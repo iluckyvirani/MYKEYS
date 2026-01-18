@@ -33,7 +33,7 @@ export default function BuySellRentTabs() {
           className="absolute rounded-[5px] bg-linear-to-r from-green-500 to-emerald-500 shadow-lg"
           animate={{
             x: `${activeTabIndex * (100 / 3) * 3}%`,
-            width: "33.33%",
+            width: "32%",
           }}
           transition={{
             type: "spring",
