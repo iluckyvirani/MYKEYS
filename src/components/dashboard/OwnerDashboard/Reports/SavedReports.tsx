@@ -191,7 +191,7 @@ export default function SavedReports() {
                   <>
                     <div className="text-center p-2 bg-blue-50 rounded">
                       <div className="text-xs text-gray-600">Revenue</div>
-                      <div className="text-sm font-bold">{formatCurrency(report.metrics.revenue)}</div>
+                      <div className="text-sm font-bold">{formatCurrency(report.metrics.revenue ?? 0)}</div>
                     </div>
                     <div className="text-center p-2 bg-green-50 rounded">
                       <div className="text-xs text-gray-600">Bookings</div>
@@ -207,15 +207,15 @@ export default function SavedReports() {
                   <>
                     <div className="text-center p-2 bg-blue-50 rounded">
                       <div className="text-xs text-gray-600">Revenue</div>
-                      <div className="text-sm font-bold">{formatCurrency(report.metrics.revenue)}</div>
+                      <div className="text-sm font-bold">{formatCurrency(report.metrics.revenue ?? 0)}</div>
                     </div>
                     <div className="text-center p-2 bg-red-50 rounded">
                       <div className="text-xs text-gray-600">Expenses</div>
-                      <div className="text-sm font-bold">{formatCurrency(report.metrics.expenses)}</div>
+                      <div className="text-sm font-bold">{formatCurrency(report.metrics.expenses ?? 0)}</div>
                     </div>
                     <div className="text-center p-2 bg-green-50 rounded">
                       <div className="text-xs text-gray-600">Profit</div>
-                      <div className="text-sm font-bold">{formatCurrency(report.metrics.profit)}</div>
+                      <div className="text-sm font-bold">{formatCurrency(report.metrics.profit ?? 0)}</div>
                     </div>
                   </>
                 )}
@@ -227,7 +227,7 @@ export default function SavedReports() {
                     </div>
                     <div className="text-center p-2 bg-green-50 rounded">
                       <div className="text-xs text-gray-600">Avg Revenue</div>
-                      <div className="text-sm font-bold">{formatCurrency(report.metrics.avgRevenue)}</div>
+                      <div className="text-sm font-bold">{formatCurrency(report.metrics.avgRevenue ?? 0)}</div>
                     </div>
                     <div className="text-center p-2 bg-purple-50 rounded">
                       <div className="text-xs text-gray-600">Top Property</div>
@@ -239,15 +239,15 @@ export default function SavedReports() {
                   <>
                     <div className="text-center p-2 bg-blue-50 rounded">
                       <div className="text-xs text-gray-600">Taxable Income</div>
-                      <div className="text-sm font-bold">{formatCurrency(report.metrics.taxableIncome)}</div>
+                      <div className="text-sm font-bold">{formatCurrency(report.metrics.taxableIncome ?? 0)}</div>
                     </div>
                     <div className="text-center p-2 bg-red-50 rounded">
                       <div className="text-xs text-gray-600">Tax Liability</div>
-                      <div className="text-sm font-bold">{formatCurrency(report.metrics.taxLiability)}</div>
+                      <div className="text-sm font-bold">{formatCurrency(report.metrics.taxLiability ?? 0)}</div>
                     </div>
                     <div className="text-center p-2 bg-green-50 rounded">
                       <div className="text-xs text-gray-600">Tax Paid</div>
-                      <div className="text-sm font-bold">{formatCurrency(report.metrics.taxPaid)}</div>
+                      <div className="text-sm font-bold">{formatCurrency(report.metrics.taxPaid ?? 0)}</div>
                     </div>
                   </>
                 )}
