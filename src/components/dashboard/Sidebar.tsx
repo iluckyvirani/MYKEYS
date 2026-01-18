@@ -63,7 +63,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
               <Home className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold font-spartan text-gray-900">
-              PropertyHub
+              MYKEYS
             </span>
           </div>
         </div>
