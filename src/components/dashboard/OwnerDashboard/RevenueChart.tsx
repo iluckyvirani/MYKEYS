@@ -37,8 +37,8 @@ const propertyRevenueData = [
 ];
 
 const revenueSources = [
-  { name: "Short-term", value: 65, color: "#10b981" },
-  { name: "Long-term", value: 30, color: "#3b82f6" },
+  { name: "Short-rent", value: 65, color: "#10b981" },
+  { name: "Long-rent", value: 30, color: "#3b82f6" },
   { name: "Purchase", value: 5, color: "#8b5cf6" },
 ];
 
@@ -51,8 +51,8 @@ export default function RevenueChart() {
   const growth = ((lastMonthRevenue - avgMonthlyRevenue) / avgMonthlyRevenue) * 100;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-[5px] shadow-sm border p-6">
+      <div className="flex items-center justify-between mb-5">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Revenue Analytics</h3>
           <p className="text-sm text-gray-500 mt-1">
@@ -64,7 +64,7 @@ export default function RevenueChart() {
             <button
               key={period}
               className={`
-                px-3 py-1.5 text-sm font-medium rounded-lg transition-colors
+                px-3 py-1.5 text-sm font-medium rounded-[5px] transition-colors
                 ${timeframe === period
                   ? "bg-green-100 text-green-700"
                   : "text-gray-600 hover:bg-gray-100"
@@ -79,8 +79,8 @@ export default function RevenueChart() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-100">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-5">
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-[5px] p-5 border border-green-100">
           <div className="flex items-center justify-between mb-4">
             <div className="p-2 bg-green-100 rounded-lg">
               <DollarSign className="w-5 h-5 text-green-600" />
@@ -96,7 +96,7 @@ export default function RevenueChart() {
           <div className="text-sm text-gray-600">Current Month Revenue</div>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-[5px] p-5 border border-blue-100">
           <div className="flex items-center justify-between mb-4">
             <div className="p-2 bg-blue-100 rounded-lg">
               <Percent className="w-5 h-5 text-blue-600" />
@@ -109,7 +109,7 @@ export default function RevenueChart() {
           <div className="text-sm text-gray-600">Average Occupancy Rate</div>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-100">
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-[5px] p-5 border border-purple-100">
           <div className="flex items-center justify-between mb-4">
             <div className="p-2 bg-purple-100 rounded-lg">
               <DollarSign className="w-5 h-5 text-purple-600" />

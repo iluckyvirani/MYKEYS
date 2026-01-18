@@ -88,7 +88,7 @@ export default function BookingCalendar() {
   const selectedDateBookings = getDayBookings(selectedDate);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
+    <div className="bg-white rounded-[5px] shadow-sm border p-5">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Booking Calendar</h3>

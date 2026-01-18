@@ -159,7 +159,7 @@ export default function ProfileForm() {
       </div>
 
       <div className="flex justify-end pt-6 border-t">
-        <Button>Save Changes</Button>
+        <Button className="cursor-pointer">Save Changes</Button>
       </div>
     </div>
   );

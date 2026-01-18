@@ -145,7 +145,7 @@ export default function PropertyList() {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
+    <div className="bg-white rounded-[5px] shadow-sm border p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Your Properties</h3>

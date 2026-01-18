@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Home, User, LogIn, LogOut, Menu, X, ChevronDown, LayoutDashboard, User as UserIcon, Building2, HelpCircle, Key } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -12,7 +13,8 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState("user");
   const [showDashboardDropdown, setShowDashboardDropdown] = useState(false);
-  
+  const router = useRouter();
+
   // Fixed: Improved scroll detection
   useEffect(() => {
     const handleScroll = () => {
@@ -24,7 +26,7 @@ export default function Navbar() {
 
     // Set initial state
     handleScroll();
-    
+
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrolled]);
@@ -34,11 +36,11 @@ export default function Navbar() {
     const checkAuth = () => {
       const token = localStorage.getItem("auth_token");
       setIsLoggedIn(!!token);
-      
+
       const role = localStorage.getItem("user_role") || "user";
       setUserRole(role);
     };
-    
+
     checkAuth();
   }, []);
 
@@ -49,11 +51,13 @@ export default function Navbar() {
     setUserRole("user");
   };
 
-  const switchDashboard = (role: string) => {
+  const switchDashboard = (role: "user" | "owner") => {
     setUserRole(role);
     localStorage.setItem("user_role", role);
     setShowDashboardDropdown(false);
-    window.location.href = `/dashboard`;
+
+    // ✅ role-based navigation
+    router.push(`/${role}/dashboard`);
   };
 
   const navItems = [
@@ -69,11 +73,10 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-          scrolled
-            ? "bg-white shadow-lg py-3" // Changed to solid white when scrolled
-            : "bg-transparent py-5"
-        }`}
+        className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled
+          ? "bg-white shadow-lg py-3" // Changed to solid white when scrolled
+          : "bg-transparent py-5"
+          }`}
         style={{
           backdropFilter: scrolled ? "blur(8px)" : "none",
           backgroundColor: scrolled ? "rgba(255, 255, 255, 0.95)" : "transparent",
@@ -87,17 +90,15 @@ export default function Navbar() {
                 whileHover={{ scale: 1.05 }}
                 className="flex items-center gap-2"
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300 ${
-                  scrolled 
-                    ? "bg-linear-to-br from-green-500 to-emerald-600" 
-                    : "bg-white/10 backdrop-blur-sm"
-                }`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300 ${scrolled
+                  ? "bg-linear-to-br from-green-500 to-emerald-600"
+                  : "bg-white/10 backdrop-blur-sm"
+                  }`}>
                   <Key className={`w-5 h-5 ${scrolled ? 'text-white' : 'text-white'}`} />
                 </div>
                 <span
-                  className={`text-2xl font-bold transition-colors duration-300 ${
-                    scrolled ? "text-gray-900" : "text-white"
-                  }`}
+                  className={`text-2xl font-bold transition-colors duration-300 ${scrolled ? "text-gray-900" : "text-white"
+                    }`}
                 >
                   MYKEYS
                 </span>
@@ -110,9 +111,8 @@ export default function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative text-sm font-medium transition-colors hover:text-green-600 ${
-                    scrolled ? "text-gray-700" : "text-white/90"
-                  }`}
+                  className={`relative text-sm font-medium transition-colors hover:text-green-600 ${scrolled ? "text-gray-700" : "text-white/90"
+                    }`}
                 >
                   {item.label}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 transition-all group-hover:w-full" />
@@ -129,20 +129,18 @@ export default function Navbar() {
                   <div className="relative">
                     <Button
                       variant={scrolled ? "outline" : "ghost"}
-                      className={`flex items-center gap-2 ${
-                        scrolled
-                          ? "text-gray-700 border-gray-300 hover:bg-gray-100"
-                          : "text-white/90 hover:bg-white/30"
-                      }`}
+                      className={`flex items-center gap-2 cursor-pointer ${scrolled
+                        ? "text-gray-700 border-gray-300 hover:bg-gray-100"
+                        : "text-white/90 hover:bg-white/30"
+                        }`}
                       onClick={() => setShowDashboardDropdown(!showDashboardDropdown)}
                     >
                       <LayoutDashboard className="w-4 h-4" />
                       Dashboard
-                      <ChevronDown className={`w-4 h-4 transition-transform ${
-                        showDashboardDropdown ? "rotate-180" : ""
-                      }`} />
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showDashboardDropdown ? "rotate-180" : ""
+                        }`} />
                     </Button>
-                    
+
                     {/* Dropdown Menu */}
                     <AnimatePresence>
                       {showDashboardDropdown && (
@@ -155,9 +153,8 @@ export default function Navbar() {
                         >
                           <button
                             onClick={() => switchDashboard("user")}
-                            className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors ${
-                              userRole === "user" ? "bg-green-100 text-green-600" : "text-gray-700"
-                            }`}
+                            className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer ${userRole === "user" ? "bg-green-100 text-green-600" : "text-gray-700"
+                              }`}
                           >
                             <UserIcon className="w-4 h-4" />
                             <div>
@@ -165,12 +162,11 @@ export default function Navbar() {
                               <p className="text-xs text-gray-500">Bookings & Inquiries</p>
                             </div>
                           </button>
-                          
+
                           <button
                             onClick={() => switchDashboard("owner")}
-                            className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors ${
-                              userRole === "owner" ? "bg-green-50 text-green-600" : "text-gray-700"
-                            }`}
+                            className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer ${userRole === "owner" ? "bg-green-50 text-green-600" : "text-gray-700"
+                              }`}
                           >
                             <Building2 className="w-4 h-4" />
                             <div>
@@ -187,11 +183,10 @@ export default function Navbar() {
                   <Button
                     onClick={handleLogout}
                     variant="ghost"
-                    className={`hidden sm:flex items-center gap-2 rounded-[5px] cursor-pointer ${
-                      scrolled 
-                        ? "text-gray-700 hover:bg-gray-50" 
-                        : "text-white hover:bg-white"
-                    }`}
+                    className={`hidden sm:flex items-center gap-2 rounded-[5px] cursor-pointer ${scrolled
+                      ? "text-gray-700 hover:bg-gray-50"
+                      : "text-white hover:bg-white"
+                      }`}
                   >
                     <LogOut className="w-4 h-4" />
                     Logout
@@ -203,11 +198,10 @@ export default function Navbar() {
                   <Link href="/login">
                     <Button
                       variant={scrolled ? "outline" : "ghost"}
-                      className={`hidden sm:flex items-center gap-2 cursor-pointer rounded-[5px] ${
-                        scrolled
-                          ? "text-gray-700 border-gray-300 hover:bg-gray-50"
-                          : "text-white/90 hover:bg-white"
-                      }`}
+                      className={`hidden sm:flex items-center gap-2 cursor-pointer rounded-[5px] ${scrolled
+                        ? "text-gray-700 border-gray-300 hover:bg-gray-50"
+                        : "text-white/90 hover:bg-white"
+                        }`}
                     >
                       <LogIn className="w-4 h-4" />
                       Login
@@ -251,7 +245,7 @@ export default function Navbar() {
               className="fixed inset-0 bg-black/50 z-40 md:hidden"
               onClick={() => setMobileMenuOpen(false)}
             />
-            
+
             {/* Mobile Menu Panel */}
             <motion.div
               initial={{ x: "100%" }}
@@ -275,7 +269,7 @@ export default function Navbar() {
                       </Link>
                     ))}
                   </div>
-                  
+
                   {/* Mobile Auth Buttons */}
                   <div className="mt-8 border-t pt-6">
                     {!isLoggedIn ? (
@@ -283,7 +277,7 @@ export default function Navbar() {
                         <div className="mb-4">
                           <p className="text-xs font-medium text-gray-500 mb-2">DASHBOARD</p>
                           <Link
-                            href="/dashboard/user"
+                            href="user/dashboard"
                             className="block py-3 px-4 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors mb-2"
                             onClick={() => setMobileMenuOpen(false)}
                           >
@@ -293,7 +287,7 @@ export default function Navbar() {
                             </div>
                           </Link>
                           <Link
-                            href="/dashboard/owner"
+                            href="owner/dashboard"
                             className="block py-3 px-4 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
                             onClick={() => setMobileMenuOpen(false)}
                           >
@@ -303,7 +297,7 @@ export default function Navbar() {
                             </div>
                           </Link>
                         </div>
-                        
+
                         <Link
                           href="/profile"
                           className="block py-3 px-4 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors mb-2"
@@ -311,7 +305,7 @@ export default function Navbar() {
                         >
                           Profile Settings
                         </Link>
-                        
+
                         <button
                           onClick={() => {
                             handleLogout();

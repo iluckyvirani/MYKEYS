@@ -67,31 +67,31 @@ const cancelledBookings = [
 
 export default function BookingTabs() {
   return (
-    <div className="bg-white rounded-xl border">
+    <div className="bg-white rounded-[5px] border">
       <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList className="w-full justify-start border-b rounded-none px-6 pt-6">
-          <TabsTrigger value="upcoming" className="flex items-center gap-2">
+        <TabsList className="w-full justify-start border-b rounded-none px-6 pt-2  py-6">
+          <TabsTrigger value="upcoming" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
             <Calendar className="w-4 h-4" />
             Upcoming
             <span className="ml-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
               {upcomingBookings.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
+          <TabsTrigger value="completed" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
             <CheckCircle className="w-4 h-4" />
             Completed
             <span className="ml-1 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
               {completedBookings.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="cancelled" className="flex items-center gap-2">
+          <TabsTrigger value="cancelled" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
             <XCircle className="w-4 h-4" />
             Cancelled
             <span className="ml-1 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
               {cancelledBookings.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="pending" className="flex items-center gap-2">
+          <TabsTrigger value="pending" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
             <Clock className="w-4 h-4" />
             Pending
             <span className="ml-1 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">

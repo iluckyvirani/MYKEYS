@@ -51,31 +51,31 @@ const archivedInquiries = [
 
 export default function InquiryTabs() {
   return (
-    <div className="bg-white rounded-xl border">
+    <div className="bg-white rounded-[5px] border">
       <Tabs defaultValue="active" className="w-full">
-        <TabsList className="w-full justify-start border-b rounded-none px-6 pt-6">
-          <TabsTrigger value="active" className="flex items-center gap-2">
+        <TabsList className="w-full justify-start border-b rounded-none px-6 pt-6 py-6">
+          <TabsTrigger value="active" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
             <MessageSquare className="w-4 h-4" />
             Active
             <span className="ml-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
               {activeInquiries.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="responded" className="flex items-center gap-2">
+          <TabsTrigger value="responded" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
             <CheckCircle className="w-4 h-4" />
             Responded
             <span className="ml-1 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
               1
             </span>
           </TabsTrigger>
-          <TabsTrigger value="pending" className="flex items-center gap-2">
+          <TabsTrigger value="pending" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
             <Clock className="w-4 h-4" />
             Pending
             <span className="ml-1 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
               1
             </span>
           </TabsTrigger>
-          <TabsTrigger value="archived" className="flex items-center gap-2">
+          <TabsTrigger value="archived" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
             <Archive className="w-4 h-4" />
             Archived
             <span className="ml-1 bg-gray-100 text-gray-800 text-xs px-2 py-0.5 rounded-full">

@@ -133,8 +133,8 @@ export default function InquiryInbox() {
   const newCount = inquiries.filter((inq) => inq.status === "new").length;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border">
-      <div className="p-6 border-b">
+    <div className="bg-white rounded-[5px] shadow-sm border">
+      <div className="p-5 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-50">

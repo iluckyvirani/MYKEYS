@@ -28,25 +28,25 @@ interface SidebarProps {
 }
 
 const userNavigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
-  { name: "Inquiries", href: "/dashboard/inquiries", icon: MessageSquare },
-  { name: "Favorites", href: "/dashboard/favorites", icon: Heart },
-  { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
-  { name: "Documents", href: "/dashboard/documents", icon: FileText },
-  { name: "Profile", href: "/dashboard/profile", icon: Settings },
+  { name: "Dashboard", href: "/user/dashboard", icon: Home },
+  { name: "Bookings", href: "/user/dashboard/bookings", icon: Calendar },
+  { name: "Inquiries", href: "/user/dashboard/inquiries", icon: MessageSquare },
+  { name: "Favorites", href: "/user/dashboard/favorites", icon: Heart },
+  { name: "Payments", href: "/user/dashboard/payments", icon: CreditCard },
+  { name: "Documents", href: "/user/dashboard/documents", icon: FileText },
+  { name: "Profile", href: "/user/dashboard/profile", icon: Settings },
 ];
 
 const ownerNavigation = [
-  { name: "Dashboard", href: "/owner/owner-dashboard", icon: Home },
-  { name: "Properties", href: "/owner/owner-dashboard/properties", icon: Building },
-  { name: "Bookings", href: "/owner/owner-dashboard/bookings", icon: Calendar },
-  { name: "Inquiries", href: "/owner/owner-dashboard/inquiries", icon: MessageSquare },
-  { name: "Finance", href: "/owner/owner-dashboard/finance", icon: DollarSign },
-  { name: "Ads", href: "/owner/owner-dashboard/ads", icon: Megaphone },
-  { name: "Reviews", href: "/owner/owner-dashboard/reviews", icon: Star },
-  { name: "Reports", href: "/owner/owner-dashboard/reports", icon: FileBarChart },
-  { name: "Analytics", href: "/owner/owner-dashboard/analytics", icon: BarChart3 },
+  { name: "Dashboard", href: "/owner/dashboard", icon: Home },
+  { name: "Properties", href: "/owner/dashboard/properties", icon: Building },
+  { name: "Bookings", href: "/owner/dashboard/bookings", icon: Calendar },
+  { name: "Inquiries", href: "/owner/dashboard/inquiries", icon: MessageSquare },
+  { name: "Finance", href: "/owner/dashboard/finance", icon: DollarSign },
+  // { name: "Ads", href: "/owner/dashboard/ads", icon: Megaphone },
+  { name: "packages", href: "/owner/dashboard/packages", icon: Star },
+  { name: "Reports", href: "/owner/dashboard/reports", icon: FileBarChart },
+  { name: "Analytics", href: "/owner/dashboard/analytics", icon: BarChart3 },
 ];
 
 export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {

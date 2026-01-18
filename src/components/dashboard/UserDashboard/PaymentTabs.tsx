@@ -83,38 +83,38 @@ const refundedPayments = [
 
 export default function PaymentTabs() {
   return (
-    <div className="bg-white rounded-xl border">
+    <div className="bg-white rounded-[5px] border">
       <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList className="w-full justify-start border-b rounded-none px-6 pt-6">
-          <TabsTrigger value="upcoming" className="flex items-center gap-2">
+        <TabsList className="w-full justify-start border-b rounded-none px-6 pt-6 py-6">
+          <TabsTrigger value="upcoming" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
             <Clock className="w-4 h-4" />
             Upcoming
             <span className="ml-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
               {upcomingPayments.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
+          <TabsTrigger value="completed" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
             <CheckCircle className="w-4 h-4" />
             Completed
             <span className="ml-1 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
               {completedPayments.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="failed" className="flex items-center gap-2">
+          <TabsTrigger value="failed" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
             <XCircle className="w-4 h-4" />
             Failed
             <span className="ml-1 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
               {failedPayments.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="refunded" className="flex items-center gap-2">
+          <TabsTrigger value="refunded" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
             <AlertCircle className="w-4 h-4" />
             Refunded
             <span className="ml-1 bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded-full">
               {refundedPayments.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="methods" className="flex items-center gap-2">
+          <TabsTrigger value="methods" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
             <CreditCard className="w-4 h-4" />
             Payment Methods
           </TabsTrigger>

@@ -1,8 +1,13 @@
-// components/dashboard/OwnerDashboard/OwnerStatsCards.tsx
 "use client";
 
-import { Building, Calendar, DollarSign, Inbox, TrendingUp, Users, Star, Percent } from "lucide-react";
-import { ownerStats } from "@/lib/constants/dashboard";
+import {
+  Building,
+  Calendar,
+  DollarSign,
+  Inbox,
+  Star,
+  Percent,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 const enhancedOwnerStats = [
@@ -64,37 +69,53 @@ const enhancedOwnerStats = [
 
 export default function OwnerStatsCards() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
       {enhancedOwnerStats.map((stat) => {
         const Icon = stat.icon;
-        const trendColor = stat.trend === "up" ? "text-green-600" : stat.trend === "down" ? "text-red-600" : "text-gray-600";
-        const trendIcon = stat.trend === "up" ? "↗" : stat.trend === "down" ? "↘" : "→";
+
+        const trendStyles =
+          stat.trend === "up"
+            ? "text-green-600 bg-green-50"
+            : stat.trend === "down"
+            ? "text-red-600 bg-red-50"
+            : "text-gray-600 bg-gray-100";
+
+        const trendIcon =
+          stat.trend === "up" ? "↗" : stat.trend === "down" ? "↘" : "→";
 
         return (
           <div
             key={stat.title}
-            className="bg-white rounded-xl p-5 shadow-sm border hover:shadow-md transition-shadow group"
+            className="bg-white rounded-[5px] p-3 border shadow-sm hover:shadow-md transition"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className={`${stat.color} p-2.5 rounded-lg`}>
+            {/* Top row */}
+            <div className="flex items-center justify-between">
+              <div className={`${stat.color} p-2.5 rounded-xl`}>
                 <Icon className="w-5 h-5 text-white" />
               </div>
-              <span className={`text-sm font-medium ${trendColor}`}>
+
+              <span
+                className={`text-xs font-semibold px-1 py-1 rounded-[5px] ml-1 ${trendStyles}`}
+              >
                 {trendIcon} {stat.change}
               </span>
             </div>
 
-            <div>
-              <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-              <p className="text-2xl font-bold mt-2">
-                {stat.title.includes("Revenue") ? formatCurrency(Number(stat.value)) : stat.value}
+            {/* Content */}
+            <div className="mt-5">
+              <p className="text-sm text-gray-500 font-medium">
+                {stat.title}
               </p>
-              <p className="text-xs text-gray-500 mt-2">{stat.details}</p>
-            </div>
 
-            {/* Hover effect line */}
-            <div className="mt-4 pt-4 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="text-xs text-gray-500">View details →</div>
+              <p className="text-2xl font-bold text-gray-900 mt-2">
+                {stat.title.includes("Revenue")
+                  ? formatCurrency(Number(stat.value))
+                  : stat.value}
+              </p>
+
+              <p className="text-sm text-gray-500 mt-2">
+                {stat.details}
+              </p>
             </div>
           </div>
         );

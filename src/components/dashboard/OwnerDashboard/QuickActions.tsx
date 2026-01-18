@@ -65,7 +65,7 @@ const quickActions = [
 
 export default function QuickActions() {
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+    <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-[5px] p-5 border border-blue-100">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
@@ -73,12 +73,12 @@ export default function QuickActions() {
             Quickly access frequently used features
           </p>
         </div>
-        <Button variant="outline" size="sm">
+        {/* <Button variant="outline" size="sm">
           Customize
-        </Button>
+        </Button> */}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
         {quickActions.map((action) => {
           const Icon = action.icon;
           return (

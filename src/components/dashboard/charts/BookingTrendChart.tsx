@@ -23,8 +23,8 @@ const bookingData = [
 
 export default function BookingTrendChart() {
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="mb-6">
+    <div className="bg-white rounded-[5px] shadow-sm border p-4">
+      <div className="mb-5">
         <h3 className="text-lg font-semibold text-gray-900">Booking Trends</h3>
         <p className="text-sm text-gray-500">Your activity over the past 5 months</p>
       </div>

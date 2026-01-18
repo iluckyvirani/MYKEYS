@@ -48,7 +48,7 @@ export default function BookingList({ bookings, emptyMessage, emptyAction }: Boo
       {bookings.map((booking) => (
         <div
           key={booking.id}
-          className="p-6 border rounded-xl hover:shadow-md transition-shadow"
+          className="p-6 border rounded-[5px] hover:shadow-md transition-shadow"
         >
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             {/* Property Info */}
@@ -105,29 +105,29 @@ export default function BookingList({ bookings, emptyMessage, emptyAction }: Boo
 
               <div className="flex flex-wrap gap-2">
                 {booking.actions.includes("view") && (
-                  <Button asChild variant="outline" size="sm" className="flex-1">
+                  <Button asChild variant="outline" size="sm" className="flex-1 cursor-pointer rounded-[5px]">
                     <Link href={`/dashboard/bookings/${booking.id}`}>
                       View Details
                     </Link>
                   </Button>
                 )}
                 {booking.actions.includes("cancel") && (
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1 cursor-pointer rounded-[5px]">
                     Cancel
                   </Button>
                 )}
                 {booking.actions.includes("modify") && (
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1 cursor-pointer rounded-[5px]">
                     Modify
                   </Button>
                 )}
                 {booking.actions.includes("review") && (
-                  <Button size="sm" className="flex-1">
+                  <Button size="sm" className="flex-1 cursor-pointer rounded-[5px]">
                     Write Review
                   </Button>
                 )}
                 {booking.actions.includes("rebook") && (
-                  <Button size="sm" className="flex-1">
+                  <Button size="sm" className="flex-1 cursor-pointer rounded-[5px]">
                     Rebook
                   </Button>
                 )}

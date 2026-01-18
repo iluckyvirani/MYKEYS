@@ -79,7 +79,7 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
       {/* Inquiries List */}
       <div className="lg:col-span-1 space-y-4">
         {inquiries.map((inquiry) => {
@@ -92,7 +92,7 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
               key={inquiry.id}
               onClick={() => setSelectedInquiry(inquiry.id)}
               className={`
-                p-4 rounded-xl border cursor-pointer transition-all
+                p-4 rounded-[5px] border cursor-pointer transition-all
                 ${isSelected 
                   ? "border-green-500 bg-green-50" 
                   : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
@@ -137,14 +137,14 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                   {inquiry.message}
                 </p>
 
-                {inquiry.unread > 0 && (
+                {/* {inquiry.unread > 0 && (
                   <div className="flex items-center gap-1 mt-2">
                     <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
                     <span className="text-xs font-medium text-blue-600">
                       {inquiry.unread} new message{inquiry.unread > 1 ? "s" : ""}
                     </span>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           );
@@ -162,8 +162,8 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
             const StatusIcon = statusConfig.icon;
 
             return (
-              <div className="bg-white rounded-xl border p-6">
-                <div className="flex items-center justify-between mb-6">
+              <div className="bg-white rounded-[5px] border p-5">
+                <div className="flex items-center justify-between mb-5">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">{inquiry.property}</h3>
                     <div className="flex items-center gap-3 mt-2">
@@ -216,7 +216,7 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                 </div>
 
                 {/* Conversation Thread */}
-                <div className="mb-6">
+                {/* <div className="mb-6">
                   <h4 className="font-semibold text-gray-900 mb-3">Conversation</h4>
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
@@ -245,25 +245,25 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                       </div>
                     )}
                   </div>
-                </div>
+                </div> */}
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-3 pt-6 border-t">
-                  <Button className="flex-1">
+                  {/* <Button className="flex-1">
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Send Message
-                  </Button>
-                  <Button variant="outline" className="flex-1">
+                  </Button> */}
+                  <Button variant="outline" className="flex-1 cursor-pointer rounded-[5px]">
                     <Calendar className="w-4 h-4 mr-2" />
                     Schedule Tour
                   </Button>
                   {inquiry.status === "pending" && (
-                    <Button variant="outline" className="text-red-600 hover:text-red-700">
+                    <Button variant="outline" className="text-red-600 hover:text-red-700 cursor-pointer rounded-[5px]">
                       Withdraw Inquiry
                     </Button>
                   )}
                   {inquiry.status === "approved" && (
-                    <Button className="bg-green-600 hover:bg-green-700 flex-1">
+                    <Button className="bg-green-600 hover:bg-green-700 flex-1 cursor-pointer rounded-[5px]">
                       Proceed to Booking
                     </Button>
                   )}

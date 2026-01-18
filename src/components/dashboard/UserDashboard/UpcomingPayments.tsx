@@ -111,8 +111,8 @@ export default function UpcomingPayments() {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-[5px] shadow-sm border p-4">
+      <div className="flex items-center justify-between mb-5">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Upcoming Payments</h3>
           <div className="flex items-center gap-2 mt-1">
