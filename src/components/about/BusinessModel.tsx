@@ -21,7 +21,7 @@ export default function BusinessModel() {
   const features = [
     {
       icon: <CreditCard className="w-6 h-6" />,
-      title: "Short Stay Payments",
+      title: "Short Rent Payments",
       description: "Secure payment processing with release after check-in. Platform holds funds for buyer/seller protection.",
       color: "from-green-500 to-emerald-600",
       model: "Short Term"
@@ -36,7 +36,7 @@ export default function BusinessModel() {
     {
       icon: <DollarSign className="w-6 h-6" />,
       title: "Commission Model",
-      description: "Short stays: 10-15%. Long rentals: 5-8%. Property sales: 1.5-3.5%. Transparent pricing always.",
+      description: "Short rents: 10-15%. Long rentals: 5-8%. Property sales: 1.5-3.5%. Transparent pricing always.",
       color: "from-purple-500 to-violet-600",
       model: "All Types"
     },
@@ -50,7 +50,7 @@ export default function BusinessModel() {
     {
       icon: <Zap className="w-6 h-6" />,
       title: "Instant Booking",
-      description: "Short stays available for instant booking. Real-time availability calendar and instant confirmation.",
+      description: "Short rents available for instant booking. Real-time availability calendar and instant confirmation.",
       color: "from-green-500 to-emerald-600",
       model: "Short Term"
     },
@@ -65,7 +65,7 @@ export default function BusinessModel() {
 
   const revenueStreams = [
     {
-      type: "Short Stay Commission",
+      type: "Short Rents Commission",
       percentage: "10-15%",
       description: "Per booking commission",
       icon: <Hotel className="w-5 h-5" />,

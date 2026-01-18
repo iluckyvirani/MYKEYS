@@ -57,7 +57,7 @@ export default function PropertySearchBar() {
             onChange={(e) => setRentalType(e.target.value)}
           >
             <option value="">Rental Duration</option>
-            <option value="short">Short Stay (Nightly)</option>
+            <option value="short">Short Rent (Nightly)</option>
             <option value="long">Long Term (Monthly)</option>
           </select>
         </div>

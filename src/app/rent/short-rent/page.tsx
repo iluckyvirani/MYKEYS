@@ -27,10 +27,10 @@ export default function ShortRentPage() {
             <div className="lg:w-3/4">
               <div className="mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                  Short Stay Properties
+                  Short Rent Properties
                 </h2>
                 <p className="text-gray-600">
-                  <span className="font-medium">856</span> properties available for short stays in London
+                  <span className="font-medium">856</span> properties available for short rents in London
                 </p>
               </div>
               

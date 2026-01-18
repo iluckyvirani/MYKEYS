@@ -12,7 +12,7 @@ export default function BuySellRentTabs() {
   // UPDATED: Changed "Sell" to "Short Stay" and "Rent" to "Long Rent"
   const tabs = [
     { id: "buy", label: "Buy", icon: Home, description: "Purchase Properties" },
-    { id: "short-rent", label: "Short Stay", icon: Clock, description: "Airbnb-style Rentals" },
+    { id: "short-rent", label: "Short Rent", icon: Clock, description: "Airbnb-style Rentals" },
     { id: "long-rent", label: "Long Rent", icon: Calendar, description: "2+ Months Rental" },
   ];
 

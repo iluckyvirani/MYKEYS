@@ -31,7 +31,7 @@ export default function ShortRentHero() {
           >
 
             <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-white mb-1 leading-tight tracking-tight">
-              Perfect Short Stays
+              Perfect Short Rents
               <span className="block text-green-400 mt-1">For Every Occasion</span>
             </h1>
 

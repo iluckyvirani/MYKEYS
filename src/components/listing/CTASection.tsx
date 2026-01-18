@@ -190,7 +190,7 @@ export default function CTASection() {
             
             <div className="text-left p-6 bg-white rounded-xl shadow-lg">
               <h5 className="font-bold text-gray-900 mb-2">How do I get paid?</h5>
-              <p className="text-gray-600">For short stays, we handle payments securely. For long rents and sales, you receive payments directly from tenants/buyers.</p>
+              <p className="text-gray-600">For short rents, we handle payments securely. For long rents and sales, you receive payments directly from tenants/buyers.</p>
             </div>
             
             <div className="text-left p-6 bg-white rounded-xl shadow-lg">

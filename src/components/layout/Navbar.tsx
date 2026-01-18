@@ -59,7 +59,7 @@ export default function Navbar() {
   const navItems = [
     { href: "/", label: "Home", icon: Home },
     { href: "/buy", label: "Buy" },
-    { href: "/rent/short-rent", label: "Short Stay" },
+    { href: "/rent/short-rent", label: "Short Rent" },
     { href: "/rent/long-rent", label: "Long Rent" },
     { href: "/how-listing-works", label: "List Property", icon: HelpCircle },
     { href: "/about", label: "About" },

@@ -36,7 +36,7 @@ const quickActions = [
 
 export default function QuickActions() {
   return (
-    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
+    <div className="bg-linear-to-r from-green-50 to-emerald-50 rounded-[5px] p-6 border border-green-100">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {quickActions.map((action) => {
@@ -45,7 +45,7 @@ export default function QuickActions() {
             <Button
               key={action.title}
               variant="outline"
-              className="h-auto py-4 px-4 flex flex-col items-center justify-center gap-2 bg-white hover:bg-white/90 border-gray-200"
+              className="h-auto py-4 px-4 rounded-[5px] cursor-pointer flex flex-col items-center justify-center gap-2 bg-white hover:bg-white/90 border-gray-200"
             >
               <div className={`${action.color} p-2 rounded-lg`}>
                 <Icon className="w-5 h-5 text-white" />

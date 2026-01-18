@@ -41,7 +41,7 @@ export default function HeroSection() {
             </h1>
 
             <p className="font-spartan text-lg sm:text-xl text-gray-200 max-w-lg mx-auto mb-10 font-light">
-              Discover properties seamlessly. Buy, Short Stay (nightly bookings), or Long Term Rent (2+ months minimum).
+              Discover properties seamlessly. Buy, Short rent (nightly bookings), or Long Term Rent (2+ months minimum).
               No hidden fees, just transparent real estate solutions.
             </p>
           </motion.div>

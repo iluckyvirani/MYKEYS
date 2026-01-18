@@ -19,7 +19,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -41,8 +41,8 @@ export default function DashboardLayout({
         />
 
         {/* Main Content Area */}
-        <main className="py-6">
-          <div className="mx-auto max-w-9xl px-4 sm:px-6 lg:px-2">
+        <main className="py-5">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-1 border">
             {/* Role Switcher Banner */}
             <RoleSwitcher currentRole={role} onSwitch={setRole} />
 

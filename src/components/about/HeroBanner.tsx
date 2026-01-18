@@ -44,7 +44,7 @@ export default function HeroBanner() {
 
             <p className="font-spartan text-lg sm:text-md text-gray-200 max-w-lg mx-auto mb-5 font-light">
               We're revolutionizing property transactions with our unified platform.
-              Whether you need a short stay, long-term rental, or want to buy a home -
+              Whether you need a short rent, long-term rental, or want to buy a home -
               we've got you covered with transparent pricing and direct owner connections.
             </p>
 
@@ -79,7 +79,7 @@ export default function HeroBanner() {
             <div className="w-12 h-12 bg-linear-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center mb-4">
               <Hotel className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Short Stays</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Short Rents</h3>
             <p className="text-gray-300">Book instantly. Pay per night. Full Airbnb-style experience with verified properties.</p>
           </div>
 

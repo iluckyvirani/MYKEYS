@@ -17,6 +17,7 @@ import {
   Star,
   FileBarChart,
   LogOut,
+  Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,10 +58,10 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       {/* Desktop Sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-50 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white lg:pt-5 lg:pb-4">
         {/* Logo */}
-        <div className="flex items-center justify-center px-6 mb-8">
+        <div className="flex items-center justify-center px-5 mb-5">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-linear-to-r from-green-600 to-emerald-500 flex items-center justify-center">
-              <Home className="w-5 h-5 text-white" />
+              <Key className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold font-spartan text-gray-900">
               MYKEYS
@@ -69,7 +70,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="mt-5 flex-1 space-y-1 px-4">
+        <nav className="mt-5 flex-1 space-y-2 px-4">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -77,9 +78,9 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-[5px] px-2 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-l-4 border-green-600"
+                    ? "bg-linear-to-r from-green-50 to-emerald-50 text-green-700 border-l-4 border-green-600"
                     : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                 )}
               >
@@ -108,7 +109,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       >
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-green-600 to-emerald-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-linear-to-r from-green-600 to-emerald-500 flex items-center justify-center">
               <Home className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold font-spartan text-gray-900">
@@ -134,7 +135,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-l-4 border-green-600"
+                    ? "bg-linear-to-r from-green-50 to-emerald-50 text-green-700 border-l-4 border-green-600"
                     : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                 )}
               >

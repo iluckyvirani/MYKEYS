@@ -25,7 +25,7 @@ import FAQSection from "@/components/contact/FAQSection";
 
 const departments = [
     {
-        name: "Short Stay Support",
+        name: "Short Rent Support",
         icon: <Hotel className="w-5 h-5" />,
         email: "shortstay@propertyplatform.com",
         phone: "+44 20 1234 5670",
@@ -141,7 +141,7 @@ export default function ContactPage() {
                                     <nav className="flex flex-wrap -mb-px">
                                         {[
                                             { id: "general", label: "General Inquiry", icon: <MessageSquare className="w-4 h-4" /> },
-                                            { id: "short", label: "Short Stay", icon: <Building2 className="w-4 h-4" /> },
+                                            { id: "short", label: "Short Rent", icon: <Building2 className="w-4 h-4" /> },
                                             { id: "long", label: "Long Term", icon: <Clock className="w-4 h-4" /> },
                                             { id: "buy", label: "Property Purchase", icon: <Shield className="w-4 h-4" /> },
                                             { id: "owner", label: "For Owners", icon: <Users className="w-4 h-4" /> },
@@ -174,10 +174,10 @@ export default function ContactPage() {
                                     )}
                                     {activeTab === "short" && (
                                         <div>
-                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Short Stay Support</h3>
+                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Short rent Support</h3>
                                             <p className="text-gray-600 mb-6">
                                                 Need help with instant bookings, payment issues, or short-term stay questions?
-                                                Our dedicated short stay team can assist you.
+                                                Our dedicated short rent team can assist you.
                                             </p>
                                         </div>
                                     )}

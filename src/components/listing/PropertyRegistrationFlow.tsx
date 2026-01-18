@@ -37,7 +37,7 @@ export default function PropertyRegistrationFlow() {
     },
     { 
       type: "short-rent", 
-      title: "Short Stay", 
+      title: "Short Rent", 
       description: "Nightly/weekly rentals",
       icon: <Calendar className="w-6 h-6" />,
       color: "from-blue-500 to-cyan-600"
@@ -221,7 +221,7 @@ export default function PropertyRegistrationFlow() {
                     <div>
                       <p className="text-blue-800 font-medium">Pro Tip</p>
                       <p className="text-blue-700 text-sm mt-1">
-                        For maximum exposure, list as Short Stay first. You'll get bookings quickly 
+                        For maximum exposure, list as Short Rent first. You'll get bookings quickly 
                         and can switch to Long Rent or Sale anytime.
                       </p>
                     </div>

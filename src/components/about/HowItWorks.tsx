@@ -21,7 +21,7 @@ export default function HowItWorks() {
     {
       step: 1,
       title: "Browse & Search",
-      description: "Use filters to find exactly what you need - short stays, long rentals, or properties to buy.",
+      description: "Use filters to find exactly what you need - short rents, long rentals, or properties to buy.",
       icon: <Search className="w-6 h-6" />,
       color: "from-blue-500 to-cyan-500",
       types: ["Short", "Long", "Buy"]
@@ -37,14 +37,14 @@ export default function HowItWorks() {
     {
       step: 3,
       title: "Choose Your Path",
-      description: "Select transaction type - instant book for short stays or send inquiry for long term/buy.",
+      description: "Select transaction type - instant book for short rents or send inquiry for long term/buy.",
       icon: <Building2 className="w-6 h-6" />,
       color: "from-green-500 to-emerald-500",
       types: ["Short", "Long", "Buy"]
     },
     {
       step: 4,
-      title: "Short Stay: Book & Pay",
+      title: "Short Rent: Book & Pay",
       description: "Instant booking with secure payment. Platform holds funds until check-in completion.",
       icon: <CreditCard className="w-6 h-6" />,
       color: "from-green-600 to-emerald-600",
@@ -70,7 +70,7 @@ export default function HowItWorks() {
 
   const transactionTypes = [
     {
-      type: "Short Stay",
+      type: "Short Rent",
       icon: <Hotel className="w-8 h-8" />,
       description: "Airbnb-style booking",
       steps: "Search → Book → Pay → Stay → Review",

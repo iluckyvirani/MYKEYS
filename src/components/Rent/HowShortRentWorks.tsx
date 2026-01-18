@@ -41,7 +41,7 @@ export default function HowShortRentWorks() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            How Short Stay Works
+            How Short Rents Works
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Easy booking process from search to check-out
@@ -70,7 +70,7 @@ export default function HowShortRentWorks() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
               <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                Why Book Short Stays with Hously?
+                Why Book Short Rents with Hously?
               </h3>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3">

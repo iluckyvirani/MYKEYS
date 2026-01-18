@@ -12,13 +12,13 @@ export default function StatsCards() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
       {userStats.map((stat) => {
         const Icon = icons[stat.icon as keyof typeof icons];
         return (
           <div
             key={stat.title}
-            className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-shadow"
+            className="bg-white rounded-[5px] p-5 shadow-sm border hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between">
               <div>

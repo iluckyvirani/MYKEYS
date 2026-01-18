@@ -76,7 +76,7 @@ export default function PropertyCard({
   // Determine badge color based on rental type
   const getRentalTypeBadge = () => {
     if (listingType === "buy") return { text: "For Sale", color: "from-purple-500 to-purple-600" };
-    if (rentalType === "short") return { text: "Short Stay", color: "from-blue-500 to-cyan-600" };
+    if (rentalType === "short") return { text: "Short Rent", color: "from-blue-500 to-cyan-600" };
     if (rentalType === "long") return { text: "Long Term", color: "from-orange-500 to-orange-600" };
     return { text: "For Rent", color: "from-green-500 to-emerald-600" };
   };

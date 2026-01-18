@@ -13,7 +13,7 @@ export default function RoleSwitcher({ currentRole, onSwitch }: RoleSwitcherProp
   const isOwner = currentRole === "owner";
 
   return (
-    <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border">
+    <div className="mb-5 p-4 bg-white rounded-[5px] shadow-sm border">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${isOwner ? "bg-blue-100" : "bg-green-100"}`}>

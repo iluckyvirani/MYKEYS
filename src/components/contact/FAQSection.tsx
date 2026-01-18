@@ -19,7 +19,7 @@ export default function FAQSection() {
 
   const faqCategories = [
     { id: "all", label: "All Questions", icon: <HelpCircle className="w-4 h-4" /> },
-    { id: "short", label: "Short Stay", icon: <Hotel className="w-4 h-4" /> },
+    { id: "short", label: "Short Rent", icon: <Hotel className="w-4 h-4" /> },
     { id: "long", label: "Long Term", icon: <Building2 className="w-4 h-4" /> },
     { id: "buy", label: "Property Purchase", icon: <TrendingUp className="w-4 h-4" /> },
     { id: "payment", label: "Payments", icon: <CreditCard className="w-4 h-4" /> },
@@ -30,8 +30,8 @@ export default function FAQSection() {
   const faqs = [
     {
       id: "1",
-      question: "How does short stay booking work?",
-      answer: "Short stays work like Airbnb: browse properties, select check-in/out dates, book instantly, and pay securely. The payment is held by our platform and released to the owner after check-in confirmation.",
+      question: "How does short rent booking work?",
+      answer: "Short rents work like Airbnb: browse properties, select check-in/out dates, book instantly, and pay securely. The payment is held by our platform and released to the owner after check-in confirmation.",
       category: "short",
       tags: ["booking", "payment", "short-stay"]
     },
@@ -51,8 +51,8 @@ export default function FAQSection() {
     },
     {
       id: "4",
-      question: "How are payments secured for short stays?",
-      answer: "We use escrow services for short stay payments. Your payment is held securely until 24 hours after check-in. If there are any issues, our support team mediates between parties.",
+      question: "How are payments secured for short rents?",
+      answer: "We use escrow services for short rent payments. Your payment is held securely until 24 hours after check-in. If there are any issues, our support team mediates between parties.",
       category: "payment",
       tags: ["security", "escrow", "short-stay"]
     },
@@ -66,14 +66,14 @@ export default function FAQSection() {
     {
       id: "6",
       question: "What commission do you charge property owners?",
-      answer: "Commission varies by service: 10-15% for short stays, 5-8% for long term rentals (one month's rent), and 1.5-3.5% for property sales. We offer different packages with varying commission rates.",
+      answer: "Commission varies by service: 10-15% for short rents, 5-8% for long term rentals (one month's rent), and 1.5-3.5% for property sales. We offer different packages with varying commission rates.",
       category: "owner",
       tags: ["commission", "fees", "owners"]
     },
     {
       id: "7",
-      question: "Can I book a short stay for just one night?",
-      answer: "Minimum stay requirements vary by property. Most short stay properties require 2-night minimum, especially on weekends. You can filter by minimum nights during search.",
+      question: "Can I book a short rent for just one night?",
+      answer: "Minimum stay requirements vary by property. Most short rent properties require 2-night minimum, especially on weekends. You can filter by minimum nights during search.",
       category: "short",
       tags: ["minimum-stay", "short-stay", "booking"]
     },
@@ -177,7 +177,7 @@ export default function FAQSection() {
         </div>
 
         {/* Still Have Questions */}
-        <div className="mt-12 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-[5px] border border-green-200">
+        <div className="mt-12 p-6 bg-linear-to-r from-green-50 to-emerald-50 rounded-[5px] border border-green-200">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h4 className="text-xl font-bold text-gray-900 mb-2">Still have questions?</h4>

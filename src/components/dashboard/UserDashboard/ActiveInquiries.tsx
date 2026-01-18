@@ -106,7 +106,7 @@ export default function ActiveInquiries() {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
+    <div className="bg-white rounded-[5px] shadow-sm border p-4">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Active Inquiries</h3>
@@ -170,14 +170,6 @@ export default function ActiveInquiries() {
                       <div className="text-xs text-gray-500">
                         Sent {getTimeAgo(inquiry.sentDate)} • Updated {getTimeAgo(inquiry.lastUpdate)}
                       </div>
-                      {inquiry.unreadMessages > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
-                          <span className="text-xs font-medium text-blue-600">
-                            {inquiry.unreadMessages} new message{inquiry.unreadMessages > 1 ? "s" : ""}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>

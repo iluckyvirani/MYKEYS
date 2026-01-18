@@ -36,13 +36,13 @@ const mockBookings = [
 
 export default function RecentBookings() {
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-[5px] shadow-sm border p-4">
+      <div className="flex items-center justify-between mb-5">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Recent Bookings</h3>
           <p className="text-sm text-gray-500">Your active and upcoming stays</p>
         </div>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="rounded-[5px] cursor-pointer">
           View All
         </Button>
       </div>
@@ -51,7 +51,7 @@ export default function RecentBookings() {
         {mockBookings.map((booking) => (
           <div
             key={booking.id}
-            className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-between p-4 rounded-[5px] border hover:bg-gray-50 transition-colors"
           >
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-lg bg-blue-50">

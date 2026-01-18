@@ -15,8 +15,8 @@ export default function UserDashboardPage() {
   return (
     <DashboardLayout defaultRole="user">
       {/* Welcome Section */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
+      <div className="mb-5">
+        <h1 className="text-2xl font-bold text-gray-900">
           Welcome back, John! 👋
         </h1>
         <p className="text-gray-600 mt-2">
@@ -25,18 +25,18 @@ export default function UserDashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="mb-8">
+      <div className="mb-5">
         <StatsCards />
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-8">
+      <div className="mb-5">
         <QuickActions />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 border border-red-900">
         {/* Left Column */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-3 space-y-5">
           {/* Recent Bookings */}
           <RecentBookings />
 
@@ -48,7 +48,7 @@ export default function UserDashboardPage() {
         </div>
 
         {/* Right Column */}
-        <div className="space-y-8">
+        <div className="space-y-8 col-span-2">
           {/* Upcoming Payments */}
           <UpcomingPayments />
 

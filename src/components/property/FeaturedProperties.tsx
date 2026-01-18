@@ -142,7 +142,7 @@ export default function FeaturedProperties() {
   // UPDATED: Filters for your business model
   const filters = [
     { id: "all", label: "All Properties" },
-    { id: "short-rent", label: "Short Stay" },
+    { id: "short-rent", label: "Short Rent" },
     { id: "long-rent", label: "Long Term Rent" },
     { id: "buy", label: "For Sale" },
     // { id: "featured", label: "Featured" },
@@ -185,7 +185,7 @@ export default function FeaturedProperties() {
         </h2>
         
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Choose from short stays, long term rentals, or purchase options. Find exactly what fits your requirements.
+          Choose from short rents, long term rentals, or purchase options. Find exactly what fits your requirements.
         </p>
       </motion.div>
 

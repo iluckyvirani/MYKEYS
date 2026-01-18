@@ -117,7 +117,7 @@ export default function OwnerDashboardDemo() {
                       <Home className="w-6 h-6 text-blue-400" />
                     </div>
                   </div>
-                  <p className="text-blue-400 text-sm mt-2">3 Short Stay, 2 Long Rent</p>
+                  <p className="text-blue-400 text-sm mt-2">3 Short Rent, 2 Long Rent</p>
                 </div>
                 
                 <div className="bg-gray-800 rounded-xl p-6">
@@ -167,7 +167,7 @@ export default function OwnerDashboardDemo() {
                         </td>
                         <td className="py-4">
                           <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm">
-                            Short Stay
+                            Short Rent
                           </span>
                         </td>
                         <td className="py-4">

@@ -36,7 +36,7 @@ export default function ContactForm({ inquiryType }: ContactFormProps) {
 
   const getInquiryTitle = () => {
     switch (inquiryType) {
-      case "short": return "Short Stay Inquiry";
+      case "short": return "Short Rent Inquiry";
       case "long": return "Long Term Rental Inquiry";
       case "buy": return "Property Purchase Inquiry";
       case "owner": return "Property Owner Inquiry";
@@ -94,7 +94,7 @@ export default function ContactForm({ inquiryType }: ContactFormProps) {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               onClick={() => setIsSubmitted(false)}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
             >
               Send Another Message
             </Button>
@@ -114,7 +114,7 @@ export default function ContactForm({ inquiryType }: ContactFormProps) {
       className="bg-white rounded-[5px] shadow-lg p-8 border border-gray-100"
     >
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg text-white">
+        <div className="p-2 bg-linear-to-r from-green-500 to-emerald-600 rounded-lg text-white">
           {getInquiryIcon()}
         </div>
         <div>
@@ -239,7 +239,7 @@ export default function ContactForm({ inquiryType }: ContactFormProps) {
             required
             rows={5}
             className="w-full px-4 py-3 border border-gray-300 rounded-[5px] focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all resize-none"
-            placeholder={`Please provide details about your ${inquiryType === "short" ? "short stay" : inquiryType === "long" ? "long term rental" : inquiryType === "buy" ? "property purchase" : "inquiry"}...`}
+            placeholder={`Please provide details about your ${inquiryType === "short" ? "short rent" : inquiryType === "long" ? "long term rental" : inquiryType === "buy" ? "property purchase" : "inquiry"}...`}
           />
         </div>
 
@@ -279,7 +279,7 @@ export default function ContactForm({ inquiryType }: ContactFormProps) {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-6 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-6 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <>

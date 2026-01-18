@@ -51,7 +51,7 @@ export default function StatsSection() {
 
   const achievements = [
     {
-      title: "Short Stay Bookings",
+      title: "Short Rent Bookings",
       value: "45,000+",
       description: "Nights booked through platform",
       icon: "🏨"

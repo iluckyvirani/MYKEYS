@@ -111,7 +111,7 @@ export default function PackagesComparison({
     shortTerm: [
       {
         id: "short-premium",
-        name: "Premium Short Stay",
+        name: "Premium Short Rent",
         price: pricing.shortRent?.pricePerNight || 0,
         type: "short",
         features: [
@@ -126,7 +126,7 @@ export default function PackagesComparison({
       },
       {
         id: "short-standard",
-        name: "Standard Short Stay",
+        name: "Standard Short Rent",
         price: (pricing.shortRent?.pricePerNight || 0) * 0.9, // 10% less
         type: "short",
         features: [
@@ -621,7 +621,7 @@ export default function PackagesComparison({
                       <Hotel className="w-4 h-4 text-blue-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold">Short Stay</h4>
+                      <h4 className="font-semibold">Short Rent</h4>
                       <p className="text-xs text-gray-500">Airbnb-style</p>
                     </div>
                   </div>
@@ -773,7 +773,7 @@ export default function PackagesComparison({
             </div>
             <p className="text-green-700 text-sm">
               Based on current market trends and your profile,{" "}
-              <span className="font-semibold">Short Stay</span> provides the best value with 
+              <span className="font-semibold">Short Rent</span> provides the best value with 
               maximum flexibility and 30% lower cost over {comparisonYears} years compared to ownership.
             </p>
           </div>
@@ -795,7 +795,7 @@ export default function PackagesComparison({
             <div>
               <h4 className="font-semibold mb-4 flex items-center gap-2">
                 <Hotel className="w-4 h-4 text-blue-600" />
-                Short Stay Packages
+                Short Rent Packages
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {packages.shortTerm.map((pkg) => (
