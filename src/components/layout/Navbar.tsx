@@ -123,7 +123,7 @@ export default function Navbar() {
             {/* Right side buttons */}
             <div className="flex items-center gap-4">
               {/* FIXED: Corrected conditional logic */}
-              {!isLoggedIn ? (
+              {isLoggedIn ? (
                 <div className="flex items-center gap-4">
                   {/* Dashboard Dropdown */}
                   <div className="relative">
@@ -187,10 +187,10 @@ export default function Navbar() {
                   <Button
                     onClick={handleLogout}
                     variant="ghost"
-                    className={`hidden sm:flex items-center gap-2 ${
+                    className={`hidden sm:flex items-center gap-2 rounded-[5px] cursor-pointer ${
                       scrolled 
                         ? "text-gray-700 hover:bg-gray-50" 
-                        : "text-white/90 hover:bg-white/10"
+                        : "text-white hover:bg-white"
                     }`}
                   >
                     <LogOut className="w-4 h-4" />
@@ -203,10 +203,10 @@ export default function Navbar() {
                   <Link href="/login">
                     <Button
                       variant={scrolled ? "outline" : "ghost"}
-                      className={`hidden sm:flex items-center gap-2 ${
+                      className={`hidden sm:flex items-center gap-2 cursor-pointer rounded-[5px] ${
                         scrolled
                           ? "text-gray-700 border-gray-300 hover:bg-gray-50"
-                          : "text-white/90 hover:bg-white/10"
+                          : "text-white/90 hover:bg-white"
                       }`}
                     >
                       <LogIn className="w-4 h-4" />
@@ -214,7 +214,7 @@ export default function Navbar() {
                     </Button>
                   </Link>
                   <Link href="/signup">
-                    <Button className="hidden sm:flex bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+                    <Button className="hidden sm:flex bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 rounded-[5px]">
                       <User className="w-4 h-4 mr-2" />
                       Sign Up
                     </Button>
