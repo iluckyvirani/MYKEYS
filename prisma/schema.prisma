@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  OWNER
+}
+
+enum PropertyMode {
+  SHORT_RENT
+  LONG_RENT
+  BUY
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+
+  properties Property[]
+  bookings   Booking[]
+  enquiries  Enquiry[]
+}
+
+model Property {
+  id        String        @id @default(uuid())
+  title     String
+  mode      PropertyMode
+  price     Int
+  ownerId   String
+  owner     User          @relation(fields: [ownerId], references: [id])
+  createdAt DateTime      @default(now())
+
+  bookings  Booking[]
+  enquiries Enquiry[]
+}
+
+model Booking {
+  id          String   @id @default(uuid())
+  userId      String
+  propertyId  String
+  checkIn     DateTime
+  checkOut    DateTime
+  totalAmount Int
+  status      String   @default("CONFIRMED")
+
+  user        User     @relation(fields: [userId], references: [id])
+  property    Property @relation(fields: [propertyId], references: [id])
+}
+
+model Enquiry {
+  id          String   @id @default(uuid())
+  userId      String
+  propertyId  String
+  message     String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  property    Property @relation(fields: [propertyId], references: [id])
+}
