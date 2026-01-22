@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
 }
 
 datasource db {
@@ -118,7 +118,8 @@ model User {
   
   // Relations
   properties    Property[]
-  bookings      Booking[]
+  bookingsAsGuest Booking[]    @relation("GuestBookings")  // Guest bookings
+  bookingsAsOwner Booking[]    @relation("OwnerBookings")  // Owner bookings
   inquiries     Inquiry[]
   reviews       Review[]
   notifications Notification[]
@@ -274,9 +275,9 @@ model Booking {
   propertyId      String
   property        Property      @relation(fields: [propertyId], references: [id])
   guestId         String
-  guest           User          @relation(fields: [guestId], references: [id], name: "bookingGuest")
+  guest           User          @relation("GuestBookings", fields: [guestId], references: [id])
   ownerId         String
-  owner           User          @relation(fields: [ownerId], references: [id], name: "bookingOwner")
+  owner           User          @relation("OwnerBookings", fields: [ownerId], references: [id])
   payment         Payment?
   
   // Timestamps
