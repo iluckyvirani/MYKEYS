@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client"
+  url      = env("DATABASE_URL")
 }
 
 datasource db {
@@ -100,37 +101,39 @@ enum SubscriptionStatus {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
-  phone         String?       @unique
-  password      String
-  firstName     String
-  lastName      String
-  avatar        String?
-  role          UserRole      @default(USER)
-  status        UserStatus    @default(ACTIVE)
-  
+  id        String     @id @default(cuid())
+  email     String     @unique
+  phone     String?    @unique
+  password  String
+  firstName String
+  lastName  String
+  avatar    String?
+  role      UserRole   @default(USER)
+  status    UserStatus @default(ACTIVE)
+
   // Owner specific
-  companyName   String?
-  taxId         String?
-  bio           String?
-  website       String?
-  
+  companyName String?
+  taxId       String?
+  bio         String?
+  website     String?
+
   // Relations
-  properties    Property[]
-  bookingsAsGuest Booking[]    @relation("GuestBookings")  // Guest bookings
-  bookingsAsOwner Booking[]    @relation("OwnerBookings")  // Owner bookings
-  inquiries     Inquiry[]
-  reviews       Review[]
-  notifications Notification[]
-  packages      OwnerPackage[]
-  payments      Payment[]
-  
+  properties      Property[]
+  bookingsAsGuest Booking[]      @relation("GuestBookings") // Guest bookings
+  bookingsAsOwner Booking[]      @relation("OwnerBookings") // Owner bookings
+  inquiries       Inquiry[]
+  reviews         Review[]
+  notifications   Notification[]
+  packages        OwnerPackage[]
+  payments        Payment[]
+
   // Timestamps
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  lastLoginAt   DateTime?
-  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  lastLoginAt DateTime?
+  adCampaigns AdCampaign[]
+  reports     Report[]
+
   // Indexes
   @@index([email])
   @@index([role])
@@ -138,65 +141,66 @@ model User {
 }
 
 model Property {
-  id            String        @id @default(cuid())
-  title         String
-  slug          String        @unique
-  description   String?
-  
+  id          String  @id @default(cuid())
+  title       String
+  slug        String  @unique
+  description String?
+
   // Address
-  address       String
-  city          String
-  state         String
-  country       String        @default("India")
-  zipCode       String?
-  latitude      Float?
-  longitude     Float?
-  
+  address   String
+  city      String
+  state     String
+  country   String  @default("India")
+  zipCode   String?
+  latitude  Float?
+  longitude Float?
+
   // Property Details
-  propertyType  PropertyType
-  listingType   ListingType
-  rentalType    RentalType?
-  
+  propertyType PropertyType
+  listingType  ListingType
+  rentalType   RentalType?
+
   // Pricing
-  price         Float
-  priceType     String        // nightly, monthly, total
-  cleaningFee   Float?        @default(0)
-  serviceFee    Float?        @default(0)
-  securityDeposit Float?      @default(0)
-  
+  price           Float
+  priceType       String // nightly, monthly, total
+  cleaningFee     Float? @default(0)
+  serviceFee      Float? @default(0)
+  securityDeposit Float? @default(0)
+
   // Specifications
-  bedrooms      Int
-  bathrooms     Int
-  sqft          Int?
-  guests        Int           @default(2)
-  minStay       Int           @default(1)
-  maxStay       Int?
-  yearBuilt     Int?
-  parking       Int?          @default(0)
-  
+  bedrooms  Int
+  bathrooms Int
+  sqft      Int?
+  guests    Int  @default(2)
+  minStay   Int  @default(1)
+  maxStay   Int?
+  yearBuilt Int?
+  parking   Int? @default(0)
+
   // Status & Visibility
   status        PropertyStatus @default(DRAFT)
-  isFeatured    Boolean       @default(false)
-  isVerified    Boolean       @default(false)
+  isFeatured    Boolean        @default(false)
+  isVerified    Boolean        @default(false)
   featuredUntil DateTime?
-  
+
   // Relations
-  ownerId       String
-  owner         User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  images        PropertyImage[]
-  amenities     PropertyAmenity[]
-  bookings      Booking[]
-  reviews       Review[]
-  inquiries     Inquiry[]
-  
+  ownerId   String
+  owner     User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  images    PropertyImage[]
+  amenities PropertyAmenity[]
+  bookings  Booking[]
+  reviews   Review[]
+  inquiries Inquiry[]
+
   // Analytics
-  views         Int           @default(0)
-  saves         Int           @default(0)
-  
+  views Int @default(0)
+  saves Int @default(0)
+
   // Timestamps
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  adCampaigns AdCampaign[]
+
   // Indexes
   @@index([ownerId])
   @@index([city])
@@ -206,85 +210,86 @@ model Property {
 }
 
 model PropertyImage {
-  id          String    @id @default(cuid())
-  url         String
-  caption     String?
-  isPrimary   Boolean   @default(false)
-  order       Int       @default(0)
-  
-  propertyId  String
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime  @default(now())
-  
+  id        String  @id @default(cuid())
+  url       String
+  caption   String?
+  isPrimary Boolean @default(false)
+  order     Int     @default(0)
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
   @@index([propertyId])
 }
 
 model Amenity {
-  id          String              @id @default(cuid())
-  name        String              @unique
-  icon        String?
-  category    String
-  
-  properties  PropertyAmenity[]
-  
-  createdAt   DateTime            @default(now())
+  id       String  @id @default(cuid())
+  name     String  @unique
+  icon     String?
+  category String
+
+  properties PropertyAmenity[]
+
+  createdAt DateTime @default(now())
 }
 
 model PropertyAmenity {
-  id          String    @id @default(cuid())
-  propertyId  String
-  amenityId   String
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  amenity     Amenity   @relation(fields: [amenityId], references: [id], onDelete: Cascade)
-  
+  id         String   @id @default(cuid())
+  propertyId String
+  amenityId  String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
   @@unique([propertyId, amenityId])
   @@index([propertyId])
   @@index([amenityId])
 }
 
 model Booking {
-  id              String        @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Booking Details
-  checkIn         DateTime
-  checkOut        DateTime
-  nights          Int
-  guests          Int           @default(1)
-  children        Int?          @default(0)
-  pets            Int?          @default(0)
-  
+  checkIn  DateTime
+  checkOut DateTime
+  nights   Int
+  guests   Int      @default(1)
+  children Int?     @default(0)
+  pets     Int?     @default(0)
+
   // Pricing
-  basePrice       Float
-  cleaningFee     Float?
-  serviceFee      Float?
-  totalAmount     Float
-  paidAmount      Float         @default(0)
-  balanceAmount   Float         @default(0)
-  
+  basePrice     Float
+  cleaningFee   Float?
+  serviceFee    Float?
+  totalAmount   Float
+  paidAmount    Float  @default(0)
+  balanceAmount Float  @default(0)
+
   // Status
-  status          BookingStatus @default(PENDING)
-  paymentStatus   PaymentStatus @default(PENDING)
-  paymentMethod   PaymentMethod?
-  
+  status        BookingStatus  @default(PENDING)
+  paymentStatus PaymentStatus  @default(PENDING)
+  paymentMethod PaymentMethod?
+
   // Special Requests
   specialRequests String?
   notes           String?
-  
+
   // Relations
-  propertyId      String
-  property        Property      @relation(fields: [propertyId], references: [id])
-  guestId         String
-  guest           User          @relation("GuestBookings", fields: [guestId], references: [id])
-  ownerId         String
-  owner           User          @relation("OwnerBookings", fields: [ownerId], references: [id])
-  payment         Payment?
-  
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  guestId    String
+  guest      User     @relation("GuestBookings", fields: [guestId], references: [id])
+  ownerId    String
+  owner      User     @relation("OwnerBookings", fields: [ownerId], references: [id])
+  payment    Payment?
+
   // Timestamps
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  cancelledAt     DateTime?
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  cancelledAt DateTime?
+  review      Review?
+
   // Indexes
   @@index([propertyId])
   @@index([guestId])
@@ -295,31 +300,32 @@ model Booking {
 }
 
 model Payment {
-  id              String        @id @default(cuid())
-  amount          Float
-  currency        String        @default("INR")
-  paymentMethod   PaymentMethod
-  status          PaymentStatus @default(PENDING)
-  transactionId   String?       @unique
-  razorpayOrderId String?
+  id                String        @id @default(cuid())
+  amount            Float
+  currency          String        @default("INR")
+  paymentMethod     PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  transactionId     String?       @unique
+  razorpayOrderId   String?
   razorpayPaymentId String?
   razorpaySignature String?
-  
+
   // Relations
-  bookingId       String?       @unique
-  booking         Booking?      @relation(fields: [bookingId], references: [id])
-  userId          String
-  user            User          @relation(fields: [userId], references: [id])
-  packageId       String?
-  package         OwnerPackage? @relation(fields: [packageId], references: [id])
-  
+  bookingId String?       @unique
+  booking   Booking?      @relation(fields: [bookingId], references: [id])
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  packageId String?
+  package   OwnerPackage? @relation("PackagePayment", fields: [packageId], references: [id])
+
   // Metadata
-  metadata        Json?
-  
+  metadata Json?
+
   // Timestamps
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  ownerPackages OwnerPackage[] @relation("LastPayment")
+
   // Indexes
   @@index([userId])
   @@index([bookingId])
@@ -328,56 +334,56 @@ model Payment {
 }
 
 model Review {
-  id          String    @id @default(cuid())
-  rating      Int       // Range: 1-5 (validate in application layer)
-  comment     String?
-  response    String?
-  
+  id       String  @id @default(cuid())
+  rating   Int // Range: 1-5 (validate in application layer)
+  comment  String?
+  response String?
+
   // Relations
-  propertyId  String
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  bookingId   String?   @unique(map: "Review_bookingId_unique")
-  booking     Booking?  @relation(fields: [bookingId], references: [id])
-  
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  bookingId  String?  @unique(map: "Review_bookingId_unique")
+  booking    Booking? @relation(fields: [bookingId], references: [id])
+
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   respondedAt DateTime?
-  
+
   // Indexes
   @@index([propertyId], map: "Review_propertyId_idx")
   @@index([userId], map: "Review_userId_idx")
 }
 
 model Inquiry {
-  id            String        @id @default(cuid())
-  message       String
-  status        InquiryStatus @default(NEW)
-  priority      String        @default("medium") // high, medium, low
-  type          String        // short_term, long_term, purchase
-  duration      String?
-  budget        Float?
-  
+  id       String        @id @default(cuid())
+  message  String
+  status   InquiryStatus @default(NEW)
+  priority String        @default("medium") // high, medium, low
+  type     String // short_term, long_term, purchase
+  duration String?
+  budget   Float?
+
   // Contact Info
-  name          String
-  email         String
-  phone         String?
-  
+  name  String
+  email String
+  phone String?
+
   // Relations
-  propertyId    String
-  property      Property      @relation(fields: [propertyId], references: [id])
-  userId        String?
-  user          User?         @relation(fields: [userId], references: [id])
-  assignedTo    String?       // User ID of assigned staff
-  
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  assignedTo String? // User ID of assigned staff
+
   // Timestamps
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  respondedAt   DateTime?
-  closedAt      DateTime?
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  respondedAt DateTime?
+  closedAt    DateTime?
+
   // Indexes
   @@index([propertyId])
   @@index([userId])
@@ -386,20 +392,20 @@ model Inquiry {
 }
 
 model Notification {
-  id          String    @id @default(cuid())
-  type        String    // booking, inquiry, payment, system
-  title       String
-  message     String
-  isRead      Boolean   @default(false)
-  data        Json?
-  
+  id      String  @id @default(cuid())
+  type    String // booking, inquiry, payment, system
+  title   String
+  message String
+  isRead  Boolean @default(false)
+  data    Json?
+
   // Relations
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Timestamps
-  createdAt   DateTime  @default(now())
-  
+  createdAt DateTime @default(now())
+
   // Indexes
   @@index([userId])
   @@index([isRead])
@@ -411,62 +417,64 @@ model Package {
   name        String
   tier        PackageTier
   description String?
-  
+
   // Pricing
-  price       Float
-  duration    String      // monthly, yearly
-  isActive    Boolean     @default(true)
-  
+  price    Float
+  duration String // monthly, yearly
+  isActive Boolean @default(true)
+
   // Features
-  propertyLimit   Int     @default(1)
-  featuredLimit   Int     @default(0)
-  storageLimit    Int     @default(5) // in GB
-  supportType     String  @default("email")
-  
+  propertyLimit Int    @default(1)
+  featuredLimit Int    @default(0)
+  storageLimit  Int    @default(5) // in GB
+  supportType   String @default("email")
+
   // Additional Features
-  features     Json       // Array of feature objects
-  
+  features Json // Array of feature objects
+
   // Timestamps
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  ownerPackages OwnerPackage[]
+
   // Indexes
   @@index([tier])
   @@index([isActive])
 }
 
 model OwnerPackage {
-  id            String              @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Subscription Details
-  packageId     String
-  package       Package             @relation(fields: [packageId], references: [id])
-  ownerId       String
-  owner         User                @relation(fields: [ownerId], references: [id])
-  
+  packageId String
+  package   Package @relation(fields: [packageId], references: [id])
+  ownerId   String
+  owner     User    @relation(fields: [ownerId], references: [id])
+
   // Status
-  status        SubscriptionStatus  @default(ACTIVE)
-  autoRenew     Boolean             @default(true)
-  
+  status    SubscriptionStatus @default(ACTIVE)
+  autoRenew Boolean            @default(true)
+
   // Dates
-  startDate     DateTime
-  endDate       DateTime
-  nextBilling   DateTime?
-  cancelledAt   DateTime?
-  
+  startDate   DateTime
+  endDate     DateTime
+  nextBilling DateTime?
+  cancelledAt DateTime?
+
   // Usage
-  propertiesUsed    Int             @default(0)
-  featuredUsed      Int             @default(0)
-  storageUsed       Float           @default(0) // in GB
-  
+  propertiesUsed Int   @default(0)
+  featuredUsed   Int   @default(0)
+  storageUsed    Float @default(0) // in GB
+
   // Payment
   lastPaymentId String?
-  lastPayment   Payment?            @relation(fields: [lastPaymentId], references: [id])
-  
+  lastPayment   Payment? @relation("LastPayment", fields: [lastPaymentId], references: [id])
+  payments      Payment[] @relation("PackagePayment")
+
   // Timestamps
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Indexes
   @@index([ownerId])
   @@index([packageId])
@@ -475,40 +483,40 @@ model OwnerPackage {
 }
 
 model AdCampaign {
-  id            String    @id @default(cuid())
-  name          String
-  platform      String    // facebook, instagram, google
-  adType        String    // image, video, carousel
-  status        String    // active, paused, completed
-  
+  id       String @id @default(cuid())
+  name     String
+  platform String // facebook, instagram, google
+  adType   String // image, video, carousel
+  status   String // active, paused, completed
+
   // Budget
-  budget        Float
-  spent         Float     @default(0)
-  dailyBudget   Float?
-  
+  budget      Float
+  spent       Float  @default(0)
+  dailyBudget Float?
+
   // Dates
-  startDate     DateTime
-  endDate       DateTime
-  
+  startDate DateTime
+  endDate   DateTime
+
   // Targeting
-  targetAudience Json?    // JSON array of audience IDs
-  locations      Json?    // JSON array of locations
-  
+  targetAudience Json? // JSON array of audience IDs
+  locations      Json? // JSON array of locations
+
   // Performance
-  impressions   Int       @default(0)
-  clicks        Int       @default(0)
-  conversions   Int       @default(0)
-  
+  impressions Int @default(0)
+  clicks      Int @default(0)
+  conversions Int @default(0)
+
   // Relations
-  propertyId    String?
-  property      Property? @relation(fields: [propertyId], references: [id])
-  ownerId       String
-  owner         User      @relation(fields: [ownerId], references: [id])
-  
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id])
+  ownerId    String
+  owner      User      @relation(fields: [ownerId], references: [id])
+
   // Timestamps
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Indexes
   @@index([ownerId])
   @@index([propertyId])
@@ -517,22 +525,22 @@ model AdCampaign {
 }
 
 model Report {
-  id            String    @id @default(cuid())
-  name          String
-  type          String    // performance, financial, property
-  parameters    Json      // Report filters and parameters
-  generatedBy   String    // User ID
-  fileUrl       String?
-  fileSize      Int?
-  downloads     Int       @default(0)
-  
+  id          String  @id @default(cuid())
+  name        String
+  type        String // performance, financial, property
+  parameters  Json // Report filters and parameters
+  generatedBy String // User ID
+  fileUrl     String?
+  fileSize    Int?
+  downloads   Int     @default(0)
+
   // Relations
-  ownerId       String?
-  owner         User?     @relation(fields: [ownerId], references: [id])
-  
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id])
+
   // Timestamps
-  createdAt     DateTime  @default(now())
-  
+  createdAt DateTime @default(now())
+
   // Indexes
   @@index([ownerId])
   @@index([type])
@@ -541,18 +549,18 @@ model Report {
 
 // Audit Logs for admin tracking
 model AuditLog {
-  id          String    @id @default(cuid())
-  action      String    // CREATE, UPDATE, DELETE
-  entity      String    // User, Property, Booking, etc.
+  id          String  @id @default(cuid())
+  action      String // CREATE, UPDATE, DELETE
+  entity      String // User, Property, Booking, etc.
   entityId    String
-  changes     Json?     // JSON diff of changes
-  performedBy String    // User ID
+  changes     Json? // JSON diff of changes
+  performedBy String // User ID
   ipAddress   String?
   userAgent   String?
-  
+
   // Timestamps
-  createdAt   DateTime  @default(now())
-  
+  createdAt DateTime @default(now())
+
   // Indexes
   @@index([entity])
   @@index([entityId])
