@@ -138,6 +138,10 @@ model User {
   @@index([email])
   @@index([role])
   @@index([status])
+
+  // Add these fields:
+  resetToken       String?
+  resetTokenExpiry DateTime?
 }
 
 model Property {

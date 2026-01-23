@@ -1,54 +1,126 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { comparePassword, generateToken } from "@/lib/auth";
-import { z } from "zod";
+import { successResponse, errorResponse } from "@/lib/response";
+import { loginSchema, validateSchema } from "@/lib/auth/validation";
+import { verifyPassword } from "@/lib/auth/password";
+import { generateTokenPair } from "@/lib/auth/jwt";
+import { toUserDTO } from "@/lib/auth/helpers";
+import { createApiError, ErrorCode } from "@/lib/auth/errors";
+import { LoginRequest, LoginResponse } from "@/types/auth";
+import { UserStatus } from "@prisma/client";
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
-
-export async function POST(req: Request) {
+/**
+ * POST /api/auth/login
+ * Authenticate user and return access & refresh tokens
+ */
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const data = loginSchema.parse(body);
+    // Parse request body
+    const body: LoginRequest = await request.json();
 
+    // Validate input
+    const validation = validateSchema(loginSchema, body);
+    if (!validation.success) {
+      return errorResponse(
+        "Validation failed",
+        400,
+        ErrorCode.VALIDATION_ERROR,
+        validation.errors
+      );
+    }
+
+    const { email, password } = validation.data;
+
+    // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { message: "Invalid credentials" },
-        { status: 401 }
-      );
+      throw createApiError(ErrorCode.INVALID_CREDENTIALS);
     }
 
-    const isValid = await comparePassword(data.password, user.password);
+    // Verify password
+    const isPasswordValid = await verifyPassword(password, user.password);
 
-    if (!isValid) {
-      return NextResponse.json(
-        { message: "Invalid credentials" },
-        { status: 401 }
-      );
+    if (!isPasswordValid) {
+      throw createApiError(ErrorCode.INVALID_CREDENTIALS);
     }
 
-    const token = generateToken({ id: user.id, role: user.role });
+    // Check account status
+    if (user.status === UserStatus.SUSPENDED) {
+      throw createApiError(ErrorCode.ACCOUNT_SUSPENDED);
+    }
 
-    return NextResponse.json({
-      message: "Login successful",
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+    if (user.status === UserStatus.INACTIVE) {
+      throw createApiError(ErrorCode.ACCOUNT_INACTIVE);
+    }
+
+    if (user.status === UserStatus.PENDING) {
+      throw createApiError(ErrorCode.ACCOUNT_PENDING);
+    }
+
+    // Update last login timestamp
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { message: error.message ?? "Something went wrong" },
-      { status: 400 }
+
+    // Generate tokens
+    const { accessToken, refreshToken } = await generateTokenPair(
+      user.id,
+      user.email,
+      user.role
+    );
+
+    // Convert to DTO (exclude password)
+    const userDTO = toUserDTO(user);
+
+    // Prepare response
+    const response: LoginResponse = {
+      user: userDTO,
+      accessToken,
+      refreshToken,
+    };
+
+    // Create NextResponse with tokens in cookies
+    const nextResponse = successResponse(response, "Login successful");
+
+    // Set HTTP-only cookies for tokens
+    nextResponse.cookies.set("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60, // 15 minutes
+      path: "/",
+    });
+
+    nextResponse.cookies.set("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: "/",
+    });
+
+    return nextResponse;
+  } catch (error) {
+    console.error("Login error:", error);
+
+    if (error instanceof Error && "statusCode" in error) {
+      const apiError = error as any;
+      return errorResponse(
+        apiError.message,
+        apiError.statusCode,
+        apiError.code,
+        apiError.errors
+      );
+    }
+
+    return errorResponse(
+      "Login failed. Please try again.",
+      500,
+      ErrorCode.INTERNAL_SERVER_ERROR
     );
   }
 }

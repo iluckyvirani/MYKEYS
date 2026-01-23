@@ -1,58 +1,133 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, generateToken } from "@/lib/auth";
-import { z } from "zod";
+import { successResponse, errorResponse } from "@/lib/response";
+import { registerSchema, validateSchema } from "@/lib/auth/validation";
+import { hashPassword } from "@/lib/auth/password";
+import { generateTokenPair } from "@/lib/auth/jwt";
+import { toUserDTO } from "@/lib/auth/helpers";
+import { createApiError, ErrorCode } from "@/lib/auth/errors";
+import { RegisterRequest, RegisterResponse } from "@/types/auth";
 
-const registerSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-  role: z.enum(["USER", "OWNER"]).optional(),
-});
-
-export async function POST(req: Request) {
+/**
+ * POST /api/auth/register
+ * Register a new user or property owner
+ */
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const data = registerSchema.parse(body);
+    // Parse request body
+    const body: RegisterRequest = await request.json();
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { message: "Email already registered" },
-        { status: 400 }
+    // Validate input
+    const validation = validateSchema(registerSchema, body);
+    if (!validation.success) {
+      return errorResponse(
+        "Validation failed",
+        400,
+        ErrorCode.VALIDATION_ERROR,
+        validation.errors
       );
     }
 
-    const hashedPassword = await hashPassword(data.password);
+    const validatedData = validation.data;
 
+    // Check if email already exists
+    const existingUserByEmail = await prisma.user.findUnique({
+      where: { email: validatedData.email },
+    });
+
+    if (existingUserByEmail) {
+      throw createApiError(ErrorCode.EMAIL_ALREADY_EXISTS);
+    }
+
+    // Check if phone already exists (if provided)
+    if (validatedData.phone) {
+      const existingUserByPhone = await prisma.user.findUnique({
+        where: { phone: validatedData.phone },
+      });
+
+      if (existingUserByPhone) {
+        throw createApiError(ErrorCode.PHONE_ALREADY_EXISTS);
+      }
+    }
+
+    // Hash password
+    const hashedPassword = await hashPassword(validatedData.password);
+
+    // Create user
     const user = await prisma.user.create({
       data: {
-        name: data.name,
-        email: data.email,
+        email: validatedData.email,
         password: hashedPassword,
-        role: data.role ?? "USER",
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        phone: validatedData.phone || null,
+        role: validatedData.role || "USER",
+        status: "ACTIVE",
+        companyName: validatedData.companyName || null,
+        website: validatedData.website || null,
+        lastLoginAt: new Date(),
       },
     });
 
-    const token = generateToken({ id: user.id, role: user.role });
+    // Generate tokens
+    const { accessToken, refreshToken } = await generateTokenPair(
+      user.id,
+      user.email,
+      user.role
+    );
 
-    return NextResponse.json({
-      message: "Registration successful",
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+    // Convert to DTO (exclude password)
+    const userDTO = toUserDTO(user);
+
+    // Prepare response
+    const response: RegisterResponse = {
+      user: userDTO,
+      accessToken,
+      refreshToken,
+    };
+
+    // Create NextResponse with tokens in cookies
+    const nextResponse = successResponse(
+      response,
+      "Registration successful",
+      201
+    );
+
+    // Set HTTP-only cookies for tokens
+    nextResponse.cookies.set("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60, // 15 minutes
+      path: "/",
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { message: error.message ?? "Something went wrong" },
-      { status: 400 }
+
+    nextResponse.cookies.set("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: "/",
+    });
+
+    return nextResponse;
+  } catch (error) {
+    console.error("Registration error:", error);
+
+    if (error instanceof Error && "statusCode" in error) {
+      const apiError = error as any;
+      return errorResponse(
+        apiError.message,
+        apiError.statusCode,
+        apiError.code,
+        apiError.errors
+      );
+    }
+
+    return errorResponse(
+      "Registration failed. Please try again.",
+      500,
+      ErrorCode.INTERNAL_SERVER_ERROR
     );
   }
 }
