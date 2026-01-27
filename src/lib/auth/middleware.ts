@@ -90,11 +90,15 @@ export async function requireOwnerOrAdmin(
 /**
  * Higher-order function for protected route handlers
  */
-export function withAuth(
-  handler: (request: NextRequest, user: JWTPayload) => Promise<NextResponse>,
+export function withAuth<T = any>(
+  handler: (
+    request: NextRequest,
+    user: JWTPayload,
+    context?: T
+  ) => Promise<NextResponse>,
   options?: { roles?: UserRole[] }
 ) {
-  return async (request: NextRequest) => {
+  return async (request: NextRequest, context?: T) => {
     try {
       let user: JWTPayload;
 
@@ -104,7 +108,7 @@ export function withAuth(
         user = await requireAuth(request);
       }
 
-      return await handler(request, user);
+      return await handler(request, user, context);
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === "UNAUTHORIZED") {

@@ -3,11 +3,16 @@ import { BookingInput } from '@/types/bookings';
 
 export const bookingService = {
   async create(data: BookingInput) {
+    const checkIn = new Date(data.checkIn);
+    const checkOut = new Date(data.checkOut);
+    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+    
     return prisma.booking.create({
       data: {
         ...data,
-        checkIn: new Date(data.checkIn),
-        checkOut: new Date(data.checkOut),
+        checkIn,
+        checkOut,
+        nights,
         balanceAmount: data.totalAmount - (data.paidAmount || 0),
       },
     });
