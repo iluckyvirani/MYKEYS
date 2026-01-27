@@ -396,7 +396,7 @@ export default function OwnerBookingsPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
+            <Button className="bg-liner-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
               <Plus className="w-4 h-4 mr-2" />
               Create Booking
             </Button>
@@ -610,7 +610,7 @@ export default function OwnerBookingsPage() {
                   <tr key={booking.id} className="border-b hover:bg-gray-50 group">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-lg bg-linear-to-br from-blue-100 to-green-100 flex items-center justify-center">
                           <Home className="w-6 h-6 text-gray-600" />
                         </div>
                         <div className="flex-1 min-w-0">
