@@ -225,16 +225,10 @@ export default function PropertyCard({
           </div>
 
           {/* CTA Button - Different based on business model */}
-          <Link
-            href={propertyUrl}
-            onClick={(e) => e.stopPropagation()} // Prevent double click
-            className="block w-full mt-6"
-          >
-            <button className="w-full cursor-pointer mt-6 bg-linear-to-r from-green-50 to-emerald-50 text-green-700 hover:text-white border border-green-200 hover:border-transparent hover:from-green-600 hover:to-emerald-600 font-medium py-3 rounded-[5px] transition-all duration-300 group/btn flex items-center justify-center gap-2">
-              View Details
-              <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-            </button>
-          </Link>
+          <div className="w-full mt-6 bg-linear-to-r from-green-50 to-emerald-50 text-green-700 group-hover:text-white border border-green-200 group-hover:border-transparent group-hover:from-green-600 group-hover:to-emerald-600 font-medium py-3 rounded-[5px] transition-all duration-300 flex items-center justify-center gap-2">
+            View Details
+            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </div>
         </div>
       </motion.div>
     </Link>
