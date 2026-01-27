@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Facebook, Twitter, Instagram, Linkedin, Youtube,
@@ -16,6 +16,18 @@ import Link from "next/link";
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [particles, setParticles] = useState<Array<{ left: string; top: string; duration: number; delay: number }>>([]);
+
+  useEffect(() => {
+    setParticles(
+      Array.from({ length: 30 }, () => ({
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        duration: 3 + Math.random() * 4,
+        delay: Math.random() * 3,
+      }))
+    );
+  }, []);
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,22 +106,22 @@ export default function Footer() {
 
       {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(30)].map((_, i) => (
+        {particles.map((particle, i) => (
           <motion.div
             key={i}
             className="absolute w-1 h-1 bg-white/20 rounded-full"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: particle.left,
+              top: particle.top,
             }}
             animate={{
               y: [0, -20, 0],
               opacity: [0.1, 0.3, 0.1],
             }}
             transition={{
-              duration: 3 + Math.random() * 4,
+              duration: particle.duration,
               repeat: Infinity,
-              delay: Math.random() * 3,
+              delay: particle.delay,
             }}
           />
         ))}

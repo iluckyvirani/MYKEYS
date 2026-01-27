@@ -1,9 +1,23 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Award, Building2, Users, ShieldCheck, Clock, Star, Home, Globe } from "lucide-react";
 
 export default function StatsSection() {
+  const [particles, setParticles] = useState<Array<{ left: string; top: string; duration: number; delay: number }>>([]);
+
+  useEffect(() => {
+    setParticles(
+      Array.from({ length: 20 }, () => ({
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        duration: 2 + Math.random() * 3,
+        delay: Math.random() * 2,
+      }))
+    );
+  }, []);
+
   const stats = [
     {
       id: 1,
@@ -224,22 +238,22 @@ export default function StatsSection() {
 
         {/* Floating Particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(20)].map((_, i) => (
+          {particles.map((particle, i) => (
             <motion.div
               key={i}
               className="absolute w-1 h-1 bg-white/30 rounded-full"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
+                left: particle.left,
+                top: particle.top,
               }}
               animate={{
                 y: [0, -20, 0],
                 opacity: [0.3, 0.8, 0.3],
               }}
               transition={{
-                duration: 2 + Math.random() * 3,
+                duration: particle.duration,
                 repeat: Infinity,
-                delay: Math.random() * 2,
+                delay: particle.delay,
               }}
             />
           ))}
