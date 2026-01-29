@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
+import { api } from "@/lib/api";
+import { ChangePasswordRequest } from "@/types/auth";
 
 export default function SecuritySettings() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -18,27 +20,62 @@ export default function SecuritySettings() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
   const [loginAlerts, setLoginAlerts] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState("30");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const passwordRequirements = [
     { text: "At least 8 characters", met: newPassword.length >= 8 },
     { text: "One uppercase letter", met: /[A-Z]/.test(newPassword) },
     { text: "One lowercase letter", met: /[a-z]/.test(newPassword) },
     { text: "One number", met: /[0-9]/.test(newPassword) },
-    { text: "One special character", met: /[!@#$%^&*]/.test(newPassword) },
+    { text: "One special character", met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) },
   ];
 
   const allRequirementsMet = passwordRequirements.every(req => req.met);
   const passwordsMatch = newPassword === confirmPassword && newPassword.length > 0;
 
-  const handlePasswordChange = () => {
-    if (!allRequirementsMet || !passwordsMatch) {
-      alert("Please meet all password requirements and ensure passwords match");
+  const handlePasswordChange = async () => {
+    if (!currentPassword) {
+      setError("Please enter your current password");
       return;
     }
-    alert("Password changed successfully!");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+
+    if (!allRequirementsMet || !passwordsMatch) {
+      setError("Please meet all password requirements and ensure passwords match");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const payload: ChangePasswordRequest = {
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      };
+
+      await api.post("/auth/change-password", payload);
+
+      setSuccess("Password changed successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to change password. Please try again.";
+      setError(message);
+      console.error("Change password error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,6 +92,18 @@ export default function SecuritySettings() {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-[5px] text-sm">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-[5px] text-sm">
+            {success}
+          </div>
+        )}
+
         <div className="space-y-4">
           <div>
             <Label htmlFor="currentPassword">Current Password</Label>
@@ -65,11 +114,14 @@ export default function SecuritySettings() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="pr-10"
+                disabled={loading}
+                placeholder="Enter your current password"
               />
               <button
                 type="button"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                disabled={loading}
               >
                 {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -85,11 +137,14 @@ export default function SecuritySettings() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="pr-10"
+                disabled={loading}
+                placeholder="Enter your new password"
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                disabled={loading}
               >
                 {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -105,11 +160,14 @@ export default function SecuritySettings() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="pr-10"
+                disabled={loading}
+                placeholder="Confirm your new password"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                disabled={loading}
               >
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -140,12 +198,12 @@ export default function SecuritySettings() {
             )}
           </div>
 
-          <Button 
+          <Button
             onClick={handlePasswordChange}
-            disabled={!allRequirementsMet || !passwordsMatch || !currentPassword}
-            className="w-full"
+            disabled={!allRequirementsMet || !passwordsMatch || !currentPassword || loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 cursor-pointer"
           >
-            Update Password
+            {loading ? "Updating Password..." : "Update Password"}
           </Button>
         </div>
       </div>

@@ -75,13 +75,22 @@ export const GET = withAuth<{ params: { id: string } }>(
 
 /**
  * PATCH /api/users/[id]
- * Update user (Admin only)
+ * Update user (Admin only or self)
  */
 export const PATCH = withAuth<{ params: { id: string } }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
     try {
       const body = await request.json();
+
+      // Check permissions
+      if (user.role !== "ADMIN" && user.userId !== params.id) {
+        return errorResponse(
+          "You don't have permission to update this user",
+          403,
+          ErrorCode.FORBIDDEN
+        );
+      }
 
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
@@ -92,36 +101,86 @@ export const PATCH = withAuth<{ params: { id: string } }>(
         return errorResponse("User not found", 404, ErrorCode.USER_NOT_FOUND);
       }
 
+      // Check if phone is being changed and already exists
+      if (body.phone && body.phone !== existingUser.phone) {
+        const existingUserWithPhone = await prisma.user.findFirst({
+          where: {
+            phone: body.phone,
+            NOT: { id: params.id },
+          },
+        });
+
+        if (existingUserWithPhone) {
+          return errorResponse(
+            "Phone number already in use",
+            400,
+            ErrorCode.PHONE_ALREADY_EXISTS
+          );
+        }
+      }
+
       // Update user
       const updatedUser = await prisma.user.update({
         where: { id: params.id },
         data: {
           ...(body.firstName && { firstName: body.firstName }),
           ...(body.lastName && { lastName: body.lastName }),
-          ...(body.phone !== undefined && { phone: body.phone }),
-          ...(body.avatar !== undefined && { avatar: body.avatar }),
-          ...(body.role && { role: body.role }),
-          ...(body.status && { status: body.status }),
-          ...(body.companyName !== undefined && { companyName: body.companyName }),
-          ...(body.taxId !== undefined && { taxId: body.taxId }),
-          ...(body.bio !== undefined && { bio: body.bio }),
-          ...(body.website !== undefined && { website: body.website }),
+          ...(body.phone !== undefined && { phone: body.phone || null }),
+          ...(body.avatar !== undefined && { avatar: body.avatar || null }),
+          // Personal Information
+          ...(body.birthDate !== undefined && {
+            birthDate: body.birthDate || null,
+          }),
+          // Address Information
+          ...(body.address !== undefined && { address: body.address || null }),
+          ...(body.city !== undefined && { city: body.city || null }),
+          ...(body.state !== undefined && { state: body.state || null }),
+          ...(body.country !== undefined && { country: body.country || null }),
+          ...(body.zipCode !== undefined && { zipCode: body.zipCode || null }),
+          // Emergency Contact
+          ...(body.emergencyName !== undefined && {
+            emergencyName: body.emergencyName || null,
+          }),
+          ...(body.emergencyContact !== undefined && {
+            emergencyContact: body.emergencyContact || null,
+          }),
+          // Owner-specific fields
+          ...(body.website !== undefined && { website: body.website || null }),
+          ...(body.companyName !== undefined && {
+            companyName: body.companyName || null,
+          }),
+          ...(body.taxId !== undefined && { taxId: body.taxId || null }),
+          // Admin only updates
+          ...(user.role === "ADMIN" &&
+            body.status && { status: body.status }),
+          ...(user.role === "ADMIN" && body.role && { role: body.role }),
         },
       });
 
+      // Convert to DTO (exclude password)
       const userDTO = toUserDTO(updatedUser);
 
       return successResponse(userDTO, "User updated successfully");
     } catch (error) {
       console.error("Update user error:", error);
+
+      if (error instanceof Error && "statusCode" in error) {
+        const apiError = error as any;
+        return errorResponse(
+          apiError.message,
+          apiError.statusCode,
+          apiError.code,
+          apiError.errors
+        );
+      }
+
       return errorResponse(
         "Failed to update user",
         500,
         ErrorCode.INTERNAL_SERVER_ERROR
       );
     }
-  },
-  { roles: ["ADMIN" as any] }
+  }
 );
 
 /**
@@ -132,6 +191,15 @@ export const DELETE = withAuth<{ params: { id: string } }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
     try {
+      // Check if user is admin
+      if (user.role !== "ADMIN") {
+        return errorResponse(
+          "You don't have permission to delete users",
+          403,
+          ErrorCode.FORBIDDEN
+        );
+      }
+
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
         where: { id: params.id },
@@ -141,16 +209,16 @@ export const DELETE = withAuth<{ params: { id: string } }>(
         return errorResponse("User not found", 404, ErrorCode.USER_NOT_FOUND);
       }
 
-      // Prevent deleting self
-      if (user.userId === params.id) {
+      // Cannot delete admin
+      if (existingUser.role === "ADMIN") {
         return errorResponse(
-          "You cannot delete your own account",
+          "Cannot delete admin users",
           400,
-          ErrorCode.INVALID_INPUT
+          ErrorCode.VALIDATION_ERROR
         );
       }
 
-      // Delete user (cascade will handle related records)
+      // Delete user
       await prisma.user.delete({
         where: { id: params.id },
       });
@@ -158,12 +226,12 @@ export const DELETE = withAuth<{ params: { id: string } }>(
       return successResponse(null, "User deleted successfully");
     } catch (error) {
       console.error("Delete user error:", error);
+
       return errorResponse(
         "Failed to delete user",
         500,
         ErrorCode.INTERNAL_SERVER_ERROR
       );
     }
-  },
-  { roles: ["ADMIN" as any] }
+  }
 );

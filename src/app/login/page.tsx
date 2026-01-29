@@ -6,24 +6,65 @@ import Link from "next/link";
 import { Lock, Mail } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { LoginRequest, LoginResponse } from "@/types/auth";
 
 export default function LoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
-      alert("Please enter email and password");
+      setError("Please enter email and password");
       return;
     }
 
-    // dummy token (replace with API later)
-    localStorage.setItem("auth_token", "demo_auth_token_123");
-    localStorage.setItem("user_email", email);
+    setLoading(true);
+    setError("");
 
-    router.push("/");
+    try {
+      const loginData: LoginRequest = {
+        email,
+        password,
+      };
+
+      const response = await api.post<LoginResponse>("/auth/login", loginData);
+
+      if (response.data) {
+        const { user, accessToken, refreshToken } = response.data;
+
+        // Store tokens
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+        localStorage.setItem("user", JSON.stringify(user));
+
+        // Redirect based on user role
+        if (user.role === "OWNER") {
+          router.push("/owner/dashboard");
+        } else {
+          router.push("/user/dashboard");
+        }
+      }
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Login failed. Please try again.";
+      setError(message);
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleLogin();
+    }
   };
 
   return (
@@ -31,6 +72,12 @@ export default function LoginPage() {
       <h2 className="text-2xl font-spartan font-bold mb-6">Login</h2>
 
       <div className="space-y-4">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-[5px] text-sm">
+            {error}
+          </div>
+        )}
+
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
           <input
@@ -39,6 +86,8 @@ export default function LoginPage() {
             className="input-field bg-gray-50 pl-10"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={loading}
           />
         </div>
 
@@ -50,27 +99,33 @@ export default function LoginPage() {
             className="input-field bg-gray-50 pl-10"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={loading}
           />
         </div>
 
         <div className="flex justify-between text-sm text-gray-500">
           <label className="flex items-center gap-2">
-            <input type="checkbox" /> Remember me
+            <input type="checkbox" disabled={loading} /> Remember me
           </label>
-          <span className="hover:text-green-600 cursor-pointer">
+          <Link
+            href="/forgot-password"
+            className="hover:text-green-600 cursor-pointer font-semibold"
+          >
             Forgot password?
-          </span>
+          </Link>
         </div>
 
         <Button
           onClick={handleLogin}
-          className="w-full bg-green-600 hover:bg-green-700 rounded-[5px] cursor-pointer"
+          disabled={loading}
+          className="w-full bg-green-600 hover:bg-green-700 rounded-[5px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Login / Sign in
+          {loading ? "Logging in..." : "Login / Sign in"}
         </Button>
 
         <p className="text-center text-sm mt-2">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <Link href="/signup" className="text-green-600 font-semibold">
             Sign Up
           </Link>
