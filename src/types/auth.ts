@@ -13,10 +13,26 @@ export interface UserDTO {
   avatar: string | null;
   role: UserRole;
   status: UserStatus;
+
+  // Personal Information
+  birthDate: string | null;
+
+  // Address Information
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  zipCode: string | null;
+
+  // Emergency Contact
+  emergencyName: string | null;
+  emergencyContact: string | null;
+
+  // Owner specific
   companyName: string | null;
   taxId: string | null;
-  bio: string | null;
   website: string | null;
+
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt: Date | null;
@@ -85,10 +101,17 @@ export interface UpdateProfileRequest {
   lastName?: string;
   phone?: string;
   avatar?: string;
-  bio?: string;
-  website?: string;
+  birthDate?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zipCode?: string;
+  emergencyName?: string;
+  emergencyContact?: string;
   companyName?: string;
   taxId?: string;
+  website?: string;
 }
 
 /**

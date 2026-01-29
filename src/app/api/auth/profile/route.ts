@@ -56,9 +56,34 @@ export async function PATCH(request: NextRequest) {
         ...(validatedData.avatar !== undefined && {
           avatar: validatedData.avatar || null,
         }),
-        ...(validatedData.bio !== undefined && {
-          bio: validatedData.bio || null,
+        // Personal Information
+        ...(validatedData.birthDate !== undefined && {
+          birthDate: validatedData.birthDate || null,
         }),
+        // Address Information
+        ...(validatedData.address !== undefined && {
+          address: validatedData.address || null,
+        }),
+        ...(validatedData.city !== undefined && {
+          city: validatedData.city || null,
+        }),
+        ...(validatedData.state !== undefined && {
+          state: validatedData.state || null,
+        }),
+        ...(validatedData.country !== undefined && {
+          country: validatedData.country || null,
+        }),
+        ...(validatedData.zipCode !== undefined && {
+          zipCode: validatedData.zipCode || null,
+        }),
+        // Emergency Contact
+        ...(validatedData.emergencyName !== undefined && {
+          emergencyName: validatedData.emergencyName || null,
+        }),
+        ...(validatedData.emergencyContact !== undefined && {
+          emergencyContact: validatedData.emergencyContact || null,
+        }),
+        // Owner-specific fields
         ...(validatedData.website !== undefined && {
           website: validatedData.website || null,
         }),

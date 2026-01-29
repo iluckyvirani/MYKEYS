@@ -75,7 +75,18 @@ export const updateProfileSchema = z.object({
   lastName: nameSchema.optional(),
   phone: phoneSchema,
   avatar: z.string().url("Invalid avatar URL").optional().or(z.literal("")),
-  bio: z.string().max(500, "Bio must not exceed 500 characters").optional(),
+  // Personal Information
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)").optional(),
+  // Address Information
+  address: z.string().max(255).optional(),
+  city: z.string().max(100).optional(),
+  state: z.string().max(100).optional(),
+  country: z.string().max(100).optional(),
+  zipCode: z.string().max(20).optional(),
+  // Emergency Contact
+  emergencyName: nameSchema.optional(),
+  emergencyContact: phoneSchema.optional(),
+  // Owner-specific fields
   website: z.string().url("Invalid website URL").optional().or(z.literal("")),
   companyName: z.string().min(2).max(100).optional(),
   taxId: z.string().max(50).optional(),
@@ -133,7 +144,7 @@ export function validateSchema<T>(
   }
 
   const errors: Record<string, string[]> = {};
-  result.error.errors.forEach((err) => {
+  result.error.issues.forEach((err) => {
     const path = err.path.join(".");
     if (!errors[path]) {
       errors[path] = [];

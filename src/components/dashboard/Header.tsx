@@ -1,8 +1,12 @@
 "use client";
 
-import { Bell, Search, Menu, User } from "lucide-react";
+import { Bell, Search, Menu, User, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import { UserDTO } from "@/types/auth";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   role: "user" | "owner";
@@ -11,6 +15,46 @@ interface HeaderProps {
 }
 
 export default function Header({ role, onMenuClick }: HeaderProps) {
+  const router = useRouter();
+  const [user, setUser] = useState<UserDTO | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get<UserDTO>("/auth/me");
+      if (response.data) {
+        setUser(response.data);
+        localStorage.setItem("user", JSON.stringify(response.data));
+      }
+    } catch (error) {
+      console.error("Failed to fetch user profile:", error);
+      // If unauthorized, redirect to login
+      if ((error as any)?.response?.status === 401) {
+        router.push("/login");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
+    router.push("/login");
+  };
+
+  const displayName = user
+    ? `${user.firstName} ${user.lastName}`
+    : "Loading...";
+  const userRole = user?.role === "OWNER" ? "Property Owner" : "Tenant";
+
   return (
     <header className="sticky top-0 z-30 bg-white border-b shadow-sm">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -44,15 +88,51 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
 
             <div className="h-8 w-px bg-gray-200"></div>
 
-            <Button variant="ghost" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
-              </div>
-              <div className="hidden md:block text-left">
-                <p className="text-sm font-medium">John Doe</p>
-                <p className="text-xs text-gray-500">{role === "user" ? "Tenant" : "Property Owner"}</p>
-              </div>
-            </Button>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+              >
+                <div className="w-8 h-8 rounded-full bg-linear-to-r from-green-500 to-emerald-600 flex items-center justify-center">
+                  {loading ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ) : (
+                    <User className="w-4 h-4 text-white" />
+                  )}
+                </div>
+                <div className="hidden md:block text-left">
+                  <p className="text-sm font-medium">{displayName}</p>
+                  <p className="text-xs text-gray-500">{userRole}</p>
+                </div>
+              </Button>
+
+              {/* User Dropdown Menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                  <button
+                    onClick={() => {
+                      router.push("/dashboard/profile");
+                      setShowUserMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <User className="w-4 h-4" />
+                    View Profile
+                  </button>
+
+                  <div className="border-t border-gray-200 my-2" />
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

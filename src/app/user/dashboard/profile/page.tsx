@@ -7,9 +7,56 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileForm from "@/components/dashboard/UserDashboard/ProfileForm";
 import SecuritySettings from "@/components/dashboard/UserDashboard/SecuritySettings";
 import NotificationSettings from "@/components/dashboard/UserDashboard/NotificationSettings";
-
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
+import { UserDTO } from "@/types/auth";
 
 export default function ProfilePage() {
+  const [user, setUser] = useState<UserDTO | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get<UserDTO>("/auth/me");
+      if (response.data) {
+        setUser(response.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileUpdate = () => {
+    fetchUserData();
+  };
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "Not specified";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout defaultRole="user">
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout defaultRole="user">
       {/* Header */}
@@ -21,10 +68,6 @@ export default function ProfilePage() {
               Manage your profile, security, and preferences
             </p>
           </div>
-          <Button className="cursor-pointer rounded-[5px]">
-            <Settings className="w-4 h-4 mr-2" />
-            Save Changes
-          </Button>
         </div>
       </div>
 
@@ -35,17 +78,16 @@ export default function ProfilePage() {
             <User className="w-10 h-10 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-gray-900">John Doe</h3>
-            <p className="text-gray-600">john.doe@example.com</p>
+            <h3 className="text-xl font-bold text-gray-900">
+              {user ? `${user.firstName} ${user.lastName}` : "Loading..."}
+            </h3>
+            <p className="text-gray-600">{user?.email}</p>
             <div className="flex items-center gap-4 mt-2">
               <div className="text-sm">
-                <span className="font-medium">Member since:</span> Jan 2023
+                <span className="font-medium">Member since:</span> {formatDate(user?.createdAt?.toString())}
               </div>
               <div className="text-sm">
-                <span className="font-medium">Verified:</span> Email, Phone
-              </div>
-              <div className="text-sm">
-                <span className="font-medium">Bookings:</span> 12
+                <span className="font-medium">Last login:</span> {user?.lastLoginAt ? formatDate(user.lastLoginAt?.toString()) : "Never"}
               </div>
             </div>
           </div>
@@ -81,17 +123,17 @@ export default function ProfilePage() {
 
           <div className="p-6">
             <TabsContent value="profile" className="m-0">
-              <ProfileForm />
+              <ProfileForm onSuccess={handleProfileUpdate} />
             </TabsContent>
-            
+
             <TabsContent value="security" className="m-0">
               <SecuritySettings />
             </TabsContent>
-            
+
             <TabsContent value="notifications" className="m-0">
               <NotificationSettings />
             </TabsContent>
-            
+
             <TabsContent value="payment" className="m-0">
               <div className="text-center py-12">
                 <CreditCard className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -100,7 +142,7 @@ export default function ProfilePage() {
                 <Button className="mt-4">Add Payment Method</Button>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="documents" className="m-0">
               <div className="text-center py-12">
                 <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />

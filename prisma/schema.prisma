@@ -110,37 +110,50 @@ model User {
   role      UserRole   @default(USER)
   status    UserStatus @default(ACTIVE)
 
+  // Personal Information (for USER role)
+  birthDate String?
+  
+  // Address Information (for USER role)
+  address String?
+  city    String?
+  state   String?
+  country String?
+  zipCode String?
+
+  // Emergency Contact (for USER role)
+  emergencyName    String?
+  emergencyContact String?
+
   // Owner specific
   companyName String?
   taxId       String?
-  bio         String?
   website     String?
 
   // Relations
   properties      Property[]
-  bookingsAsGuest Booking[]      @relation("GuestBookings") // Guest bookings
-  bookingsAsOwner Booking[]      @relation("OwnerBookings") // Owner bookings
+  bookingsAsGuest Booking[]      @relation("GuestBookings")
+  bookingsAsOwner Booking[]      @relation("OwnerBookings")
   inquiries       Inquiry[]
   reviews         Review[]
   notifications   Notification[]
   packages        OwnerPackage[]
   payments        Payment[]
+  adCampaigns     AdCampaign[]
+  reports         Report[]
+
+  // Authentication
+  resetToken       String?
+  resetTokenExpiry DateTime?
 
   // Timestamps
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   lastLoginAt DateTime?
-  adCampaigns AdCampaign[]
-  reports     Report[]
 
   // Indexes
   @@index([email])
   @@index([role])
   @@index([status])
-
-  // Add these fields:
-  resetToken       String?
-  resetTokenExpiry DateTime?
 }
 
 model Property {
@@ -194,15 +207,15 @@ model Property {
   bookings  Booking[]
   reviews   Review[]
   inquiries Inquiry[]
+  adCampaigns AdCampaign[]
 
   // Analytics
   views Int @default(0)
   saves Int @default(0)
 
   // Timestamps
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  adCampaigns AdCampaign[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Indexes
   @@index([ownerId])
@@ -286,12 +299,12 @@ model Booking {
   ownerId    String?
   owner      User?    @relation("OwnerBookings", fields: [ownerId], references: [id])
   payment    Payment?
+  review     Review?
 
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   cancelledAt DateTime?
-  review      Review?
 
   // Indexes
   @@index([propertyId])
@@ -338,7 +351,7 @@ model Payment {
 
 model Review {
   id       String  @id @default(cuid())
-  rating   Int // Range: 1-5 (validate in application layer)
+  rating   Int // Range: 1-5
   comment  String?
   response String?
 
@@ -347,7 +360,7 @@ model Review {
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   userId     String
   user       User     @relation(fields: [userId], references: [id])
-  bookingId  String?  @unique(map: "Review_bookingId_unique")
+  bookingId  String?  @unique
   booking    Booking? @relation(fields: [bookingId], references: [id])
 
   // Timestamps
@@ -356,15 +369,15 @@ model Review {
   respondedAt DateTime?
 
   // Indexes
-  @@index([propertyId], map: "Review_propertyId_idx")
-  @@index([userId], map: "Review_userId_idx")
+  @@index([propertyId])
+  @@index([userId])
 }
 
 model Inquiry {
   id       String        @id @default(cuid())
   message  String
   status   InquiryStatus @default(NEW)
-  priority String        @default("medium") // high, medium, low
+  priority String        @default("medium")
   type     String // short_term, long_term, purchase
   duration String?
   budget   Float?
@@ -550,7 +563,6 @@ model Report {
   @@index([createdAt])
 }
 
-// Audit Logs for admin tracking
 model AuditLog {
   id          String  @id @default(cuid())
   action      String // CREATE, UPDATE, DELETE
@@ -567,6 +579,6 @@ model AuditLog {
   // Indexes
   @@index([entity])
   @@index([entityId])
-  @@index([performedBy])
+  @@index([performedAt])
   @@index([createdAt])
 }
