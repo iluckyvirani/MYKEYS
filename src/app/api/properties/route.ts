@@ -139,9 +139,9 @@ export const POST = withAuth(
         listingType,
         bedrooms,
         bathrooms,
-        area,
         amenities,
         images,
+        priceType
       } = body;
 
       if (!title || !address || !city || !state || !price || !propertyType || !listingType) {
@@ -166,18 +166,15 @@ export const POST = withAuth(
           latitude: body.latitude,
           longitude: body.longitude,
           price,
+          priceType: priceType || "MONTHLY",
           propertyType,
           listingType,
           rentalType: body.rentalType,
           bedrooms: bedrooms || 0,
           bathrooms: bathrooms || 0,
-          area,
-          furnished: body.furnished || false,
-          parking: body.parking || false,
-          petFriendly: body.petFriendly || false,
+          parking: body.parking || 0,
           status: "DRAFT",
           ownerId: user.userId,
-          availableFrom: body.availableFrom ? new Date(body.availableFrom) : new Date(),
           // Create images if provided
           ...(images && images.length > 0 && {
             images: {

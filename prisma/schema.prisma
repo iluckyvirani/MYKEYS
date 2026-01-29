@@ -283,8 +283,8 @@ model Booking {
   property   Property @relation(fields: [propertyId], references: [id])
   guestId    String
   guest      User     @relation("GuestBookings", fields: [guestId], references: [id])
-  ownerId    String
-  owner      User     @relation("OwnerBookings", fields: [ownerId], references: [id])
+  ownerId    String?
+  owner      User?    @relation("OwnerBookings", fields: [ownerId], references: [id])
   payment    Payment?
 
   // Timestamps

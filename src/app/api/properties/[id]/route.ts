@@ -11,11 +11,12 @@ import { JWTPayload } from "@/lib/auth/jwt";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const property = await prisma.property.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         owner: {
           select: {
@@ -100,13 +101,14 @@ export async function GET(
  * PATCH /api/properties/[id]
  * Update property (Owner/Admin only)
  */
-export const PATCH = withAuth<{ params: { id: string } }>(
+export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
+    const { id } = await params;
     try {
       // Check if property exists and user owns it
       const existingProperty = await prisma.property.findUnique({
-        where: { id: params.id },
+        where: { id },
       });
 
       if (!existingProperty) {
@@ -129,7 +131,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
 
       // Update property
       const property = await prisma.property.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           ...(body.title && { title: body.title }),
           ...(body.description && { description: body.description }),
@@ -180,13 +182,14 @@ export const PATCH = withAuth<{ params: { id: string } }>(
  * DELETE /api/properties/[id]
  * Delete property (Owner/Admin only)
  */
-export const DELETE = withAuth<{ params: { id: string } }>(
+export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
+    const { id } = await params;
     try {
       // Check if property exists and user owns it
       const existingProperty = await prisma.property.findUnique({
-        where: { id: params.id },
+        where: { id },
       });
 
       if (!existingProperty) {
@@ -207,7 +210,7 @@ export const DELETE = withAuth<{ params: { id: string } }>(
 
       // Delete property (cascade will delete related records)
       await prisma.property.delete({
-        where: { id: params.id },
+        where: { id },
       });
 
       return successResponse(null, "Property deleted successfully");
