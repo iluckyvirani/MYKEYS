@@ -73,13 +73,21 @@ export interface LoginRequest {
   password: string;
 }
 
+// Login Data (inside data)
+export interface LoginData {
+  user: UserDTO;
+  accessToken: string;
+  refreshToken: string;
+}
+
+
 /**
  * Login Response
  */
 export interface LoginResponse {
-  user: UserDTO;
-  accessToken: string;
-  refreshToken: string;
+  success: boolean;
+  message: string;
+  data: LoginData;
 }
 
 /**

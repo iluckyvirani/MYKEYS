@@ -49,6 +49,7 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
     localStorage.removeItem("user");
     router.push("/login");
   };
+  
 
   const displayName = user
     ? `${user.firstName} ${user.lastName}`

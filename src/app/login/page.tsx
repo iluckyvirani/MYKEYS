@@ -35,7 +35,7 @@ export default function LoginPage() {
       const response = await api.post<LoginResponse>("/auth/login", loginData);
 
       if (response.data) {
-        const { user, accessToken, refreshToken } = response.data;
+        const { user, accessToken, refreshToken } = response.data.data;
 
         // Store tokens
         localStorage.setItem("accessToken", accessToken);
