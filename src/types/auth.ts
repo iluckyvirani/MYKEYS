@@ -38,6 +38,10 @@ export interface UserDTO {
   lastLoginAt: Date | null;
 }
 
+
+
+
+
 /**
  * Register Request
  */
@@ -77,6 +81,15 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
 }
+
+/**
+ * Get profile Response
+ */
+
+export interface MeResponse {
+  data: UserDTO;
+}
+
 
 /**
  * Refresh Token Request

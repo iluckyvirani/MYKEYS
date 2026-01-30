@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { UserDTO } from "@/types/auth";
+import { MeResponse, UserDTO } from "@/types/auth";
 import { useRouter } from "next/navigation";
 
 interface HeaderProps {
@@ -27,9 +27,9 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      const response = await api.get<UserDTO>("/auth/me");
+      const response = await api.get<MeResponse>("/auth/me");
       if (response.data) {
-        setUser(response.data);
+        setUser(response.data.data);
         localStorage.setItem("user", JSON.stringify(response.data));
       }
     } catch (error) {
