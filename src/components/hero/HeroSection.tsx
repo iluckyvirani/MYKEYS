@@ -3,8 +3,15 @@
 import { motion } from "framer-motion";
 import BuySellRentTabs from "./BuySellRentTabs";
 import PropertySearchBar from "../search/PropertySearchBar";
+import { useState } from "react";
 
-export default function HeroSection() {
+export default function HeroSection({ selectedTab: propSelectedTab, onTabChange: propOnTabChange }: { selectedTab: "all" | "buy" | "short-rent" | "long-rent"; onTabChange: (tab: "all" | "buy" | "short-rent" | "long-rent") => void }) {
+  const [localSelectedTab, setLocalSelectedTab] = useState<"all" | "buy" | "short-rent" | "long-rent">(propSelectedTab);
+
+  const handleTabChange = (tab: "all" | "buy" | "short-rent" | "long-rent") => {
+    setLocalSelectedTab(tab);
+    propOnTabChange(tab);
+  };
   return (
     <section className="relative h-screen min-h-175 flex items-center justify-center overflow-hidden">
       {/* Zoom Background Image Effect */}
@@ -53,17 +60,19 @@ export default function HeroSection() {
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.4 }}
         >
-          <BuySellRentTabs />
+          <BuySellRentTabs selectedTab={localSelectedTab} onTabChange={handleTabChange} />
         </motion.div>
 
         {/* Property Search */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <PropertySearchBar />
-        </motion.div>
+        {localSelectedTab !== "all" && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <PropertySearchBar selectedType={localSelectedTab} />
+          </motion.div>
+        )}        
       </div>
 
       {/* Scroll Indicator */}

@@ -49,7 +49,7 @@ export default function SignupPage() {
       );
 
       if (response.data) {
-        const { user, accessToken, refreshToken } = response.data;
+        const { user, accessToken, refreshToken } = response.data.data;
 
         // Store tokens
         localStorage.setItem("accessToken", accessToken);

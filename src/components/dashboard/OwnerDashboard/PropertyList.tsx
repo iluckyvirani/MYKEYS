@@ -198,7 +198,7 @@ export default function PropertyList() {
                 <tr key={property.id} className="border-b hover:bg-gray-50 transition-colors">
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-lg bg-linear-to-br from-blue-100 to-green-100 flex items-center justify-center">
                         <Building className="w-6 h-6 text-gray-600" />
                       </div>
                       <div>

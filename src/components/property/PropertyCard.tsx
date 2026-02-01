@@ -10,6 +10,7 @@ export interface PropertyCardProps {
   id?: number;
   imageUrl: string;
   title: string;
+  slug: string;
   address: string;
   price: string;
   rating: number;
@@ -30,36 +31,33 @@ export interface PropertyCardProps {
 }
 
 export default function PropertyCard({
-  id = 1,
-  imageUrl = "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
-  title = "Modern Luxury Villa",
-  address = "710 Boyd Dr, Baton Rouge, LA",
-  price = "$5000",
-  rentalType = "short",
-  listingType = "rent",
-  priceType = "monthly",
-  rating = 5.0,
-  reviews = 30,
-  sqft = 8000,
-  beds = 4,
-  baths = 4,
-  propertyType = "Villa",
-  isFeatured = false,
-  isNew = false,
-  minStay = 2,
-  maxStay = 30,
-  minLease = 12
+  id,
+  imageUrl,
+  title,
+  slug,
+  address,
+  price,
+  rentalType,
+  listingType,
+  priceType,
+  rating,
+  reviews,
+  sqft,
+  beds,
+  baths,
+  propertyType,
+  isFeatured,
+  isNew,
+  minStay = 1,
+  maxStay,
+  minLease = 1
 }: PropertyCardProps) {
   const [isLiked, setIsLiked] = useState(false);
 
 
   // Function to generate proper slug/URL
   const getPropertySlug = () => {
-    const slugTitle = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-    return `/property/${id}-${slugTitle}`;
+    return `/property/${id}`;
   };
 
   const propertyUrl = getPropertySlug();

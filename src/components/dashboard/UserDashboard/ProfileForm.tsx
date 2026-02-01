@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { UserDTO, UpdateProfileRequest } from "@/types/auth";
+import { UserDTO, UpdateProfileRequest, MeResponse } from "@/types/auth";
 
 interface ProfileFormProps {
   onSuccess?: () => void;
@@ -38,10 +38,10 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
   const fetchUserProfile = async () => {
     try {
       setInitialLoading(true);
-      const response = await api.get<UserDTO>("/auth/me");
+      const response = await api.get<MeResponse>("/auth/me");
 
       if (response.data) {
-        const user = response.data;
+        const user = response.data.data;
         setFormData({
           firstName: user.firstName || "",
           lastName: user.lastName || "",

@@ -51,6 +51,12 @@ enum RentalType {
   LONG_TERM
 }
 
+enum PriceType {
+  NIGHTLY
+  MONTHLY
+  TOTAL
+}
+
 enum BookingStatus {
   PENDING
   CONFIRMED
@@ -178,7 +184,8 @@ model Property {
 
   // Pricing
   price           Float
-  priceType       String // nightly, monthly, total
+  priceType       PriceType // nightly, monthly, total
+  originalPrice   Float?
   cleaningFee     Float? @default(0)
   serviceFee      Float? @default(0)
   securityDeposit Float? @default(0)
@@ -210,8 +217,10 @@ model Property {
   adCampaigns AdCampaign[]
 
   // Analytics
-  views Int @default(0)
-  saves Int @default(0)
+  views      Int   @default(0)
+  saves      Int   @default(0)
+  occupancy  Int   @default(0) // percentage: 0-100
+  revenue    Float @default(0) // monthly revenue for owner dashboard
 
   // Timestamps
   createdAt DateTime @default(now())

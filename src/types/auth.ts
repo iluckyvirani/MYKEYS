@@ -56,13 +56,20 @@ export interface RegisterRequest {
   website?: string;
 }
 
+// resgster response 
+export interface RegisterData {
+  user: UserDTO;
+  accessToken: string;
+  refreshToken: string;
+}
+
 /**
  * Register Response
  */
 export interface RegisterResponse {
-  user: UserDTO;
-  accessToken: string;
-  refreshToken: string;
+  success: boolean;
+  message: string;
+  data: RegisterData;
 }
 
 /**

@@ -152,6 +152,26 @@ export const POST = withAuth(
         );
       }
 
+      // Validate amenities exist if provided
+      if (amenities && amenities.length > 0) {
+        const existingAmenities = await prisma.amenity.findMany({
+          where: {
+            id: {
+              in: amenities,
+            },
+          },
+          select: { id: true },
+        });
+
+        if (existingAmenities.length !== amenities.length) {
+          return errorResponse(
+            "One or more amenities do not exist",
+            400,
+            ErrorCode.VALIDATION_ERROR
+          );
+        }
+      }
+
       // Create property
       const property = await prisma.property.create({
         data: {
@@ -167,12 +187,19 @@ export const POST = withAuth(
           longitude: body.longitude,
           price,
           priceType: priceType || "MONTHLY",
+          originalPrice: body.originalPrice,
           propertyType,
           listingType,
           rentalType: body.rentalType,
           bedrooms: bedrooms || 0,
           bathrooms: bathrooms || 0,
+          sqft: body.sqft,
+          guests: body.guests || 2,
+          minStay: body.minStay || 1,
+          maxStay: body.maxStay,
           parking: body.parking || 0,
+          occupancy: body.occupancy || 0,
+          revenue: body.revenue || 0,
           status: "DRAFT",
           ownerId: user.userId,
           // Create images if provided

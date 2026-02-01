@@ -9,7 +9,7 @@ import SecuritySettings from "@/components/dashboard/UserDashboard/SecuritySetti
 import NotificationSettings from "@/components/dashboard/UserDashboard/NotificationSettings";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { UserDTO } from "@/types/auth";
+import { MeResponse, UserDTO } from "@/types/auth";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<UserDTO | null>(null);
@@ -22,9 +22,9 @@ export default function ProfilePage() {
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      const response = await api.get<UserDTO>("/auth/me");
+      const response = await api.get<MeResponse>("/auth/me");
       if (response.data) {
-        setUser(response.data);
+        setUser(response.data.data);
       }
     } catch (err) {
       console.error("Failed to fetch user data:", err);

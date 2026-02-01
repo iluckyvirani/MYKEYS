@@ -53,7 +53,7 @@ export const registerSchema = z.object({
   firstName: nameSchema,
   lastName: nameSchema,
   phone: phoneSchema,
-  role: z.enum(["USER", "OWNER"]).optional().default("USER"),
+  role: z.enum(["USER", "OWNER", "ADMIN"]).optional().default("USER"),
   // Owner-specific fields
   companyName: z.string().min(2).max(100).optional(),
   website: z.string().url("Invalid website URL").optional().or(z.literal("")),
