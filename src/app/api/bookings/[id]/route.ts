@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UpdateBookingStatusRequest, BookingResponse, UpdateBookingStatusResponse } from '@/types/booking';
+import { bookingService } from '@/lib/bookings/bookingService';
+import { UpdateBookingStatusRequest, BookingResponse, UpdateBookingStatusResponse, BookingType, PaymentStatus, PaymentMethod } from '@/types/bookings';
 
 /**
  * GET /api/bookings/{id}
@@ -87,11 +88,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         cleaningFee: 50,
         serviceFee: 25,
         totalAmount: 775,
-        paymentStatus: 'PAID',
-        paymentMethod: 'CREDIT_CARD',
+        paymentStatus: PaymentStatus.PAID,
+        paymentMethod: PaymentMethod.CREDIT_CARD,
         paidAmount: 775,
         balanceAmount: 0,
-        status: body.status as any,
+        status: body.status,
         ownerId: 'OWNER-1',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

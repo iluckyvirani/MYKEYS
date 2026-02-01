@@ -1,70 +1,171 @@
-// Inquiry Type Definitions - Complete Schema
-// Covers: Long Rent Inquiries and Buy Property Inquiries
+/**
+ * Inquiry Types and Enums
+ * Supports two inquiry types: LONG_RENT and BUY
+ */
 
 // ============= ENUMS =============
+
 export enum InquiryStatus {
-  PENDING = "PENDING",        // Just received
-  REVIEWED = "REVIEWED",      // Owner read it
-  INTERESTED = "INTERESTED",  // Owner interested
-  REJECTED = "REJECTED",      // Owner declined
-  CLOSED = "CLOSED",          // Inquiry concluded
+  PENDING = 'PENDING',
+  REVIEWED = 'REVIEWED',
+  INTERESTED = 'INTERESTED',
+  REJECTED = 'REJECTED',
+  CLOSED = 'CLOSED',
 }
 
 export enum InquiryType {
-  LONG_RENT = "LONG_RENT",
-  BUY = "BUY",
+  LONG_RENT = 'LONG_RENT',
+  BUY = 'BUY',
 }
 
-// ============= UNIFIED INQUIRY BASE =============
+// ============= BASE INTERFACE =============
+
+/**
+ * BaseInquiry - Common fields for all inquiry types
+ */
 export interface BaseInquiry {
+  // Identifiers
   id: string;
   propertyId: string;
-  propertyTitle: string;
-  propertyPrice?: number;     // For buy inquiries
-  
-  // User Details
+
+  // Guest/Inquirer Information
   guestId: string;
   guestName: string;
   guestEmail: string;
   guestPhone: string;
-  
-  // Owner Details
-  ownerId: string;
-  
-  // Message Thread
-  message: string;            // Initial inquiry
-  ownerResponse?: string;     // Owner's response
-  
-  // Status & Metadata
+
+  // Inquiry Details
+  message: string;
   status: InquiryStatus;
-  inquiryType: InquiryType;
+
+  // Owner Response
+  ownerId: string;
+  ownerResponse?: string;
+
+  // Timestamps
   createdAt: string;
   updatedAt: string;
-  lastReplyAt?: string;
-  
-  // Additional
-  priority?: "HIGH" | "MEDIUM" | "LOW";
-  tags?: string[];
-  followUpDate?: string;
 }
 
-// ============= LONG RENT INQUIRY =============
+// ============= SPECIFIC INQUIRY TYPES =============
+
+/**
+ * LongRentInquiry - For long-term rental inquiries (months-based)
+ */
 export interface LongRentInquiry extends BaseInquiry {
   inquiryType: InquiryType.LONG_RENT;
-  desiredStartDate: string;
+  desiredStartDate: string; // ISO date string
   desiredDurationMonths: number;
   numberOfOccupants: number;
-  pricePerMonth: number;
-  minLeasePeriod: number;
+  
+  // Pricing Information
+  pricePerMonth?: number;
+  minLeasePeriod?: number;
   maxLeasePeriod?: number;
-  securityDeposit: number;
+  securityDeposit?: number;
+  estimatedMonthlyTotal?: number; // pricePerMonth + utilities estimate
 }
 
+/**
+ * BuyInquiry - For property purchase inquiries
+ */
+export interface BuyInquiry extends BaseInquiry {
+  inquiryType: InquiryType.BUY;
+  propertyPrice: number; // Total purchase price
+}
+
+// Type union for all inquiry types
+export type Inquiry = LongRentInquiry | BuyInquiry;
+
+// ============= REQUEST/RESPONSE TYPES =============
+
+/**
+ * Request to create a long-rent inquiry
+ */
 export interface CreateLongRentInquiryRequest {
   propertyId: string;
   desiredStartDate: string;
   desiredDurationMonths: number;
   numberOfOccupants: number;
+  message?: string;
+  guestName: string;
+  guestEmail: string;
+  guestPhone?: string;
+}
+
+/**
+ * Request to create a buy inquiry
+ */
+export interface CreateBuyInquiryRequest {
+  propertyId: string;
+  message?: string;
+  guestName: string;
+  guestEmail: string;
+  guestPhone?: string;
+}
+
+/**
+ * Generic inquiry creation request (auto-detects type)
+ */
+export interface CreateInquiryRequest {
+  propertyId: string;
+  desiredStartDate?: string;
+  desiredDurationMonths?: number;
+  numberOfOccupants?: number;
+  message?: string;
+  guestName: string;
+  guestEmail: string;
+  guestPhone?: string;
+}
+
+/**
+ * Request to update inquiry status
+ */
+export interface UpdateInquiryStatusRequest {
+  status: InquiryStatus;
+  ownerResponse?: string;
+}
+
+/**
+ * Single inquiry response
+ */
+export interface InquiryResponse {
+  success: boolean;
+  message: string;
+  data: Inquiry | null;
+}
+
+/**
+ * Paginated inquiry list response
+ */
+export interface InquiryListResponse {
+  success: boolean;
+  message: string;
+  data: {
+    items: Inquiry[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+}
+
+/**
+ * Query filters for fetching inquiries
+ */
+export interface InquiryFilters {
+  propertyId?: string;
+  guestId?: string;
+  ownerId?: string;
+  status?: InquiryStatus;
+  inquiryType?: InquiryType;
+  page?: number;
+  pageSize?: number;
+}
+
+// ============= LEGACY TYPE (for compatibility) =============
+
+export type InquiryInput = {
   message: string;
 }
 
@@ -76,44 +177,6 @@ export interface BuyInquiry extends BaseInquiry {
 
 export interface CreateBuyInquiryRequest {
   propertyId: string;
-  message: string;
-}
-
-// ============= UPDATE INQUIRIES =============
-export interface UpdateInquiryRequest {
-  status?: string;
-  ownerResponse?: string;
-  priority?: "HIGH" | "MEDIUM" | "LOW";
-  tags?: string[];
-  followUpDate?: string;
-}
-
-// ============= RESPONSE TYPES =============
-export interface InquiryResponse<T extends BaseInquiry = BaseInquiry> {
-  success: boolean;
-  message: string;
-  data: T;
-}
-
-export interface InquiryListResponse<T extends BaseInquiry = BaseInquiry> {
-  success: boolean;
-  message: string;
-  data: {
-    items: T[];
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-  };
-}
-
-// ============= FILTERS =============
-export interface InquiryFilters {
-  propertyId?: string;
-  guestId?: string;
-  ownerId?: string;
-  status?: InquiryStatus;
-  inquiryType?: InquiryType;
-  page?: number;
-  pageSize?: number;
-}
+  userId?: string;
+  assignedTo?: string;
+};

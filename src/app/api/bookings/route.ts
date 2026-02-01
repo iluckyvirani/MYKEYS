@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CreateShortBookingRequest, BookingResponse, BookingListResponse, BookingFilters, ShortBookingDTO } from '@/types/booking';
+import { CreateShortBookingRequest, BookingResponse, BookingListResponse, BookingFilters, ShortBookingDTO, BookingStatus, PaymentStatus, BookingType } from '@/types/bookings';
+
+// Extend BookingFilters to include date range filters if not already defined
+interface ExtendedBookingFilters extends BookingFilters {
+  from?: string;
+  to?: string;
+}
 
 /**
  * GET /api/bookings
@@ -10,7 +16,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     
-    const filters: BookingFilters = {
+    const filters: ExtendedBookingFilters = {
       propertyId: searchParams.get('propertyId') || undefined,
       guestId: searchParams.get('guestId') || undefined,
       ownerId: searchParams.get('ownerId') || undefined,
@@ -89,7 +95,7 @@ export async function POST(req: NextRequest) {
     
     const booking: ShortBookingDTO = {
       id: `BOOK-${Date.now()}`,
-      bookingType: 'SHORT_TERM' as any,
+      bookingType: BookingType.SHORT_TERM,
       propertyId: body.propertyId,
       propertyTitle: 'Sample Property',
       guestId: 'USER-1', // TODO: Get from auth
@@ -106,11 +112,11 @@ export async function POST(req: NextRequest) {
       cleaningFee: 50,
       serviceFee: 25,
       totalAmount: (100 * numberOfNights) + 50 + 25,
-      paymentStatus: 'PENDING',
+      paymentStatus: PaymentStatus.PENDING,
       paymentMethod: body.paymentMethod,
       paidAmount: 0,
       balanceAmount: (100 * numberOfNights) + 50 + 25,
-      status: 'PENDING',
+      status: BookingStatus.PENDING,
       specialRequests: body.specialRequests,
       ownerId: 'OWNER-1',
       createdAt: new Date().toISOString(),
@@ -130,6 +136,10 @@ export async function POST(req: NextRequest) {
       { success: false, message: 'Failed to create booking', data: null },
       { status: 500 }
     );
+/* `>>>>>>> Stashed changes` is a merge conflict marker that indicates there are conflicting changes in
+the code that need to be resolved. In this case, it appears that there are changes in the code that
+were stashed (saved temporarily) and now there is a conflict when trying to merge those changes back
+into the codebase. */
   }
 }
 
