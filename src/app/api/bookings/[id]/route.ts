@@ -6,9 +6,9 @@ import { UpdateBookingStatusRequest, BookingResponse, UpdateBookingStatusRespons
  * GET /api/bookings/{id}
  * Fetch a specific booking by ID
  */
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -40,9 +40,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  * Only owner can accept/cancel bookings
  * Body: UpdateBookingStatusRequest
  */
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body: UpdateBookingStatusRequest = await req.json();
 
     if (!id) {
@@ -114,9 +114,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  * Cancel a booking (guest action)
  * Only guest who created the booking can delete
  */
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
