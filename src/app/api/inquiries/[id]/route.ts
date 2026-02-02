@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UpdateInquiryRequest, InquiryResponse } from '@/types/inquiry';
+import { UpdateInquiryStatusRequest, InquiryResponse } from '@/types/inquiry';
 
 /**
  * GET /api/inquiries/{id}
  * Fetch a specific inquiry by ID
  */
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -39,10 +39,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  * Only owner can respond to inquiries
  * Body: UpdateInquiryRequest
  */
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
-    const body: UpdateInquiryRequest = await req.json();
+    const { id } = await params;
+    const body: UpdateInquiryStatusRequest = await req.json();
 
     if (!id) {
       return NextResponse.json(
@@ -71,7 +71,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data: {
         id,
         propertyId: 'PROP-1',
-        propertyTitle: 'Sample Property',
         guestId: 'USER-1',
         guestName: 'Guest Name',
         guestEmail: 'guest@example.com',
@@ -79,11 +78,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ownerId: 'OWNER-1',
         message: 'Initial inquiry message',
         ownerResponse: body.ownerResponse,
-        status: body.status as any,
-        inquiryType: 'LONG_RENT' as any,
+        status: body.status,
+        inquiryType: 'LONG_RENT',
+        desiredStartDate: '2024-03-01',
+        desiredDurationMonths: 6,
+        numberOfOccupants: 2,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      },
+      } as any,
     };
 
     return NextResponse.json(response);
@@ -101,9 +103,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  * Close/delete an inquiry
  * Can be done by guest (original inquirer) or owner
  */
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(

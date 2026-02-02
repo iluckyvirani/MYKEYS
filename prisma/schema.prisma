@@ -81,6 +81,7 @@ enum PaymentMethod {
   NET_BANKING
   CASH
   WALLET
+  BANK_TRANSFER
 }
 
 enum InquiryStatus {
@@ -93,9 +94,8 @@ enum InquiryStatus {
 
 enum PackageTier {
   BASIC
-  PROFESSIONAL
+  STANDARD
   PREMIUM
-  ENTERPRISE
 }
 
 enum SubscriptionStatus {
