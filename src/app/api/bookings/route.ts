@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+<<<<<<< Updated upstream
+=======
+import { bookingService } from '@/lib/bookings/bookingService';
+>>>>>>> Stashed changes
 import { CreateShortBookingRequest, BookingResponse, BookingListResponse, BookingFilters, ShortBookingDTO, BookingStatus, PaymentStatus, BookingType } from '@/types/bookings';
 
 // Extend BookingFilters to include date range filters if not already defined

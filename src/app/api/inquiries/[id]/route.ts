@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
-    const body: UpdateInquiryRequest = await req.json();
+    const body: UpdateInquiryStatusRequest = await req.json();
 
     if (!id) {
       return NextResponse.json(

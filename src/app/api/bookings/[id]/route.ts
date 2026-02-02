@@ -71,7 +71,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       message: `Booking status updated to ${body.status}`,
       data: {
         id,
+<<<<<<< Updated upstream
         bookingType: 'SHORT_TERM' as any,
+=======
+        bookingType: BookingType.SHORT_TERM,
+>>>>>>> Stashed changes
         propertyId: 'PROP-1',
         propertyTitle: 'Sample Property',
         guestId: 'USER-1',
