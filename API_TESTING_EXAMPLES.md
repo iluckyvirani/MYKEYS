@@ -242,6 +242,280 @@ curl "http://localhost:3000/api/properties?status=ACTIVE&page=1&pageSize=50"
 
 ---
 
+## Favorites API
+
+The Favorites API allows users to manage their favorite properties with add, remove, toggle, and list operations.
+
+### 1. Get User's Favorite Properties (GET)
+**Endpoint:** `GET /api/favorites`
+
+Retrieve all favorite properties for the authenticated user with pagination and rating calculations.
+
+```bash
+# Get all favorites (default: page 1, pageSize 10)
+curl http://localhost:3000/api/favorites \
+  -H "Authorization: Bearer <user-token>"
+
+# With pagination
+curl "http://localhost:3000/api/favorites?page=2&pageSize=20" \
+  -H "Authorization: Bearer <user-token>"
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Favorites retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": "fav_clxyz123abc",
+        "userId": "user_clxyz456def",
+        "propertyId": "prop-001",
+        "createdAt": "2026-02-02T10:30:00.000Z",
+        "property": {
+          "id": "prop-001",
+          "title": "Modern Luxury Apartment in Canary Wharf",
+          "slug": "modern-luxury-apartment-canary-wharf",
+          "description": "Stunning modern apartment with panoramic views",
+          "address": "25 Harbour Exchange, London E14",
+          "city": "London",
+          "state": "England",
+          "country": "United Kingdom",
+          "zipCode": "E14 9RR",
+          "latitude": 51.5048,
+          "longitude": -0.0191,
+          "propertyType": "Apartment",
+          "listingType": "buy",
+          "price": 850000,
+          "priceType": "total",
+          "bedrooms": 3,
+          "bathrooms": 2,
+          "sqft": 1200,
+          "guests": 4,
+          "minStay": 1,
+          "maxStay": null,
+          "status": "ACTIVE",
+          "isFeatured": true,
+          "averageRating": 4.8,
+          "reviewCount": 24,
+          "images": [
+            {
+              "id": "img_001",
+              "url": "https://images.unsplash.com/...",
+              "caption": "Living Room",
+              "isPrimary": true,
+              "order": 1
+            }
+          ],
+          "amenities": [
+            {
+              "id": "am_001",
+              "amenity": {
+                "id": "a_001",
+                "name": "WiFi",
+                "icon": "wifi",
+                "category": "Connectivity"
+              }
+            }
+          ],
+          "owner": {
+            "id": "owner_001",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john@example.com",
+            "phone": "+44123456789",
+            "avatar": "https://..."
+          }
+        }
+      }
+    ],
+    "total": 12,
+    "page": 1,
+    "pageSize": 10,
+    "totalPages": 2
+  }
+}
+```
+
+**Error Response (401 - Unauthorized):**
+```json
+{
+  "success": false,
+  "message": "Unauthorized",
+  "code": "UNAUTHORIZED"
+}
+```
+
+### 2. Add Property to Favorites (POST)
+**Endpoint:** `POST /api/favorites/add`
+
+Add a property to the user's favorites list. Increments the property's save count.
+
+```bash
+curl -X POST http://localhost:3000/api/favorites/add \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <user-token>" \
+  -d '{
+    "propertyId": "prop-001"
+  }'
+```
+
+**Success Response (201):**
+```json
+{
+  "success": true,
+  "message": "Property added to favorites successfully",
+  "data": {
+    "id": "fav_clxyz123abc",
+    "userId": "user_clxyz456def",
+    "propertyId": "prop-001",
+    "createdAt": "2026-02-02T10:30:00.000Z"
+  }
+}
+```
+
+**Error Response (Already Favorited - 400):**
+```json
+{
+  "success": false,
+  "message": "Property already in favorites",
+  "code": "ALREADY_FAVORITED"
+}
+```
+
+**Error Response (Property Not Found - 404):**
+```json
+{
+  "success": false,
+  "message": "Property not found",
+  "code": "PROPERTY_NOT_FOUND"
+}
+```
+
+**Error Response (Missing Property ID - 400):**
+```json
+{
+  "success": false,
+  "message": "Property ID is required",
+  "code": "MISSING_PROPERTY_ID"
+}
+```
+
+### 3. Remove Property from Favorites (DELETE)
+**Endpoint:** `DELETE /api/favorites/remove`
+
+Remove a property from the user's favorites list. Decrements the property's save count.
+
+```bash
+curl -X DELETE http://localhost:3000/api/favorites/remove \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <user-token>" \
+  -d '{
+    "propertyId": "prop-001"
+  }'
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Property removed from favorites successfully",
+  "data": null
+}
+```
+
+**Error Response (Not Favorited - 404):**
+```json
+{
+  "success": false,
+  "message": "Favorite not found",
+  "code": "FAVORITE_NOT_FOUND"
+}
+```
+
+**Error Response (Missing Property ID - 400):**
+```json
+{
+  "success": false,
+  "message": "Property ID is required",
+  "code": "MISSING_PROPERTY_ID"
+}
+```
+
+### 4. Toggle Favorite Status (POST)
+**Endpoint:** `POST /api/favorites/toggle`
+
+Toggle the favorite status of a property. Adds to favorites if not already favorited, removes if already favorited.
+
+```bash
+curl -X POST http://localhost:3000/api/favorites/toggle \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <user-token>" \
+  -d '{
+    "propertyId": "prop-001"
+  }'
+```
+
+**Response (Added to Favorites - 200):**
+```json
+{
+  "success": true,
+  "message": "Property added to favorites successfully",
+  "data": {
+    "action": "added",
+    "favorite": {
+      "id": "fav_clxyz123abc",
+      "userId": "user_clxyz456def",
+      "propertyId": "prop-001",
+      "createdAt": "2026-02-02T10:30:00.000Z"
+    }
+  }
+}
+```
+
+**Response (Removed from Favorites - 200):**
+```json
+{
+  "success": true,
+  "message": "Property removed from favorites successfully",
+  "data": {
+    "action": "removed",
+    "favorite": null
+  }
+}
+```
+
+**Error Response (Property Not Found - 404):**
+```json
+{
+  "success": false,
+  "message": "Property not found",
+  "code": "PROPERTY_NOT_FOUND"
+}
+```
+
+**Error Response (Missing Property ID - 400):**
+```json
+{
+  "success": false,
+  "message": "Property ID is required",
+  "code": "MISSING_PROPERTY_ID"
+}
+```
+
+---
+
+curl -X DELETE http://localhost:3000/api/favorites/remove \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <user-token>" \
+  -d '{
+    "propertyId": "prop-001"
+  }'
+
+
+
+
 ## Status Codes
 
 | Code | Meaning |
