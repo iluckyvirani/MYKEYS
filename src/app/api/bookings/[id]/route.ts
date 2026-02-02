@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { bookingService } from '@/lib/bookings/bookingService';
-import { UpdateBookingStatusRequest, BookingResponse, UpdateBookingStatusResponse, BookingType, PaymentStatus, PaymentMethod } from '@/types/bookings';
+import {
+  UpdateBookingStatusRequest,
+  UpdateBookingStatusResponse,
+  PaymentStatus,
+  PaymentMethod,
+  BookingType,
+} from '@/types/bookings';
 
 /**
  * GET /api/bookings/{id}
- * Fetch a specific booking by ID
+ * Fetch booking by ID
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await params;
+    const { id } = params;
 
     if (!id) {
       return NextResponse.json(
@@ -17,9 +25,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       );
     }
 
-    // TODO: Fetch booking from database
+    // TODO: Fetch booking from DB
     // const booking = await bookingService.getById(id);
-    // if (!booking) return NextResponse.json({ success: false, message: 'Booking not found', data: null }, { status: 404 });
+    // if (!booking) { ... }
 
     return NextResponse.json(
       { success: false, message: 'Booking not found', data: null },
@@ -37,12 +45,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 /**
  * PATCH /api/bookings/{id}
  * Update booking status (owner action)
- * Only owner can accept/cancel bookings
- * Body: UpdateBookingStatusRequest
  */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const body: UpdateBookingStatusRequest = await req.json();
 
     if (!id) {
@@ -52,7 +61,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       );
     }
 
-    if (!body.status) {
+    if (!body?.status) {
       return NextResponse.json(
         { success: false, message: 'Status is required', data: null },
         { status: 400 }
@@ -60,18 +69,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // TODO:
-    // 1. Verify user is the booking owner
+    // 1. Verify owner
     // 2. Validate status transition
-    // 3. If CANCELLED, process refund
-    // 4. Update booking in database
-    // 5. Send notification email
+    // 3. Handle refund if cancelled
+    // 4. Update DB
+    // 5. Send notifications
 
     const response: UpdateBookingStatusResponse = {
       success: true,
       message: `Booking status updated to ${body.status}`,
       data: {
         id,
-        bookingType: 'SHORT_TERM' as any,
+        bookingType: BookingType.SHORT_TERM,
         propertyId: 'PROP-1',
         propertyTitle: 'Sample Property',
         guestId: 'USER-1',
@@ -99,7 +108,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       },
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error('Error updating booking:', error);
     return NextResponse.json(
@@ -111,12 +120,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 /**
  * DELETE /api/bookings/{id}
- * Cancel a booking (guest action)
- * Only guest who created the booking can delete
+ * Cancel booking (guest action)
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await params;
+    const { id } = params;
 
     if (!id) {
       return NextResponse.json(
@@ -126,11 +137,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     // TODO:
-    // 1. Verify user is the guest who created the booking
-    // 2. Check if cancellation is allowed (based on cancellation policy)
-    // 3. Process refund if applicable
-    // 4. Update booking status to CANCELLED
-    // 5. Send cancellation email
+    // 1. Verify guest ownership
+    // 2. Check cancellation policy
+    // 3. Refund if applicable
+    // 4. Update status in DB
 
     return NextResponse.json(
       { success: true, message: 'Booking cancelled successfully', data: null },
@@ -144,4 +154,3 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     );
   }
 }
-
