@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  UpdateBookingStatusRequest,
-  UpdateBookingStatusResponse,
-  PaymentStatus,
-  PaymentMethod,
-  BookingType,
-} from '@/types/bookings';
+import { bookingService } from '@/lib/bookings/bookingService';
+import { UpdateBookingStatusRequest, BookingResponse, UpdateBookingStatusResponse, BookingType, PaymentStatus, PaymentMethod } from '@/types/bookings';
 
 /**
  * GET /api/bookings/{id}
- * Fetch booking by ID
+ * Fetch a specific booking by ID
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    // Await the params promise
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -25,9 +18,9 @@ export async function GET(
       );
     }
 
-    // TODO: Fetch booking from DB
+    // TODO: Fetch booking from database
     // const booking = await bookingService.getById(id);
-    // if (!booking) { ... }
+    // if (!booking) return NextResponse.json({ success: false, message: 'Booking not found', data: null }, { status: 404 });
 
     return NextResponse.json(
       { success: false, message: 'Booking not found', data: null },
@@ -45,13 +38,13 @@ export async function GET(
 /**
  * PATCH /api/bookings/{id}
  * Update booking status (owner action)
+ * Only owner can accept/cancel bookings
+ * Body: UpdateBookingStatusRequest
  */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    // Await the params promise
+    const { id } = await params;
     const body: UpdateBookingStatusRequest = await req.json();
 
     if (!id) {
@@ -61,7 +54,7 @@ export async function PATCH(
       );
     }
 
-    if (!body?.status) {
+    if (!body.status) {
       return NextResponse.json(
         { success: false, message: 'Status is required', data: null },
         { status: 400 }
@@ -69,18 +62,18 @@ export async function PATCH(
     }
 
     // TODO:
-    // 1. Verify owner
+    // 1. Verify user is the booking owner
     // 2. Validate status transition
-    // 3. Handle refund if cancelled
-    // 4. Update DB
-    // 5. Send notifications
+    // 3. If CANCELLED, process refund
+    // 4. Update booking in database
+    // 5. Send notification email
 
     const response: UpdateBookingStatusResponse = {
       success: true,
       message: `Booking status updated to ${body.status}`,
       data: {
         id,
-        bookingType: BookingType.SHORT_TERM,
+        bookingType: 'SHORT_TERM' as any,
         propertyId: 'PROP-1',
         propertyTitle: 'Sample Property',
         guestId: 'USER-1',
@@ -108,7 +101,7 @@ export async function PATCH(
       },
     };
 
-    return NextResponse.json(response, { status: 200 });
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error updating booking:', error);
     return NextResponse.json(
@@ -120,14 +113,13 @@ export async function PATCH(
 
 /**
  * DELETE /api/bookings/{id}
- * Cancel booking (guest action)
+ * Cancel a booking (guest action)
+ * Only guest who created the booking can delete
  */
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    // Await the params promise
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -137,10 +129,11 @@ export async function DELETE(
     }
 
     // TODO:
-    // 1. Verify guest ownership
-    // 2. Check cancellation policy
-    // 3. Refund if applicable
-    // 4. Update status in DB
+    // 1. Verify user is the guest who created the booking
+    // 2. Check if cancellation is allowed (based on cancellation policy)
+    // 3. Process refund if applicable
+    // 4. Update booking status to CANCELLED
+    // 5. Send cancellation email
 
     return NextResponse.json(
       { success: true, message: 'Booking cancelled successfully', data: null },
