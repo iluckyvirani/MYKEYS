@@ -1,5 +1,5 @@
 import { User } from "@prisma/client";
-import { UserDTO } from "@/types/auth";
+import { UserDTO, UserRole, UserStatus } from "@/types/auth";
 
 /**
  * Convert Prisma User model to UserDTO (exclude password)
@@ -12,8 +12,8 @@ export function toUserDTO(user: User): UserDTO {
     firstName: user.firstName,
     lastName: user.lastName,
     avatar: user.avatar,
-    role: user.role,
-    status: user.status,
+    role: user.role as UserRole,
+    status: user.status as UserStatus,
     birthDate: user.birthDate,
     address: user.address,
     city: user.city,

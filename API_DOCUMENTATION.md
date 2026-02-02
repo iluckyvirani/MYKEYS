@@ -146,3 +146,44 @@ All endpoints follow consistent response format:
 - `403`: Forbidden (no permission)
 - `404`: Not found
 - `500`: Internal server error
+
+## Favorites API
+
+### 1. Get User Favorites
+**Endpoint:** `GET /api/favorites`  
+**Authentication:** Required  
+**Description:** Get user's favorite properties with pagination
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `pageSize` (optional): Items per page (default: 10)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Favorites retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": "fav_123",
+        "userId": "user_123",
+        "propertyId": "prop_123",
+        "createdAt": "2026-02-02T10:00:00.000Z",
+        "property": {
+          "id": "prop_123",
+          "title": "Luxury Villa",
+          "price": 45000,
+          "averageRating": 4.8,
+          "reviewCount": 124,
+          ...
+        }
+      }
+    ],
+    "total": 15,
+    "page": 1,
+    "pageSize": 10,
+    "totalPages": 2
+  }
+}
+```

@@ -8,6 +8,7 @@ import PropertyCard, { PropertyCardProps } from "./PropertyCard";
 const buyProperties: PropertyCardProps[] = [
   {
     id: 1,
+    slug: "modern-canary-wharf-apartment",
     imageUrl: "https://images.unsplash.com/photo-1613490493576-7fde63acd811",
     title: "Modern Canary Wharf Apartment",
     address: "25 Harbour Exchange, London E14",
@@ -26,6 +27,7 @@ const buyProperties: PropertyCardProps[] = [
   },
   {
     id: 2,
+    slug: "victorian-house-kensington",
     imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750",
     title: "Victorian House in Kensington",
     address: "45 Kensington High Street, London W8",
@@ -44,6 +46,7 @@ const buyProperties: PropertyCardProps[] = [
   },
   {
     id: 3,
+    slug: "riverside-studio-chelsea",
     imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00",
     title: "Riverside Studio in Chelsea",
     address: "12 Chelsea Harbour, London SW10",
@@ -62,6 +65,7 @@ const buyProperties: PropertyCardProps[] = [
   },
   {
     id: 4,
+    slug: "luxury-penthouse-mayfair",
     imageUrl: "https://images.unsplash.com/photo-1570129477492-45c003edd2be",
     title: "Luxury Penthouse in Mayfair",
     address: "8 Berkeley Square, London W1J",
@@ -80,6 +84,7 @@ const buyProperties: PropertyCardProps[] = [
   },
   {
     id: 5,
+    slug: "modern-loft-shoreditch",
     imageUrl: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c",
     title: "Modern Loft in Shoreditch",
     address: "15 Brick Lane, London E1",
@@ -98,6 +103,7 @@ const buyProperties: PropertyCardProps[] = [
   },
   {
     id: 6,
+    slug: "family-home-hampstead",
     imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2",
     title: "Family Home in Hampstead",
     address: "23 Hampstead High Street, London NW3",
@@ -116,6 +122,7 @@ const buyProperties: PropertyCardProps[] = [
   },
   {
     id: 7,
+    slug: "waterfront-apartment-canary-wharf",
     imageUrl: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
     title: "Waterfront Apartment in Canary Wharf",
     address: "33 South Quay, London E14",
@@ -134,6 +141,7 @@ const buyProperties: PropertyCardProps[] = [
   },
   {
     id: 8,
+    slug: "garden-flat-notting-hill",
     imageUrl: "https://images.unsplash.com/photo-1513584684374-8bab748fbf90",
     title: "Garden Flat in Notting Hill",
     address: "56 Portobello Road, London W11",
@@ -152,6 +160,7 @@ const buyProperties: PropertyCardProps[] = [
   },
   {
     id: 9,
+    slug: "new-build-stratford",
     imageUrl: "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
     title: "New Build in Stratford",
     address: "78 Olympic Park, London E20",

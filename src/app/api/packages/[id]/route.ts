@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { packageService } from '@/lib/packages/packageService';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const pkg = await packageService.getById(params.id);
+    const { id } = await params;
+    const pkg = await packageService.getById(id);
     if (!pkg) return NextResponse.json({ error: 'Package not found' }, { status: 404 });
     return NextResponse.json(pkg);
   } catch (err) {
@@ -12,10 +13,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const data = await req.json();
-    const pkg = await packageService.update(params.id, data);
+    const pkg = await packageService.update(id, data);
     return NextResponse.json(pkg);
   } catch (err) {
     console.error(err);
@@ -23,9 +25,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const pkg = await packageService.delete(params.id);
+    const { id } = await params;
+    const pkg = await packageService.delete(id);
     return NextResponse.json(pkg);
   } catch (err) {
     console.error(err);

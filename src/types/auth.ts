@@ -1,4 +1,17 @@
-import { UserRole, UserStatus } from "@prisma/client";
+// import { UserRole, UserStatus } from "@prisma/client";
+
+export enum UserStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  SUSPENDED = "SUSPENDED",
+  PENDING = "PENDING"
+}
+
+export enum UserRole {
+  USER = "USER",
+  OWNER = "OWNER",
+  ADMIN = "ADMIN"
+}
 
 /**
  * User Response DTO (Data Transfer Object)

@@ -13,9 +13,10 @@ import { toUserDTO } from "@/lib/auth/helpers";
 export const GET = withAuth<{ params: { id: string } }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
+    const { id } = params;
     try {
       // Check if user is accessing their own profile or is admin
-      if (user.role !== "ADMIN" && user.userId !== params.id) {
+      if (user.role !== "ADMIN" && user.userId !== id) {
         return errorResponse(
           "You don't have permission to view this user",
           403,
@@ -24,7 +25,7 @@ export const GET = withAuth<{ params: { id: string } }>(
       }
 
       const targetUser = await prisma.user.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           _count: {
             select: {
@@ -36,7 +37,7 @@ export const GET = withAuth<{ params: { id: string } }>(
               packages: true,
             },
           },
-          properties: user.role === "ADMIN" || user.userId === params.id ? {
+          properties: user.role === "ADMIN" || user.userId === id ? {
             select: {
               id: true,
               title: true,
@@ -80,11 +81,12 @@ export const GET = withAuth<{ params: { id: string } }>(
 export const PATCH = withAuth<{ params: { id: string } }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
+    const { id } = params;
     try {
       const body = await request.json();
 
       // Check permissions
-      if (user.role !== "ADMIN" && user.userId !== params.id) {
+      if (user.role !== "ADMIN" && user.userId !== id) {
         return errorResponse(
           "You don't have permission to update this user",
           403,
@@ -94,7 +96,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
 
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
-        where: { id: params.id },
+        where: { id },
       });
 
       if (!existingUser) {
@@ -106,7 +108,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
         const existingUserWithPhone = await prisma.user.findFirst({
           where: {
             phone: body.phone,
-            NOT: { id: params.id },
+            NOT: { id },
           },
         });
 
@@ -121,7 +123,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
 
       // Update user
       const updatedUser = await prisma.user.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           ...(body.firstName && { firstName: body.firstName }),
           ...(body.lastName && { lastName: body.lastName }),
@@ -190,6 +192,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
 export const DELETE = withAuth<{ params: { id: string } }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
+    const { id } = params;
     try {
       // Check if user is admin
       if (user.role !== "ADMIN") {
@@ -202,7 +205,7 @@ export const DELETE = withAuth<{ params: { id: string } }>(
 
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
-        where: { id: params.id },
+        where: { id },
       });
 
       if (!existingUser) {
@@ -220,7 +223,7 @@ export const DELETE = withAuth<{ params: { id: string } }>(
 
       // Delete user
       await prisma.user.delete({
-        where: { id: params.id },
+        where: { id },
       });
 
       return successResponse(null, "User deleted successfully");

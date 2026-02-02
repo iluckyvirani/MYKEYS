@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAccessToken, JWTPayload } from "./jwt";
-import { UserRole } from "@prisma/client";
+// import { UserRole } from "@prisma/client";
 import { errorResponse } from "@/lib/response";
 
+
+
+export const UserRole = {
+  USER: "USER",
+  OWNER: "OWNER",
+  ADMIN: "ADMIN"
+} as const;
+
+export type UserRole = typeof UserRole[keyof typeof UserRole];
 /**
  * Extended NextRequest with user info
  */
@@ -98,7 +107,7 @@ export function withAuth<T = any>(
   ) => Promise<NextResponse>,
   options?: { roles?: UserRole[] }
 ) {
-  return async (request: NextRequest, context?: T) => {
+  return async (request: NextRequest, context?: any) => {
     try {
       let user: JWTPayload;
 
@@ -106,6 +115,13 @@ export function withAuth<T = any>(
         user = await requireRole(request, options.roles);
       } else {
         user = await requireAuth(request);
+      }
+
+      // Handle Promise-based params for Next.js 15+
+      if (context && typeof context === 'object' && 'params' in context) {
+        if (context.params && typeof context.params.then === 'function') {
+          context.params = await context.params;
+        }
       }
 
       return await handler(request, user, context);

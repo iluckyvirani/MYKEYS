@@ -7,8 +7,14 @@ import { generateTokenPair } from "@/lib/auth/jwt";
 import { toUserDTO } from "@/lib/auth/helpers";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
 import { LoginRequest, LoginResponse } from "@/types/auth";
-import { UserStatus } from "@prisma/client";
+// import { UserStatus } from "@prisma/client";
 
+export enum UserStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  SUSPENDED = "SUSPENDED",
+  PENDING = "PENDING"
+}
 /**
  * POST /api/auth/login
  * Authenticate user and return access & refresh tokens
@@ -78,13 +84,17 @@ export async function POST(request: NextRequest) {
 
     // Prepare response
     const response: LoginResponse = {
-      user: userDTO,
-      accessToken,
-      refreshToken,
+      success: true,
+      message: "Login successful",
+      data: {
+        user: userDTO,
+        accessToken,
+        refreshToken,
+      },
     };
 
     // Create NextResponse with tokens in cookies
-    const nextResponse = successResponse(response, "Login successful");
+    const nextResponse = successResponse(response.data, "Login successful");
 
     // Set HTTP-only cookies for tokens
     nextResponse.cookies.set("accessToken", accessToken, {

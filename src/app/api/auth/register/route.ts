@@ -81,14 +81,18 @@ export async function POST(request: NextRequest) {
 
     // Prepare response
     const response: RegisterResponse = {
-      user: userDTO,
-      accessToken,
-      refreshToken,
+      success: true,
+      message: "Registration successful",
+      data: {
+        user: userDTO,
+        accessToken,
+        refreshToken,
+      },
     };
 
     // Create NextResponse with tokens in cookies
     const nextResponse = successResponse(
-      response,
+      response.data,
       "Registration successful",
       201
     );
