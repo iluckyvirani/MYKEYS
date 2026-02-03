@@ -181,9 +181,17 @@ export default function PropertyDetailsPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [inquiryForm, setInquiryForm] = useState({
         name: "",
+        email: "",
         phone: "",
-        message: ""
+        message: "",
+        desiredStartDate: "",
+        desiredDurationMonths: "",
+        numberOfOccupants: ""
     });
+    const [bookingStatus, setBookingStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+    const [inquiryStatus, setInquiryStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+    const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
+    const [isInquirySubmitting, setIsInquirySubmitting] = useState(false);
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [property, setProperty] = useState<any>(mockPropertyData);
     const [loading, setLoading] = useState(true);
@@ -210,9 +218,13 @@ export default function PropertyDetailsPage() {
                         state: apiData.state || "UK",
                         description: apiData.description || mockPropertyData.description,
                         listingType: apiData.listingType?.toLowerCase() || mockPropertyData.listingType,
-                        rentalType: apiData.rentalType?.toLowerCase() === "short_term" ? "short" : "long",
+                        rentalType: apiData.rentalType
+                            ? apiData.rentalType.toLowerCase() === "short_term"
+                                ? "short"
+                                : "long"
+                            : mockPropertyData.rentalType,
                         priceType: apiData.priceType?.toLowerCase() || mockPropertyData.priceType,
-                        price: `£${apiData.price}` || mockPropertyData.price,
+                        price: apiData.price ? `£${apiData.price}` : mockPropertyData.price,
                         beds: apiData.bedrooms || mockPropertyData.beds,
                         baths: apiData.bathrooms || mockPropertyData.baths,
                         sqft: apiData.sqft || mockPropertyData.sqft,
@@ -271,9 +283,94 @@ export default function PropertyDetailsPage() {
 
     const handleInquirySubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Inquiry submitted:", inquiryForm);
-        setShowInquiryModal(false);
-        setInquiryForm({ name: "", phone: "", message: "" });
+        setInquiryStatus(null);
+        setIsInquirySubmitting(true);
+
+        const sendInquiry = async () => {
+            try {
+                const payload: Record<string, string | number | undefined> = {
+                    propertyId: String(property.id),
+                    guestName: inquiryForm.name,
+                    guestEmail: inquiryForm.email,
+                    guestPhone: inquiryForm.phone,
+                    message: inquiryForm.message,
+                };
+
+                if (property.listingType === "rent" && property.rentalType === "long") {
+                    payload.desiredStartDate = inquiryForm.desiredStartDate;
+                    payload.desiredDurationMonths = inquiryForm.desiredDurationMonths
+                        ? Number(inquiryForm.desiredDurationMonths)
+                        : undefined;
+                    payload.numberOfOccupants = inquiryForm.numberOfOccupants
+                        ? Number(inquiryForm.numberOfOccupants)
+                        : undefined;
+                }
+
+                const response = await api.post("/inquiries", payload);
+
+                if (response.data?.success) {
+                    setInquiryStatus({ type: "success", message: "Inquiry sent successfully." });
+                    setShowInquiryModal(false);
+                    setInquiryForm({
+                        name: "",
+                        email: "",
+                        phone: "",
+                        message: "",
+                        desiredStartDate: "",
+                        desiredDurationMonths: "",
+                        numberOfOccupants: ""
+                    });
+                } else {
+                    setInquiryStatus({ type: "error", message: response.data?.message || "Failed to send inquiry." });
+                }
+            } catch (error) {
+                console.error("Error submitting inquiry:", error);
+                setInquiryStatus({ type: "error", message: "Failed to send inquiry. Please try again." });
+            } finally {
+                setIsInquirySubmitting(false);
+            }
+        };
+
+        sendInquiry();
+    };
+
+    const handleBookingSubmit = async () => {
+        setBookingStatus(null);
+
+        if (!checkInDate || !checkOutDate) {
+            setBookingStatus({ type: "error", message: "Please select check-in and check-out dates." });
+            return;
+        }
+
+        if (new Date(checkOutDate) <= new Date(checkInDate)) {
+            setBookingStatus({ type: "error", message: "Check-out date must be after check-in date." });
+            return;
+        }
+
+        setIsBookingSubmitting(true);
+
+        try {
+            const response = await api.post("/bookings", {
+                propertyId: String(property.id),
+                checkInDate,
+                checkOutDate,
+                numberOfGuests: guests,
+            });
+
+            if (response.data?.success) {
+                setBookingStatus({ type: "success", message: "Booking request submitted successfully." });
+                setCheckInDate("");
+                setCheckOutDate("");
+                setGuests(2);
+            } else {
+                setBookingStatus({ type: "error", message: response.data?.message || "Failed to submit booking." });
+            }
+        } catch (error) {
+            console.error("Error creating booking:", error);
+            setBookingStatus({ type: "error", message: "Failed to submit booking. Please try again." });
+        } finally {
+            setIsBookingSubmitting(false);
+        }
     };
 
     return (
@@ -1000,10 +1097,22 @@ export default function PropertyDetailsPage() {
                                             </div>
 
                                             {/* Book Now Button for Short Stay */}
-                                            <Button className="w-full rounded-[5px] py-6 text-lg font-semibold mb-4 bg-linear-to-r from-green-600 to-emerald-600 cursor-pointer">
+                                            <Button
+                                                onClick={handleBookingSubmit}
+                                                disabled={isBookingSubmitting}
+                                                className="w-full rounded-[5px] py-6 text-lg font-semibold mb-4 bg-linear-to-r from-green-600 to-emerald-600 cursor-pointer"
+                                            >
                                                 <Calendar className="w-5 h-5 mr-2" />
-                                                Book Now
+                                                {isBookingSubmitting ? "Booking..." : "Book Now"}
                                             </Button>
+
+                                            {bookingStatus && (
+                                                <p
+                                                    className={`text-sm ${bookingStatus.type === "success" ? "text-green-600" : "text-red-600"}`}
+                                                >
+                                                    {bookingStatus.message}
+                                                </p>
+                                            )}
 
                                             <div className="text-center text-sm text-gray-500">
                                                 <p>🔒 Secure payment processed by Hously</p>
@@ -1100,6 +1209,20 @@ export default function PropertyDetailsPage() {
 
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Email Address
+                                                </label>
+                                                <input
+                                                    type="email"
+                                                    value={inquiryForm.email}
+                                                    onChange={(e) => setInquiryForm({ ...inquiryForm, email: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-[5px]"
+                                                    placeholder="Enter your email"
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
                                                     Phone Number
                                                 </label>
                                                 <input
@@ -1122,6 +1245,53 @@ export default function PropertyDetailsPage() {
                                         </div>
                                     )}
 
+                                    {property.listingType === "rent" && property.rentalType === "long" && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Desired start date
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={inquiryForm.desiredStartDate}
+                                                    onChange={(e) => setInquiryForm({ ...inquiryForm, desiredStartDate: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-[5px]"
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Lease duration (months)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    value={inquiryForm.desiredDurationMonths}
+                                                    onChange={(e) => setInquiryForm({ ...inquiryForm, desiredDurationMonths: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-[5px]"
+                                                    placeholder="e.g. 12"
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Number of occupants
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    value={inquiryForm.numberOfOccupants}
+                                                    onChange={(e) => setInquiryForm({ ...inquiryForm, numberOfOccupants: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-[5px]"
+                                                    placeholder="e.g. 2"
+                                                    required
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Message {isLoggedIn && "(Required)"}
@@ -1141,10 +1311,18 @@ export default function PropertyDetailsPage() {
                                         />
                                     </div>
 
-                                    <Button type="submit" className="w-full py-3 rounded-[5px] cursor-pointer">
+                                    <Button type="submit" className="w-full py-3 rounded-[5px] cursor-pointer" disabled={isInquirySubmitting}>
                                         <Mail className="w-5 h-5 mr-2" />
-                                        Send Inquiry
+                                        {isInquirySubmitting ? "Sending..." : "Send Inquiry"}
                                     </Button>
+
+                                    {inquiryStatus && (
+                                        <p
+                                            className={`text-xs text-center ${inquiryStatus.type === "success" ? "text-green-600" : "text-red-600"}`}
+                                        >
+                                            {inquiryStatus.message}
+                                        </p>
+                                    )}
 
                                     <p className="text-xs text-gray-500 text-center">
                                         Your inquiry will be sent directly to the property owner.

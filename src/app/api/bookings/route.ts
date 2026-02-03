@@ -1,8 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-<<<<<<< Updated upstream
-=======
-import { bookingService } from '@/lib/bookings/bookingService';
->>>>>>> Stashed changes
 import { CreateShortBookingRequest, BookingResponse, BookingListResponse, BookingFilters, ShortBookingDTO, BookingStatus, PaymentStatus, BookingType } from '@/types/bookings';
 
 // Extend BookingFilters to include date range filters if not already defined
@@ -140,10 +136,5 @@ export async function POST(req: NextRequest) {
       { success: false, message: 'Failed to create booking', data: null },
       { status: 500 }
     );
-/* `>>>>>>> Stashed changes` is a merge conflict marker that indicates there are conflicting changes in
-the code that need to be resolved. In this case, it appears that there are changes in the code that
-were stashed (saved temporarily) and now there is a conflict when trying to merge those changes back
-into the codebase. */
   }
 }
-
