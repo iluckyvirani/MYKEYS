@@ -20,12 +20,15 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     
+    const statusParam = searchParams.get('status');
+    const inquiryTypeParam = searchParams.get('inquiryType');
+    
     const filters: InquiryFilters = {
       propertyId: searchParams.get('propertyId') || undefined,
       guestId: searchParams.get('guestId') || undefined,
       ownerId: searchParams.get('ownerId') || undefined,
-      status: searchParams.get('status') as any || undefined,
-      inquiryType: searchParams.get('inquiryType') as any || undefined,
+      status: statusParam ? (statusParam as InquiryStatus) : undefined,
+      inquiryType: inquiryTypeParam ? (inquiryTypeParam as InquiryType) : undefined,
       page: parseInt(searchParams.get('page') || '1'),
       pageSize: parseInt(searchParams.get('pageSize') || '10'),
     };

@@ -960,6 +960,7 @@ export default function PropertyDetailsPage() {
                                                     </label>
                                                     <input
                                                         type="date"
+                                                        title="Check-in date"
                                                         value={checkInDate}
                                                         onChange={(e) => setCheckInDate(e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
@@ -971,6 +972,7 @@ export default function PropertyDetailsPage() {
                                                     </label>
                                                     <input
                                                         type="date"
+                                                        title="Check-out date"
                                                         value={checkOutDate}
                                                         onChange={(e) => setCheckOutDate(e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"

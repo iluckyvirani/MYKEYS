@@ -100,6 +100,8 @@ export default function PropertySearchBar({ selectedType }: { selectedType: "all
           <div className="col-span-3 relative">
             <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
             <select
+              title="Property type"
+              aria-label="Property type"
               className="input-field appearance-none bg-white"
               value={propertyType}
               onChange={(e) => setPropertyType(e.target.value)}

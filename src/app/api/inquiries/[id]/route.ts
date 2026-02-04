@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UpdateInquiryStatusRequest, InquiryResponse } from '@/types/inquiry';
+import { UpdateInquiryStatusRequest, InquiryResponse, InquiryType } from '@/types/inquiry';
 
 /**
  * GET /api/inquiries/{id}
@@ -78,14 +78,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ownerId: 'OWNER-1',
         message: 'Initial inquiry message',
         ownerResponse: body.ownerResponse,
+        inquiryType: InquiryType.LONG_RENT,
         status: body.status,
-        inquiryType: 'LONG_RENT',
+        inquiryType: 'LONG_RENT' as InquiryType,
         desiredStartDate: '2024-03-01',
         desiredDurationMonths: 6,
         numberOfOccupants: 2,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      } as any,
+      },
     };
 
     return NextResponse.json(response);

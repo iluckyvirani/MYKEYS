@@ -16,14 +16,12 @@ export default function HeroSection({ selectedTab: propSelectedTab, onTabChange:
     <section className="relative h-screen min-h-175 flex items-center justify-center overflow-hidden">
       {/* Zoom Background Image Effect */}
       <div className="zoom-image">
-        {/* Background Image with zoom effect */}
+        {/* Background Image with zoom effect - dynamic background required */}
         <div
-          className="absolute inset-0 image-wrap z-1 bg-no-repeat bg-center bg-cover"
+          className="absolute inset-0 image-wrap z-1 bg-no-repeat bg-center bg-cover scale-110 animate-none"
           style={{
             backgroundImage: "url('https://images.pexels.com/photos/259588/pexels-photo-259588.jpeg')",
-            transform: 'scale(1.1)',
-            transition: 'transform 10s ease-out',
-          }}
+          } as React.CSSProperties}
         />
 
         {/* Black overlay */}
