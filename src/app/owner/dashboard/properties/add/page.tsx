@@ -26,11 +26,14 @@ import {
   Tv,
   Shield,
   Plus,
-  Image as ImageIcon
+  Image as ImageIcon,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { api } from "@/lib/api";
 
 const propertyTypes = [
   { value: "apartment", label: "Apartment", icon: Home },
@@ -59,7 +62,10 @@ const amenities = [
 ];
 
 export default function AddPropertyPage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [listingType, setListingType] = useState<"rent" | "buy">("rent");
   const [rentalType, setRentalType] = useState<"short" | "long">("short");
   
@@ -69,6 +75,9 @@ export default function AddPropertyPage() {
     description: "",
     propertyType: "",
     address: "",
+    city: "",
+    state: "",
+    country: "India",
     
     // Pricing
     price: "",
@@ -125,11 +134,63 @@ export default function AddPropertyPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Property submitted:", formData);
-    alert("Property added successfully!");
-    // In real app, submit to API
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Validate required fields
+      if (!formData.title || !formData.address || !formData.price || !formData.propertyType) {
+        setError("Please fill in all required fields");
+        return;
+      }
+
+      // Prepare API payload
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        price: parseInt(formData.price),
+        priceType: formData.priceType.toUpperCase(),
+        propertyType: formData.propertyType.toUpperCase(),
+        listingType: listingType === "buy" ? "BUY" : "RENT",
+        rentalType: rentalType === "short" ? "SHORT_TERM" : "LONG_TERM",
+        bedrooms: formData.beds ? parseInt(formData.beds) : 0,
+        bathrooms: formData.baths ? parseInt(formData.baths) : 0,
+        sqft: formData.sqft ? parseInt(formData.sqft) : 0,
+        maxGuests: formData.guests ? parseInt(formData.guests) : null,
+        minStay: formData.minStay ? parseInt(formData.minStay) : null,
+        maxStay: formData.maxStay ? parseInt(formData.maxStay) : null,
+        minLease: formData.minLease ? parseInt(formData.minLease) : null,
+        maxLease: formData.maxLease ? parseInt(formData.maxLease) : null,
+        availableFrom: formData.availableFrom ? new Date(formData.availableFrom).toISOString() : null,
+        securityDeposit: formData.securityDeposit ? parseInt(formData.securityDeposit) : null,
+        cleaningFee: formData.cleaningFee ? parseInt(formData.cleaningFee) : null,
+        serviceFee: formData.serviceFee ? parseInt(formData.serviceFee) : null,
+        amenities: formData.amenities,
+        images: formData.images.map(url => ({ url })),
+        status: "ACTIVE"
+      };
+
+      const response = await api.post("/properties", payload);
+      
+      if (response.data?.success) {
+        // Navigate back to properties list
+        router.push("/owner/dashboard/properties");
+      } else {
+        setError(response.data?.message || "Failed to create property");
+      }
+    } catch (err: any) {
+      console.error("Error creating property:", err);
+      setError(err.response?.data?.message || "Failed to create property. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderStep1 = () => (
@@ -245,6 +306,30 @@ export default function AddPropertyPage() {
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="city">City *</Label>
+            <Input
+              id="city"
+              name="city"
+              value={formData.city}
+              onChange={handleInputChange}
+              placeholder="e.g., Mumbai"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="state">State *</Label>
+            <Input
+              id="state"
+              name="state"
+              value={formData.state}
+              onChange={handleInputChange}
+              placeholder="e.g., Maharashtra"
+              required
+            />
           </div>
 
           <div className="md:col-span-2">
@@ -646,6 +731,16 @@ export default function AddPropertyPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="bg-white rounded-[5px] border p-8">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-[5px] flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-red-900">Error</h3>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
+              </div>
+            </div>
+          )}
+          
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
@@ -676,10 +771,20 @@ export default function AddPropertyPage() {
             ) : (
               <Button
                 type="submit"
-                className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8"
+                disabled={loading}
+                className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Building className="w-4 h-4 mr-2" />
-                Publish Property
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <Building className="w-4 h-4 mr-2" />
+                    Publish Property
+                  </>
+                )}
               </Button>
             )}
           </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UpdateInquiryStatusRequest, InquiryResponse, InquiryType } from '@/types/inquiry';
+import { UpdateInquiryStatusRequest, InquiryResponse, InquiryType, LongRentInquiry } from '@/types/inquiry';
 
 /**
  * GET /api/inquiries/{id}
@@ -65,28 +65,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // 4. Send email to guest with owner's response
     // 5. Update lastReplyAt timestamp
 
+    const inquiryData: LongRentInquiry = {
+      id,
+      propertyId: 'PROP-1',
+      guestId: 'USER-1',
+      guestName: 'Guest Name',
+      guestEmail: 'guest@example.com',
+      guestPhone: '1234567890',
+      ownerId: 'OWNER-1',
+      message: 'Initial inquiry message',
+      ownerResponse: body.ownerResponse,
+      inquiryType: InquiryType.LONG_RENT,
+      status: body.status,
+      desiredStartDate: '2024-03-01',
+      desiredDurationMonths: 6,
+      numberOfOccupants: 2,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
     const response: InquiryResponse = {
       success: true,
       message: `Inquiry status updated to ${body.status}`,
-      data: {
-        id,
-        propertyId: 'PROP-1',
-        guestId: 'USER-1',
-        guestName: 'Guest Name',
-        guestEmail: 'guest@example.com',
-        guestPhone: '1234567890',
-        ownerId: 'OWNER-1',
-        message: 'Initial inquiry message',
-        ownerResponse: body.ownerResponse,
-        inquiryType: InquiryType.LONG_RENT,
-        status: body.status,
-        inquiryType: 'LONG_RENT' as InquiryType,
-        desiredStartDate: '2024-03-01',
-        desiredDurationMonths: 6,
-        numberOfOccupants: 2,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+      data: inquiryData,
     };
 
     return NextResponse.json(response);

@@ -1,7 +1,7 @@
 // components/dashboard/UserDashboard/InquiryList.tsx
 "use client";
 
-import { MessageSquare, User, Calendar, Clock, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { MessageSquare, User, Calendar, Clock, CheckCircle, XCircle, ArrowRight, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { useState } from "react";
@@ -35,16 +35,16 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case "responded":
-        return { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Responded" };
       case "pending":
         return { color: "bg-yellow-100 text-yellow-800", icon: Clock, label: "Pending" };
-      case "approved":
-        return { color: "bg-blue-100 text-blue-800", icon: CheckCircle, label: "Approved" };
+      case "reviewed":
+        return { color: "bg-blue-100 text-blue-800", icon: CheckCircle, label: "Reviewed" };
+      case "interested":
+        return { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Interested" };
       case "rejected":
         return { color: "bg-red-100 text-red-800", icon: XCircle, label: "Rejected" };
-      case "negotiating":
-        return { color: "bg-purple-100 text-purple-800", icon: MessageSquare, label: "Negotiating" };
+      case "closed":
+        return { color: "bg-gray-100 text-gray-800", icon: Archive, label: "Closed" };
       default:
         return { color: "bg-gray-100 text-gray-800", icon: Clock, label: "Pending" };
     }

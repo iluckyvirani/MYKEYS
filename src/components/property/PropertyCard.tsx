@@ -4,6 +4,7 @@ import { Heart, Star, BedDouble, Bath, Maximize, MapPin, ChevronRight, Home, Moo
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { api } from "@/lib/api";
 
 // In PropertyCard.tsx, update the interface to include the new properties:
 export interface PropertyCardProps {
@@ -53,6 +54,28 @@ export default function PropertyCard({
   minLease = 1
 }: PropertyCardProps) {
   const [isLiked, setIsLiked] = useState(false);
+  const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsLoadingFavorite(true);
+    try {
+      const response = await api.post("/favorites/toggle", {
+        propertyId: id
+      });
+
+      if (response.data?.success) {
+        const action = response.data.data?.action;
+        setIsLiked(action === "added");
+      }
+    } catch (error: any) {
+      console.error("Error toggling favorite:", error);
+    } finally {
+      setIsLoadingFavorite(false);
+    }
+  };
 
 
   // Function to generate proper slug/URL
@@ -145,8 +168,9 @@ export default function PropertyCard({
 
           {/* Like Button */}
           <button
-            onClick={() => setIsLiked(!isLiked)}
-            className="absolute top-4 right-4 bg-white p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+            onClick={handleToggleFavorite}
+            disabled={isLoadingFavorite}
+            className="absolute top-4 right-4 bg-white p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
             style={{ top: '4rem' }} // Position below property type badge
           >
             <Heart

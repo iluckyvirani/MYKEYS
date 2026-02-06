@@ -11,13 +11,13 @@ import { checkFavorite } from "@/lib/favorites/service";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { propertyId: string } }
+  { params }: { params: Promise<{ propertyId: string }> }
 ) {
   try {
     // Authenticate user
     const user = await requireAuth(request);
 
-    const { propertyId } = params;
+    const { propertyId } = await params;
 
     if (!propertyId) {
       return errorResponse(

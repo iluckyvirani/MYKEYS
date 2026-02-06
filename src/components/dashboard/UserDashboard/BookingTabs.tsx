@@ -2,70 +2,77 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import BookingList from "./BookingList";
-
-const upcomingBookings = [
-  {
-    id: "BK001",
-    property: "Seaside Villa, Goa",
-    type: "short_term",
-    dates: "Jan 15 - Jan 22, 2024",
-    checkIn: "2024-01-15",
-    checkOut: "2024-01-22",
-    amount: 45000,
-    status: "confirmed",
-    guests: 4,
-    nights: 7,
-    actions: ["cancel", "modify", "view"],
-  },
-  {
-    id: "BK002",
-    property: "Urban Apartment, Mumbai",
-    type: "long_term",
-    dates: "Feb 1 - Jul 31, 2024",
-    checkIn: "2024-02-01",
-    checkOut: "2024-07-31",
-    amount: 150000,
-    status: "pending",
-    guests: 2,
-    nights: 180,
-    actions: ["cancel", "view"],
-  },
-];
-
-const completedBookings = [
-  {
-    id: "BK003",
-    property: "Mountain Cottage, Shimla",
-    type: "short_term",
-    dates: "Dec 20 - Dec 25, 2023",
-    checkIn: "2023-12-20",
-    checkOut: "2023-12-25",
-    amount: 25000,
-    status: "completed",
-    guests: 3,
-    nights: 5,
-    actions: ["review", "rebook", "view"],
-  },
-];
-
-const cancelledBookings = [
-  {
-    id: "BK004",
-    property: "Luxury Penthouse, Delhi",
-    type: "short_term",
-    dates: "Jan 5 - Jan 10, 2024",
-    checkIn: "2024-01-05",
-    checkOut: "2024-01-10",
-    amount: 35000,
-    status: "cancelled",
-    guests: 2,
-    nights: 5,
-    actions: ["rebook", "view"],
-  },
-];
+import { ShortBookingDTO, BookingStatus } from "@/types/bookings";
 
 export default function BookingTabs() {
+  const [allBookings, setAllBookings] = useState<ShortBookingDTO[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/bookings?pageSize=100");
+
+        if (response.data?.success && response.data.data?.items) {
+          setAllBookings(response.data.data.items);
+          setError(null);
+        } else {
+          setError("Failed to load bookings");
+        }
+      } catch (err: any) {
+        console.error("Error fetching bookings:", err);
+        setError(err.message || "Failed to fetch bookings");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, []);
+
+  // Categorize bookings by status
+  const upcomingBookings = allBookings.filter(
+    (b) => b.status === BookingStatus.PENDING || b.status === BookingStatus.CONFIRMED
+  );
+
+  const completedBookings = allBookings.filter(
+    (b) => b.status === BookingStatus.COMPLETED
+  );
+
+  const cancelledBookings = allBookings.filter(
+    (b) => b.status === BookingStatus.CANCELLED
+  );
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-[5px] border p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600"></div>
+            <p className="mt-4 text-gray-600">Loading your bookings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-[5px] border p-6">
+        <div className="text-center py-12">
+          <Calendar className="w-16 h-16 text-red-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading bookings</h3>
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-[5px] border">
       <Tabs defaultValue="upcoming" className="w-full">
@@ -93,9 +100,9 @@ export default function BookingTabs() {
           </TabsTrigger>
           <TabsTrigger value="pending" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
             <Clock className="w-4 h-4" />
-            Pending
+            All Bookings
             <span className="ml-1 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
-              0
+              {allBookings.length}
             </span>
           </TabsTrigger>
         </TabsList>
@@ -126,11 +133,11 @@ export default function BookingTabs() {
           </TabsContent>
           
           <TabsContent value="pending" className="m-0">
-            <div className="text-center py-12">
-              <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No pending bookings</h3>
-              <p className="text-gray-500">All your bookings are confirmed!</p>
-            </div>
+            <BookingList 
+              bookings={allBookings} 
+              emptyMessage="No bookings found."
+              emptyAction={{ label: "Browse Properties", href: "/properties" }}
+            />
           </TabsContent>
         </div>
       </Tabs>

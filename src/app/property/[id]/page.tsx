@@ -43,6 +43,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
+import { CreateShortBookingRequest, PaymentMethod } from "@/types/bookings";
 
 // Mock property data - London based
 const mockPropertyData = {
@@ -187,6 +188,9 @@ export default function PropertyDetailsPage() {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [property, setProperty] = useState<any>(mockPropertyData);
     const [loading, setLoading] = useState(true);
+    const [bookingLoading, setBookingLoading] = useState(false);
+    const [bookingError, setBookingError] = useState<string | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CREDIT_CARD);
 
     // Fetch property data from API
     useEffect(() => {
@@ -269,11 +273,116 @@ export default function PropertyDetailsPage() {
         return docs;
     };
 
-    const handleInquirySubmit = (e: React.FormEvent) => {
+    const handleInquirySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Inquiry submitted:", inquiryForm);
-        setShowInquiryModal(false);
-        setInquiryForm({ name: "", phone: "", message: "" });
+
+        try {
+            let inquiryData: any = {
+                propertyId: property.id,
+                message: inquiryForm.message,
+                guestName: inquiryForm.name,
+                guestEmail: inquiryForm.phone, // Note: using phone field for email, adjust as needed
+            };
+
+            // Add specific fields based on property type
+            if (property.rentalType === "long") {
+                inquiryData = {
+                    ...inquiryData,
+                    desiredStartDate: new Date().toISOString().split('T')[0],
+                    desiredDurationMonths: property.minTerm || 12,
+                    numberOfOccupants: 1,
+                };
+            }
+
+            const response = await api.post("/inquiries", inquiryData);
+
+            if (response.data?.success) {
+                console.log("Inquiry sent successfully:", response.data.data);
+                setShowInquiryModal(false);
+                setInquiryForm({ name: "", phone: "", message: "" });
+                // Show success message (you can add a toast notification here)
+            } else {
+                alert(response.data?.message || "Failed to send inquiry");
+            }
+        } catch (error: any) {
+            console.error("Error sending inquiry:", error);
+            alert(error.response?.data?.message || "Failed to send inquiry. Please try again.");
+        }
+    };
+
+    const handleBookingSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setBookingError(null);
+        
+        // Validation
+        if (!checkInDate || !checkOutDate) {
+            setBookingError("Please select both check-in and check-out dates");
+            return;
+        }
+
+        if (!guests || guests < 1) {
+            setBookingError("Please select number of guests");
+            return;
+        }
+
+        if (guests > property.guests) {
+            setBookingError(`Maximum ${property.guests} guests allowed for this property`);
+            return;
+        }
+
+        const checkIn = new Date(checkInDate);
+        const checkOut = new Date(checkOutDate);
+
+        if (checkOut <= checkIn) {
+            setBookingError("Check-out date must be after check-in date");
+            return;
+        }
+
+        try {
+            setBookingLoading(true);
+
+            const bookingRequest: CreateShortBookingRequest = {
+                propertyId: property.id,
+                checkInDate: checkInDate,
+                checkOutDate: checkOutDate,
+                numberOfGuests: guests,
+                paymentMethod: paymentMethod,
+                specialRequests: ""
+            };
+
+            const response = await api.post("/bookings", bookingRequest);
+
+            if (response.data?.success) {
+                // Booking created successfully
+                console.log("Booking created:", response.data.data);
+                // Redirect to payment or confirmation page
+                router.push(`/booking/${response.data.data.id}`);
+            } else {
+                setBookingError(response.data?.message || "Failed to create booking");
+            }
+        } catch (error: any) {
+            console.error("Error creating booking:", error);
+            const errorMessage = error.response?.data?.message || error.message || "Failed to create booking. Please try again.";
+            setBookingError(errorMessage);
+        } finally {
+            setBookingLoading(false);
+        }
+    };
+
+    const handleToggleFavorite = async () => {
+        try {
+            const response = await api.post("/favorites/toggle", {
+                propertyId: property.id
+            });
+
+            if (response.data?.success) {
+                const action = response.data.data?.action;
+                setIsLiked(action === "added");
+                console.log(`Property ${action} to favorites`);
+            }
+        } catch (error: any) {
+            console.error("Error toggling favorite:", error);
+        }
     };
 
     return (
@@ -322,11 +431,11 @@ export default function PropertyDetailsPage() {
                                 <div className="flex items-center gap-4">
                                     <Button
                                         variant="outline"
-                                        onClick={() => setIsLiked(!isLiked)}
+                                        onClick={handleToggleFavorite}
                                         className="flex items-center gap-2"
                                     >
                                         <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                                        Save
+                                        {isLiked ? "Saved" : "Save"}
                                     </Button>
                                     <Button variant="outline" className="flex items-center gap-2">
                                         <Share2 className="w-5 h-5" />
@@ -952,7 +1061,7 @@ export default function PropertyDetailsPage() {
                                     {/* Dynamic Form based on Business Model */}
                                     {property.rentalType === "short" && property.listingType === "rent" ? (
                                         // Short Stay Booking Form
-                                        <div className="space-y-4 mb-6">
+                                        <form onSubmit={handleBookingSubmit} className="space-y-4 mb-6">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -964,6 +1073,7 @@ export default function PropertyDetailsPage() {
                                                         value={checkInDate}
                                                         onChange={(e) => setCheckInDate(e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                        required
                                                     />
                                                 </div>
                                                 <div>
@@ -976,6 +1086,7 @@ export default function PropertyDetailsPage() {
                                                         value={checkOutDate}
                                                         onChange={(e) => setCheckOutDate(e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                        required
                                                     />
                                                 </div>
                                             </div>
@@ -986,6 +1097,7 @@ export default function PropertyDetailsPage() {
                                                 </label>
                                                 <div className="flex items-center border border-gray-300 rounded-lg">
                                                     <button
+                                                        type="button"
                                                         onClick={() => setGuests(Math.max(1, guests - 1))}
                                                         className="px-3 py-2 text-gray-600 hover:text-gray-900"
                                                     >
@@ -993,6 +1105,7 @@ export default function PropertyDetailsPage() {
                                                     </button>
                                                     <span className="flex-1 text-center">{guests} guests</span>
                                                     <button
+                                                        type="button"
                                                         onClick={() => setGuests(guests + 1)}
                                                         className="px-3 py-2 text-gray-600 hover:text-gray-900"
                                                     >
@@ -1001,16 +1114,52 @@ export default function PropertyDetailsPage() {
                                                 </div>
                                             </div>
 
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Payment Method
+                                                </label>
+                                                <select
+                                                    value={paymentMethod}
+                                                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                >
+                                                    <option value={PaymentMethod.CREDIT_CARD}>Credit Card</option>
+                                                    <option value={PaymentMethod.DEBIT_CARD}>Debit Card</option>
+                                                    <option value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</option>
+                                                    <option value={PaymentMethod.WALLET}>Wallet</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Error Message */}
+                                            {bookingError && (
+                                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                                    {bookingError}
+                                                </div>
+                                            )}
+
                                             {/* Book Now Button for Short Stay */}
-                                            <Button className="w-full rounded-[5px] py-6 text-lg font-semibold mb-4 bg-linear-to-r from-green-600 to-emerald-600 cursor-pointer">
-                                                <Calendar className="w-5 h-5 mr-2" />
-                                                Book Now
+                                            <Button
+                                                type="submit"
+                                                disabled={bookingLoading}
+                                                className="w-full rounded-[5px] py-6 text-lg font-semibold mb-4 bg-linear-to-r from-green-600 to-emerald-600 cursor-pointer disabled:opacity-50"
+                                            >
+                                                {bookingLoading ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                                        Processing...
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center justify-center gap-2">
+                                                        <Calendar className="w-5 h-5" />
+                                                        Book Now
+                                                    </span>
+                                                )}
                                             </Button>
 
                                             <div className="text-center text-sm text-gray-500">
                                                 <p>🔒 Secure payment processed by Hously</p>
                                             </div>
-                                        </div>
+                                        </form>
                                     ) : (
                                         // Long Rent or Buy - Inquiry Button
                                         <div className="space-y-4 mb-6">
