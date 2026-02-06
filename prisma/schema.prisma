@@ -202,7 +202,7 @@ model Property {
   parking   Int? @default(0)
 
   // Status & Visibility
-  status        PropertyStatus @default(DRAFT)
+  status        PropertyStatus @default(ACTIVE)
   isFeatured    Boolean        @default(false)
   isVerified    Boolean        @default(false)
   featuredUntil DateTime?

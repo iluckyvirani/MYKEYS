@@ -1,39 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { bookingService } from '@/lib/bookings/bookingService';
-import { UpdateBookingStatusRequest, BookingResponse, UpdateBookingStatusResponse, BookingType, PaymentStatus, PaymentMethod } from '@/types/bookings';
+import { NextRequest } from 'next/server';
+import { successResponse, errorResponse } from '@/lib/response';
+import { withAuth } from '@/lib/auth/middleware';
+import { ErrorCode } from '@/lib/auth/errors';
+import { JWTPayload } from '@/lib/auth/jwt';
+import { UpdateBookingStatusRequest, ShortBookingDTO, BookingType, PaymentStatus, PaymentMethod, BookingStatus } from '@/types/bookings';
 
 /**
  * GET /api/bookings/{id}
  * Fetch a specific booking by ID
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload, context?: any) => {
   try {
-    // Await the params promise
-    const { id } = await params;
+    const { id } = await context.params;
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, message: 'Booking ID is required', data: null },
-        { status: 400 }
-      );
+      return errorResponse('Booking ID is required', 400, ErrorCode.INVALID_INPUT);
     }
 
     // TODO: Fetch booking from database
-    // const booking = await bookingService.getById(id);
-    // if (!booking) return NextResponse.json({ success: false, message: 'Booking not found', data: null }, { status: 404 });
+    // const booking = await prisma.booking.findUnique({
+    //   where: { id },
+    // });
+    // if (!booking) return errorResponse('Booking not found', 404, ErrorCode.RESOURCE_NOT_FOUND);
 
-    return NextResponse.json(
-      { success: false, message: 'Booking not found', data: null },
-      { status: 404 }
-    );
+    return errorResponse('Booking not found', 404, ErrorCode.RESOURCE_NOT_FOUND);
   } catch (error) {
     console.error('Error fetching booking:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to fetch booking', data: null },
-      { status: 500 }
-    );
+    return errorResponse('Failed to fetch booking', 500, ErrorCode.INTERNAL_SERVER_ERROR);
   }
-}
+});
 
 /**
  * PATCH /api/bookings/{id}
@@ -41,24 +36,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
  * Only owner can accept/cancel bookings
  * Body: UpdateBookingStatusRequest
  */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withAuth(async (request: NextRequest, user: JWTPayload, context?: any) => {
   try {
-    // Await the params promise
-    const { id } = await params;
-    const body: UpdateBookingStatusRequest = await req.json();
+    const { id } = await context.params;
+    const body: UpdateBookingStatusRequest = await request.json();
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, message: 'Booking ID is required', data: null },
-        { status: 400 }
-      );
+      return errorResponse('Booking ID is required', 400, ErrorCode.INVALID_INPUT);
     }
 
     if (!body.status) {
-      return NextResponse.json(
-        { success: false, message: 'Status is required', data: null },
-        { status: 400 }
-      );
+      return errorResponse('Status is required', 400, ErrorCode.VALIDATION_ERROR);
     }
 
     // TODO:
@@ -68,68 +56,53 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // 4. Update booking in database
     // 5. Send notification email
 
-    const response: UpdateBookingStatusResponse = {
-      success: true,
-      message: `Booking status updated to ${body.status}`,
-      data: {
-        id,
-<<<<<<< Updated upstream
-        bookingType: 'SHORT_TERM' as any,
-=======
-        bookingType: BookingType.SHORT_TERM,
->>>>>>> Stashed changes
-        propertyId: 'PROP-1',
-        propertyTitle: 'Sample Property',
-        guestId: 'USER-1',
-        guestName: 'Guest Name',
-        guestEmail: 'guest@example.com',
-        guestPhone: '1234567890',
-        checkInDate: '2024-01-15',
-        checkOutDate: '2024-01-22',
-        numberOfNights: 7,
-        numberOfGuests: 2,
-        pricePerNight: 100,
-        totalNights: 7,
-        subtotal: 700,
-        cleaningFee: 50,
-        serviceFee: 25,
-        totalAmount: 775,
-        paymentStatus: PaymentStatus.PAID,
-        paymentMethod: PaymentMethod.CREDIT_CARD,
-        paidAmount: 775,
-        balanceAmount: 0,
-        status: body.status,
-        ownerId: 'OWNER-1',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+    const booking: ShortBookingDTO = {
+      id,
+      bookingType: BookingType.SHORT_TERM,
+      propertyId: 'PROP-1',
+      propertyTitle: 'Sample Property',
+      guestId: 'USER-1',
+      guestName: 'Guest Name',
+      guestEmail: 'guest@example.com',
+      guestPhone: '1234567890',
+      checkInDate: '2024-01-15',
+      checkOutDate: '2024-01-22',
+      numberOfNights: 7,
+      numberOfGuests: 2,
+      pricePerNight: 100,
+      totalNights: 7,
+      subtotal: 700,
+      cleaningFee: 50,
+      serviceFee: 25,
+      totalAmount: 775,
+      paymentStatus: PaymentStatus.PAID,
+      paymentMethod: PaymentMethod.CREDIT_CARD,
+      paidAmount: 775,
+      balanceAmount: 0,
+      status: body.status as BookingStatus,
+      ownerId: 'OWNER-1',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    return NextResponse.json(response);
+    return successResponse(booking, `Booking status updated to ${body.status}`);
   } catch (error) {
     console.error('Error updating booking:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to update booking', data: null },
-      { status: 500 }
-    );
+    return errorResponse('Failed to update booking', 500, ErrorCode.INTERNAL_SERVER_ERROR);
   }
-}
+});
 
 /**
  * DELETE /api/bookings/{id}
  * Cancel a booking (guest action)
  * Only guest who created the booking can delete
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withAuth(async (request: NextRequest, user: JWTPayload, context?: any) => {
   try {
-    // Await the params promise
-    const { id } = await params;
+    const { id } = await context.params;
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, message: 'Booking ID is required', data: null },
-        { status: 400 }
-      );
+      return errorResponse('Booking ID is required', 400, ErrorCode.INVALID_INPUT);
     }
 
     // TODO:
@@ -139,15 +112,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // 4. Update booking status to CANCELLED
     // 5. Send cancellation email
 
-    return NextResponse.json(
-      { success: true, message: 'Booking cancelled successfully', data: null },
-      { status: 200 }
-    );
+    return successResponse(null, 'Booking cancelled successfully');
   } catch (error) {
     console.error('Error cancelling booking:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to cancel booking', data: null },
-      { status: 500 }
-    );
+    return errorResponse('Failed to cancel booking', 500, ErrorCode.INTERNAL_SERVER_ERROR);
   }
-}
+});

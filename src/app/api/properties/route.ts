@@ -186,7 +186,7 @@ export const POST = withAuth(
           latitude: body.latitude,
           longitude: body.longitude,
           price,
-          priceType: priceType || "MONTHLY",
+          priceType: priceType || "NIGHTLY",
           originalPrice: body.originalPrice,
           propertyType,
           listingType,
@@ -200,7 +200,7 @@ export const POST = withAuth(
           parking: body.parking || 0,
           occupancy: body.occupancy || 0,
           revenue: body.revenue || 0,
-          status: "DRAFT",
+          status: body.status || "ACTIVE",
           ownerId: user.userId,
           // Create images if provided
           ...(images && images.length > 0 && {

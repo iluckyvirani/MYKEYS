@@ -1,77 +1,131 @@
-import { NextRequest, NextResponse } from 'next/server';
-<<<<<<< Updated upstream
-=======
-import { bookingService } from '@/lib/bookings/bookingService';
->>>>>>> Stashed changes
-import { CreateShortBookingRequest, BookingResponse, BookingListResponse, BookingFilters, ShortBookingDTO, BookingStatus, PaymentStatus, BookingType } from '@/types/bookings';
-
-// Extend BookingFilters to include date range filters if not already defined
-interface ExtendedBookingFilters extends BookingFilters {
-  from?: string;
-  to?: string;
-}
+import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { successResponse, errorResponse, paginatedResponse } from '@/lib/response';
+import { withAuth } from '@/lib/auth/middleware';
+import { ErrorCode } from '@/lib/auth/errors';
+import { JWTPayload } from '@/lib/auth/jwt';
+import { CreateShortBookingRequest, ShortBookingDTO, BookingStatus, PaymentStatus, BookingType, PaymentMethod } from '@/types/bookings';
 
 /**
  * GET /api/bookings
- * Fetch bookings with filters
+ * Fetch bookings with optional filters
  * Query params: propertyId, guestId, ownerId, status, paymentStatus, from, to, page, pageSize
  */
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     
-    const filters: ExtendedBookingFilters = {
-      propertyId: searchParams.get('propertyId') || undefined,
-      guestId: searchParams.get('guestId') || undefined,
-      ownerId: searchParams.get('ownerId') || undefined,
-      status: searchParams.get('status') as any || undefined,
-      paymentStatus: searchParams.get('paymentStatus') as any || undefined,
-      from: searchParams.get('from') || undefined,
-      to: searchParams.get('to') || undefined,
-      page: parseInt(searchParams.get('page') || '1'),
-      pageSize: parseInt(searchParams.get('pageSize') || '10'),
-    };
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '10');
+    const skip = (page - 1) * pageSize;
 
-    // TODO: Query database with filters
-    // const bookings = await bookingService.getBookings(filters);
+    // Build where clause for filters
+    const where: any = {};
+    
+    const propertyId = searchParams.get('propertyId');
+    const guestId = searchParams.get('guestId');
+    const ownerId = searchParams.get('ownerId');
+    const status = searchParams.get('status');
+    const paymentStatus = searchParams.get('paymentStatus');
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
 
-    // Hardcoded response structure for now
-    const response: BookingListResponse = {
-      success: true,
-      message: 'Bookings retrieved successfully',
-      data: {
-        items: [],
-        total: 0,
-        page: filters.page || 1,
-        pageSize: filters.pageSize || 10,
-        totalPages: 0,
-      },
-    };
+    if (propertyId) where.propertyId = propertyId;
+    if (guestId) where.guestId = guestId;
+    if (ownerId) where.ownerId = ownerId;
+    if (status) where.status = status;
+    if (paymentStatus) where.paymentStatus = paymentStatus;
+    
+    if (from || to) {
+      where.checkIn = {};
+      if (from) where.checkIn.gte = new Date(from);
+      if (to) where.checkIn.lte = new Date(to);
+    }
 
-    return NextResponse.json(response);
+    // Fetch bookings from database
+    const [bookingsData, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          property: {
+            select: {
+              id: true,
+              title: true,
+              ownerId: true,
+            },
+          },
+          guest: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+            },
+          },
+        },
+      }),
+      prisma.booking.count({ where }),
+    ]);
+
+    // Transform database results to ShortBookingDTO format
+    const bookings: ShortBookingDTO[] = bookingsData
+      .filter((booking) => booking.property && booking.guest)
+      .map((booking) => ({
+        id: booking.id,
+        bookingType: BookingType.SHORT_TERM,
+        propertyId: booking.property.id,
+        propertyTitle: booking.property.title,
+        guestId: booking.guest.id,
+        guestName: `${booking.guest.firstName} ${booking.guest.lastName}`,
+        guestEmail: booking.guest.email,
+        guestPhone: booking.guest.phone || '',
+        checkInDate: booking.checkIn.toISOString().split('T')[0],
+        checkOutDate: booking.checkOut.toISOString().split('T')[0],
+        numberOfNights: booking.nights,
+        numberOfGuests: booking.guests,
+        pricePerNight: booking.basePrice,
+        totalNights: booking.nights,
+        subtotal: booking.basePrice * booking.nights,
+        cleaningFee: booking.cleaningFee || 0,
+        serviceFee: booking.serviceFee || 0,
+        totalAmount: booking.totalAmount,
+        paymentStatus: booking.paymentStatus as PaymentStatus,
+        paymentMethod: booking.paymentMethod as PaymentMethod | undefined,
+        paidAmount: booking.paidAmount || 0,
+        balanceAmount: booking.totalAmount - (booking.paidAmount || 0),
+        status: booking.status as BookingStatus,
+        specialRequests: booking.specialRequests || '',
+        ownerId: booking.ownerId || '',
+        createdAt: booking.createdAt.toISOString(),
+        updatedAt: booking.updatedAt.toISOString(),
+      }));
+
+    return paginatedResponse(bookings, total, page, pageSize, 'Bookings retrieved successfully');
   } catch (error) {
     console.error('Error fetching bookings:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to fetch bookings', data: null },
-      { status: 500 }
-    );
+    return errorResponse('Failed to fetch bookings', 500, ErrorCode.INTERNAL_SERVER_ERROR);
   }
-}
+});
 
 /**
  * POST /api/bookings
- * Create a new short-term booking (nights-based)
+ * Create a new short-term booking
  * Body: CreateShortBookingRequest
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
-    const body: CreateShortBookingRequest = await req.json();
+    const body: CreateShortBookingRequest = await request.json();
 
     // Validate required fields
     if (!body.propertyId || !body.checkInDate || !body.checkOutDate || !body.numberOfGuests) {
-      return NextResponse.json(
-        { success: false, message: 'Missing required fields', data: null },
-        { status: 400 }
+      return errorResponse(
+        'Missing required fields: propertyId, checkInDate, checkOutDate, numberOfGuests',
+        400,
+        ErrorCode.VALIDATION_ERROR
       );
     }
 
@@ -79,71 +133,109 @@ export async function POST(req: NextRequest) {
     const checkIn = new Date(body.checkInDate);
     const checkOut = new Date(body.checkOutDate);
     
+    if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
+      return errorResponse('Invalid date format', 400, ErrorCode.INVALID_INPUT);
+    }
+
     if (checkOut <= checkIn) {
-      return NextResponse.json(
-        { success: false, message: 'Check-out date must be after check-in date', data: null },
-        { status: 400 }
+      return errorResponse(
+        'Check-out date must be after check-in date',
+        400,
+        ErrorCode.INVALID_INPUT
       );
     }
 
-    // TODO: 
-    // 1. Fetch property details
-    // 2. Validate numberOfGuests <= property.maxGuests
-    // 3. Check property availability
-    // 4. Calculate pricing
-    // 5. Process payment
-    // 6. Create booking in database
-    // 7. Send confirmation email
+    // Fetch property details from database
+    const property = await prisma.property.findUnique({
+      where: { id: body.propertyId },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        cleaningFee: true,
+        serviceFee: true,
+        guests: true,
+        ownerId: true,
+      },
+    });
 
+    if (!property) {
+      return errorResponse('Property not found', 404, ErrorCode.RESOURCE_NOT_FOUND);
+    }
+
+    // Validate numberOfGuests <= property.maxGuests
+    if (body.numberOfGuests > property.guests) {
+      return errorResponse(
+        `Maximum ${property.guests} guests allowed for this property`,
+        400,
+        ErrorCode.INVALID_INPUT
+      );
+    }
+
+    // Fetch guest details from database
+    const guest = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+      },
+    });
+
+    if (!guest) {
+      return errorResponse('Guest details not found', 404, ErrorCode.RESOURCE_NOT_FOUND);
+    }
+
+    // Calculate pricing
     const numberOfNights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+    const pricePerNight = property.price;
+    const subtotal = pricePerNight * numberOfNights;
+    const cleaningFee = property.cleaningFee || 0;
+    const serviceFee = property.serviceFee || 0;
+    const totalAmount = subtotal + cleaningFee + serviceFee;
+
+    // TODO:
+    // 1. Check property availability (no overlapping bookings)
+    // 2. Process payment
+    // 3. Create booking in database
+    // 4. Send confirmation email
     
     const booking: ShortBookingDTO = {
       id: `BOOK-${Date.now()}`,
       bookingType: BookingType.SHORT_TERM,
-      propertyId: body.propertyId,
-      propertyTitle: 'Sample Property',
-      guestId: 'USER-1', // TODO: Get from auth
-      guestName: 'Guest Name',
-      guestEmail: 'guest@example.com',
-      guestPhone: '1234567890',
+      propertyId: property.id,
+      propertyTitle: property.title,
+      guestId: guest.id,
+      guestName: `${guest.firstName} ${guest.lastName}`,
+      guestEmail: guest.email,
+      guestPhone: guest.phone || '',
       checkInDate: body.checkInDate,
       checkOutDate: body.checkOutDate,
       numberOfNights,
       numberOfGuests: body.numberOfGuests,
-      pricePerNight: 100, // TODO: From property
+      pricePerNight,
       totalNights: numberOfNights,
-      subtotal: 100 * numberOfNights,
-      cleaningFee: 50,
-      serviceFee: 25,
-      totalAmount: (100 * numberOfNights) + 50 + 25,
+      subtotal,
+      cleaningFee,
+      serviceFee,
+      totalAmount,
       paymentStatus: PaymentStatus.PENDING,
-      paymentMethod: body.paymentMethod,
+      paymentMethod: body.paymentMethod || PaymentMethod.CREDIT_CARD,
       paidAmount: 0,
-      balanceAmount: (100 * numberOfNights) + 50 + 25,
+      balanceAmount: totalAmount,
       status: BookingStatus.PENDING,
-      specialRequests: body.specialRequests,
-      ownerId: 'OWNER-1',
+      specialRequests: body.specialRequests || '',
+      ownerId: property.ownerId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    const response: BookingResponse = {
-      success: true,
-      message: 'Booking created successfully',
-      data: booking,
-    };
-
-    return NextResponse.json(response, { status: 201 });
+    return successResponse(booking, 'Booking created successfully', 201);
   } catch (error) {
     console.error('Error creating booking:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to create booking', data: null },
-      { status: 500 }
-    );
-/* `>>>>>>> Stashed changes` is a merge conflict marker that indicates there are conflicting changes in
-the code that need to be resolved. In this case, it appears that there are changes in the code that
-were stashed (saved temporarily) and now there is a conflict when trying to merge those changes back
-into the codebase. */
+    return errorResponse('Failed to create booking', 500, ErrorCode.INTERNAL_SERVER_ERROR);
   }
-}
+});
 

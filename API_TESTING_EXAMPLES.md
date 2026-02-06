@@ -513,8 +513,212 @@ curl -X DELETE http://localhost:3000/api/favorites/remove \
     "propertyId": "prop-001"
   }'
 
+---
 
+## Bookings API
 
+### 1. Create Booking (POST)
+```bash
+curl -X POST http://localhost:3000/api/bookings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <guest-token>" \
+  -d '{
+    "propertyId": "PROP-123",
+    "checkInDate": "2026-02-10",
+    "checkOutDate": "2026-02-15",
+    "numberOfGuests": 2,
+    "paymentMethod": "CREDIT_CARD",
+    "specialRequests": "Extra pillows please"
+  }'
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Booking created successfully",
+  "data": {
+    "id": "BOOK-1706476800000",
+    "bookingType": "SHORT_TERM",
+    "propertyId": "PROP-123",
+    "propertyTitle": "Sample Property",
+    "guestId": "USER-456",
+    "guestName": "Guest Name",
+    "guestEmail": "guest@example.com",
+    "guestPhone": "",
+    "checkInDate": "2026-02-10",
+    "checkOutDate": "2026-02-15",
+    "numberOfNights": 5,
+    "numberOfGuests": 2,
+    "pricePerNight": 100,
+    "totalNights": 5,
+    "subtotal": 500,
+    "cleaningFee": 50,
+    "serviceFee": 25,
+    "totalAmount": 575,
+    "paymentStatus": "PENDING",
+    "paymentMethod": "CREDIT_CARD",
+    "paidAmount": 0,
+    "balanceAmount": 575,
+    "status": "PENDING",
+    "specialRequests": "Extra pillows please",
+    "ownerId": "OWNER-1",
+    "createdAt": "2026-02-05T10:00:00.000Z",
+    "updatedAt": "2026-02-05T10:00:00.000Z"
+  }
+}
+```
+
+### 2. Get All Bookings (GET)
+```bash
+# Get all bookings
+curl http://localhost:3000/api/bookings \
+  -H "Authorization: Bearer <user-token>"
+
+# With filters
+curl "http://localhost:3000/api/bookings?propertyId=PROP-123&status=CONFIRMED&page=1&pageSize=10" \
+  -H "Authorization: Bearer <user-token>"
+
+# Filter by date range
+curl "http://localhost:3000/api/bookings?from=2026-02-01&to=2026-02-28&page=1" \
+  -H "Authorization: Bearer <user-token>"
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Bookings retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": "BOOK-1706476800000",
+        "bookingType": "SHORT_TERM",
+        "propertyId": "PROP-123",
+        "guestId": "USER-456",
+        "checkInDate": "2026-02-10",
+        "checkOutDate": "2026-02-15",
+        "numberOfNights": 5,
+        "status": "CONFIRMED",
+        "paymentStatus": "PAID",
+        "totalAmount": 575,
+        "createdAt": "2026-02-05T10:00:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "pageSize": 10,
+    "totalPages": 1
+  }
+}
+```
+
+### 3. Get Booking by ID (GET)
+```bash
+curl http://localhost:3000/api/bookings/BOOK-1706476800000 \
+  -H "Authorization: Bearer <user-token>"
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Booking retrieved successfully",
+  "data": {
+    "id": "BOOK-1706476800000",
+    "bookingType": "SHORT_TERM",
+    "propertyId": "PROP-123",
+    "propertyTitle": "Sample Property",
+    "guestId": "USER-456",
+    "guestName": "Guest Name",
+    "guestEmail": "guest@example.com",
+    "checkInDate": "2026-02-10",
+    "checkOutDate": "2026-02-15",
+    "numberOfNights": 5,
+    "numberOfGuests": 2,
+    "pricePerNight": 100,
+    "totalAmount": 575,
+    "paymentStatus": "PAID",
+    "status": "CONFIRMED",
+    "specialRequests": "Extra pillows please",
+    "createdAt": "2026-02-05T10:00:00.000Z",
+    "updatedAt": "2026-02-05T10:00:00.000Z"
+  }
+}
+```
+
+### 4. Update Booking Status (PATCH)
+```bash
+# Owner confirms/cancels booking
+curl -X PATCH http://localhost:3000/api/bookings/BOOK-1706476800000 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <owner-token>" \
+  -d '{
+    "status": "CONFIRMED"
+  }'
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Booking status updated to CONFIRMED",
+  "data": {
+    "id": "BOOK-1706476800000",
+    "bookingType": "SHORT_TERM",
+    "status": "CONFIRMED",
+    "paymentStatus": "PAID",
+    "totalAmount": 575,
+    "createdAt": "2026-02-05T10:00:00.000Z",
+    "updatedAt": "2026-02-05T10:00:00.000Z"
+  }
+}
+```
+
+**Valid Status Values:**
+- `PENDING` - Initial booking state
+- `CONFIRMED` - Owner accepts booking
+- `COMPLETED` - Stay is completed
+- `CANCELLED` - Booking cancelled
+
+### 5. Cancel Booking (DELETE)
+```bash
+# Guest cancels booking
+curl -X DELETE http://localhost:3000/api/bookings/BOOK-1706476800000 \
+  -H "Authorization: Bearer <guest-token>"
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Booking cancelled successfully",
+  "data": null
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "success": false,
+  "message": "Check-out date must be after check-in date",
+  "code": "INVALID_INPUT"
+}
+```
+
+### Query Parameters for GET /api/bookings
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `propertyId` | string | Filter by property ID |
+| `guestId` | string | Filter by guest ID |
+| `ownerId` | string | Filter by owner ID |
+| `status` | string | Filter by booking status (PENDING, CONFIRMED, COMPLETED, CANCELLED) |
+| `paymentStatus` | string | Filter by payment status (PENDING, PARTIAL, PAID, REFUNDED) |
+| `from` | date | Filter bookings from this date |
+| `to` | date | Filter bookings to this date |
+| `page` | number | Page number (default: 1) |
+| `pageSize` | number | Items per page (default: 10) |
 
 ## Status Codes
 
