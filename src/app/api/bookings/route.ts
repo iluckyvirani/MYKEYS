@@ -196,14 +196,65 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
     const serviceFee = property.serviceFee || 0;
     const totalAmount = subtotal + cleaningFee + serviceFee;
 
+    // Check property availability (no overlapping bookings)
+    const overlappingBookings = await prisma.booking.count({
+      where: {
+        propertyId: body.propertyId,
+        status: {
+          in: [BookingStatus.CONFIRMED],
+        },
+        OR: [
+          {
+            checkIn: { lt: checkOut },
+            checkOut: { gt: checkIn },
+          },
+        ],
+      },
+    });
+
+    if (overlappingBookings > 0) {
+      return errorResponse(
+        'Property is not available for the selected dates',
+        400,
+        ErrorCode.INVALID_INPUT
+      );
+    }
+
     // TODO:
-    // 1. Check property availability (no overlapping bookings)
-    // 2. Process payment
-    // 3. Create booking in database
-    // 4. Send confirmation email
+    // 1. Process payment
+    // 2. Send confirmation email
     
+    // Create booking in database
+    const bookingData: any = {
+      checkIn,
+      checkOut,
+      nights: numberOfNights,
+      guests: body.numberOfGuests,
+      basePrice: pricePerNight,
+      cleaningFee,
+      serviceFee,
+      totalAmount,
+      paidAmount: 0,
+      balanceAmount: totalAmount,
+      status: BookingStatus.PENDING,
+      paymentStatus: PaymentStatus.PENDING,
+      specialRequests: body.specialRequests || '',
+      propertyId: property.id,
+      guestId: guest.id,
+      ownerId: property.ownerId,
+    };
+
+    if (body.paymentMethod) {
+      bookingData.paymentMethod = body.paymentMethod;
+    }
+
+    const createdBooking = await prisma.booking.create({
+      data: bookingData,
+    });
+
+    // Transform to DTO
     const booking: ShortBookingDTO = {
-      id: `BOOK-${Date.now()}`,
+      id: createdBooking.id,
       bookingType: BookingType.SHORT_TERM,
       propertyId: property.id,
       propertyTitle: property.title,
@@ -211,25 +262,25 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
       guestName: `${guest.firstName} ${guest.lastName}`,
       guestEmail: guest.email,
       guestPhone: guest.phone || '',
-      checkInDate: body.checkInDate,
-      checkOutDate: body.checkOutDate,
-      numberOfNights,
-      numberOfGuests: body.numberOfGuests,
-      pricePerNight,
-      totalNights: numberOfNights,
-      subtotal,
-      cleaningFee,
-      serviceFee,
-      totalAmount,
-      paymentStatus: PaymentStatus.PENDING,
-      paymentMethod: body.paymentMethod || PaymentMethod.CREDIT_CARD,
-      paidAmount: 0,
-      balanceAmount: totalAmount,
-      status: BookingStatus.PENDING,
-      specialRequests: body.specialRequests || '',
-      ownerId: property.ownerId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      checkInDate: createdBooking.checkIn.toISOString().split('T')[0],
+      checkOutDate: createdBooking.checkOut.toISOString().split('T')[0],
+      numberOfNights: createdBooking.nights,
+      numberOfGuests: createdBooking.guests,
+      pricePerNight: createdBooking.basePrice,
+      totalNights: createdBooking.nights,
+      subtotal: createdBooking.basePrice * createdBooking.nights,
+      cleaningFee: createdBooking.cleaningFee || 0,
+      serviceFee: createdBooking.serviceFee || 0,
+      totalAmount: createdBooking.totalAmount,
+      paymentStatus: createdBooking.paymentStatus as PaymentStatus,
+      paymentMethod: createdBooking.paymentMethod as PaymentMethod | undefined,
+      paidAmount: createdBooking.paidAmount || 0,
+      balanceAmount: createdBooking.totalAmount - (createdBooking.paidAmount || 0),
+      status: createdBooking.status as BookingStatus,
+      specialRequests: createdBooking.specialRequests || '',
+      ownerId: createdBooking.ownerId || '',
+      createdAt: createdBooking.createdAt.toISOString(),
+      updatedAt: createdBooking.updatedAt.toISOString(),
     };
 
     return successResponse(booking, 'Booking created successfully', 201);

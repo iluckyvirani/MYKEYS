@@ -34,7 +34,7 @@ export default function Navbar() {
   // Simulating authentication check
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem("auth_token");
+      const token = localStorage.getItem("accessToken");
       setIsLoggedIn(!!token);
 
       const role = localStorage.getItem("user_role") || "user";
@@ -45,7 +45,7 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("auth_token");
+    localStorage.removeItem("accessToken");
     localStorage.removeItem("user_role");
     setIsLoggedIn(false);
     setUserRole("user");

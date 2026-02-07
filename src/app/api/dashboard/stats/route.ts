@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/middleware';
 import { successResponse, errorResponse } from '@/lib/response';
 import { prisma } from '@/lib/prisma';
+import { BookingStatus } from '@/types/bookings';
 
 /**
  * GET /api/dashboard/stats
@@ -11,14 +12,24 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth(request);
 
+    if (!user || !user.userId) {
+      return errorResponse('Invalid user session', 401, 'UNAUTHORIZED');
+    }
+
+    // Verify prisma client is available
+    if (!prisma || typeof prisma.booking?.count !== 'function') {
+      console.error('Prisma client not properly initialized');
+      return errorResponse('Database connection failed', 500, 'DASHBOARD_STATS_ERROR');
+    }
+
     // Calculate real statistics from database
-    const [activeBookings, totalInquiries, favoriteProperties] = await Promise.all([
+    const [activeBookings, totalInquiries] = await Promise.all([
       // Count active bookings (PENDING or CONFIRMED status)
       prisma.booking.count({
         where: {
           guestId: user.userId,
           status: {
-            in: ['PENDING', 'CONFIRMED'],
+            in: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
           },
         },
       }),
@@ -28,13 +39,13 @@ export async function GET(request: NextRequest) {
           userId: user.userId,
         },
       }),
-      // Count favorite properties
-      prisma.favorite.count({
-        where: {
-          userId: user.userId,
-        },
-      }),
     ]);
+
+    // Count favorite properties using raw query
+    const favoriteResult = await prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*) as count FROM "Favorite" WHERE "userId" = ${user.userId}
+    `;
+    const favoriteProperties = Number(favoriteResult[0]?.count || 0);
 
     const stats = {
       activeBookings,
