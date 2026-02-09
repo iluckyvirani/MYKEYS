@@ -10,10 +10,9 @@ import { toUserDTO } from "@/lib/auth/helpers";
  * GET /api/users/[id]
  * Get user by ID (Admin only or own profile)
  */
-export const GET = withAuth<{ params: { id: string } }>(
+export const GET = withAuth<{ params: Promise<{ id: string }> }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
-    const { id } = params;
+    const { id } = await context!.params;
     try {
       // Check if user is accessing their own profile or is admin
       if (user.role !== "ADMIN" && user.userId !== id) {
@@ -78,10 +77,9 @@ export const GET = withAuth<{ params: { id: string } }>(
  * PATCH /api/users/[id]
  * Update user (Admin only or self)
  */
-export const PATCH = withAuth<{ params: { id: string } }>(
+export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
-    const { id } = params;
+    const { id } = await context!.params;
     try {
       const body = await request.json();
 
@@ -189,10 +187,9 @@ export const PATCH = withAuth<{ params: { id: string } }>(
  * DELETE /api/users/[id]
  * Delete user (Admin only)
  */
-export const DELETE = withAuth<{ params: { id: string } }>(
+export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
-    const { id } = params;
+    const { id } = await context!.params;
     try {
       // Check if user is admin
       if (user.role !== "ADMIN") {

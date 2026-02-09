@@ -107,7 +107,7 @@ export function withAuth<T = any>(
   ) => Promise<NextResponse>,
   options?: { roles?: UserRole[] }
 ) {
-  return async (request: NextRequest, context?: any) => {
+  return async (request: NextRequest, context?: T) => {
     try {
       let user: JWTPayload;
 
@@ -119,8 +119,9 @@ export function withAuth<T = any>(
 
       // Handle Promise-based params for Next.js 15+
       if (context && typeof context === 'object' && 'params' in context) {
-        if (context.params && typeof context.params.then === 'function') {
-          context.params = await context.params;
+        const ctxAny = context as any;
+        if (ctxAny.params && typeof ctxAny.params.then === 'function') {
+          ctxAny.params = await ctxAny.params;
         }
       }
 

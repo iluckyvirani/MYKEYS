@@ -103,8 +103,7 @@ export async function GET(
  */
 export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
-    const { id } = await params;
+    const { id } = await context!.params;
     try {
       // Check if property exists and user owns it
       const existingProperty = await prisma.property.findUnique({
@@ -188,8 +187,7 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
  */
 export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
-    const { id } = await params;
+    const { id } = await context!.params;
     try {
       // Check if property exists and user owns it
       const existingProperty = await prisma.property.findUnique({

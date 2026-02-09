@@ -55,8 +55,7 @@ export async function GET(
  */
 export const PUT = withAuth<{ params: Promise<{ id: string }> }>(
     async (request: NextRequest, user: JWTPayload, context) => {
-        const { params } = context!;
-        const { id } = await params;
+        const { id } = await context!.params;
         try {
             const body = await request.json();
 
@@ -113,8 +112,7 @@ export const PUT = withAuth<{ params: Promise<{ id: string }> }>(
  */
 export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
     async (request: NextRequest, _user: JWTPayload, context) => {
-        const { params } = context!;
-        const { id } = await params;
+        const { id } = await context!.params;
         try {
             // Check if amenity exists
             const amenity = await prisma.amenity.findUnique({
