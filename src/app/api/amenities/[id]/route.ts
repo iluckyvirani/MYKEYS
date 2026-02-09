@@ -53,10 +53,10 @@ export async function GET(
  * PUT /api/amenities/:id
  * Update an amenity (Admin only)
  */
-export const PUT = withAuth<{ params: { id: string } }>(
+export const PUT = withAuth<{ params: Promise<{ id: string }> }>(
     async (request: NextRequest, user: JWTPayload, context) => {
         const { params } = context!;
-        const { id } = params;
+        const { id } = await params;
         try {
             const body = await request.json();
 
@@ -111,10 +111,10 @@ export const PUT = withAuth<{ params: { id: string } }>(
  * DELETE /api/amenities/:id
  * Delete an amenity (Admin only)
  */
-export const DELETE = withAuth<{ params: { id: string } }>(
+export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
     async (request: NextRequest, _user: JWTPayload, context) => {
         const { params } = context!;
-        const { id } = params;
+        const { id } = await params;
         try {
             // Check if amenity exists
             const amenity = await prisma.amenity.findUnique({

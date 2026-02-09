@@ -10,9 +10,9 @@ import { UpdateBookingStatusRequest, ShortBookingDTO, BookingType, PaymentStatus
  * GET /api/bookings/{id}
  * Fetch a specific booking by ID
  */
-export const GET = withAuth<{ params: { id: string } }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload, context?: any) => {
   try {
-    const { id } = context!.params;
+    const { id } = await context.params;
 
     if (!id) {
       return errorResponse('Booking ID is required', 400, ErrorCode.INVALID_INPUT);
@@ -88,9 +88,9 @@ export const GET = withAuth<{ params: { id: string } }>(async (request: NextRequ
  * Only owner can accept/cancel bookings
  * Body: UpdateBookingStatusRequest
  */
-export const PATCH = withAuth<{ params: { id: string } }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const PATCH = withAuth(async (request: NextRequest, user: JWTPayload, context?: any) => {
   try {
-    const { id } = context!.params;
+    const { id } = await context.params;
     const body: UpdateBookingStatusRequest = await request.json();
 
     if (!id) {
@@ -208,9 +208,9 @@ export const PATCH = withAuth<{ params: { id: string } }>(async (request: NextRe
  * Cancel a booking (guest action)
  * Only guest who created the booking can delete
  */
-export const DELETE = withAuth<{ params: { id: string } }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const DELETE = withAuth(async (request: NextRequest, user: JWTPayload, context?: any) => {
   try {
-    const { id } = context!.params;
+    const { id } = await context.params;
 
     if (!id) {
       return errorResponse('Booking ID is required', 400, ErrorCode.INVALID_INPUT);
