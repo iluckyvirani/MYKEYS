@@ -79,6 +79,7 @@ export const GET = withAuth<{ params: { id: string } }>(
  * Update user (Admin only or self)
  */
 export const PATCH = withAuth<{ params: { id: string } }>(
+
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
     const { id } = params;
@@ -190,6 +191,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
  * Delete user (Admin only)
  */
 export const DELETE = withAuth<{ params: { id: string } }>(
+
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
     const { id } = params;

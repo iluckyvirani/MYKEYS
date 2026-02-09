@@ -101,10 +101,10 @@ export async function GET(
  * PATCH /api/properties/[id]
  * Update property (Owner/Admin only)
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
+export const PATCH = withAuth<{ params: { id: string } }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
-    const { id } = await params;
+    const { id } = params;
     try {
       // Check if property exists and user owns it
       const existingProperty = await prisma.property.findUnique({
@@ -186,7 +186,7 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
  * DELETE /api/properties/[id]
  * Delete property (Owner/Admin only)
  */
-export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
+export const DELETE = withAuth<{ params: { id: string } }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { params } = context!;
     const { id } = await params;
