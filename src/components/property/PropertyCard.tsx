@@ -15,6 +15,7 @@ export interface PropertyCardProps {
   slug: string;
   address: string;
   price: string;
+  propertyPrice: string;
   rating: number;
   reviews: number;
   sqft: number;
@@ -38,6 +39,7 @@ export default function PropertyCard({
   slug,
   address,
   price,
+  propertyPrice,
   rentalType,
   listingType,
   priceType,
@@ -194,7 +196,7 @@ export default function PropertyCard({
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm text-gray-500 mb-1">Price</p>
-              <h3 className="text-2xl font-bold text-gray-900 font-spartan">{price}
+              <h3 className="text-2xl font-bold text-gray-900 font-spartan">{listingType === "buy" ? propertyPrice : price}
                 <span className="text-sm font-normal text-gray-500">/{getPriceSuffix()}</span>
               </h3>
             </div>

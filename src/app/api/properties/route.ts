@@ -174,7 +174,17 @@ export const POST = withAuth(
         images,
       } = body;
 
-      if (!title || !address || !city || !state || !price || !propertyType || !listingType || !priceType) {
+      if (
+        !title ||
+        !address ||
+        !city ||
+        !state ||
+        price === undefined ||
+        price === null ||
+        !priceType ||
+        !propertyType ||
+        !listingType
+      ) {
         return errorResponse(
           "Missing required fields: title, address, city, state, price, priceType, propertyType, listingType",
           400,

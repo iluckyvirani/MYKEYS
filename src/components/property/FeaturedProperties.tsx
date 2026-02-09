@@ -52,6 +52,7 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
           slug: property.slug,
           address: `${property.address} ${property.city}`,
           price: `£${property.price}`,
+          propertyPrice: `£${property.propertyPrice}`,
           rentalType: property.rentalType?.toLowerCase() === "short_term" ? "short" : "long",
           listingType: property.listingType?.toLowerCase() === "buy" ? "buy" : "rent",
           priceType: property.priceType?.toLowerCase() || "monthly",
