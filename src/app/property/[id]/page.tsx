@@ -44,6 +44,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import { CreateShortBookingRequest, PaymentMethod } from "@/types/bookings";
+import { formatDateToReadable } from "@/utils/utils";
+import { MeResponse } from "@/types/auth";
 
 // Mock property data - London based
 const mockPropertyData = {
@@ -179,9 +181,11 @@ export default function PropertyDetailsPage() {
     const [activeTab, setActiveTab] = useState("overview");
     const [showAllAmenities, setShowAllAmenities] = useState(false);
     const [showInquiryModal, setShowInquiryModal] = useState(false);
+    const [inquirySuccess, setInquirySuccess] = useState<string | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [inquiryForm, setInquiryForm] = useState({
         name: "",
+        email: "",
         phone: "",
         message: ""
     });
@@ -190,6 +194,7 @@ export default function PropertyDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [bookingLoading, setBookingLoading] = useState(false);
     const [bookingError, setBookingError] = useState<string | null>(null);
+    const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CREDIT_CARD);
 
     // Fetch property data from API
@@ -223,10 +228,24 @@ export default function PropertyDetailsPage() {
                         propertyType: apiData.propertyType || mockPropertyData.propertyType,
                         minStay: apiData.minStay || mockPropertyData.minStay,
                         maxStay: apiData.maxStay || mockPropertyData.maxStay,
-                        minLease: apiData.minLease || mockPropertyData.minTerm,
+                        minTerm: apiData.minTerm || mockPropertyData.minTerm,
+                        maxTerm: apiData.maxTerm || mockPropertyData.maxTerm,
+                        freeparking: apiData.parking || mockPropertyData.freeParking,
+                        guests: apiData.guests || mockPropertyData.guests,
+                        availableFrom: apiData.availableFrom || mockPropertyData.availableFrom,
+                        securityDeposit: `£${apiData.securityDeposit}` || mockPropertyData.securityDeposit,
+                        billsIncluded: apiData.billsIncluded || false,
+                        epcRating: apiData.epcRating || mockPropertyData.epcRating,
+                        councilTaxBand: apiData.councilTaxBand || mockPropertyData.councilTaxBand,
+                        propertyPrice: apiData.propertyPrice || mockPropertyData.propertyPrice,
+                        propertyTax: `£${apiData.propertyTax}` || mockPropertyData.propertyTax,
+                        hoaFee: `£${apiData.hoaFee}` || mockPropertyData.hoaFee,
+                        leasehold: apiData.leasehold,
+                        leaseYears: apiData.leaseYears || mockPropertyData.leaseYears,
+                        groundRent: apiData.groundRent || mockPropertyData.groundRent,
                         images: apiData.images?.map((img: any) => img.url) || mockPropertyData.images,
                         amenities: apiData.amenities?.map((amenity: any) => ({
-                            name: amenity.name,
+                            name: amenity.amenity.name,
                             icon: <Wifi className="w-5 h-5" /> // Fallback icon
                         })) || mockPropertyData.amenities,
                         rating: apiData.averageRating || mockPropertyData.rating,
@@ -256,6 +275,33 @@ export default function PropertyDetailsPage() {
         fetchProperty();
     }, [params?.id]);
 
+    // Check if user is logged in and prefill form
+    useEffect(() => {
+        const fetchUserDetails = async () => {
+            try {
+                const response = await api.get<MeResponse>("/auth/me");
+                if (response.data && response.data.data) {
+                    const userData = response.data.data;
+                    localStorage.setItem("user", JSON.stringify(response.data));
+                    setIsLoggedIn(true);
+                    setInquiryForm({
+                        name: `${userData.firstName || ""} ${userData.lastName || ""}`.trim(),
+                        email: userData.email || "",
+                        phone: userData.phone || "",
+                        message: ""
+                    });
+                }
+            } catch (error) {
+                console.log("User not logged in");
+                setIsLoggedIn(false);
+            }
+        };
+
+        fetchUserDetails();
+    }, []);
+
+
+
     // Get documents based on listing type
     const getRequiredDocuments = () => {
         const docs = [...property.requiredDocuments.common];
@@ -275,13 +321,15 @@ export default function PropertyDetailsPage() {
 
     const handleInquirySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setInquirySuccess(null);
 
         try {
             let inquiryData: any = {
                 propertyId: property.id,
                 message: inquiryForm.message,
-                guestName: inquiryForm.name,
-                guestEmail: inquiryForm.phone, // Note: using phone field for email, adjust as needed
+                name: inquiryForm.name,
+                email: inquiryForm.email,
+                phone: inquiryForm.phone,
             };
 
             // Add specific fields based on property type
@@ -299,8 +347,10 @@ export default function PropertyDetailsPage() {
             if (response.data?.success) {
                 console.log("Inquiry sent successfully:", response.data.data);
                 setShowInquiryModal(false);
-                setInquiryForm({ name: "", phone: "", message: "" });
-                // Show success message (you can add a toast notification here)
+                setInquiryForm({ name: "", phone: "", message: "", email: "" });
+                setInquirySuccess("Inquiry sent successfully! The owner will review your message and get back to you soon.");
+                // Auto close success modal after 4 seconds
+                setTimeout(() => setInquirySuccess(null), 4000);
             } else {
                 alert(response.data?.message || "Failed to send inquiry");
             }
@@ -313,7 +363,8 @@ export default function PropertyDetailsPage() {
     const handleBookingSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setBookingError(null);
-        
+        setBookingSuccess(null);
+
         // Validation
         if (!checkInDate || !checkOutDate) {
             setBookingError("Please select both check-in and check-out dates");
@@ -355,8 +406,11 @@ export default function PropertyDetailsPage() {
             if (response.data?.success) {
                 // Booking created successfully
                 console.log("Booking created:", response.data.data);
-                // Redirect to payment or confirmation page
-                router.push(`/booking/${response.data.data.id}`);
+                setBookingSuccess("Booking confirmed! We'll send you a confirmation email shortly.");
+                // Clear form
+                setCheckInDate("");
+                setCheckOutDate("");
+                setGuests(2);
             } else {
                 setBookingError(response.data?.message || "Failed to create booking");
             }
@@ -446,9 +500,11 @@ export default function PropertyDetailsPage() {
 
                             {/* Property Type Badges */}
                             <div className="flex flex-wrap gap-2 mt-4">
-                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                                    {property.rentalType === "short" ? "Short Rent" : "Long Term"}
-                                </span>
+                                {property.listingType === "rent" &&
+                                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                                        {property.rentalType === "short" ? "Short Rent" : "Long Term"}
+                                    </span>
+                                }
                                 <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                                     {property.propertyType}
                                 </span>
@@ -670,7 +726,7 @@ export default function PropertyDetailsPage() {
                                                         <div className="space-y-4">
                                                             <div>
                                                                 <p className="text-sm text-gray-600">Available from</p>
-                                                                <p className="font-medium text-lg">{property.availableFrom}</p>
+                                                                <p className="font-medium text-lg">{formatDateToReadable(property.availableFrom)}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm text-gray-600">Minimum term</p>
@@ -1093,7 +1149,7 @@ export default function PropertyDetailsPage() {
 
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Guests
+                                                    Guests (Max: {property.guests})
                                                 </label>
                                                 <div className="flex items-center border border-gray-300 rounded-lg">
                                                     <button
@@ -1106,7 +1162,7 @@ export default function PropertyDetailsPage() {
                                                     <span className="flex-1 text-center">{guests} guests</span>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setGuests(guests + 1)}
+                                                        onClick={() => setGuests(Math.min(property.guests, guests + 1))}
                                                         className="px-3 py-2 text-gray-600 hover:text-gray-900"
                                                     >
                                                         +
@@ -1134,6 +1190,13 @@ export default function PropertyDetailsPage() {
                                             {bookingError && (
                                                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                                                     {bookingError}
+                                                </div>
+                                            )}
+
+                                            {/* Success Message */}
+                                            {bookingSuccess && (
+                                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                                                    ✓ {bookingSuccess}
                                                 </div>
                                             )}
 
@@ -1215,7 +1278,7 @@ export default function PropertyDetailsPage() {
                         </div>
                     </div>
 
-            // {/* Inquiry Modal */}
+                    {/* Inquiry Modal */}
                     {showInquiryModal && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                             <div className="bg-white rounded-[5px] shadow-xl max-w-md w-full p-4">
@@ -1262,6 +1325,20 @@ export default function PropertyDetailsPage() {
                                                     required
                                                 />
                                             </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Email
+                                                </label>
+                                                <input
+                                                    type="email"
+                                                    value={inquiryForm.email}
+                                                    onChange={(e) => setInquiryForm({ ...inquiryForm, email: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-[5px]"
+                                                    placeholder="Enter your email address"
+                                                    required
+                                                />
+                                            </div>
                                         </>
                                     ) : (
                                         <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -1301,6 +1378,49 @@ export default function PropertyDetailsPage() {
                                         Your inquiry will be sent directly to the property owner.
                                     </p>
                                 </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Inquiry Success Modal */}
+                    {inquirySuccess && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-[5px] shadow-xl max-w-md w-full p-6 text-center">
+                                <div className="mb-4 flex justify-center">
+                                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                                        <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">Inquiry Sent!</h3>
+                                <p className="text-gray-600 mb-6">
+                                    {inquirySuccess}
+                                </p>
+
+                                <div className="space-y-3">
+                                    <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
+                                        <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                        </svg>
+                                        We've sent you a confirmation email
+                                    </p>
+                                    <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
+                                        <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM8 8a1 1 0 000 2h6a1 1 0 100-2H8zm0 4a1 1 0 100 2h3a1 1 0 100-2H8z" clipRule="evenodd" />
+                                        </svg>
+                                        Owner will review your message soon
+                                    </p>
+                                </div>
+
+                                <Button
+                                    onClick={() => setInquirySuccess(null)}
+                                    className="w-full mt-6 rounded-[5px] py-2 cursor-pointer"
+                                >
+                                    Close
+                                </Button>
                             </div>
                         </div>
                     )}

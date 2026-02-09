@@ -2,19 +2,17 @@
 
 import { Filter, Star, Home, Bath, Bed, PoundSterling } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BuyFiltersState } from "@/app/buy/page";
 import { useState, useEffect } from "react";
+import { LongRentFiltersState } from "@/app/rent/long-rent/page";
 
-interface BuyFiltersProps {
-  filters: BuyFiltersState;
-  onFilterChange: (filters: Partial<BuyFiltersState>) => void;
+interface LongRentFiltersProps {
+  filters: LongRentFiltersState;
+  onFilterChange: (filters: Partial<LongRentFiltersState>) => void;
 }
 
-export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps) {
-  // Local state for filter controls - only applied when "Apply Filters" is clicked
-  const [localFilters, setLocalFilters] = useState<BuyFiltersState>(filters);
+export default function LongRentFilters({ filters, onFilterChange }: LongRentFiltersProps) {
+  const [localFilters, setLocalFilters] = useState<LongRentFiltersState>(filters);
 
-  // Sync local filters with parent filters on mount or when parent changes
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
@@ -56,13 +54,14 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
   };
 
   const clearFilters = () => {
-    const emptyFilters: BuyFiltersState = {
-      priceRange: [0, 2000000],
+    const emptyFilters: LongRentFiltersState = {
+      priceRange: [0, 5000],
       selectedTypes: [],
       selectedBeds: null,
       selectedBaths: null,
       minRating: 0,
-      availableFrom: "",
+      minTermMonths: 1,
+      maxTermMonths: 24,
       propertyPreferences: [],
       searchLocation: "",
     };
@@ -89,11 +88,11 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
           </button>
         </div>
 
-        {/* Price Range */}
+        {/* Price Range (Per Month) */}
         <div className="mb-6 pb-6 border-b">
           <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <PoundSterling className="w-4 h-4 text-green-600" />
-            Price Range
+            Price Per Month
           </h4>
           <div className="space-y-4">
             <div className="flex justify-between text-sm text-gray-600">
@@ -103,8 +102,8 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
             <input
               type="range"
               min="0"
-              max="2000000"
-              step="50000"
+              max="5000"
+              step="50"
               value={localFilters.priceRange[0]}
               onChange={(e) => setLocalFilters(prev => ({ ...prev, priceRange: [parseInt(e.target.value), prev.priceRange[1]] }))}
               className="w-full"
@@ -112,8 +111,8 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
             <input
               type="range"
               min="0"
-              max="2000000"
-              step="50000"
+              max="5000"
+              step="50"
               value={localFilters.priceRange[1]}
               onChange={(e) => setLocalFilters(prev => ({ ...prev, priceRange: [prev.priceRange[0], parseInt(e.target.value)] }))}
               className="w-full"
@@ -129,7 +128,7 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
               <input
                 type="number"
                 value={localFilters.priceRange[1]}
-                onChange={(e) => setLocalFilters(prev => ({ ...prev, priceRange: [prev.priceRange[0], parseInt(e.target.value) || 2000000] }))}
+                onChange={(e) => setLocalFilters(prev => ({ ...prev, priceRange: [prev.priceRange[0], parseInt(e.target.value) || 5000] }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 placeholder="Max"
               />
@@ -198,6 +197,43 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
                 {baths} {baths === 1 ? "Bath" : "Baths"}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Minimum Term (Months) */}
+        <div className="mb-6 pb-6 border-b">
+          <h4 className="font-semibold text-gray-800 mb-4">Minimum Term (Months)</h4>
+          <input
+            type="range"
+            min="1"
+            max="24"
+            step="1"
+            value={localFilters.minTermMonths}
+            onChange={(e) => setLocalFilters(prev => ({ ...prev, minTermMonths: parseInt(e.target.value) }))}
+            className="w-full mb-2"
+          />
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>1 month</span>
+            <span className="font-medium">{localFilters.minTermMonths} months</span>
+          </div>
+        </div>
+
+        {/* Maximum Term (Months) */}
+        <div className="mb-6 pb-6 border-b">
+          <h4 className="font-semibold text-gray-800 mb-4">Maximum Term (Months)</h4>
+          <input
+            type="range"
+            min="1"
+            max="60"
+            step="1"
+            value={localFilters.maxTermMonths}
+            onChange={(e) => setLocalFilters(prev => ({ ...prev, maxTermMonths: parseInt(e.target.value) }))}
+            className="w-full mb-2"
+          />
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>1 month</span>
+            <span className="font-medium">{localFilters.maxTermMonths} months</span>
+            <span>60+</span>
           </div>
         </div>
 

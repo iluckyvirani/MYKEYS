@@ -178,6 +178,7 @@ model Property {
   latitude  Float?
   longitude Float?
 
+
   // Property Details
   propertyType PropertyType
   listingType  ListingType
@@ -191,21 +192,46 @@ model Property {
   serviceFee      Float? @default(0)
   securityDeposit Float? @default(0)
 
+
   // Specifications
   bedrooms  Int
   bathrooms Int
   sqft      Int?
   guests    Int  @default(2)
-  minStay   Int  @default(1)
-  maxStay   Int?
-  yearBuilt Int?
-  parking   Int? @default(0)
+
+
+
+  // Short Stay specific
+  minStay      Int     @default(1)
+  maxStay      Int?
+  yearBuilt    Int?
+  checkInTime  String  @default("14:00")
+  checkOutTime String  @default("11:00")
+  selfCheckIn  Boolean @default(false)
+  parking      Boolean @default(false)
 
   // Status & Visibility
   status        PropertyStatus @default(ACTIVE)
   isFeatured    Boolean        @default(false)
   isVerified    Boolean        @default(false)
   featuredUntil DateTime?
+
+  // Long Rent specific
+  availableFrom   DateTime?
+  minTerm         Int     @default(1)  // months (standard in UK)
+  maxTerm         Int?
+  billsIncluded   Boolean?
+  councilTaxBand  String?  // UK specific
+  epcRating       String?  // UK Energy Performance Certificate
+
+  // Sale specific
+  propertyPrice Float?
+  propertyTax   Float?  // UK council tax year
+  hoaFee        Float?  // Service charge in UK month
+  leasehold     Boolean?
+  leaseYears    Int?
+  groundRent    Int?
+
 
   // Relations
   ownerId   String

@@ -12,6 +12,8 @@ export default function HeroSection({ selectedTab: propSelectedTab, onTabChange:
     setLocalSelectedTab(tab);
     propOnTabChange(tab);
   };
+
+  
   return (
     <section className="relative h-screen min-h-175 flex items-center justify-center overflow-hidden">
       {/* Zoom Background Image Effect */}

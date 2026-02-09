@@ -4,6 +4,7 @@ import { Heart, Star, BedDouble, Bath, Maximize, MapPin, ChevronRight, Home, Moo
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 // In PropertyCard.tsx, update the interface to include the new properties:
@@ -27,8 +28,7 @@ export interface PropertyCardProps {
   listingType?: "buy" | "rent";
   priceType?: "nightly" | "monthly" | "total";
   minStay?: number;
-  maxStay?: number;
-  minLease?: number;
+  minTerm?: number;
 }
 
 export default function PropertyCard({
@@ -49,10 +49,10 @@ export default function PropertyCard({
   propertyType,
   isFeatured,
   isNew,
-  minStay = 1,
-  maxStay,
-  minLease = 1
+  minStay,
+  minTerm,
 }: PropertyCardProps) {
+  const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
 
@@ -77,6 +77,12 @@ export default function PropertyCard({
     }
   };
 
+  const handleViewDetails = () => {
+    router.push(`/property/${id}`);
+  };
+
+  
+
 
   // Function to generate proper slug/URL
   const getPropertySlug = () => {
@@ -98,15 +104,15 @@ export default function PropertyCard({
   const getRentalTypeBadge = () => {
     if (listingType === "buy") return { text: "For Sale", color: "from-purple-500 to-purple-600" };
     if (rentalType === "short") return { text: "Short Rent", color: "from-blue-500 to-cyan-600" };
-    if (rentalType === "long") return { text: "Long Term", color: "from-orange-500 to-orange-600" };
+    if (rentalType === "long") return { text: "Long Rent", color: "from-orange-500 to-orange-600" };
     return { text: "For Rent", color: "from-green-500 to-emerald-600" };
   };
 
   // Get duration text
   const getDurationText = () => {
     if (listingType === "buy") return "";
-    if (rentalType === "short") return `Min ${minStay} night${minStay > 1 ? 's' : ''}`;
-    if (rentalType === "long") return `Min ${minLease} month${minLease > 1 ? 's' : ''}`;
+    if (rentalType === "short") return `Min ${minStay} night${minStay && minStay > 1 ? 's' : ''}`;
+    if (rentalType === "long") return `Min ${minTerm} month${minTerm && minTerm > 1 ? 's' : ''}`;
     return "";
   };
 
@@ -114,7 +120,7 @@ export default function PropertyCard({
   const durationText = getDurationText();
 
   return (
-    <Link href={propertyUrl} className="block">
+    // <Link href={propertyUrl} className="block">
       <motion.div
         whileHover={{ y: -8 }}
         transition={{ duration: 0.3 }}
@@ -170,8 +176,8 @@ export default function PropertyCard({
           <button
             onClick={handleToggleFavorite}
             disabled={isLoadingFavorite}
-            className="absolute top-4 right-4 bg-white p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
-            style={{ top: '4rem' }} // Position below property type badge
+            className="absolute z-10 bg-white p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 pointer-events-auto hover:scale-110"
+            style={{ top: '5rem', right: '1rem' }}
           >
             <Heart
               className={`w-5 h-5 transition-all duration-300 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-500'}`}
@@ -247,12 +253,15 @@ export default function PropertyCard({
           </div>
 
           {/* CTA Button - Different based on business model */}
-          <div className="w-full mt-6 bg-linear-to-r from-green-50 to-emerald-50 text-green-700 group-hover:text-white border border-green-200 group-hover:border-transparent group-hover:from-green-600 group-hover:to-emerald-600 font-medium py-3 rounded-[5px] transition-all duration-300 flex items-center justify-center gap-2">
+          <button
+            onClick={handleViewDetails}
+            className="w-full mt-6 bg-linear-to-r from-green-50 to-emerald-50 text-green-700 group-hover:text-white border border-green-200 group-hover:border-transparent group-hover:from-green-600 group-hover:to-emerald-600 font-medium py-3 rounded-[5px] transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg"
+          >
             View Details
             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </div>
+          </button>
         </div>
       </motion.div>
-    </Link>
+    // </Link>
   );
 }

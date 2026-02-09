@@ -3,7 +3,7 @@
 import PropertyCard, { PropertyCardProps } from "./PropertyCard";
 import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 
 export default function FeaturedProperties({ selectedTab = "all" }: { selectedTab?: string }) {
@@ -20,15 +20,7 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
     { id: "buy", label: "For Sale" },
   ];
 
-  // Sync with hero section and fetch properties
-  useEffect(() => {
-    if (selectedTab) {
-      setActiveFilter(selectedTab);
-    }
-    fetchProperties();
-  }, [selectedTab, activeFilter]);
-
-  const fetchProperties = async () => {
+  const fetchProperties = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -40,7 +32,7 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
       if (activeFilter === "buy") {
         params.append("listingType", "BUY");
       } else {
-        params.append("listingType", "RENT");
+        // params.append("listingType", "RENT");
         
         // Add rental type filter if specific type selected
         if (activeFilter === "short-rent") {
@@ -58,10 +50,10 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
           imageUrl: property.images?.[0]?.url || "/api/placeholder/400/300",
           title: property.title,
           slug: property.slug,
-          address: `${property.city}, ${property.state}`,
+          address: `${property.address} ${property.city}`,
           price: `£${property.price}`,
           rentalType: property.rentalType?.toLowerCase() === "short_term" ? "short" : "long",
-          listingType: activeFilter === "buy" ? "buy" : "rent",
+          listingType: property.listingType?.toLowerCase() === "buy" ? "buy" : "rent",
           priceType: property.priceType?.toLowerCase() || "monthly",
           rating: property.averageRating || 0,
           reviews: property.reviewCount || 0,
@@ -72,8 +64,7 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
           isFeatured: true,
           isNew: false,
           minStay: property.minStay || 1,
-          maxStay: property.maxStay || 30,
-          minLease: property.minLease || 1,
+          minTerm: property.minTerm || 1,
         }));
         setProperties(mappedProperties);
       }
@@ -82,7 +73,15 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeFilter]);
+
+  // Sync with hero section and fetch properties
+  useEffect(() => {
+    if (selectedTab) {
+      setActiveFilter(selectedTab);
+    }
+    fetchProperties();
+  }, [selectedTab, activeFilter, fetchProperties]);
 
   const filteredProperties = properties.filter(property => {
     if (activeFilter === "all") return true;

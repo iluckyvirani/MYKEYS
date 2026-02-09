@@ -28,12 +28,20 @@ export async function GET(request: NextRequest) {
     const maxPrice = searchParams.get("maxPrice");
     const bedrooms = searchParams.get("bedrooms");
     const bathrooms = searchParams.get("bathrooms");
+    const rentalType = searchParams.get("rentalType");
+    const minRating = searchParams.get("minRating");
+    const guests = searchParams.get("guests");
+    const minStay = searchParams.get("minStay");
+    const maxStay = searchParams.get("maxStay");
+    const minTerm = searchParams.get("minTerm");
+    const maxTerm = searchParams.get("maxTerm");
 
     // Build where clause
     const where: any = {};
 
     if (status) where.status = status;
     if (listingType) where.listingType = listingType;
+    if (rentalType) where.rentalType = rentalType;
     if (propertyType) where.propertyType = propertyType;
     if (city) where.city = { contains: city, mode: "insensitive" };
     if (state) where.state = { contains: state, mode: "insensitive" };
@@ -46,6 +54,28 @@ export async function GET(request: NextRequest) {
 
     if (bedrooms) where.bedrooms = { gte: parseInt(bedrooms) };
     if (bathrooms) where.bathrooms = { gte: parseInt(bathrooms) };
+
+    // Short-term rental filters
+    if (rentalType === "SHORT_TERM") {
+      if (guests) where.guests = { gte: parseInt(guests) };
+      if (minStay) where.minStay = { gte: parseInt(minStay) };
+      if (maxStay) where.maxStay = { lte: parseInt(maxStay) };
+    }
+
+    // Long-term rental filters
+    if (rentalType === "LONG_TERM") {
+      if (minTerm) where.minTerm = { gte: parseInt(minTerm) };
+      if (maxTerm) where.maxTerm = { lte: parseInt(maxTerm) };
+    }
+
+    // Minimum rating filter
+    if (minRating) {
+      where.reviews = {
+        some: {
+          rating: { gte: parseInt(minRating) },
+        },
+      };
+    }
 
     // Get properties with pagination
     const [properties, total] = await Promise.all([
@@ -135,18 +165,18 @@ export const POST = withAuth(
         country,
         zipCode,
         price,
+        priceType,
         propertyType,
         listingType,
         bedrooms,
         bathrooms,
         amenities,
         images,
-        priceType
       } = body;
 
-      if (!title || !address || !city || !state || !price || !propertyType || !listingType) {
+      if (!title || !address || !city || !state || !price || !propertyType || !listingType || !priceType) {
         return errorResponse(
-          "Missing required fields",
+          "Missing required fields: title, address, city, state, price, priceType, propertyType, listingType",
           400,
           ErrorCode.VALIDATION_ERROR
         );
@@ -186,21 +216,41 @@ export const POST = withAuth(
           latitude: body.latitude,
           longitude: body.longitude,
           price,
-          priceType: priceType || "NIGHTLY",
+          priceType,
           originalPrice: body.originalPrice,
+          cleaningFee: body.cleaningFee || 0,
+          serviceFee: body.serviceFee || 0,
+          securityDeposit: body.securityDeposit || 0,
           propertyType,
           listingType,
           rentalType: body.rentalType,
-          bedrooms: bedrooms || 0,
-          bathrooms: bathrooms || 0,
+          bedrooms: bedrooms || 1,
+          bathrooms: bathrooms || 1,
           sqft: body.sqft,
           guests: body.guests || 2,
           minStay: body.minStay || 1,
           maxStay: body.maxStay,
-          parking: body.parking || 0,
-          occupancy: body.occupancy || 0,
-          revenue: body.revenue || 0,
-          status: body.status || "ACTIVE",
+          yearBuilt: body.yearBuilt,
+          checkInTime: body.checkInTime || "14:00",
+          checkOutTime: body.checkOutTime || "11:00",
+          selfCheckIn: body.selfCheckIn || false,
+          parking: body.parking || false,
+          status: body.status || "DRAFT",
+          isFeatured: body.isFeatured || false,
+          // Long rent specific
+          availableFrom: body.availableFrom,
+          minTerm: body.minTerm || 1,
+          maxTerm: body.maxTerm,
+          billsIncluded: body.billsIncluded,
+          councilTaxBand: body.councilTaxBand,
+          epcRating: body.epcRating,
+          // Sale specific
+          propertyPrice: body.propertyPrice,
+          propertyTax: body.propertyTax,
+          hoaFee: body.hoaFee,
+          leasehold: body.leasehold,
+          leaseYears: body.leaseYears,
+          groundRent: body.groundRent,
           ownerId: user.userId,
           // Create images if provided
           ...(images && images.length > 0 && {

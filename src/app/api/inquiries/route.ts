@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { 
   CreateLongRentInquiryRequest,
   CreateBuyInquiryRequest,
@@ -14,37 +15,104 @@ import {
 /**
  * GET /api/inquiries
  * Fetch inquiries with filters
- * Query params: propertyId, guestId, ownerId, status, inquiryType, page, pageSize
+ * Query params: propertyId, userId, status, page, pageSize
  */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     
-    const statusParam = searchParams.get('status');
-    const inquiryTypeParam = searchParams.get('inquiryType');
-    
-    const filters: InquiryFilters = {
-      propertyId: searchParams.get('propertyId') || undefined,
-      guestId: searchParams.get('guestId') || undefined,
-      ownerId: searchParams.get('ownerId') || undefined,
-      status: statusParam ? (statusParam as InquiryStatus) : undefined,
-      inquiryType: inquiryTypeParam ? (inquiryTypeParam as InquiryType) : undefined,
-      page: parseInt(searchParams.get('page') || '1'),
-      pageSize: parseInt(searchParams.get('pageSize') || '10'),
-    };
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '10');
+    const skip = (page - 1) * pageSize;
 
-    // TODO: Query database with filters
-    // const inquiries = await inquiryService.getInquiries(filters);
+    const where: any = {};
+    
+    const propertyId = searchParams.get('propertyId');
+    const userId = searchParams.get('userId');
+    const status = searchParams.get('status');
+
+    if (propertyId) where.propertyId = propertyId;
+    if (userId) where.userId = userId;
+    if (status) where.status = status;
+
+    const [inquiries, total] = await Promise.all([
+      prisma.inquiry.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          property: {
+            select: {
+              id: true,
+              title: true,
+              price: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      }),
+      prisma.inquiry.count({ where }),
+    ]);
+
+    const mappedInquiries = inquiries.map((inquiry): any => {
+      const baseInquiry = {
+        id: inquiry.id,
+        propertyId: inquiry.propertyId,
+        propertyTitle: inquiry.property?.title || 'Unknown Property',
+        guestId: inquiry.userId || '',
+        guestName: inquiry.name || (inquiry.user ? `${inquiry.user.firstName} ${inquiry.user.lastName}` : ''),
+        guestEmail: inquiry.email,
+        guestPhone: inquiry.phone || '',
+        message: inquiry.message,
+        status: inquiry.status,
+        priority: inquiry.priority,
+        createdAt: inquiry.createdAt.toISOString(),
+        updatedAt: inquiry.updatedAt.toISOString(),
+      };
+
+      // Map to appropriate inquiry type
+      if (inquiry.type === 'long_term') {
+        return {
+          ...baseInquiry,
+          inquiryType: InquiryType.LONG_RENT,
+          type: 'long_term',
+          desiredStartDate: inquiry.createdAt.toISOString().split('T')[0],
+          desiredDurationMonths: inquiry.duration ? parseInt(inquiry.duration) : 12,
+          numberOfOccupants: 1,
+          pricePerMonth: inquiry.budget || 0,
+          minLeasePeriod: 12,
+          maxLeasePeriod: 60,
+          securityDeposit: (inquiry.budget || 0) * 1,
+          ownerId: '',
+        } as LongRentInquiry;
+      } else {
+        return {
+          ...baseInquiry,
+          inquiryType: InquiryType.BUY,
+          type: 'purchase',
+          propertyPrice: inquiry.budget || 0,
+          ownerId: '',
+        } as BuyInquiry;
+      }
+    });
 
     const response: InquiryListResponse = {
       success: true,
       message: 'Inquiries retrieved successfully',
       data: {
-        items: [],
-        total: 0,
-        page: filters.page || 1,
-        pageSize: filters.pageSize || 10,
-        totalPages: 0,
+        items: mappedInquiries as any,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
       },
     };
 
@@ -74,67 +142,81 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Determine inquiry type
-    let inquiry: LongRentInquiry | BuyInquiry;
-
-    if (body.desiredStartDate && body.desiredDurationMonths) {
-      // Long-rent inquiry
-      const longRentBody = body as CreateLongRentInquiryRequest;
-
-      inquiry = {
-        id: `INQ-LONG-${Date.now()}`,
-        propertyId: longRentBody.propertyId,
-        propertyTitle: 'Sample Property',
-        guestId: 'USER-1', // TODO: From auth
-        guestName: 'Guest Name',
-        guestEmail: 'guest@example.com',
-        guestPhone: '1234567890',
-        ownerId: 'OWNER-1',
-        message: longRentBody.message,
-        status: InquiryStatus.PENDING,
-        inquiryType: InquiryType.LONG_RENT,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        desiredStartDate: longRentBody.desiredStartDate,
-        desiredDurationMonths: longRentBody.desiredDurationMonths,
-        numberOfOccupants: longRentBody.numberOfOccupants,
-        pricePerMonth: 50000, // TODO: From property
-        minLeasePeriod: 12,    // TODO: From property
-        maxLeasePeriod: 24,    // TODO: From property
-        securityDeposit: 50000, // Usually 1 month
-      } as LongRentInquiry;
-    } else {
-      // Buy inquiry
-      const buyBody = body as CreateBuyInquiryRequest;
-
-      inquiry = {
-        id: `INQ-BUY-${Date.now()}`,
-        propertyId: buyBody.propertyId,
-        propertyTitle: 'Sample Property',
-        propertyPrice: 2500000, // TODO: From property
-        guestId: 'USER-1', // TODO: From auth
-        guestName: 'Guest Name',
-        guestEmail: 'guest@example.com',
-        guestPhone: '1234567890',
-        ownerId: 'OWNER-1',
-        message: buyBody.message,
-        status: InquiryStatus.PENDING,
-        inquiryType: InquiryType.BUY,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } as BuyInquiry;
+    if (!body.name || !body.email) {
+      return NextResponse.json(
+        { success: false, message: 'name and email are required', data: null },
+        { status: 400 }
+      );
     }
 
-    // TODO:
-    // 1. Fetch property details
-    // 2. Save inquiry to database
-    // 3. Send notification email to owner
-    // 4. Send confirmation email to guest
+    // Fetch property to verify it exists
+    const property = await prisma.property.findUnique({
+      where: { id: body.propertyId },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        listingType: true,
+      },
+    });
+
+    if (!property) {
+      return NextResponse.json(
+        { success: false, message: 'Property not found', data: null },
+        { status: 404 }
+      );
+    }
+
+    // Determine inquiry type
+    let inquiryType = 'purchase';
+    if (body.desiredStartDate && body.desiredDurationMonths) {
+      inquiryType = 'long_term';
+    } else if (property.listingType !== 'BUY') {
+      inquiryType = 'long_term';
+    }
+
+    // Create inquiry in database
+    const inquiry = await prisma.inquiry.create({
+      data: {
+        propertyId: body.propertyId,
+        message: body.message,
+        name: body.name,
+        email: body.email,
+        phone: body.phone || null,
+        type: inquiryType,
+        duration: body.desiredDurationMonths?.toString() || null,
+        budget: body.budget || null,
+        status: 'NEW',
+        userId: body.userId || null,
+      },
+      include: {
+        property: {
+          select: {
+            id: true,
+            title: true,
+            price: true,
+          },
+        },
+      },
+    });
 
     const response: InquiryResponse = {
       success: true,
       message: 'Inquiry created successfully',
-      data: inquiry,
+      data: {
+        id: inquiry.id,
+        propertyId: inquiry.propertyId,
+        propertyTitle: inquiry.property.title,
+        guestId: inquiry.userId || '',
+        guestName: inquiry.name,
+        guestEmail: inquiry.email,
+        guestPhone: inquiry.phone || '',
+        message: inquiry.message,
+        status: inquiry.status as InquiryStatus,
+        type: inquiry.type,
+        createdAt: inquiry.createdAt.toISOString(),
+        updatedAt: inquiry.updatedAt.toISOString(),
+      } as any,
     };
 
     return NextResponse.json(response, { status: 201 });

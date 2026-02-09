@@ -1,18 +1,18 @@
 "use client";
 
-import { Filter, Star, Home, Bath, Bed, PoundSterling } from "lucide-react";
+import { Filter, Star, Home, Bath, Bed, PoundSterling, Users, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BuyFiltersState } from "@/app/buy/page";
 import { useState, useEffect } from "react";
+import { ShortRentFiltersState } from "@/app/rent/short-rent/page";
 
-interface BuyFiltersProps {
-  filters: BuyFiltersState;
-  onFilterChange: (filters: Partial<BuyFiltersState>) => void;
+interface ShortRentFiltersProps {
+  filters: ShortRentFiltersState;
+  onFilterChange: (filters: Partial<ShortRentFiltersState>) => void;
 }
 
-export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps) {
+export default function ShortRentFilters({ filters, onFilterChange }: ShortRentFiltersProps) {
   // Local state for filter controls - only applied when "Apply Filters" is clicked
-  const [localFilters, setLocalFilters] = useState<BuyFiltersState>(filters);
+  const [localFilters, setLocalFilters] = useState<ShortRentFiltersState>(filters);
 
   // Sync local filters with parent filters on mount or when parent changes
   useEffect(() => {
@@ -40,6 +40,7 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
 
   const bedrooms = [1, 2, 3, 4, 5, 6];
   const bathrooms = [1, 2, 3, 4, 5];
+  const guestOptions = [1, 2, 3, 4, 5, 6, 8];
 
   const togglePropertyType = (type: string) => {
     const updated = localFilters.selectedTypes.includes(type)
@@ -56,13 +57,15 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
   };
 
   const clearFilters = () => {
-    const emptyFilters: BuyFiltersState = {
-      priceRange: [0, 2000000],
+    const emptyFilters: ShortRentFiltersState = {
+      priceRange: [0, 2000],
       selectedTypes: [],
       selectedBeds: null,
       selectedBaths: null,
       minRating: 0,
-      availableFrom: "",
+      guestCapacity: null,
+      minStayNights: 1,
+      maxStayNights: 30,
       propertyPreferences: [],
       searchLocation: "",
     };
@@ -89,11 +92,11 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
           </button>
         </div>
 
-        {/* Price Range */}
+        {/* Price Range (Per Night) */}
         <div className="mb-6 pb-6 border-b">
           <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <PoundSterling className="w-4 h-4 text-green-600" />
-            Price Range
+            Price Per Night
           </h4>
           <div className="space-y-4">
             <div className="flex justify-between text-sm text-gray-600">
@@ -103,8 +106,8 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
             <input
               type="range"
               min="0"
-              max="2000000"
-              step="50000"
+              max="2000"
+              step="10"
               value={localFilters.priceRange[0]}
               onChange={(e) => setLocalFilters(prev => ({ ...prev, priceRange: [parseInt(e.target.value), prev.priceRange[1]] }))}
               className="w-full"
@@ -112,8 +115,8 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
             <input
               type="range"
               min="0"
-              max="2000000"
-              step="50000"
+              max="2000"
+              step="10"
               value={localFilters.priceRange[1]}
               onChange={(e) => setLocalFilters(prev => ({ ...prev, priceRange: [prev.priceRange[0], parseInt(e.target.value)] }))}
               className="w-full"
@@ -129,7 +132,7 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
               <input
                 type="number"
                 value={localFilters.priceRange[1]}
-                onChange={(e) => setLocalFilters(prev => ({ ...prev, priceRange: [prev.priceRange[0], parseInt(e.target.value) || 2000000] }))}
+                onChange={(e) => setLocalFilters(prev => ({ ...prev, priceRange: [prev.priceRange[0], parseInt(e.target.value) || 2000] }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 placeholder="Max"
               />
@@ -198,6 +201,65 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
                 {baths} {baths === 1 ? "Bath" : "Baths"}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Guest Capacity */}
+        <div className="mb-6 pb-6 border-b">
+          <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Users className="w-4 h-4 text-green-600" />
+            Guest Capacity
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {guestOptions.map((guests) => (
+              <button
+                key={guests}
+                onClick={() => setLocalFilters(prev => ({ ...prev, guestCapacity: guests === prev.guestCapacity ? null : guests }))}
+                className={`px-4 py-2 rounded-lg text-sm transition-colors ${localFilters.guestCapacity === guests
+                  ? "bg-green-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+              >
+                {guests} {guests === 1 ? "Guest" : "Guests"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Minimum Stay (Nights) */}
+        <div className="mb-6 pb-6 border-b">
+          <h4 className="font-semibold text-gray-800 mb-4">Minimum Stay (Nights)</h4>
+          <input
+            type="range"
+            min="1"
+            max="30"
+            step="1"
+            value={localFilters.minStayNights}
+            onChange={(e) => setLocalFilters(prev => ({ ...prev, minStayNights: parseInt(e.target.value) }))}
+            className="w-full mb-2"
+          />
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>1 night</span>
+            <span className="font-medium">{localFilters.minStayNights} nights</span>
+          </div>
+        </div>
+
+        {/* Maximum Stay (Nights) */}
+        <div className="mb-6 pb-6 border-b">
+          <h4 className="font-semibold text-gray-800 mb-4">Maximum Stay (Nights)</h4>
+          <input
+            type="range"
+            min="1"
+            max="90"
+            step="1"
+            value={localFilters.maxStayNights}
+            onChange={(e) => setLocalFilters(prev => ({ ...prev, maxStayNights: parseInt(e.target.value) }))}
+            className="w-full mb-2"
+          />
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>1 night</span>
+            <span className="font-medium">{localFilters.maxStayNights} nights</span>
+            <span>90+</span>
           </div>
         </div>
 

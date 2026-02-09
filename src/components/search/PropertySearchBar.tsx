@@ -88,7 +88,7 @@ export default function PropertySearchBar({ selectedType }: { selectedType: "all
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
             <input
               type="text"
-              placeholder="Location or keywords"
+              placeholder="Area or postcode"
               value={searchLocation}
               onChange={(e) => setSearchLocation(e.target.value)}
               disabled={loading}
