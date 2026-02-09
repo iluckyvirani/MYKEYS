@@ -21,11 +21,15 @@ export default function ShortRentFilters({ filters, onFilterChange }: ShortRentF
 
   const propertyTypes = [
     { id: "HOUSE", label: "House", icon: <Home className="w-4 h-4" /> },
-    { id: "apartment", label: "Apartment", icon: <Home className="w-4 h-4" /> },
-    { id: "villa", label: "Villa", icon: <Home className="w-4 h-4" /> },
-    { id: "flat", label: "Flat", icon: <Home className="w-4 h-4" /> },
-    { id: "bungalow", label: "Bungalow", icon: <Home className="w-4 h-4" /> },
-    { id: "penthouse", label: "Penthouse", icon: <Home className="w-4 h-4" /> },
+    { id: "APARTMENT", label: "Apartment", icon: <Home className="w-4 h-4" /> },
+    { id: "VILLA", label: "Villa", icon: <Home className="w-4 h-4" /> },
+    { id: "FLAT", label: "Flat", icon: <Home className="w-4 h-4" /> },
+    { id: "BUNGALOW", label: "Bungalow", icon: <Home className="w-4 h-4" /> },
+    { id: "PENTHOUSE", label: "Penthouse", icon: <Home className="w-4 h-4" /> },
+    { id: "COTTAGE", label: "Cottage", icon: <Home className="w-4 h-4" /> },
+    { id: "CONDOMINIUM", label: "Condominium", icon: <Home className="w-4 h-4" /> },
+    { id: "TOWNHOUSE", label: "Townhouse", icon: <Home className="w-4 h-4" /> },
+    { id: "STUDIO", label: "Studio", icon: <Home className="w-4 h-4" /> },
   ];
 
   const propertyPreferencesList = [
@@ -309,7 +313,7 @@ export default function ShortRentFilters({ filters, onFilterChange }: ShortRentF
 
       {/* Apply Filters Button */}
       <div className="sticky bottom-0 p-2 bg-white border-t">
-        <Button 
+        <Button
           onClick={applyFilters}
           className="w-full bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
         >

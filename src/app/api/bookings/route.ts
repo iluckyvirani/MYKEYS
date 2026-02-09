@@ -20,19 +20,18 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
     const skip = (page - 1) * pageSize;
 
     // Build where clause for filters
-    const where: any = {};
+    const where: any = {
+      // Always filter by logged-in user's bookings
+      guestId: user.userId,
+    };
     
     const propertyId = searchParams.get('propertyId');
-    const guestId = searchParams.get('guestId');
-    const ownerId = searchParams.get('ownerId');
     const status = searchParams.get('status');
     const paymentStatus = searchParams.get('paymentStatus');
     const from = searchParams.get('from');
     const to = searchParams.get('to');
 
     if (propertyId) where.propertyId = propertyId;
-    if (guestId) where.guestId = guestId;
-    if (ownerId) where.ownerId = ownerId;
     if (status) where.status = status;
     if (paymentStatus) where.paymentStatus = paymentStatus;
     
@@ -161,6 +160,15 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
 
     if (!property) {
       return errorResponse('Property not found', 404, ErrorCode.RESOURCE_NOT_FOUND);
+    }
+
+    // Check if user is trying to book their own property
+    if (property.ownerId === user.userId) {
+      return errorResponse(
+        'You cannot book your own property',
+        403,
+        ErrorCode.FORBIDDEN
+      );
     }
 
     // Validate numberOfGuests <= property.maxGuests

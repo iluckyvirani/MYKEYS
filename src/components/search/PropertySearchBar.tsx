@@ -112,9 +112,11 @@ export default function PropertySearchBar({ selectedType }: { selectedType: "all
               <option value="villa">Villa</option>
               <option value="house">House</option>
               <option value="flat">Flat</option>
-              <option value="commercial">Commercial</option>
-              <option value="cottage">Cottage</option>
+              <option value="bungalow">Bungalow</option>
               <option value="penthouse">Penthouse</option>
+              <option value="cottage">Cottage</option>
+              <option value="condominium">Condominium</option>
+              <option value="townhouse">Townhouse</option>
               <option value="studio">Studio</option>
             </select>
           </div>

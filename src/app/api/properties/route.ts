@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const propertyType = searchParams.get("propertyType");
     const city = searchParams.get("city");
     const state = searchParams.get("state");
+    const zipCode = searchParams.get("zipCode");
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
     const bedrooms = searchParams.get("bedrooms");
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
     if (propertyType) where.propertyType = propertyType;
     if (city) where.city = { contains: city, mode: "insensitive" };
     if (state) where.state = { contains: state, mode: "insensitive" };
+    if (zipCode) where.zipCode = { contains: zipCode, mode: "insensitive" };
     
     if (minPrice || maxPrice) {
       where.price = {};

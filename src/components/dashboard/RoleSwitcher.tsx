@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Home, Building } from "lucide-react";
 import { Switch } from "../ui/switch";
 import { useRouter } from "next/navigation";
+import { UserDTO } from "@/types/auth";
 
 interface RoleSwitcherProps {
   currentRole: "user" | "owner";
@@ -16,6 +18,29 @@ export default function RoleSwitcher({
 }: RoleSwitcherProps) {
   const router = useRouter();
   const isOwner = currentRole === "owner";
+  const [user, setUser] = useState<UserDTO | null>(null);
+
+  // Check if user has both roles
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr) as UserDTO;
+        setUser(userData);
+      } catch (error) {
+        console.error("Failed to parse user data:", error);
+      }
+    }
+  }, []);
+
+  // Only show RoleSwitcher if user has both USER and OWNER roles
+  const hasUserRole = user?.roles?.includes("USER");
+  const hasOwnerRole = user?.roles?.includes("OWNER");
+  const canSwitchRoles = hasUserRole && hasOwnerRole;
+
+  if (!canSwitchRoles) {
+    return null;
+  }
 
   const handleRoleChange = (checked: boolean) => {
     const role = checked ? "owner" : "user";

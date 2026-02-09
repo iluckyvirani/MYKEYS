@@ -42,12 +42,8 @@ export default function LoginPage() {
         localStorage.setItem("refreshToken", refreshToken);
         localStorage.setItem("user", JSON.stringify(user));
 
-        // Redirect based on user role
-        if (user.role === "OWNER") {
-          router.push("/");
-        } else {
-          router.push("/");
-        }
+        // Redirect to home page
+        router.push("/");
       }
     } catch (err: any) {
       const message =

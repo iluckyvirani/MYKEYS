@@ -196,6 +196,62 @@ export default function PropertyDetailsPage() {
     const [bookingError, setBookingError] = useState<string | null>(null);
     const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CREDIT_CARD);
+    const [nights, setNights] = useState(0);
+    const [subtotal, setSubtotal] = useState(0);
+    const [cleaningFeeAmount, setCleaningFeeAmount] = useState(0);
+    const [serviceFeeAmount, setServiceFeeAmount] = useState(0);
+    const [totalAmount, setTotalAmount] = useState(0);
+
+    // Helper function to extract numeric value from price strings
+    const parsePrice = (priceString: string): number => {
+        return parseFloat(priceString.replace(/[^0-9.]/g, ''));
+    };
+
+    // Calculate price when dates or property change
+    useEffect(() => {
+        if (checkInDate && checkOutDate && property.priceType === "nightly") {
+            const checkIn = new Date(checkInDate);
+            const checkOut = new Date(checkOutDate);
+
+            if (checkOut > checkIn) {
+                // Calculate number of nights
+                const nightsCount = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+                setNights(nightsCount);
+
+                // Parse the price
+                const pricePerNight = parsePrice(property.price);
+
+                // Calculate subtotal
+                const subTotal = pricePerNight * nightsCount;
+                setSubtotal(subTotal);
+
+                // Parse fees
+                const cleaningFee = parsePrice(property.cleaningFee || "0");
+                const serviceFee = parsePrice(property.serviceFee || "0");
+
+                setCleaningFeeAmount(cleaningFee);
+                setServiceFeeAmount(serviceFee);
+
+                // Calculate total
+                const total = subTotal + cleaningFee + serviceFee;
+                setTotalAmount(total);
+            } else {
+                // Reset if dates are invalid
+                setNights(0);
+                setSubtotal(0);
+                setCleaningFeeAmount(0);
+                setServiceFeeAmount(0);
+                setTotalAmount(0);
+            }
+        } else {
+            // Reset if no dates selected
+            setNights(0);
+            setSubtotal(0);
+            setCleaningFeeAmount(0);
+            setServiceFeeAmount(0);
+            setTotalAmount(0);
+        }
+    }, [checkInDate, checkOutDate, property]);
 
     // Fetch property data from API
     useEffect(() => {
@@ -1185,6 +1241,37 @@ export default function PropertyDetailsPage() {
                                                     <option value={PaymentMethod.WALLET}>Wallet</option>
                                                 </select>
                                             </div>
+
+                                            {/* Price Breakdown - Show only when dates are selected */}
+                                            {nights > 0 && (
+                                                <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
+                                                    <h4 className="font-bold text-gray-900">Price Breakdown</h4>
+                                                    <div className="space-y-2 text-sm">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">
+                                                                £{parsePrice(property.price).toFixed(2)} × {nights} night{nights !== 1 ? 's' : ''}
+                                                            </span>
+                                                            <span className="font-medium">£{subtotal.toFixed(2)}</span>
+                                                        </div>
+                                                        {cleaningFeeAmount > 0 && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-600">Cleaning fee</span>
+                                                                <span className="font-medium">£{cleaningFeeAmount.toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        {serviceFeeAmount > 0 && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-600">Service fee</span>
+                                                                <span className="font-medium">£{serviceFeeAmount.toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                                            <span className="font-bold text-gray-900">Total</span>
+                                                            <span className="text-2xl font-bold text-green-600">£{totalAmount.toFixed(2)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* Error Message */}
                                             {bookingError && (

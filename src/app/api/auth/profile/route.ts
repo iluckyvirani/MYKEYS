@@ -97,7 +97,7 @@ export async function PATCH(request: NextRequest) {
     });
 
     // Convert to DTO (exclude password)
-    const userDTO = toUserDTO(updatedUser);
+    const userDTO = await toUserDTO(updatedUser);
 
     return successResponse(userDTO, "Profile updated successfully");
   } catch (error) {

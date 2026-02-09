@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Convert to DTO (exclude password)
-    const userDTO = toUserDTO(user);
+    const userDTO = await toUserDTO(user);
 
     return successResponse(userDTO, "User profile retrieved successfully");
   } catch (error) {

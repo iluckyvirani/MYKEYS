@@ -6,7 +6,7 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole {
+enum RoleType {
   USER
   OWNER
   ADMIN
@@ -105,6 +105,21 @@ enum SubscriptionStatus {
   PENDING
 }
 
+model UserRoleAssignment {
+  id     String @id @default(cuid())
+
+  userId String
+  role   RoleType
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, role])
+  @@index([userId])
+}
+
+
 model User {
   id        String     @id @default(cuid())
   email     String     @unique
@@ -113,7 +128,7 @@ model User {
   firstName String
   lastName  String
   avatar    String?
-  role      UserRole   @default(USER)
+  roles     UserRoleAssignment[]
   status    UserStatus @default(ACTIVE)
 
   // Personal Information (for USER role)
@@ -159,7 +174,6 @@ model User {
 
   // Indexes
   @@index([email])
-  @@index([role])
   @@index([status])
 }
 

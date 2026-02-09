@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/auth/middleware';
+import { JWTPayload } from '@/lib/auth/jwt';
 import { 
   CreateLongRentInquiryRequest,
   CreateBuyInquiryRequest,
@@ -131,7 +133,7 @@ export async function GET(req: NextRequest) {
  * Create a new inquiry (long-rent or buy)
  * Body: CreateLongRentInquiryRequest | CreateBuyInquiryRequest
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
   try {
     const body = await req.json();
 
@@ -149,7 +151,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch property to verify it exists
+    // Fetch property to verify it exists and get owner info
     const property = await prisma.property.findUnique({
       where: { id: body.propertyId },
       select: {
@@ -157,6 +159,7 @@ export async function POST(req: NextRequest) {
         title: true,
         price: true,
         listingType: true,
+        ownerId: true,
       },
     });
 
@@ -164,6 +167,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, message: 'Property not found', data: null },
         { status: 404 }
+      );
+    }
+
+    // Check if user is trying to create an inquiry for their own property
+    if (property.ownerId === user.userId) {
+      return NextResponse.json(
+        { success: false, message: 'You cannot create an inquiry for your own property', data: null },
+        { status: 403 }
       );
     }
 
@@ -227,4 +238,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

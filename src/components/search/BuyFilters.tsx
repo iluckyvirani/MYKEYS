@@ -21,11 +21,15 @@ export default function BuyFilters({ filters, onFilterChange }: BuyFiltersProps)
 
   const propertyTypes = [
     { id: "HOUSE", label: "House", icon: <Home className="w-4 h-4" /> },
-    { id: "apartment", label: "Apartment", icon: <Home className="w-4 h-4" /> },
-    { id: "villa", label: "Villa", icon: <Home className="w-4 h-4" /> },
-    { id: "flat", label: "Flat", icon: <Home className="w-4 h-4" /> },
-    { id: "bungalow", label: "Bungalow", icon: <Home className="w-4 h-4" /> },
-    { id: "penthouse", label: "Penthouse", icon: <Home className="w-4 h-4" /> },
+    { id: "APARTMENT", label: "Apartment", icon: <Home className="w-4 h-4" /> },
+    { id: "VILLA", label: "Villa", icon: <Home className="w-4 h-4" /> },
+    { id: "FLAT", label: "Flat", icon: <Home className="w-4 h-4" /> },
+    { id: "BUNGALOW", label: "Bungalow", icon: <Home className="w-4 h-4" /> },
+    { id: "PENTHOUSE", label: "Penthouse", icon: <Home className="w-4 h-4" /> },
+    { id: "COTTAGE", label: "Cottage", icon: <Home className="w-4 h-4" /> },
+    { id: "CONDOMINIUM", label: "Condominium", icon: <Home className="w-4 h-4" /> },
+    { id: "TOWNHOUSE", label: "Townhouse", icon: <Home className="w-4 h-4" /> },
+    { id: "STUDIO", label: "Studio", icon: <Home className="w-4 h-4" /> },
   ];
 
   const propertyPreferencesList = [

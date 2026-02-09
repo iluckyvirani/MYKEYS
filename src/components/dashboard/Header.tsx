@@ -54,7 +54,7 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
   const displayName = user
     ? `${user.firstName} ${user.lastName}`
     : "Loading...";
-  const userRole = user?.role === "OWNER" ? "Property Owner" : "Tenant";
+  const userRole = user?.roles?.includes("OWNER") ? "Property Owner" : "Tenant";
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b shadow-sm">

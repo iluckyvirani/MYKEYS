@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import PropertySearchBarsecond from "../search/PropertySearchBarsecond";
+import PropertySearch from "../search/PropertySearch";
 
 interface BuyHeroProps {
-  onSearchChange?: (query: string, location: string) => void;
+  onSearchChange?: (city: string, zipCode: string) => void;
 }
 
 export default function BuyHero({ onSearchChange }: BuyHeroProps) {
@@ -49,7 +49,7 @@ export default function BuyHero({ onSearchChange }: BuyHeroProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.2 }}
                 >
-                    <PropertySearchBarsecond onSearch={onSearchChange} />
+                    <PropertySearch onSearch={onSearchChange} />
                 </motion.div>
             </div>
         </section>

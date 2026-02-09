@@ -6,7 +6,7 @@ import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ShortBookingDTO } from "@/types/booking";
+import { ShortBookingDTO } from "@/types/bookings";
 
 export default function RecentBookings() {
   const [bookings, setBookings] = useState<ShortBookingDTO[]>([]);

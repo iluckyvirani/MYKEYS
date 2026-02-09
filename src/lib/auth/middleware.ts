@@ -69,7 +69,7 @@ export async function requireAuth(request: NextRequest): Promise<JWTPayload> {
  */
 export async function requireRole(
   request: NextRequest,
-  allowedRoles: UserRole[]
+  allowedRoles: string[]
 ): Promise<JWTPayload> {
   const user = await requireAuth(request);
 

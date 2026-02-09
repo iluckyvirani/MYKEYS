@@ -37,9 +37,12 @@ export async function POST(request: NextRequest) {
 
     const { email, password } = validation.data;
 
-    // Find user by email
+    // Find user by email with roles
     const user = await prisma.user.findUnique({
       where: { email },
+      include: {
+        roles: true,
+      },
     });
 
     if (!user) {
@@ -72,15 +75,18 @@ export async function POST(request: NextRequest) {
       data: { lastLoginAt: new Date() },
     });
 
+    // Get primary role (first role or USER as fallback)
+    const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0].role : "USER";
+
     // Generate tokens
     const { accessToken, refreshToken } = await generateTokenPair(
       user.id,
       user.email,
-      user.role
+      primaryRole
     );
 
     // Convert to DTO (exclude password)
-    const userDTO = toUserDTO(user);
+    const userDTO = await toUserDTO(user);
 
     // Prepare response
     const response: LoginResponse = {

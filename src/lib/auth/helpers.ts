@@ -1,10 +1,23 @@
 import { User } from "@prisma/client";
 import { UserDTO, UserRole, UserStatus } from "@/types/auth";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Convert Prisma User model to UserDTO (exclude password)
  */
-export function toUserDTO(user: User): UserDTO {
+export async function toUserDTO(user: User): Promise<UserDTO> {
+  // Fetch user roles from UserRoleAssignment
+  const roleAssignments = await prisma.userRoleAssignment.findMany({
+    where: { userId: user.id },
+  });
+
+  const roles = roleAssignments.map((ra) => ra.role as UserRole);
+
+  // If no roles found, default to USER
+  if (roles.length === 0) {
+    roles.push(UserRole.USER);
+  }
+
   return {
     id: user.id,
     email: user.email,
@@ -12,7 +25,7 @@ export function toUserDTO(user: User): UserDTO {
     firstName: user.firstName,
     lastName: user.lastName,
     avatar: user.avatar,
-    role: user.role as UserRole,
+    roles: roles,
     status: user.status as UserStatus,
     birthDate: user.birthDate,
     address: user.address,
@@ -41,20 +54,34 @@ export function getUserFullName(user: User | UserDTO): string {
 /**
  * Check if user can access owner features
  */
-export function canAccessOwnerFeatures(user: User | UserDTO): boolean {
-  return user.role === "OWNER" || user.role === "ADMIN";
+export function canAccessOwnerFeatures(user: UserDTO): boolean {
+  return user.roles.some((r) => r === "OWNER") || user.roles.some((r) => r === "ADMIN");
 }
 
 /**
  * Check if user is admin
  */
-export function isAdmin(user: User | UserDTO): boolean {
-  return user.role === "ADMIN";
+export function isAdmin(user: UserDTO): boolean {
+  return user.roles.some((r) => r === "ADMIN");
+}
+
+/**
+ * Check if user has owner role
+ */
+export function hasOwnerRole(user: UserDTO): boolean {
+  return user.roles.some((r) => r === "OWNER");
+}
+
+/**
+ * Check if user has role
+ */
+export function hasRole(user: UserDTO, role: UserRole): boolean {
+  return user.roles.includes(role);
 }
 
 /**
  * Check if user account is active
  */
-export function isAccountActive(user: User | UserDTO): boolean {
+export function isAccountActive(user: UserDTO): boolean {
   return user.status === "ACTIVE";
 }

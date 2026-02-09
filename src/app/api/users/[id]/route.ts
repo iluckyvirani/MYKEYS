@@ -55,8 +55,9 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
       }
 
       // Convert to DTO (exclude password)
+      const userDTOData = await toUserDTO(targetUser);
       const userDTO = {
-        ...toUserDTO(targetUser),
+        ...userDTOData,
         counts: targetUser._count,
         recentProperties: targetUser.properties,
       };
@@ -158,7 +159,7 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
       });
 
       // Convert to DTO (exclude password)
-      const userDTO = toUserDTO(updatedUser);
+      const userDTO = await toUserDTO(updatedUser);
 
       return successResponse(userDTO, "User updated successfully");
     } catch (error) {
@@ -203,6 +204,9 @@ export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
         where: { id },
+        include: {
+          roles: true,
+        },
       });
 
       if (!existingUser) {
@@ -210,7 +214,7 @@ export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
       }
 
       // Cannot delete admin
-      if (existingUser.role === "ADMIN") {
+      if (existingUser.roles.some((r) => r.role === "ADMIN")) {
         return errorResponse(
           "Cannot delete admin users",
           400,

@@ -61,7 +61,6 @@ export async function POST(request: NextRequest) {
         firstName: validatedData.firstName,
         lastName: validatedData.lastName,
         phone: validatedData.phone || null,
-        role: validatedData.role || "USER",
         status: "ACTIVE",
         companyName: validatedData.companyName || null,
         website: validatedData.website || null,
@@ -69,15 +68,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Generate tokens
+    // Assign USER role by default
+    await prisma.userRoleAssignment.create({
+      data: {
+        userId: user.id,
+        role: "USER",
+      },
+    });
+
+    // Generate tokens (use USER as primary role)
     const { accessToken, refreshToken } = await generateTokenPair(
       user.id,
       user.email,
-      user.role
+      "USER"
     );
 
     // Convert to DTO (exclude password)
-    const userDTO = toUserDTO(user);
+    const userDTO = await toUserDTO(user);
 
     // Prepare response
     const response: RegisterResponse = {

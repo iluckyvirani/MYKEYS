@@ -40,7 +40,7 @@ export default function SignupPage() {
         password,
         firstName,
         lastName,
-        role: "USER", // Default to USER role
+        phone: undefined,
       };
 
       const response = await api.post<RegisterResponse>(
@@ -56,12 +56,8 @@ export default function SignupPage() {
         localStorage.setItem("refreshToken", refreshToken);
         localStorage.setItem("user", JSON.stringify(user));
 
-        // Redirect based on user role
-        if (user.role === "OWNER") {
-          router.push("/owner/dashboard");
-        } else {
-          router.push("/user/dashboard");
-        }
+        // Redirect to home page
+        router.push("/");
       }
     } catch (err: any) {
       const message =

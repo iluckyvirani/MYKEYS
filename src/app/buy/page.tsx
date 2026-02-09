@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BuyHero from "@/components/Buy/BuyHero";
@@ -21,6 +22,7 @@ export interface BuyFiltersState {
 }
 
 export default function BuyPage() {
+  const searchParams = useSearchParams();
   const [filters, setFilters] = useState<BuyFiltersState>({
     priceRange: [0, 2000000],
     selectedTypes: [],
@@ -31,15 +33,40 @@ export default function BuyPage() {
     propertyPreferences: [],
     searchLocation: "",
   });
-  const [searchQuery, setSearchQuery] = useState("");
   const [totalCount, setTotalCount] = useState(0);
+
+  // Apply URL filters on page load
+  useEffect(() => {
+    const minPrice = searchParams.get("minPrice");
+    const maxPrice = searchParams.get("maxPrice");
+    const propertyType = searchParams.get("propertyType");
+    const searchLocation = searchParams.get("search");
+    
+    setFilters(prev => ({
+      ...prev,
+      priceRange: [
+        minPrice ? parseInt(minPrice) : 0,
+        maxPrice ? parseInt(maxPrice) : 2000000
+      ],
+      selectedTypes: propertyType ? propertyType.split(",") : [],
+      searchLocation: searchLocation || "",
+    }));
+
+    // Scroll to property grid after filters are applied
+    setTimeout(() => {
+      const propertyGridSection = document.getElementById("property-grid-section");
+      if (propertyGridSection) {
+        propertyGridSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 300);
+  }, [searchParams]);
 
   const handleFilterChange = (newFilters: Partial<BuyFiltersState>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
-  const handleSearchChange = (query: string, location: string) => {
-    setSearchQuery(query);
+  const handleSearchChange = (city: string, zipCode: string) => {
+    const location = zipCode || city;
     handleFilterChange({ searchLocation: location });
   };
 
@@ -55,7 +82,7 @@ export default function BuyPage() {
               <BuyFilters filters={filters} onFilterChange={handleFilterChange} />
             </div>
             
-            <div className="lg:w-3/4">
+            <div className="lg:w-3/4" id="property-grid-section">
               <div className="mb-6">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                   Properties For Sale
@@ -68,7 +95,6 @@ export default function BuyPage() {
               
               <PropertyGrid 
                 filters={filters} 
-                searchQuery={searchQuery}
                 onCountChange={setTotalCount}
               />
             </div>

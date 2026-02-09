@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PropertyGrid from "@/components/property/PropertyGrid";
@@ -21,6 +22,7 @@ export interface LongRentFiltersState {
 }
 
 export default function LongRentPage() {
+  const searchParams = useSearchParams();
   const [filters, setFilters] = useState<LongRentFiltersState>({
     priceRange: [0, 5000],
     selectedTypes: [],
@@ -32,15 +34,40 @@ export default function LongRentPage() {
     propertyPreferences: [],
     searchLocation: "",
   });
-  const [searchQuery, setSearchQuery] = useState("");
   const [totalCount, setTotalCount] = useState(0);
+
+  // Apply URL filters on page load
+  useEffect(() => {
+    const minPrice = searchParams.get("minPrice");
+    const maxPrice = searchParams.get("maxPrice");
+    const propertyType = searchParams.get("propertyType");
+    const searchLocation = searchParams.get("search");
+    
+    setFilters(prev => ({
+      ...prev,
+      priceRange: [
+        minPrice ? parseInt(minPrice) : 0,
+        maxPrice ? parseInt(maxPrice) : 5000
+      ],
+      selectedTypes: propertyType ? propertyType.split(",") : [],
+      searchLocation: searchLocation || "",
+    }));
+
+    // Scroll to property grid after filters are applied
+    setTimeout(() => {
+      const propertyGridSection = document.getElementById("property-grid-section");
+      if (propertyGridSection) {
+        propertyGridSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 300);
+  }, [searchParams]);
 
   const handleFilterChange = (newFilters: Partial<LongRentFiltersState>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
-  const handleSearchChange = (query: string, location: string) => {
-    setSearchQuery(query);
+  const handleSearchChange = (city: string, zipCode: string) => {
+    const location = zipCode || city;
     handleFilterChange({ searchLocation: location });
   };
 
@@ -56,7 +83,7 @@ export default function LongRentPage() {
               <LongRentFilters filters={filters} onFilterChange={handleFilterChange} />
             </div>
 
-            <div className="lg:w-3/4">
+            <div className="lg:w-3/4" id="property-grid-section">
               <div className="mb-6">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                   Long Term Rental Properties
@@ -69,7 +96,6 @@ export default function LongRentPage() {
 
               <PropertyGrid 
                 filters={filters}
-                searchQuery={searchQuery}
                 listingType="RENT"
                 rentalType="LONG_TERM"
                 onCountChange={setTotalCount}

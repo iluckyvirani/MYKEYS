@@ -24,7 +24,7 @@ export interface UserDTO {
   firstName: string;
   lastName: string;
   avatar: string | null;
-  role: UserRole;
+  roles: string[];
   status: UserStatus;
 
   // Personal Information
@@ -64,9 +64,26 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   phone?: string;
-  role?: "USER" | "OWNER";
   companyName?: string;
   website?: string;
+}
+
+/**
+ * Become Owner Request
+ */
+export interface BecomeOwnerRequest {
+  companyName?: string;
+  taxId?: string;
+  website?: string;
+}
+
+/**
+ * Become Owner Response
+ */
+export interface BecomeOwnerResponse {
+  success: boolean;
+  message: string;
+  data: RegisterData;
 }
 
 // resgster response 
