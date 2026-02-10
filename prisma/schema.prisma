@@ -406,6 +406,18 @@ model Review {
   comment  String?
   response String?
 
+  // Rating breakdown (optional detailed ratings)
+  cleanlinessRating   Int? // 1-5
+  communicationRating Int? // 1-5
+  accuracyRating      Int? // 1-5
+  locationRating      Int? // 1-5
+  valueRating         Int? // 1-5
+
+  // Status & Verification
+  isVerified   Boolean @default(false) // Review from actual booking
+  helpfulCount Int     @default(0) // How many found this helpful
+  reportCount  Int     @default(0) // How many reported as inappropriate
+
   // Relations
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
@@ -422,6 +434,8 @@ model Review {
   // Indexes
   @@index([propertyId])
   @@index([userId])
+  @@index([rating])
+  @@index([isVerified])
 }
 
 model Inquiry {
@@ -460,11 +474,20 @@ model Inquiry {
 
 model Notification {
   id      String  @id @default(cuid())
-  type    String // booking, inquiry, payment, system
+  type    String // booking, inquiry, payment, system, review, property
   title   String
   message String
   isRead  Boolean @default(false)
-  data    Json?
+  data    Json? // Additional context data
+  
+  // Notification metadata
+  priority  String  @default("normal") // low, normal, high, urgent
+  category  String? // informational, action_required, warning, success
+  actionUrl String? // URL to navigate when notification is clicked
+  imageUrl  String? // Optional image for rich notifications
+  
+  // Expiration
+  expiresAt DateTime? // Auto-delete after this date
 
   // Relations
   userId String
@@ -472,11 +495,14 @@ model Notification {
 
   // Timestamps
   createdAt DateTime @default(now())
+  readAt    DateTime? // When the notification was read
 
   // Indexes
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+  @@index([type])
+  @@index([priority])
 }
 
 model Package {

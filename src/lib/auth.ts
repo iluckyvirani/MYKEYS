@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { NextRequest } from "next/server";
+import { authenticate } from "./auth/middleware";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -13,4 +15,12 @@ export async function comparePassword(password: string, hash: string) {
 
 export function generateToken(payload: { id: string; role: string }) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+}
+
+/**
+ * Get authenticated user from request token
+ * Returns null if not authenticated
+ */
+export async function getUserFromToken(request: NextRequest) {
+  return authenticate(request);
 }
