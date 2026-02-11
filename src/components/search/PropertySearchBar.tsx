@@ -1,22 +1,26 @@
 "use client";
 
-import { Search, Home, DollarSign, Calendar } from "lucide-react";
+import { Search} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function PropertySearchBar({ selectedType }: { selectedType: "all" | "buy" | "short-rent" | "long-rent" }) {
   const router = useRouter();
-  const [propertyType, setPropertyType] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [searchLocation, setSearchLocation] = useState("");
+  // const [propertyType, setPropertyType] = useState("");
+  // const [minPrice, setMinPrice] = useState("");
+  // const [maxPrice, setMaxPrice] = useState("");
+  // const [searchLocation, setSearchLocation] = useState("");
+
+  const [city, setCity] = useState("");
+  const [zipCode, setZipCode] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (selectedType === "all") return;
 
     setLoading(true);
@@ -25,10 +29,13 @@ export default function PropertySearchBar({ selectedType }: { selectedType: "all
     try {
       // Build query params
       const params = new URLSearchParams();
-      if (searchLocation) params.append("search", searchLocation);
-      if (propertyType) params.append("propertyType", propertyType.toUpperCase());
-      if (minPrice) params.append("minPrice", minPrice);
-      if (maxPrice) params.append("maxPrice", maxPrice);
+      // if (searchLocation) params.append("search", searchLocation);
+      // if (propertyType) params.append("propertyType", propertyType.toUpperCase());
+      // if (minPrice) params.append("minPrice", minPrice);
+      // if (maxPrice) params.append("maxPrice", maxPrice);
+
+      if (city) params.append("city", city);
+      if (zipCode) params.append("zipCode", zipCode);
 
       // Add filter based on selected type
       const filterMap: Record<string, { listingType: string; rentalType?: string }> = {
@@ -74,82 +81,41 @@ export default function PropertySearchBar({ selectedType }: { selectedType: "all
       )}
       <form onSubmit={handleSearch}>
         {/* Labels - UPDATED for better clarity */}
-        <div className="grid grid-cols-12 gap-4 text-sm font-bold text-green-500 mb-2">
-          <div className="col-span-3">Search</div>
-          <div className="col-span-3">Property Type</div>
-          <div className="col-span-3">Min Price</div>
-          <div className="col-span-3">Max Price</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-bold text-green-500 mb-2">
+          <div>City</div>
+          <div>Zipcode</div>
         </div>
-
         {/* Inputs */}
-        <div className="grid grid-cols-12 gap-4 items-center">
-          {/* Keyword */}
-          <div className="col-span-3 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-1">
+          {/* City Input */}
+          <div className="relative">
             <input
               type="text"
-              placeholder="Area or postcode"
-              value={searchLocation}
-              onChange={(e) => setSearchLocation(e.target.value)}
+              placeholder="e.g., London"
+              value={city}
               disabled={loading}
-              className="input-field bg-gray-50"
+              onChange={(e) => setCity(e.target.value)}
+              className="input-field bg-gray-50 w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:border-green-500 transition"
             />
           </div>
 
-          {/* Property Type */}
-          <div className="col-span-3 relative">
-            <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
-            <select
-              title="Property type"
-              aria-label="Property type"
-              className="input-field appearance-none bg-white"
-              value={propertyType}
-              onChange={(e) => setPropertyType(e.target.value)}
-              disabled={loading}
-            >
-              <option value="">All Property Types</option>
-              <option value="apartment">Apartment</option>
-              <option value="villa">Villa</option>
-              <option value="house">House</option>
-              <option value="flat">Flat</option>
-              <option value="bungalow">Bungalow</option>
-              <option value="penthouse">Penthouse</option>
-              <option value="cottage">Cottage</option>
-              <option value="condominium">Condominium</option>
-              <option value="townhouse">Townhouse</option>
-              <option value="studio">Studio</option>
-            </select>
-          </div>
-
-          {/* Min Price */}
-          <div className="col-span-3 relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+          {/* Zipcode Input */}
+          <div className="relative">
             <input
-              type="number"
-              placeholder="Min Price"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
+              type="text"
+              placeholder="e.g., SW1A 1AA"
+              value={zipCode}
               disabled={loading}
-              className="input-field bg-gray-50"
-            />
-          </div>
-
-          {/* Max Price */}
-          <div className="col-span-3 relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
-            <input
-              type="number"
-              placeholder="Max Price"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              disabled={loading}
-              className="input-field bg-gray-50"
+              onChange={(e) => setZipCode(e.target.value)}
+              className="input-field bg-gray-50 w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:border-green-500 transition"
             />
           </div>
         </div>
-        <div className="flex items-center justify-center mt-1">
-          <Button 
-            type="submit" 
+
+        {/* Search Button - Full Width Below */}
+        <div className="flex items-center justify-center">
+          <Button
+            type="submit"
             disabled={loading}
             className="w-100 rounded-tr-none rounded-tl-none h-12 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white"
           >

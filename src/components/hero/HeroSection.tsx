@@ -35,7 +35,7 @@ export default function HeroSection({ selectedTab: propSelectedTab, onTabChange:
       </div>
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-20">
+      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -87,4 +87,4 @@ export default function HeroSection({ selectedTab: propSelectedTab, onTabChange:
       </div>
     </section>
   );
-}
+} 

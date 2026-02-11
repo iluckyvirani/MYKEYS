@@ -281,6 +281,8 @@ export default function PropertyDetailsPage() {
                         rentalType: apiData.rentalType?.toLowerCase() === "short_term" ? "short" : "long",
                         priceType: apiData.priceType?.toLowerCase() || mockPropertyData.priceType,
                         price: `£${apiData.price}` || mockPropertyData.price,
+                        cleaningFee: `£${apiData.cleaningFee}` || mockPropertyData.cleaningFee,
+                        serviceFee: `£${apiData.serviceFee}` || mockPropertyData.serviceFee,
                         beds: apiData.bedrooms || mockPropertyData.beds,
                         baths: apiData.bathrooms || mockPropertyData.baths,
                         sqft: apiData.sqft || mockPropertyData.sqft,

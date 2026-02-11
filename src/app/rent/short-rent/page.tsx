@@ -40,29 +40,20 @@ function ShortRentPageContent() {
 
   // Apply URL filters on page load
   useEffect(() => {
-    const minPrice = searchParams.get("minPrice");
-    const maxPrice = searchParams.get("maxPrice");
-    const propertyType = searchParams.get("propertyType");
-    const searchLocation = searchParams.get("search");
+    const city = searchParams.get("city");
+    const zipCode = searchParams.get("zipCode");
+    
+    const searchLocation = zipCode || city || "";
     
     setFilters(prev => ({
       ...prev,
-      priceRange: [
-        minPrice ? parseInt(minPrice) : 0,
-        maxPrice ? parseInt(maxPrice) : 2000
-      ],
-      selectedTypes: propertyType ? propertyType.split(",") : [],
-      searchLocation: searchLocation || "",
+      searchLocation: searchLocation,
     }));
-
-    // Scroll to property grid after filters are applied
-    setTimeout(() => {
-      const propertyGridSection = document.getElementById("property-grid-section");
-      if (propertyGridSection) {
-        propertyGridSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }, 300);
   }, [searchParams]);
+
+  // Extract initial values for search bar
+  const initialCity = searchParams.get("city") || "";
+  const initialZipCode = searchParams.get("zipCode") || "";
 
   const handleFilterChange = (newFilters: Partial<ShortRentFiltersState>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
@@ -77,7 +68,7 @@ function ShortRentPageContent() {
     <>
       <Navbar />
       <main className="min-h-screen">
-        <ShortRentHero onSearchChange={handleSearchChange} />
+        <ShortRentHero onSearchChange={handleSearchChange} initialCity={initialCity} initialZipCode={initialZipCode} />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-5 py-5">
           <div className="flex flex-col lg:flex-row gap-8">

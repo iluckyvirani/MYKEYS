@@ -5,9 +5,11 @@ import PropertySearch from "../search/PropertySearch";
 
 interface BuyHeroProps {
   onSearchChange?: (city: string, zipCode: string) => void;
+  initialCity?: string;
+  initialZipCode?: string;
 }
 
-export default function BuyHero({ onSearchChange }: BuyHeroProps) {
+export default function BuyHero({ onSearchChange, initialCity = "", initialZipCode = "" }: BuyHeroProps) {
     return (
         <section className="relative h-screen min-h-125 flex items-center justify-center overflow-hidden">
             {/* Background Image without zoom effect */}
@@ -49,7 +51,7 @@ export default function BuyHero({ onSearchChange }: BuyHeroProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.2 }}
                 >
-                    <PropertySearch onSearch={onSearchChange} />
+                    <PropertySearch onSearch={onSearchChange} initialCity={initialCity} initialZipCode={initialZipCode} />
                 </motion.div>
             </div>
         </section>
