@@ -20,12 +20,6 @@ COMMIT;
 -- AlterEnum
 ALTER TYPE "PaymentMethod" ADD VALUE 'BANK_TRANSFER';
 
--- DropForeignKey
-ALTER TABLE "Favorite" DROP CONSTRAINT "Favorite_propertyId_fkey";
-
--- DropForeignKey
-ALTER TABLE "Favorite" DROP CONSTRAINT "Favorite_userId_fkey";
-
 -- AlterTable
 ALTER TABLE "Property" ADD COLUMN     "availableFrom" TIMESTAMP(3),
 ADD COLUMN     "billsIncluded" BOOLEAN,
@@ -45,9 +39,3 @@ ADD COLUMN     "selfCheckIn" BOOLEAN NOT NULL,
 DROP COLUMN "parking",
 ADD COLUMN     "parking" BOOLEAN NOT NULL,
 ALTER COLUMN "status" SET DEFAULT 'ACTIVE';
-
--- AddForeignKey
-ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_propertyId_fkey" FOREIGN KEY ("propertyId") REFERENCES "Property"("id") ON DELETE CASCADE ON UPDATE CASCADE;

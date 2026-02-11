@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RazorpayPaymentModal } from "@/components/RazorpayPaymentModal";
 import { api } from "@/lib/api";
 import { CreateShortBookingRequest, PaymentMethod } from "@/types/bookings";
 import { formatDateToReadable } from "@/utils/utils";
@@ -196,6 +197,8 @@ export default function PropertyDetailsPage() {
     const [bookingError, setBookingError] = useState<string | null>(null);
     const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CREDIT_CARD);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [paymentData, setPaymentData] = useState<{bookingId: string, amount: number, propertyTitle: string} | null>(null);
     const [nights, setNights] = useState(0);
     const [subtotal, setSubtotal] = useState(0);
     const [cleaningFeeAmount, setCleaningFeeAmount] = useState(0);
@@ -461,12 +464,21 @@ export default function PropertyDetailsPage() {
 
             if (response.data?.success) {
                 // Booking created successfully
-                console.log("Booking created:", response.data.data);
-                setBookingSuccess("Booking confirmed! We'll send you a confirmation email shortly.");
-                // Clear form
-                setCheckInDate("");
-                setCheckOutDate("");
-                setGuests(2);
+                const bookingData = response.data.data;
+                console.log("Booking created:", bookingData);
+                
+                // Set payment data and show payment modal
+                if (bookingData?.id && totalAmount > 0) {
+                    setPaymentData({
+                        bookingId: bookingData.id,
+                        amount: totalAmount,
+                        propertyTitle: property.title
+                    });
+                    setShowPaymentModal(true);
+                }
+                
+                // Also show initial success message
+                setBookingSuccess("Booking confirmed! Now complete the payment.");
             } else {
                 setBookingError(response.data?.message || "Failed to create booking");
             }
@@ -1510,6 +1522,33 @@ export default function PropertyDetailsPage() {
                                 </Button>
                             </div>
                         </div>
+                    )}
+
+                    {/* Razorpay Payment Modal */}
+                    {showPaymentModal && paymentData && (
+                        <RazorpayPaymentModal
+                            isOpen={showPaymentModal}
+                            bookingId={paymentData.bookingId}
+                            amount={paymentData.amount}
+                            propertyTitle={paymentData.propertyTitle}
+                            onClose={() => {
+                                setShowPaymentModal(false);
+                                setPaymentData(null);
+                            }}
+                            onPaymentSuccess={() => {
+                                setShowPaymentModal(false);
+                                setPaymentData(null);
+                                setCheckInDate("");
+                                setCheckOutDate("");
+                                setGuests(2);
+                                // Show success message
+                                setBookingSuccess("Payment completed successfully! Your booking is confirmed.");
+                                setTimeout(() => setBookingSuccess(null), 5000);
+                            }}
+                            onPaymentError={(error: string) => {
+                                setBookingError(error);
+                            }}
+                        />
                     )}
                 </>
             )}
