@@ -7,11 +7,13 @@ import { Button } from "../ui/button";
 
 interface PropertySearchProps {
     onSearch?: (city: string, zipcode: string) => void;
+    initialCity?: string;
+    initialZipCode?: string;
 }
 
-export default function PropertySearch({ onSearch }: PropertySearchProps) {
-    const [city, setCity] = useState("");
-    const [zipCode, setZipCode] = useState("");
+export default function PropertySearch({ onSearch, initialCity = "", initialZipCode = "" }: PropertySearchProps) {
+    const [city, setCity] = useState(initialCity);
+    const [zipCode, setZipCode] = useState(initialZipCode);
     const router = useRouter();
 
     const handleSearch = () => {
