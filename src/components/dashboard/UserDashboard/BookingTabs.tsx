@@ -12,28 +12,33 @@ export default function BookingTabs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get("/bookings?pageSize=100");
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/bookings?pageSize=100");
 
-        if (response.data?.success && response.data.data?.items) {
-          setAllBookings(response.data.data.items);
-          setError(null);
-        } else {
-          setError("Failed to load bookings");
-        }
-      } catch (err: any) {
-        console.error("Error fetching bookings:", err);
-        setError(err.message || "Failed to fetch bookings");
-      } finally {
-        setLoading(false);
+      if (response.data?.success && response.data.data?.items) {
+        setAllBookings(response.data.data.items);
+        setError(null);
+      } else {
+        setError("Failed to load bookings");
       }
-    };
+    } catch (err: any) {
+      console.error("Error fetching bookings:", err);
+      setError(err.message || "Failed to fetch bookings");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchBookings();
   }, []);
+
+  // Reload bookings when a booking is updated
+  const handleBookingUpdated = () => {
+    fetchBookings();
+  };
 
   // Categorize bookings by status
   const upcomingBookings = allBookings.filter(
@@ -113,6 +118,7 @@ export default function BookingTabs() {
               bookings={upcomingBookings} 
               emptyMessage="No upcoming bookings. Start exploring properties!"
               emptyAction={{ label: "Browse Properties", href: "/properties" }}
+              onBookingUpdated={handleBookingUpdated}
             />
           </TabsContent>
           
@@ -121,6 +127,7 @@ export default function BookingTabs() {
               bookings={completedBookings} 
               emptyMessage="No completed bookings yet."
               emptyAction={{ label: "View Upcoming", href: "#" }}
+              onBookingUpdated={handleBookingUpdated}
             />
           </TabsContent>
           
@@ -129,6 +136,7 @@ export default function BookingTabs() {
               bookings={cancelledBookings} 
               emptyMessage="No cancelled bookings."
               emptyAction={{ label: "Browse Properties", href: "/properties" }}
+              onBookingUpdated={handleBookingUpdated}
             />
           </TabsContent>
           
@@ -137,6 +145,7 @@ export default function BookingTabs() {
               bookings={allBookings} 
               emptyMessage="No bookings found."
               emptyAction={{ label: "Browse Properties", href: "/properties" }}
+              onBookingUpdated={handleBookingUpdated}
             />
           </TabsContent>
         </div>

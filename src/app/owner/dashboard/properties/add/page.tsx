@@ -19,55 +19,42 @@ import {
   Home,
   Hotel,
   TrendingUp,
-  Wifi,
-  Car,
-  Wind,
-  Utensils,
-  Tv,
-  Shield,
   Plus,
   Image as ImageIcon,
-  AlertCircle
+  AlertCircle,
+  Loader
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/lib/api";
 
 const propertyTypes = [
-  { value: "apartment", label: "Apartment", icon: Home },
-  { value: "villa", label: "Villa", icon: Building },
-  { value: "house", label: "House", icon: Home },
-  { value: "studio", label: "Studio", icon: Home },
-  { value: "penthouse", label: "Penthouse", icon: Building },
-  { value: "cottage", label: "Cottage", icon: Home },
-  { value: "bungalow", label: "Bungalow", icon: Home },
-  { value: "commercial", label: "Commercial", icon: Building },
+  { value: "APARTMENT", label: "Apartment", icon: Home },
+  { value: "VILLA", label: "Villa", icon: Building },
+  { value: "HOUSE", label: "House", icon: Home },
+  { value: "STUDIO", label: "Studio", icon: Home },
+  { value: "PENTHOUSE", label: "Penthouse", icon: Building },
+  { value: "COTTAGE", label: "Cottage", icon: Home },
+  { value: "BUNGALOW", label: "Bungalow", icon: Home },
+  { value: "COMMERCIAL", label: "Commercial", icon: Building },
 ];
 
-const amenities = [
-  { id: "wifi", label: "WiFi", icon: Wifi },
-  { id: "parking", label: "Parking", icon: Car },
-  { id: "ac", label: "Air Conditioning", icon: Wind },
-  { id: "kitchen", label: "Kitchen", icon: Utensils },
-  { id: "tv", label: "TV", icon: Tv },
-  { id: "pool", label: "Swimming Pool", icon: Wind },
-  { id: "gym", label: "Gym", icon: Wind },
-  { id: "security", label: "Security", icon: Shield },
-  { id: "elevator", label: "Elevator", icon: Wind },
-  { id: "laundry", label: "Laundry", icon: Wind },
-  { id: "balcony", label: "Balcony", icon: Wind },
-  { id: "garden", label: "Garden", icon: Wind },
-];
+interface AmenityOption {
+  id: string;
+  name: string;
+}
 
 export default function AddPropertyPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [loadingAmenities, setLoadingAmenities] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [listingType, setListingType] = useState<"rent" | "buy">("rent");
   const [rentalType, setRentalType] = useState<"short" | "long">("short");
+  const [amenities, setAmenities] = useState<AmenityOption[]>([]);
   
   const [formData, setFormData] = useState({
     // Basic Info
@@ -78,35 +65,77 @@ export default function AddPropertyPage() {
     city: "",
     state: "",
     country: "India",
+    zipCode: "",
     
-    // Pricing
+    // Pricing - RENT
     price: "",
-    priceType: "nightly", // nightly, monthly, total
+    priceType: "NIGHTLY",
     securityDeposit: "",
     cleaningFee: "",
     serviceFee: "",
+    
+    // Pricing - BUY
+    propertyPrice: "",
+    propertyTax: "",
+    hoaFee: "",
+    leasehold: false,
+    leaseYears: "",
+    groundRent: "",
     
     // Details
     beds: "",
     baths: "",
     sqft: "",
     guests: "",
-    minStay: "2",
-    maxStay: "30",
-    minLease: "12",
-    maxLease: "24",
     
-    // Availability
+    // Short Stay
+    minStay: "1",
+    maxStay: "30",
+    checkInTime: "14:00",
+    checkOutTime: "11:00",
+    
+    // Long Term
+    minTerm: "1",
+    maxTerm: "24",
     availableFrom: "",
+    billsIncluded: false,
+    councilTaxBand: "",
+    epcRating: "",
     
     // Features
     amenities: [] as string[],
-    images: [] as string[],
+    images: [] as File[],
   });
 
+  // Fetch amenities on component mount
+  useEffect(() => {
+    const fetchAmenities = async () => {
+      try {
+        setLoadingAmenities(true);
+        const response = await api.get("/amenities?pageSize=50");
+        if (response.data?.amenities) {
+          setAmenities(response.data.amenities);
+        }
+      } catch (err) {
+        console.error("Error fetching amenities:", err);
+        setError("Failed to load amenities");
+      } finally {
+        setLoadingAmenities(false);
+      }
+    };
+
+    fetchAmenities();
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target as HTMLInputElement;
+    
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const toggleAmenity = (amenityId: string) => {
@@ -121,9 +150,8 @@ export default function AddPropertyPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      // In real app, upload to cloud storage
-      const newImages = Array.from(files).map(file => URL.createObjectURL(file));
-      setFormData(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
+      const newFiles = Array.from(files);
+      setFormData(prev => ({ ...prev, images: [...prev.images, ...newFiles] }));
     }
   };
 
@@ -142,45 +170,101 @@ export default function AddPropertyPage() {
       setError(null);
       
       // Validate required fields
-      if (!formData.title || !formData.address || !formData.price || !formData.propertyType) {
+      if (!formData.title || !formData.address || !formData.propertyType) {
         setError("Please fill in all required fields");
         return;
       }
 
+      // Validate pricing
+      if (listingType === "buy" && !formData.propertyPrice) {
+        setError("Please enter property price");
+        return;
+      }
+
+      if (listingType === "rent" && !formData.price) {
+        setError("Please enter rental price");
+        return;
+      }
+
+      // Validate images
+      if (formData.images.length < 1) {
+        setError("Please upload at least one property image");
+        return;
+      }
+
+      // Convert images to base64 or handle upload
+      const imagePromises = formData.images.map(file => {
+        return new Promise<{ url: string; caption?: string; isPrimary?: boolean }>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve({
+              url: reader.result as string,
+              isPrimary: formData.images[0] === file
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const uploadedImages = await Promise.all(imagePromises);
+
       // Prepare API payload
-      const payload = {
+      const payload: any = {
         title: formData.title,
         description: formData.description,
         address: formData.address,
         city: formData.city,
         state: formData.state,
         country: formData.country,
-        price: parseInt(formData.price),
-        priceType: formData.priceType.toUpperCase(),
-        propertyType: formData.propertyType.toUpperCase(),
+        zipCode: formData.zipCode,
+        propertyType: formData.propertyType,
         listingType: listingType === "buy" ? "BUY" : "RENT",
-        rentalType: rentalType === "short" ? "SHORT_TERM" : "LONG_TERM",
         bedrooms: formData.beds ? parseInt(formData.beds) : 0,
         bathrooms: formData.baths ? parseInt(formData.baths) : 0,
-        sqft: formData.sqft ? parseInt(formData.sqft) : 0,
-        maxGuests: formData.guests ? parseInt(formData.guests) : null,
-        minStay: formData.minStay ? parseInt(formData.minStay) : null,
-        maxStay: formData.maxStay ? parseInt(formData.maxStay) : null,
-        minLease: formData.minLease ? parseInt(formData.minLease) : null,
-        maxLease: formData.maxLease ? parseInt(formData.maxLease) : null,
-        availableFrom: formData.availableFrom ? new Date(formData.availableFrom).toISOString() : null,
-        securityDeposit: formData.securityDeposit ? parseInt(formData.securityDeposit) : null,
-        cleaningFee: formData.cleaningFee ? parseInt(formData.cleaningFee) : null,
-        serviceFee: formData.serviceFee ? parseInt(formData.serviceFee) : null,
+        sqft: formData.sqft ? parseInt(formData.sqft) : null,
+        guests: formData.guests ? parseInt(formData.guests) : 2,
         amenities: formData.amenities,
-        images: formData.images.map(url => ({ url })),
+        images: uploadedImages,
         status: "ACTIVE"
       };
+
+      if (listingType === "rent") {
+        payload.rentalType = rentalType === "short" ? "SHORT_TERM" : "LONG_TERM";
+        payload.price = parseInt(formData.price);
+        payload.priceType = formData.priceType;
+        payload.securityDeposit = formData.securityDeposit ? parseInt(formData.securityDeposit) : null;
+        payload.cleaningFee = formData.cleaningFee ? parseInt(formData.cleaningFee) : null;
+        payload.serviceFee = formData.serviceFee ? parseInt(formData.serviceFee) : null;
+
+        if (rentalType === "short") {
+          payload.minStay = formData.minStay ? parseInt(formData.minStay) : 1;
+          payload.maxStay = formData.maxStay ? parseInt(formData.maxStay) : null;
+          payload.checkInTime = formData.checkInTime;
+          payload.checkOutTime = formData.checkOutTime;
+        } else {
+          payload.minTerm = formData.minTerm ? parseInt(formData.minTerm) : 1;
+          payload.maxTerm = formData.maxTerm ? parseInt(formData.maxTerm) : null;
+          payload.availableFrom = formData.availableFrom ? new Date(formData.availableFrom).toISOString() : null;
+          payload.billsIncluded = formData.billsIncluded;
+          payload.councilTaxBand = formData.councilTaxBand || null;
+          payload.epcRating = formData.epcRating || null;
+        }
+      } else {
+        // BUY listing
+        payload.propertyPrice = parseInt(formData.propertyPrice);
+        payload.propertyTax = formData.propertyTax ? parseInt(formData.propertyTax) : null;
+        payload.hoaFee = formData.hoaFee ? parseInt(formData.hoaFee) : null;
+        payload.leasehold = formData.leasehold;
+        payload.leaseYears = formData.leaseYears ? parseInt(formData.leaseYears) : null;
+        payload.groundRent = formData.groundRent ? parseInt(formData.groundRent) : null;
+        // For BUY, set a dummy price for the database (required field)
+        payload.price = parseInt(formData.propertyPrice);
+        payload.priceType = "TOTAL";
+      }
 
       const response = await api.post("/properties", payload);
       
       if (response.data?.success) {
-        // Navigate back to properties list
         router.push("/owner/dashboard/properties");
       } else {
         setError(response.data?.message || "Failed to create property");
@@ -202,7 +286,10 @@ export default function AddPropertyPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
             type="button"
-            onClick={() => { setListingType("rent"); setRentalType("short"); }}
+            onClick={() => { 
+              setListingType("rent"); 
+              setRentalType("short"); 
+            }}
             className={`p-6 rounded-[5px] border-2 transition-all ${
               listingType === "rent" && rentalType === "short"
                 ? "border-green-500 bg-green-50"
@@ -221,7 +308,10 @@ export default function AddPropertyPage() {
 
           <button
             type="button"
-            onClick={() => { setListingType("rent"); setRentalType("long"); }}
+            onClick={() => { 
+              setListingType("rent"); 
+              setRentalType("long"); 
+            }}
             className={`p-6 rounded-[5px] border-2 transition-all ${
               listingType === "rent" && rentalType === "long"
                 ? "border-blue-500 bg-blue-50"
@@ -332,6 +422,17 @@ export default function AddPropertyPage() {
             />
           </div>
 
+          <div>
+            <Label htmlFor="zipCode">Postal Code</Label>
+            <Input
+              id="zipCode"
+              name="zipCode"
+              value={formData.zipCode}
+              onChange={handleInputChange}
+              placeholder="e.g., 400001"
+            />
+          </div>
+
           <div className="md:col-span-2">
             <Label htmlFor="description">Property Description *</Label>
             <Textarea
@@ -390,7 +491,7 @@ export default function AddPropertyPage() {
           </div>
 
           <div>
-            <Label htmlFor="sqft">Area (sq ft) *</Label>
+            <Label htmlFor="sqft">Area (sq ft)</Label>
             <div className="relative">
               <Maximize2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
@@ -401,7 +502,6 @@ export default function AddPropertyPage() {
                 onChange={handleInputChange}
                 className="pl-10"
                 min="0"
-                required
               />
             </div>
           </div>
@@ -423,139 +523,315 @@ export default function AddPropertyPage() {
       </div>
 
       <div className="pt-6 border-t">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Pricing Information</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          {listingType === "buy" ? "Sale Information" : "Pricing Information"}
+        </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <Label htmlFor="price">
-              {listingType === "buy" ? "Total Price *" : 
-               rentalType === "short" ? "Price per Night *" : 
-               "Monthly Rent *"}
-            </Label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                value={formData.price}
-                onChange={handleInputChange}
-                className="pl-10"
-                min="0"
-                required
-              />
+        {listingType === "buy" ? (
+          // Buy Listing Pricing
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="propertyPrice">Property Price *</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="propertyPrice"
+                  name="propertyPrice"
+                  type="number"
+                  value={formData.propertyPrice}
+                  onChange={handleInputChange}
+                  className="pl-10"
+                  placeholder="Total sale price"
+                  min="0"
+                  required
+                />
+              </div>
             </div>
+
+            <div>
+              <Label htmlFor="propertyTax">Annual Property Tax</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="propertyTax"
+                  name="propertyTax"
+                  type="number"
+                  value={formData.propertyTax}
+                  onChange={handleInputChange}
+                  className="pl-10"
+                  placeholder="Annual tax amount"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="hoaFee">HOA / Service Charge (Monthly)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="hoaFee"
+                  name="hoaFee"
+                  type="number"
+                  value={formData.hoaFee}
+                  onChange={handleInputChange}
+                  className="pl-10"
+                  placeholder="Monthly HOA fee"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-end">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="leasehold"
+                  checked={formData.leasehold}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="ml-2 text-gray-700">Leasehold Property</span>
+              </label>
+            </div>
+
+            {formData.leasehold && (
+              <>
+                <div>
+                  <Label htmlFor="leaseYears">Remaining Lease (years)</Label>
+                  <Input
+                    id="leaseYears"
+                    name="leaseYears"
+                    type="number"
+                    value={formData.leaseYears}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 99"
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="groundRent">Ground Rent (Annual)</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Input
+                      id="groundRent"
+                      name="groundRent"
+                      type="number"
+                      value={formData.groundRent}
+                      onChange={handleInputChange}
+                      className="pl-10"
+                      placeholder="Annual ground rent"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-
-          {listingType === "rent" && rentalType === "short" && (
-            <>
-              <div>
-                <Label htmlFor="cleaningFee">Cleaning Fee</Label>
+        ) : (
+          // Rent Listing Pricing
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="price">
+                {rentalType === "short" ? "Price per Night *" : "Monthly Rent *"}
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
-                  id="cleaningFee"
-                  name="cleaningFee"
-                  value={formData.cleaningFee}
+                  id="price"
+                  name="price"
+                  type="number"
+                  value={formData.price}
                   onChange={handleInputChange}
+                  className="pl-10"
+                  min="0"
+                  required
                 />
               </div>
+            </div>
 
-              <div>
-                <Label htmlFor="securityDeposit">Security Deposit</Label>
-                <Input
-                  id="securityDeposit"
-                  name="securityDeposit"
-                  value={formData.securityDeposit}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="serviceFee">Service Fee</Label>
-                <Input
-                  id="serviceFee"
-                  name="serviceFee"
-                  value={formData.serviceFee}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            {rentalType === "short" && (
+              <>
                 <div>
-                  <Label htmlFor="minStay">Minimum Stay (nights)</Label>
+                  <Label htmlFor="cleaningFee">Cleaning Fee</Label>
                   <Input
-                    id="minStay"
-                    name="minStay"
+                    id="cleaningFee"
+                    name="cleaningFee"
                     type="number"
-                    value={formData.minStay}
+                    value={formData.cleaningFee}
                     onChange={handleInputChange}
-                    min="1"
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="maxStay">Maximum Stay (nights)</Label>
+                  <Label htmlFor="securityDeposit">Security Deposit</Label>
                   <Input
-                    id="maxStay"
-                    name="maxStay"
+                    id="securityDeposit"
+                    name="securityDeposit"
                     type="number"
-                    value={formData.maxStay}
+                    value={formData.securityDeposit}
                     onChange={handleInputChange}
-                    min="1"
                   />
                 </div>
-              </div>
-            </>
-          )}
 
-          {listingType === "rent" && rentalType === "long" && (
-            <>
-              <div>
-                <Label htmlFor="securityDeposit">Security Deposit</Label>
-                <Input
-                  id="securityDeposit"
-                  name="securityDeposit"
-                  value={formData.securityDeposit}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="minLease">Minimum Lease (months)</Label>
+                  <Label htmlFor="serviceFee">Service Fee</Label>
                   <Input
-                    id="minLease"
-                    name="minLease"
+                    id="serviceFee"
+                    name="serviceFee"
                     type="number"
-                    value={formData.minLease}
+                    value={formData.serviceFee}
                     onChange={handleInputChange}
-                    min="1"
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="minStay">Minimum Stay (nights)</Label>
+                    <Input
+                      id="minStay"
+                      name="minStay"
+                      type="number"
+                      value={formData.minStay}
+                      onChange={handleInputChange}
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="maxStay">Maximum Stay (nights)</Label>
+                    <Input
+                      id="maxStay"
+                      name="maxStay"
+                      type="number"
+                      value={formData.maxStay}
+                      onChange={handleInputChange}
+                      min="1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="checkInTime">Check-in Time</Label>
+                    <Input
+                      id="checkInTime"
+                      name="checkInTime"
+                      type="time"
+                      value={formData.checkInTime}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="checkOutTime">Check-out Time</Label>
+                    <Input
+                      id="checkOutTime"
+                      name="checkOutTime"
+                      type="time"
+                      value={formData.checkOutTime}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {rentalType === "long" && (
+              <>
                 <div>
-                  <Label htmlFor="maxLease">Maximum Lease (months)</Label>
+                  <Label htmlFor="securityDeposit">Security Deposit</Label>
                   <Input
-                    id="maxLease"
-                    name="maxLease"
+                    id="securityDeposit"
+                    name="securityDeposit"
                     type="number"
-                    value={formData.maxLease}
+                    value={formData.securityDeposit}
                     onChange={handleInputChange}
-                    min="1"
                   />
                 </div>
-              </div>
 
-              <div>
-                <Label htmlFor="availableFrom">Available From</Label>
-                <Input
-                  id="availableFrom"
-                  name="availableFrom"
-                  type="date"
-                  value={formData.availableFrom}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </>
-          )}
-        </div>
+                <div>
+                  <Label htmlFor="availableFrom">Available From</Label>
+                  <Input
+                    id="availableFrom"
+                    name="availableFrom"
+                    type="date"
+                    value={formData.availableFrom}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="minTerm">Minimum Lease (months)</Label>
+                    <Input
+                      id="minTerm"
+                      name="minTerm"
+                      type="number"
+                      value={formData.minTerm}
+                      onChange={handleInputChange}
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="maxTerm">Maximum Lease (months)</Label>
+                    <Input
+                      id="maxTerm"
+                      name="maxTerm"
+                      type="number"
+                      value={formData.maxTerm}
+                      onChange={handleInputChange}
+                      min="1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="billsIncluded"
+                      checked={formData.billsIncluded}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-green-600 rounded"
+                    />
+                    <span className="ml-2 text-gray-700">Bills Included</span>
+                  </label>
+                </div>
+
+                <div>
+                  <Label htmlFor="councilTaxBand">Council Tax Band</Label>
+                  <Input
+                    id="councilTaxBand"
+                    name="councilTaxBand"
+                    value={formData.councilTaxBand}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Band A, Band B"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="epcRating">EPC Rating</Label>
+                  <select
+                    id="epcRating"
+                    name="epcRating"
+                    value={formData.epcRating}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-[5px] focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">Select rating</option>
+                    <option value="A">A (Most efficient)</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                    <option value="E">E</option>
+                    <option value="F">F</option>
+                    <option value="G">G (Least efficient)</option>
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -566,38 +842,47 @@ export default function AddPropertyPage() {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Amenities</h3>
         <p className="text-sm text-gray-600 mb-6">Select amenities available in your property</p>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {amenities.map((amenity) => {
-            const isSelected = formData.amenities.includes(amenity.id);
-            const Icon = amenity.icon;
-            
-            return (
-              <button
-                key={amenity.id}
-                type="button"
-                onClick={() => toggleAmenity(amenity.id)}
-                className={`p-4 rounded-[5px] border-2 transition-all flex flex-col items-center ${
-                  isSelected
-                    ? "border-green-500 bg-green-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <Icon className={`w-6 h-6 mb-2 ${isSelected ? "text-green-600" : "text-gray-500"}`} />
-                <span className={`text-sm font-medium ${isSelected ? "text-green-700" : "text-gray-700"}`}>
-                  {amenity.label}
-                </span>
-                {isSelected && (
-                  <Check className="w-4 h-4 text-green-600 absolute top-2 right-2" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {loadingAmenities ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader className="w-6 h-6 text-gray-400 animate-spin" />
+            <span className="ml-2 text-gray-600">Loading amenities...</span>
+          </div>
+        ) : amenities.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {amenities.map((amenity) => {
+              const isSelected = formData.amenities.includes(amenity.id);
+              
+              return (
+                <button
+                  key={amenity.id}
+                  type="button"
+                  onClick={() => toggleAmenity(amenity.id)}
+                  className={`p-4 rounded-[5px] border-2 transition-all flex flex-col items-center relative ${
+                    isSelected
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <span className={`text-sm font-medium text-center ${isSelected ? "text-green-700" : "text-gray-700"}`}>
+                    {amenity.name}
+                  </span>
+                  {isSelected && (
+                    <Check className="w-4 h-4 text-green-600 absolute top-2 right-2" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-gray-50 rounded-[5px] border">
+            <p className="text-gray-600">No amenities available</p>
+          </div>
+        )}
       </div>
 
       <div className="pt-6 border-t">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Images</h3>
-        <p className="text-sm text-gray-600 mb-6">Upload high-quality photos of your property (minimum 5)</p>
+        <p className="text-sm text-gray-600 mb-6">Upload high-quality photos of your property (minimum 1)</p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Image Upload Box */}
@@ -616,9 +901,9 @@ export default function AddPropertyPage() {
 
           {/* Uploaded Images */}
           {formData.images.map((image, index) => (
-            <div key={index} className="relative aspect-video rounded-[5px] overflow-hidden group">
+            <div key={index} className="relative aspect-video rounded-[5px] overflow-hidden group bg-gray-100">
               <Image
-                src={image}
+                src={URL.createObjectURL(image)}
                 alt={`Property ${index + 1}`}
                 fill
                 className="object-cover"
@@ -630,8 +915,8 @@ export default function AddPropertyPage() {
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/60 to-transparent p-3">
-                <p className="text-white text-sm">Image {index + 1}</p>
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 to-transparent p-3">
+                <p className="text-white text-sm truncate">{image.name}</p>
               </div>
             </div>
           ))}
@@ -639,39 +924,9 @@ export default function AddPropertyPage() {
 
         {formData.images.length > 0 && (
           <div className="mt-4 text-sm text-gray-600">
-            Uploaded {formData.images.length} images. Add more to reach minimum 5.
+            Uploaded {formData.images.length} image{formData.images.length > 1 ? 's' : ''}. {formData.images.length < 5 ? `Add ${5 - formData.images.length} more for best results.` : 'Ready to publish!'}
           </div>
         )}
-      </div>
-
-      {/* Additional Information */}
-      <div className="pt-6 border-t">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
-        
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="houseRules">House Rules (for short stay)</Label>
-            <Textarea
-              id="houseRules"
-              name="houseRules"
-              rows={3}
-              placeholder="List any specific rules for guests..."
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="cancellationPolicy">Cancellation Policy</Label>
-            <select
-              id="cancellationPolicy"
-              name="cancellationPolicy"
-              className="w-full px-3 py-2 border border-gray-300 rounded-[5px] focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            >
-              <option value="flexible">Flexible (Full refund 24h before check-in)</option>
-              <option value="moderate">Moderate (Full refund 5 days before check-in)</option>
-              <option value="strict">Strict (50% refund up to 1 week before)</option>
-            </select>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -804,15 +1059,37 @@ export default function AddPropertyPage() {
             {formData.title && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Title:</span>
-                <span className="font-medium truncate">{formData.title}</span>
+                <span className="font-medium truncate ml-2">{formData.title}</span>
               </div>
             )}
-            {formData.price && (
+            {formData.propertyType && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Type:</span>
+                <span className="font-medium">{formData.propertyType}</span>
+              </div>
+            )}
+            {(formData.price || formData.propertyPrice) && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Price:</span>
                 <span className="font-medium">
-                  ₹{formData.price} {listingType === "rent" ? (rentalType === "short" ? "/night" : "/month") : "total"}
+                  ₹{listingType === "buy" ? formData.propertyPrice : formData.price}
+                  <span className="text-sm text-gray-500 ml-1">
+                    {listingType === "rent" && (rentalType === "short" ? "/night" : "/month")}
+                    {listingType === "buy" && " total"}
+                  </span>
                 </span>
+              </div>
+            )}
+            {formData.beds && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Bedrooms:</span>
+                <span className="font-medium">{formData.beds}</span>
+              </div>
+            )}
+            {formData.amenities.length > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Amenities:</span>
+                <span className="font-medium">{formData.amenities.length} selected</span>
               </div>
             )}
           </div>

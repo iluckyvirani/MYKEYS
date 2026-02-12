@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate real statistics from database
-    const [activeBookings, totalInquiries] = await Promise.all([
+    const [activeBookings, totalInquiries, totalSpent] = await Promise.all([
       // Count active bookings (PENDING or CONFIRMED status)
       prisma.booking.count({
         where: {
@@ -39,6 +39,20 @@ export async function GET(request: NextRequest) {
           userId: user.userId,
         },
       }),
+      // Calculate total spent on bookings (sum of PAID payments)
+      prisma.payment
+        .aggregate({
+          where: {
+            booking: {
+              guestId: user.userId,
+            },
+            status: 'PAID',
+          },
+          _sum: {
+            amount: true,
+          },
+        })
+        .then((result) => result._sum?.amount || 0),
     ]);
 
     // Count favorite properties using raw query
@@ -51,7 +65,7 @@ export async function GET(request: NextRequest) {
       activeBookings,
       totalInquiries,
       favoriteProperties,
-      upcomingPayments: 45500, // Static data for upcoming payments
+      totalSpent: Number(totalSpent) || 0,
     };
 
     return successResponse(stats, 'Dashboard stats retrieved successfully');

@@ -13,13 +13,15 @@ import {
   InquiryStatus,
   InquiryType,
 } from '@/types/inquiry';
+import { notificationService } from '@/lib/notifications/notificationService';
+import { emailService } from '@/lib/email/emailService';
 
 /**
  * GET /api/inquiries
  * Fetch inquiries with filters
- * Query params: propertyId, userId, status, page, pageSize
+ * Query params: propertyId, userId, ownerId, status, page, pageSize, search
  */
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(req.url);
     
@@ -31,11 +33,32 @@ export async function GET(req: NextRequest) {
     
     const propertyId = searchParams.get('propertyId');
     const userId = searchParams.get('userId');
+    const ownerId = searchParams.get('ownerId');
     const status = searchParams.get('status');
+    const search = searchParams.get('search');
 
-    if (propertyId) where.propertyId = propertyId;
-    if (userId) where.userId = userId;
+    // If ownerId is provided, filter by properties owned by that user
+    if (ownerId || searchParams.get('forOwner') === 'true') {
+      where.property = {
+        ownerId: ownerId || user.userId,
+      };
+    } else if (propertyId) {
+      where.propertyId = propertyId;
+    } else if (userId) {
+      // Default: filter by guest/user inquiries
+      where.userId = userId;
+    }
+    
     if (status) where.status = status;
+    
+    // Search by guest name or email
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
     const [inquiries, total] = await Promise.all([
       prisma.inquiry.findMany({
@@ -126,7 +149,7 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/inquiries
@@ -210,6 +233,51 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
         },
       },
     });
+
+    // Send notification to property owner
+    await notificationService.createInquiryNotification(
+      property.ownerId,
+      {
+        inquiryId: inquiry.id,
+        propertyTitle: property.title,
+        propertyId: property.id,
+        inquirerName: body.name,
+        inquiryType: inquiryType,
+      }
+    );
+
+    // Get owner email and name
+    const owner = await prisma.user.findUnique({
+      where: { id: property.ownerId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+
+    // Send thank you email to inquirer (guest)
+    await emailService.sendInquiryConfirmationEmail(
+      body.email,
+      body.name,
+      property.title
+    );
+
+    // Send notification email to property owner
+    if (owner) {
+      await emailService.sendNewInquiryNotificationEmail(
+        owner.email,
+        `${owner.firstName} ${owner.lastName}`,
+        body.name,
+        property.title,
+        inquiry.id
+      );
+    }
+
+    // Create system notification for user (guest) - thank you message
+    if (body.userId) {
+      await notificationService.createSystemNotification(
+        body.userId,
+        'Thank You for Your Inquiry!',
+        `Your inquiry about "${property.title}" has been received. The owner will respond soon.`
+      );
+    }
 
     const response: InquiryResponse = {
       success: true,

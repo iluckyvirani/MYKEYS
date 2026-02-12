@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UpdateInquiryStatusRequest, InquiryResponse, InquiryType, LongRentInquiry } from '@/types/inquiry';
+import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/auth/middleware';
+import { JWTPayload } from '@/lib/auth/jwt';
+import { UpdateInquiryStatusRequest, InquiryResponse, InquiryType, LongRentInquiry, InquiryStatus } from '@/types/inquiry';
+import { notificationService } from '@/lib/notifications/notificationService';
+import { emailService } from '@/lib/email/emailService';
 
 /**
  * GET /api/inquiries/{id}
  * Fetch a specific inquiry by ID
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAuth(async (req: NextRequest, user: JWTPayload, context?: { params: Promise<{ id: string }> }) => {
   try {
-    const { id } = await params;
+    const { id } = await context?.params!
 
     if (!id) {
       return NextResponse.json(
@@ -16,14 +21,67 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       );
     }
 
-    // TODO: Fetch inquiry from database
-    // const inquiry = await inquiryService.getById(id);
-    // if (!inquiry) return NextResponse.json({ success: false, message: 'Inquiry not found', data: null }, { status: 404 });
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id },
+      include: {
+        property: {
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            ownerId: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
 
-    return NextResponse.json(
-      { success: false, message: 'Inquiry not found', data: null },
-      { status: 404 }
-    );
+    if (!inquiry) {
+      return NextResponse.json(
+        { success: false, message: 'Inquiry not found', data: null },
+        { status: 404 }
+      );
+    }
+
+    // Verify user is either the inquirer or the property owner
+    if (inquiry.userId !== user.userId && inquiry.property?.ownerId !== user.userId) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized', data: null },
+        { status: 403 }
+      );
+    }
+
+    const mappedInquiry = {
+      id: inquiry.id,
+      propertyId: inquiry.propertyId,
+      propertyTitle: inquiry.property?.title || 'Unknown Property',
+      guestId: inquiry.userId || '',
+      guestName: inquiry.name || (inquiry.user ? `${inquiry.user.firstName} ${inquiry.user.lastName}` : ''),
+      guestEmail: inquiry.email,
+      guestPhone: inquiry.phone || '',
+      message: inquiry.message,
+      ownerResponse: (inquiry as any).response,
+      status: inquiry.status as InquiryStatus,
+      priority: inquiry.priority,
+      createdAt: inquiry.createdAt.toISOString(),
+      updatedAt: inquiry.updatedAt.toISOString(),
+    };
+
+    const response: InquiryResponse = {
+      success: true,
+      message: 'Inquiry retrieved successfully',
+      data: mappedInquiry as any,
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error fetching inquiry:', error);
     return NextResponse.json(
@@ -31,17 +89,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PATCH /api/inquiries/{id}
  * Update inquiry status with owner response (owner action)
- * Only owner can respond to inquiries
+ * Only owner can update inquiry status
  * Body: UpdateInquiryRequest
  */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withAuth(async (req: NextRequest, user: JWTPayload, context?: { params: Promise<{ id: string }> }) => {
   try {
-    const { id } = await params;
+    const { id } = await context?.params!
     const body: UpdateInquiryStatusRequest = await req.json();
 
     if (!id) {
@@ -51,43 +109,117 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       );
     }
 
-    if (!body.status || !body.ownerResponse) {
+    if (!body.status) {
       return NextResponse.json(
-        { success: false, message: 'status and ownerResponse are required', data: null },
+        { success: false, message: 'status is required', data: null },
         { status: 400 }
       );
     }
 
-    // TODO:
-    // 1. Verify user is the property owner
-    // 2. Fetch inquiry from database
-    // 3. Update status and ownerResponse
-    // 4. Send email to guest with owner's response
-    // 5. Update lastReplyAt timestamp
+    // Fetch inquiry from database
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id },
+      include: {
+        property: {
+          select: {
+            ownerId: true,
+            title: true,
+          },
+        },
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
 
-    const inquiryData: LongRentInquiry = {
-      id,
-      propertyId: 'PROP-1',
-      guestId: 'USER-1',
-      guestName: 'Guest Name',
-      guestEmail: 'guest@example.com',
-      guestPhone: '1234567890',
-      ownerId: 'OWNER-1',
-      message: 'Initial inquiry message',
-      ownerResponse: body.ownerResponse,
-      inquiryType: InquiryType.LONG_RENT,
+    if (!inquiry) {
+      return NextResponse.json(
+        { success: false, message: 'Inquiry not found', data: null },
+        { status: 404 }
+      );
+    }
+
+    // Verify user is the property owner
+    if (inquiry.property?.ownerId !== user.userId) {
+      return NextResponse.json(
+        { success: false, message: 'Only property owner can update inquiry status', data: null },
+        { status: 403 }
+      );
+    }
+
+    // Update inquiry status and response
+    const updateData: any = {
       status: body.status,
-      desiredStartDate: '2024-03-01',
-      desiredDurationMonths: 6,
-      numberOfOccupants: 2,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(),
+    };
+
+    if (body.ownerResponse) {
+      updateData.response = body.ownerResponse;
+    }
+
+    const updatedInquiry = await prisma.inquiry.update({
+      where: { id },
+      data: updateData,
+      include: {
+        property: {
+          select: {
+            title: true,
+            ownerId: true,
+          },
+        },
+      },
+    });
+
+    // Send notification and email to guest when owner responds
+    if (body.ownerResponse && inquiry.user) {
+      // Create notification for the guest
+      await notificationService.createSystemNotification(
+        inquiry.userId || '',
+        'Response to Your Inquiry!',
+        `The property owner has responded to your inquiry about "${updatedInquiry.property?.title || 'the property'}"`,
+      );
+
+      // Get owner info to send in email
+      const owner = await prisma.user.findUnique({
+        where: { id: inquiry.property?.ownerId },
+        select: { firstName: true, lastName: true },
+      });
+
+      // Send response email to guest
+      await emailService.sendInquiryResponseEmail(
+        inquiry.user.email,
+        `${inquiry.user.firstName} ${inquiry.user.lastName}`,
+        owner ? `${owner.firstName} ${owner.lastName}` : 'Property Owner',
+        updatedInquiry.property?.title || 'the property',
+        body.ownerResponse,
+        id
+      );
+    }
+
+    const mappedInquiry = {
+      id: updatedInquiry.id,
+      propertyId: updatedInquiry.propertyId,
+      propertyTitle: updatedInquiry.property?.title || 'Unknown Property',
+      guestId: updatedInquiry.userId || '',
+      guestName: updatedInquiry.name || (inquiry.user ? `${inquiry.user.firstName} ${inquiry.user.lastName}` : ''),
+      guestEmail: updatedInquiry.email,
+      guestPhone: updatedInquiry.phone || '',
+      message: updatedInquiry.message,
+      ownerResponse: (updatedInquiry as any).response,
+      status: updatedInquiry.status as InquiryStatus,
+      priority: updatedInquiry.priority,
+      createdAt: updatedInquiry.createdAt.toISOString(),
+      updatedAt: updatedInquiry.updatedAt.toISOString(),
     };
 
     const response: InquiryResponse = {
       success: true,
       message: `Inquiry status updated to ${body.status}`,
-      data: inquiryData,
+      data: mappedInquiry as any,
     };
 
     return NextResponse.json(response);
@@ -98,7 +230,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/inquiries/{id}

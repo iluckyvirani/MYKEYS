@@ -99,7 +99,7 @@ export async function requireOwnerOrAdmin(
 /**
  * Higher-order function for protected route handlers
  */
-export function withAuth<T = any>(
+export function withAuth<T extends { params?: Record<string, any> } = any>(
   handler: (
     request: NextRequest,
     user: JWTPayload,

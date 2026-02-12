@@ -4,6 +4,9 @@ import { withAuth } from '@/lib/auth/middleware';
 import { successResponse, errorResponse, paginatedResponse } from '@/lib/response';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { InitiatePaymentRequest, PaymentFilter } from '@/types/payment';
+import { notificationService } from '@/lib/notifications/notificationService';
+import { emailService } from '@/lib/email/emailService';
+import { prisma } from '@/lib/prisma';
 
 /**
  * GET /api/payments
@@ -70,6 +73,19 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
 
     // Initiate payment
     const result = await paymentService.initiatePayment(data, user.userId);
+
+    // Send pending payment notification to user
+    await notificationService.createPaymentNotification(
+      user.userId,
+      {
+        paymentId: result.payment.id,
+        bookingId: data.bookingId,
+        amount: data.amount,
+        currency: 'INR',
+        status: 'pending',
+      },
+      'pending'
+    );
 
     return successResponse(
       {

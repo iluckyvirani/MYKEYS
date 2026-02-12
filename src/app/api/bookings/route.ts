@@ -5,6 +5,8 @@ import { withAuth } from '@/lib/auth/middleware';
 import { ErrorCode } from '@/lib/auth/errors';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { CreateShortBookingRequest, ShortBookingDTO, BookingStatus, PaymentStatus, BookingType, PaymentMethod } from '@/types/bookings';
+import { notificationService } from '@/lib/notifications/notificationService';
+import { emailService } from '@/lib/email/emailService';
 
 /**
  * GET /api/bookings
@@ -259,6 +261,68 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
     const createdBooking = await prisma.booking.create({
       data: bookingData,
     });
+
+    // Create notifications for guest and owner
+    const guestName = `${guest.firstName} ${guest.lastName}`;
+    
+    // Notification to guest
+    await notificationService.createBookingNotification(
+      guest.id,
+      {
+        bookingId: createdBooking.id,
+        propertyTitle: property.title,
+        propertyId: property.id,
+        guestName: guestName,
+        checkIn: createdBooking.checkIn.toISOString().split('T')[0],
+        checkOut: createdBooking.checkOut.toISOString().split('T')[0],
+      },
+      'created'
+    );
+
+    // Notification to property owner
+    await notificationService.createBookingNotification(
+      property.ownerId,
+      {
+        bookingId: createdBooking.id,
+        propertyTitle: property.title,
+        propertyId: property.id,
+        guestName: guestName,
+        checkIn: createdBooking.checkIn.toISOString().split('T')[0],
+        checkOut: createdBooking.checkOut.toISOString().split('T')[0],
+      },
+      'created'
+    );
+
+    // Get owner details for email
+    const owner = await prisma.user.findUnique({
+      where: { id: property.ownerId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+
+    // Send confirmation email to guest
+    await emailService.sendBookingConfirmationEmail(
+      guest.email,
+      guestName,
+      property.title,
+      createdBooking.checkIn.toISOString().split('T')[0],
+      createdBooking.checkOut.toISOString().split('T')[0],
+      createdBooking.totalAmount,
+      createdBooking.id
+    );
+
+    // Send notification email to owner
+    if (owner) {
+      await emailService.sendBookingNotificationEmailToOwner(
+        owner.email,
+        `${owner.firstName} ${owner.lastName}`,
+        guestName,
+        property.title,
+        createdBooking.checkIn.toISOString().split('T')[0],
+        createdBooking.checkOut.toISOString().split('T')[0],
+        createdBooking.id
+      );
+    }
+
 
     // Transform to DTO
     const booking: ShortBookingDTO = {

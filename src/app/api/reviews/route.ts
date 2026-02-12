@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { reviewService } from '@/lib/reviews/reviewService';
 import { getUserFromToken } from '@/lib/auth';
 import { ReviewFilter } from '@/types/review';
+import { notificationService } from '@/lib/notifications/notificationService';
+import { emailService } from '@/lib/email/emailService';
+import { prisma } from '@/lib/prisma';
 
 /**
  * GET /api/reviews
@@ -50,6 +53,66 @@ export async function POST(req: NextRequest) {
     data.userId = user.userId;
     
     const review = await reviewService.create(data);
+
+    // Get property details to notify owner
+    if (review.propertyId) {
+      const property = await prisma.property.findUnique({
+        where: { id: review.propertyId },
+        select: {
+          title: true,
+          ownerId: true,
+        },
+      });
+
+      if (property) {
+        // Get reviewer name
+        const reviewer = await prisma.user.findUnique({
+          where: { id: review.userId },
+          select: { firstName: true, lastName: true, email: true },
+        });
+
+        const reviewerName = reviewer ? `${reviewer.firstName} ${reviewer.lastName}` : 'A guest';
+
+        // Send notification to property owner
+        await notificationService.createReviewNotification(
+          property.ownerId,
+          {
+            reviewId: review.id,
+            propertyId: review.propertyId,
+            propertyTitle: property.title,
+            reviewerName: reviewerName,
+            rating: review.rating,
+          }
+        );
+
+        // Get owner details for email
+        const owner = await prisma.user.findUnique({
+          where: { id: property.ownerId },
+          select: { firstName: true, lastName: true, email: true },
+        });
+
+        // Send email to owner about the review
+        if (owner && reviewer) {
+          await emailService.sendNewReviewNotificationEmail(
+            owner.email,
+            `${owner.firstName} ${owner.lastName}`,
+            reviewerName,
+            property.title,
+            review.rating,
+            review.comment || 'No comment provided',
+            review.propertyId
+          );
+        }
+
+        // Create notification for the reviewer (user) that their review was posted
+        await notificationService.createSystemNotification(
+          review.userId,
+          'Review Posted Successfully!',
+          `Your review for "${property.title}" has been posted successfully.`
+        );
+      }
+    }
+
     return NextResponse.json(review, { status: 201 });
   } catch (err: any) {
     console.error('POST /api/reviews error:', err);

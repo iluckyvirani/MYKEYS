@@ -7,6 +7,8 @@ import { generateTokenPair } from "@/lib/auth/jwt";
 import { toUserDTO } from "@/lib/auth/helpers";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
 import { RegisterRequest, RegisterResponse } from "@/types/auth";
+import { notificationService } from "@/lib/notifications/notificationService";
+import { emailService } from "@/lib/email/emailService";
 
 /**
  * POST /api/auth/register
@@ -75,6 +77,16 @@ export async function POST(request: NextRequest) {
         role: "USER",
       },
     });
+
+    // Send welcome notification
+    await notificationService.createSystemNotification(
+      user.id,
+      "Welcome to MyKeys!",
+      `Welcome ${user.firstName}! We're excited to have you on MyKeys. Explore properties, create bookings, and connect with property owners.`
+    );
+
+    // Send welcome email
+    await emailService.sendWelcomeEmail(user.email, user.firstName);
 
     // Generate tokens (use USER as primary role)
     const { accessToken, refreshToken } = await generateTokenPair(

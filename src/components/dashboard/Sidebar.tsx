@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Calendar,
@@ -20,6 +20,8 @@ import {
   Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { api } from "@/lib/api";
 
 interface SidebarProps {
   role: "user" | "owner";
@@ -51,7 +53,35 @@ const ownerNavigation = [
 
 export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigation = role === "user" ? userNavigation : ownerNavigation;
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      
+      // Call logout API
+      await api.post("/auth/logout");
+      
+      // Clear localStorage
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      
+      // Redirect to login
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still clear data and redirect even if API call fails
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      router.push("/login");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <>
@@ -93,9 +123,13 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
         {/* Bottom Section */}
         <div className="mt-auto p-4 border-t">
-          <button className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+          <button 
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <LogOut className="w-5 h-5" />
-            Logout
+            {isLoggingOut ? "Logging out..." : "Logout"}
           </button>
         </div>
       </div>
@@ -145,6 +179,18 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
             );
           })}
         </nav>
+
+        {/* Mobile Logout Button */}
+        <div className="mt-auto p-4 border-t">
+          <button 
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <LogOut className="w-5 h-5" />
+            {isLoggingOut ? "Logging out..." : "Logout"}
+          </button>
+        </div>
       </div>
     </>
   );

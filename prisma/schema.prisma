@@ -452,6 +452,9 @@ model Inquiry {
   email String
   phone String?
 
+  // Owner Response
+  response  String? // Owner's response to the inquiry
+  
   // Relations
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id])

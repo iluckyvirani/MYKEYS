@@ -6,7 +6,7 @@ import StatsCards from "@/components/dashboard/UserDashboard/StatsCards";
 import RecentBookings from "@/components/dashboard/UserDashboard/RecentBookings";
 import ActiveInquiries from "@/components/dashboard/UserDashboard/ActiveInquiries";
 import FavoriteProperties from "@/components/dashboard/UserDashboard/FavoriteProperties";
-import UpcomingPayments from "@/components/dashboard/UserDashboard/UpcomingPayments";
+import RecentPayments from "@/components/dashboard/UserDashboard/RecentPayments";
 import QuickActions from "@/components/dashboard/UserDashboard/QuickActions";
 import Notifications from "@/components/dashboard/UserDashboard/Notifications";
 import BookingTrendChart from "@/components/dashboard/charts/BookingTrendChart";
@@ -50,9 +50,9 @@ export default function UserDashboardPage() {
         <QuickActions />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left Column */}
-        <div className="lg:col-span-3 space-y-5">
+        <div className="lg:col-span-2 space-y-5">
           {/* Recent Bookings */}
           <RecentBookings />
 
@@ -64,9 +64,9 @@ export default function UserDashboardPage() {
         </div>
 
         {/* Right Column */}
-        <div className="space-y-5 col-span-3">
-          {/* Upcoming Payments */}
-          <UpcomingPayments />
+        <div className="space-y-5">
+          {/* Recent Payments */}
+          <RecentPayments />
 
           {/* Notifications */}
           <Notifications />

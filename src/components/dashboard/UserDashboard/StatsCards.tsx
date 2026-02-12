@@ -8,7 +8,7 @@ interface DashboardStats {
   activeBookings: number;
   totalInquiries: number;
   favoriteProperties: number;
-  upcomingPayments: number;
+  totalSpent: number;
 }
 
 export default function StatsCards() {
@@ -44,7 +44,7 @@ export default function StatsCards() {
     activeBookings: 0,
     totalInquiries: 0,
     favoriteProperties: 0,
-    upcomingPayments: 0,
+    totalSpent: 0,
   };
 
   const userStats = [
@@ -70,9 +70,9 @@ export default function StatsCards() {
       color: "bg-pink-500",
     },
     {
-      title: "Upcoming Payments",
-      value: displayStats.upcomingPayments > 0 ? `₹${displayStats.upcomingPayments.toLocaleString('en-IN')}` : "₹0",
-      change: "Due soon",
+      title: "Total Spent",
+      value: displayStats.totalSpent > 0 ? `₹${displayStats.totalSpent.toLocaleString('en-IN')}` : "₹0",
+      change: "Amount paid on bookings",
       icon: "credit-card",
       color: "bg-purple-500",
     },

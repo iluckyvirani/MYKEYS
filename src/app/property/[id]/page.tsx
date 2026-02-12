@@ -38,7 +38,8 @@ import {
     Scale,
     ShoppingBag,
     ParkingCircle,
-    Train
+    Train,
+    ThumbsUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,60 +49,44 @@ import { CreateShortBookingRequest, PaymentMethod } from "@/types/bookings";
 import { formatDateToReadable } from "@/utils/utils";
 import { MeResponse } from "@/types/auth";
 
-// Mock property data - London based
-const mockPropertyData = {
-    id: 1,
-    title: "Modern Luxury Apartment in Canary Wharf",
-    address: "25 Harbour Exchange Square, Canary Wharf, London E14 9GE",
-    description: "Stunning modern apartment with panoramic views of the River Thames. Features 3 bedrooms, 2 bathrooms, open-plan living, and premium finishes throughout. Perfect for city living or investment.",
-
-    // Property types based on your business model
-    listingType: "buy", // "rent" or "buy"
-    rentalType: "long", // "short" or "long"
-    priceType: "nightly", // "nightly", "monthly", "total"
-
-    // Pricing - UK format
-    price: "£2,800",
-    originalPrice: "£3,000",
-    securityDeposit: "£3,360", // Typically 5-6 weeks rent in UK
-    cleaningFee: "£150",
-    serviceFee: "£85",
-
-    // Property specs
-    beds: 3,
-    baths: 2,
-    sqft: 1200,
-    guests: 4,
-    propertyType: "Apartment",
-
-    // Short Stay specific
-    minStay: 2,
-    maxStay: 30,
-    checkInTime: "3:00 PM",
-    checkOutTime: "11:00 AM",
-    selfCheckIn: true,
-    freeParking: false,
-    cancellationPolicy: "Free cancellation up to 48 hours before check-in. Cancel within 48 hours for a 50% refund.",
-
-    // Long Rent specific
-    availableFrom: "1st March 2024",
-    minTerm: 12, // months (standard in UK)
-    maxTerm: 24, // months
+// Default empty property object
+const emptyPropertyData = {
+    id: "",
+    title: "",
+    address: "",
+    description: "",
+    listingType: "rent",
+    rentalType: "short" as const,
+    priceType: "nightly" as const,
+    price: "0",
+    beds: 0,
+    baths: 0,
+    sqft: 0,
+    guests: 0,
+    propertyType: "",
+    minStay: 0,
+    maxStay: 0,
+    minTerm: 0,
+    maxTerm: 0,
+    freeparking: false,
+    availableFrom: "",
+    securityDeposit: "0",
     billsIncluded: false,
-    councilTaxBand: "D", // UK specific
-    epcRating: "B", // UK Energy Performance Certificate
-
-    // Sale specific
-    propertyPrice: "£850,000",
-    propertyTax: "£2,500/year", // UK council tax
-    hoaFee: "£250/month", // Service charge in UK
-    leasehold: true, // Common in UK
-    leaseYears: 125,
-    groundRent: "£350/year",
-
-    // Required Documents for UK properties
+    epcRating: "",
+    councilTaxBand: "",
+    propertyPrice: "0",
+    propertyTax: "0",
+    hoaFee: "0",
+    leasehold: false,
+    leaseYears: 0,
+    groundRent: "0",
+    amenities: [] as any[],
+    images: [] as string[],
+    owner: null,
+    rating: 0,
+    reviewsCount: 0,
+    reviews: [] as any[],
     requiredDocuments: {
-        // Common for all types
         common: [
             "Proof of identity (Passport/Driving License)",
             "Proof of address (Utility bill/Bank statement)",
@@ -125,50 +110,6 @@ const mockPropertyData = {
             "Booking confirmation",
         ]
     },
-
-    // Amenities
-    amenities: [
-        { name: "Fibre Broadband", icon: <Wifi className="w-5 h-5" /> },
-        { name: "Underground Parking", icon: <Car className="w-5 h-5" /> },
-        { name: "Central Heating", icon: <Wind className="w-5 h-5" /> },
-        { name: "Fitted Kitchen", icon: <Utensils className="w-5 h-5" /> },
-        { name: "Smart TV", icon: <Tv className="w-5 h-5" /> },
-        { name: "Balcony", icon: <Droplets className="w-5 h-5" /> },
-        { name: "Concierge", icon: <Shield className="w-5 h-5" /> },
-    ],
-
-    // Images
-    images: [
-        "https://images.unsplash.com/photo-1613490493576-7fde63acd811?q=80&w=2071",
-        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070",
-        "https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=2070",
-        "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?q=80&w=2068",
-        "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?q=80&w=1974",
-    ],
-
-    // Owner info (only for short stay)
-    owner: {
-        name: "James Wilson",
-        joined: "January 2019",
-        verified: true,
-        responseRate: "95%",
-        responseTime: "within 2 hours",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070",
-    },
-
-    // Reviews
-    rating: 4.85,
-    reviewsCount: 89,
-    reviews: [
-        {
-            id: 1,
-            user: "Emily Thompson",
-            date: "January 2024",
-            rating: 5,
-            comment: "Excellent location and beautifully maintained property. The process was smooth and professional.",
-            avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?q=80&w=1974",
-        },
-    ],
 };
 
 export default function PropertyDetailsPage() {
@@ -191,7 +132,7 @@ export default function PropertyDetailsPage() {
         message: ""
     });
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-    const [property, setProperty] = useState<any>(mockPropertyData);
+    const [property, setProperty] = useState<any>(emptyPropertyData);
     const [loading, setLoading] = useState(true);
     const [bookingLoading, setBookingLoading] = useState(false);
     const [bookingError, setBookingError] = useState<string | null>(null);
@@ -204,6 +145,10 @@ export default function PropertyDetailsPage() {
     const [cleaningFeeAmount, setCleaningFeeAmount] = useState(0);
     const [serviceFeeAmount, setServiceFeeAmount] = useState(0);
     const [totalAmount, setTotalAmount] = useState(0);
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [averageRating, setAverageRating] = useState(0);
+    const [totalReviews, setTotalReviews] = useState(0);
 
     // Helper function to extract numeric value from price strings
     const parsePrice = (priceString: string): number => {
@@ -268,70 +213,103 @@ export default function PropertyDetailsPage() {
                 if (response.data?.success && response.data.data) {
                     const apiData = response.data.data;
 
-                    // Map API response to component format, fallback to mock data for missing fields
+                    // Map API response to component format, fallback to empty data for missing fields
                     const mappedData = {
-                        ...mockPropertyData,
-                        id: apiData.id || mockPropertyData.id,
-                        title: apiData.title || mockPropertyData.title,
-                        address: `${apiData.address || mockPropertyData.address}`,
+                        ...emptyPropertyData,
+                        id: apiData.id || emptyPropertyData.id,
+                        title: apiData.title || emptyPropertyData.title,
+                        address: `${apiData.address || emptyPropertyData.address}`,
                         city: apiData.city || "London",
                         state: apiData.state || "UK",
-                        description: apiData.description || mockPropertyData.description,
-                        listingType: apiData.listingType?.toLowerCase() || mockPropertyData.listingType,
+                        description: apiData.description || emptyPropertyData.description,
+                        listingType: apiData.listingType?.toLowerCase() || emptyPropertyData.listingType,
                         rentalType: apiData.rentalType?.toLowerCase() === "short_term" ? "short" : "long",
-                        priceType: apiData.priceType?.toLowerCase() || mockPropertyData.priceType,
-                        price: `£${apiData.price}` || mockPropertyData.price,
-                        beds: apiData.bedrooms || mockPropertyData.beds,
-                        baths: apiData.bathrooms || mockPropertyData.baths,
-                        sqft: apiData.sqft || mockPropertyData.sqft,
-                        propertyType: apiData.propertyType || mockPropertyData.propertyType,
-                        minStay: apiData.minStay || mockPropertyData.minStay,
-                        maxStay: apiData.maxStay || mockPropertyData.maxStay,
-                        minTerm: apiData.minTerm || mockPropertyData.minTerm,
-                        maxTerm: apiData.maxTerm || mockPropertyData.maxTerm,
-                        freeparking: apiData.parking || mockPropertyData.freeParking,
-                        guests: apiData.guests || mockPropertyData.guests,
-                        availableFrom: apiData.availableFrom || mockPropertyData.availableFrom,
-                        securityDeposit: `£${apiData.securityDeposit}` || mockPropertyData.securityDeposit,
+                        priceType: apiData.priceType?.toLowerCase() || emptyPropertyData.priceType,
+                        price: `£${apiData.price}` || emptyPropertyData.price,
+                        beds: apiData.bedrooms || emptyPropertyData.beds,
+                        baths: apiData.bathrooms || emptyPropertyData.baths,
+                        sqft: apiData.sqft || emptyPropertyData.sqft,
+                        propertyType: apiData.propertyType || emptyPropertyData.propertyType,
+                        minStay: apiData.minStay || emptyPropertyData.minStay,
+                        maxStay: apiData.maxStay || emptyPropertyData.maxStay,
+                        minTerm: apiData.minTerm || emptyPropertyData.minTerm,
+                        maxTerm: apiData.maxTerm || emptyPropertyData.maxTerm,
+                        freeparking: apiData.parking || emptyPropertyData.freeparking,
+                        guests: apiData.guests || emptyPropertyData.guests,
+                        availableFrom: apiData.availableFrom || emptyPropertyData.availableFrom,
+                        securityDeposit: `£${apiData.securityDeposit}` || emptyPropertyData.securityDeposit,
                         billsIncluded: apiData.billsIncluded || false,
-                        epcRating: apiData.epcRating || mockPropertyData.epcRating,
-                        councilTaxBand: apiData.councilTaxBand || mockPropertyData.councilTaxBand,
-                        propertyPrice: apiData.propertyPrice || mockPropertyData.propertyPrice,
-                        propertyTax: `£${apiData.propertyTax}` || mockPropertyData.propertyTax,
-                        hoaFee: `£${apiData.hoaFee}` || mockPropertyData.hoaFee,
+                        epcRating: apiData.epcRating || emptyPropertyData.epcRating,
+                        councilTaxBand: apiData.councilTaxBand || emptyPropertyData.councilTaxBand,
+                        propertyPrice: apiData.propertyPrice || emptyPropertyData.propertyPrice,
+                        propertyTax: `£${apiData.propertyTax}` || emptyPropertyData.propertyTax,
+                        hoaFee: `£${apiData.hoaFee}` || emptyPropertyData.hoaFee,
                         leasehold: apiData.leasehold,
-                        leaseYears: apiData.leaseYears || mockPropertyData.leaseYears,
-                        groundRent: apiData.groundRent || mockPropertyData.groundRent,
-                        images: apiData.images?.map((img: any) => img.url) || mockPropertyData.images,
+                        leaseYears: apiData.leaseYears || emptyPropertyData.leaseYears,
+                        groundRent: apiData.groundRent || emptyPropertyData.groundRent,
+                        images: apiData.images?.map((img: any) => img.url) || emptyPropertyData.images,
                         amenities: apiData.amenities?.map((amenity: any) => ({
                             name: amenity.amenity.name,
                             icon: <Wifi className="w-5 h-5" /> // Fallback icon
-                        })) || mockPropertyData.amenities,
-                        rating: apiData.averageRating || mockPropertyData.rating,
-                        reviewsCount: apiData.reviewCount || mockPropertyData.reviewsCount,
-                        reviews: apiData.reviews || mockPropertyData.reviews,
+                        })) || emptyPropertyData.amenities,
+                        rating: apiData.averageRating || emptyPropertyData.rating,
+                        reviewsCount: apiData.reviewCount || emptyPropertyData.reviewsCount,
+                        reviews: apiData.reviews || emptyPropertyData.reviews,
                         owner: apiData.owner ? {
                             name: apiData.owner.name || "Property Owner",
                             joined: "Active",
                             verified: true,
                             responseRate: "95%",
                             responseTime: "within 2 hours",
-                            avatar: apiData.owner.profileImage || mockPropertyData.owner.avatar,
-                        } : mockPropertyData.owner,
+                            avatar: apiData.owner.profileImage || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070",
+                        } : emptyPropertyData.owner,
                     };
 
                     setProperty(mappedData);
                 }
             } catch (error) {
                 console.error("Error fetching property:", error);
-                // Keep using mock data on error
-                setProperty(mockPropertyData);
+                // Keep using empty data on error
+                setProperty(emptyPropertyData);
             } finally {
                 setLoading(false);
             }
         };
 
+        const fetchReviews = async () => {
+            try {
+                setReviewsLoading(true);
+                const id = params?.id;
+                if (!id) return;
+
+                const response = await api.get(`/reviews?propertyId=${id}&limit=10`);
+
+                if (response.data?.success && response.data.data) {
+                    const reviewsData = response.data.data;
+                    setReviews(reviewsData);
+
+                    // Calculate average rating from reviews
+                    if (reviewsData.length > 0) {
+                        const avgRating = reviewsData.reduce((sum: number, review: any) => sum + (review.rating || 0), 0) / reviewsData.length;
+                        setAverageRating(Math.round(avgRating * 10) / 10);
+                        setTotalReviews(reviewsData.length);
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching reviews:", error);
+                setReviews([]);
+            } finally {
+                setReviewsLoading(false);
+            }
+        };
+
         fetchProperty();
+        // Fetch reviews after a short delay to ensure property is loaded
+        const reviewTimer = setTimeout(() => {
+            fetchReviews();
+        }, 500);
+
+        return () => clearTimeout(reviewTimer);
     }, [params?.id]);
 
     // Check if user is logged in and prefill form
@@ -698,13 +676,13 @@ export default function PropertyDetailsPage() {
 
                                 {/* Property Details Tabs */}
                                 <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-                                    <TabsList className="grid w-full grid-cols-5 rounded-[5px]">
+                                    <TabsList className="grid w-full grid-cols-6 rounded-[5px]">
                                         <TabsTrigger className="rounded-[5px]" value="overview">Overview</TabsTrigger>
                                         <TabsTrigger className="rounded-[5px]" value="amenities">Amenities</TabsTrigger>
                                         <TabsTrigger className="rounded-[5px]" value="documents">Documents</TabsTrigger>
                                         <TabsTrigger className="rounded-[5px]" value="location">Location</TabsTrigger>
-
-                                        <TabsTrigger className="rounded-[5px]" value="reviews">Reviews ({property.reviewsCount})</TabsTrigger>
+                                        <TabsTrigger className="rounded-[5px]" value="reviews">Reviews ({totalReviews > 0 ? totalReviews : property.reviewsCount})</TabsTrigger>
+                                        <TabsTrigger className="rounded-[5px]" value="responses">Responses</TabsTrigger>
                                     </TabsList>
 
                                     <TabsContent value="overview" className="mt-6">
@@ -966,41 +944,68 @@ export default function PropertyDetailsPage() {
                                                 <div className="flex items-center gap-4 mb-6">
                                                     <div className="flex items-center">
                                                         <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                                                        <span className="text-2xl font-bold ml-2">{property.rating}</span>
+                                                        <span className="text-2xl font-bold ml-2">{averageRating || property.rating}</span>
                                                     </div>
                                                     <div className="text-gray-600">·</div>
                                                     <div>
-                                                        <span className="font-medium">{property.reviewsCount} reviews</span>
+                                                        <span className="font-medium">{totalReviews > 0 ? totalReviews : property.reviewsCount} reviews</span>
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-6">
-                                                    {property.reviews.map((review: { id: number; avatar: string; user: string; date: string; rating: number; comment: string }) => (
-                                                        <div key={review.id} className="border-b pb-6 last:border-0">
-                                                            <div className="flex items-center gap-3 mb-3">
-                                                                <img
-                                                                    src={review.avatar}
-                                                                    alt={review.user}
-                                                                    className="w-10 h-10 rounded-full"
-                                                                />
-                                                                <div>
-                                                                    <p className="font-medium">{review.user}</p>
-                                                                    <p className="text-sm text-gray-600">{review.date}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex mb-2">
-                                                                {[...Array(5)].map((_, i) => (
-                                                                    <Star
-                                                                        key={i}
-                                                                        size={16}
-                                                                        className={`${i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                            <p className="text-gray-700">{review.comment}</p>
+                                                {reviewsLoading ? (
+                                                    <div className="flex justify-center py-8">
+                                                        <div className="animate-spin">
+                                                            <Clock className="w-6 h-6 text-gray-400" />
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                    </div>
+                                                ) : reviews.length > 0 ? (
+                                                    <div className="space-y-6">
+                                                        {reviews.map((review: any) => (
+                                                            <div key={review.id} className="border-b pb-6 last:border-0">
+                                                                <div className="flex items-center gap-3 mb-3">
+                                                                    <img
+                                                                        src={review.user?.profileImage || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070"}
+                                                                        alt={review.user?.name || "Reviewer"}
+                                                                        className="w-10 h-10 rounded-full object-cover"
+                                                                    />
+                                                                    <div>
+                                                                        <p className="font-medium">{review.user?.name || "Anonymous"}</p>
+                                                                        <p className="text-sm text-gray-600">
+                                                                            {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "Recently"}
+                                                                        </p>
+                                                                    </div>
+                                                                    {review.isVerified && (
+                                                                        <div className="ml-auto flex items-center gap-1 bg-green-50 px-3 py-1 rounded-full">
+                                                                            <Check className="w-4 h-4 text-green-600" />
+                                                                            <span className="text-xs font-medium text-green-600">Verified</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex mb-2">
+                                                                    {[...Array(5)].map((_, i) => (
+                                                                        <Star
+                                                                            key={i}
+                                                                            size={16}
+                                                                            className={`${i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                                <p className="text-gray-700 mb-2">{review.comment}</p>
+                                                                {review.helpfulCount > 0 && (
+                                                                    <p className="text-sm text-gray-500">
+                                                                        <ThumbsUp className="w-4 h-4 inline mr-1" />
+                                                                        {review.helpfulCount} found this helpful
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-8">
+                                                        <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                                        <p className="text-gray-600">No reviews yet. Be the first to review this property!</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </TabsContent>
@@ -1106,6 +1111,73 @@ export default function PropertyDetailsPage() {
                                             </div>
                                         </div>
 
+                                    </TabsContent>
+
+                                    <TabsContent value="responses" className="mt-6">
+                                        <div className="space-y-6">
+                                            <div className="border rounded-[5px] p-6">
+                                                <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                                                    <MessageCircle className="w-5 h-5" />
+                                                    Property Responses & Messages
+                                                </h3>
+
+                                                <div className="space-y-4">
+                                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                        <div className="flex items-start gap-3">
+                                                            <Clock className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                                                            <div>
+                                                                <p className="font-medium text-blue-900">Sent an inquiry?</p>
+                                                                <p className="text-sm text-blue-700 mt-1">
+                                                                    Your inquiries and owner responses will appear here. Check back soon!
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {isLoggedIn ? (
+                                                        <div className="space-y-3">
+                                                            <h4 className="font-medium text-gray-900">Contact the owner</h4>
+                                                            <Button
+                                                                onClick={() => setShowInquiryModal(true)}
+                                                                className="w-full bg-green-600 hover:bg-green-700"
+                                                            >
+                                                                <MessageCircle className="w-4 h-4 mr-2" />
+                                                                Send Message
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center py-6">
+                                                            <p className="text-gray-600 mb-3">Sign in to send messages to the owner</p>
+                                                            <Button
+                                                                onClick={() => router.push("/login")}
+                                                                variant="outline"
+                                                                className="w-full"
+                                                            >
+                                                                Sign In
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-6 pt-6 border-t">
+                                                    <h4 className="font-medium mb-3">How it works</h4>
+                                                    <ul className="space-y-2 text-sm text-gray-600">
+                                                        <li className="flex items-start gap-2">
+                                                            <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                                                            <span>Send an inquiry or booking request</span>
+                                                        </li>
+                                                        <li className="flex items-start gap-2">
+                                                            <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                                                            <span>Owner reviews and responds</span>
+                                                        </li>
+                                                        <li className="flex items-start gap-2">
+                                                            <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                                                            <span>Finalize booking or rental agreement</span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </TabsContent>
                                 </Tabs>
                             </div>
@@ -1292,10 +1364,18 @@ export default function PropertyDetailsPage() {
                                                 </div>
                                             )}
 
-                                            {/* Success Message */}
+                                            {/* Success Message with Booking Confirmation */}
                                             {bookingSuccess && (
-                                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-                                                    ✓ {bookingSuccess}
+                                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                                    <div className="flex items-start gap-3">
+                                                        <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                                                        <div>
+                                                            <p className="font-medium text-green-900">{bookingSuccess}</p>
+                                                            <p className="text-sm text-green-700 mt-1">
+                                                                Check your email for booking confirmation and payment details.
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
 

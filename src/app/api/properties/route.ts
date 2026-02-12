@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * pageSize;
 
     // Filters
+    const forOwner = searchParams.get("forOwner") === "true";
+    const ownerId = searchParams.get("ownerId");
+    const search = searchParams.get("search");
     const status = searchParams.get("status");
     const listingType = searchParams.get("listingType");
     const propertyType = searchParams.get("propertyType");
@@ -39,6 +42,23 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {};
+
+    // Owner filters
+    if (forOwner) {
+      // Note: forOwner requires authentication in middleware, use context to get userId
+      // For now, this will need userId from the authenticated request
+      // This will be set in withAuth wrapper for owner dashboard
+    }
+    if (ownerId) where.ownerId = ownerId;
+
+    // Search by title or address
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { address: { contains: search, mode: "insensitive" } },
+        { city: { contains: search, mode: "insensitive" } },
+      ];
+    }
 
     if (status) where.status = status;
     if (listingType) where.listingType = listingType;
