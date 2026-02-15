@@ -12,7 +12,7 @@ interface Payment {
   bookingId?: string;
   packageId?: string;
   propertyTitle?: string;
-  type: "BOOKING" | "PACKAGE";
+  paymentType: "BOOKING" | "PACKAGE";
   amount: number;
   status: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "PARTIAL";
   paymentMethod?: string;
@@ -36,7 +36,7 @@ export default function PaymentTabs() {
         if (response.data?.success && response.data.data?.items) {
           // Filter only BOOKING type payments (excluding PACKAGE payments for owners)
           const bookingPayments = response.data.data.items.filter(
-            (p: Payment) => p.type === "BOOKING"
+            (p: Payment) => p.paymentType === "BOOKING"
           );
           setAllPayments(bookingPayments);
           setError(null);

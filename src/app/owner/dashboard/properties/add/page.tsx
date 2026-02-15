@@ -113,8 +113,8 @@ export default function AddPropertyPage() {
       try {
         setLoadingAmenities(true);
         const response = await api.get("/amenities?pageSize=50");
-        if (response.data?.amenities) {
-          setAmenities(response.data.amenities);
+        if (response.data?.data?.items) {
+          setAmenities(response.data?.data?.items);
         }
       } catch (err) {
         console.error("Error fetching amenities:", err);

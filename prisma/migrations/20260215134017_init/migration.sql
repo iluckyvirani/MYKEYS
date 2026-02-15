@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('USER', 'OWNER', 'ADMIN');
+CREATE TYPE "RoleType" AS ENUM ('USER', 'OWNER', 'ADMIN');
 
 -- CreateEnum
 CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING');
@@ -17,22 +17,35 @@ CREATE TYPE "ListingType" AS ENUM ('RENT', 'BUY');
 CREATE TYPE "RentalType" AS ENUM ('SHORT_TERM', 'LONG_TERM');
 
 -- CreateEnum
+CREATE TYPE "PriceType" AS ENUM ('NIGHTLY', 'MONTHLY', 'TOTAL');
+
+-- CreateEnum
 CREATE TYPE "BookingStatus" AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'CHECKED_IN', 'CHECKED_OUT');
 
 -- CreateEnum
 CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'REFUNDED', 'PARTIAL');
 
 -- CreateEnum
-CREATE TYPE "PaymentMethod" AS ENUM ('CREDIT_CARD', 'DEBIT_CARD', 'UPI', 'NET_BANKING', 'CASH', 'WALLET');
+CREATE TYPE "PaymentMethod" AS ENUM ('CREDIT_CARD', 'DEBIT_CARD', 'UPI', 'NET_BANKING', 'CASH', 'WALLET', 'BANK_TRANSFER');
 
 -- CreateEnum
 CREATE TYPE "InquiryStatus" AS ENUM ('NEW', 'READ', 'REPLIED', 'CLOSED', 'CONVERTED');
 
 -- CreateEnum
-CREATE TYPE "PackageTier" AS ENUM ('BASIC', 'PROFESSIONAL', 'PREMIUM', 'ENTERPRISE');
+CREATE TYPE "PackageTier" AS ENUM ('BASIC', 'STANDARD', 'PREMIUM');
 
 -- CreateEnum
 CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIVE', 'EXPIRED', 'CANCELLED', 'PENDING');
+
+-- CreateTable
+CREATE TABLE "UserRoleAssignment" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "role" "RoleType" NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "UserRoleAssignment_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -43,12 +56,20 @@ CREATE TABLE "User" (
     "firstName" TEXT NOT NULL,
     "lastName" TEXT NOT NULL,
     "avatar" TEXT,
-    "role" "UserRole" NOT NULL DEFAULT 'USER',
     "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
+    "birthDate" TEXT,
+    "address" TEXT,
+    "city" TEXT,
+    "state" TEXT,
+    "country" TEXT,
+    "zipCode" TEXT,
+    "emergencyName" TEXT,
+    "emergencyContact" TEXT,
     "companyName" TEXT,
     "taxId" TEXT,
-    "bio" TEXT,
     "website" TEXT,
+    "resetToken" TEXT,
+    "resetTokenExpiry" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "lastLoginAt" TIMESTAMP(3),
@@ -73,7 +94,8 @@ CREATE TABLE "Property" (
     "listingType" "ListingType" NOT NULL,
     "rentalType" "RentalType",
     "price" DOUBLE PRECISION NOT NULL,
-    "priceType" TEXT NOT NULL,
+    "priceType" "PriceType" NOT NULL,
+    "originalPrice" DOUBLE PRECISION,
     "cleaningFee" DOUBLE PRECISION DEFAULT 0,
     "serviceFee" DOUBLE PRECISION DEFAULT 0,
     "securityDeposit" DOUBLE PRECISION DEFAULT 0,
@@ -84,14 +106,31 @@ CREATE TABLE "Property" (
     "minStay" INTEGER NOT NULL DEFAULT 1,
     "maxStay" INTEGER,
     "yearBuilt" INTEGER,
-    "parking" INTEGER DEFAULT 0,
-    "status" "PropertyStatus" NOT NULL DEFAULT 'DRAFT',
+    "checkInTime" TEXT NOT NULL DEFAULT '14:00',
+    "checkOutTime" TEXT NOT NULL DEFAULT '11:00',
+    "selfCheckIn" BOOLEAN NOT NULL DEFAULT false,
+    "parking" BOOLEAN NOT NULL DEFAULT false,
+    "status" "PropertyStatus" NOT NULL DEFAULT 'ACTIVE',
     "isFeatured" BOOLEAN NOT NULL DEFAULT false,
     "isVerified" BOOLEAN NOT NULL DEFAULT false,
     "featuredUntil" TIMESTAMP(3),
+    "availableFrom" TIMESTAMP(3),
+    "minTerm" INTEGER NOT NULL DEFAULT 1,
+    "maxTerm" INTEGER,
+    "billsIncluded" BOOLEAN,
+    "councilTaxBand" TEXT,
+    "epcRating" TEXT,
+    "propertyPrice" DOUBLE PRECISION,
+    "propertyTax" DOUBLE PRECISION,
+    "hoaFee" DOUBLE PRECISION,
+    "leasehold" BOOLEAN,
+    "leaseYears" INTEGER,
+    "groundRent" INTEGER,
     "ownerId" TEXT NOT NULL,
     "views" INTEGER NOT NULL DEFAULT 0,
     "saves" INTEGER NOT NULL DEFAULT 0,
+    "occupancy" INTEGER NOT NULL DEFAULT 0,
+    "revenue" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -153,7 +192,7 @@ CREATE TABLE "Booking" (
     "notes" TEXT,
     "propertyId" TEXT NOT NULL,
     "guestId" TEXT NOT NULL,
-    "ownerId" TEXT NOT NULL,
+    "ownerId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "cancelledAt" TIMESTAMP(3),
@@ -188,6 +227,14 @@ CREATE TABLE "Review" (
     "rating" INTEGER NOT NULL,
     "comment" TEXT,
     "response" TEXT,
+    "cleanlinessRating" INTEGER,
+    "communicationRating" INTEGER,
+    "accuracyRating" INTEGER,
+    "locationRating" INTEGER,
+    "valueRating" INTEGER,
+    "isVerified" BOOLEAN NOT NULL DEFAULT false,
+    "helpfulCount" INTEGER NOT NULL DEFAULT 0,
+    "reportCount" INTEGER NOT NULL DEFAULT 0,
     "propertyId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "bookingId" TEXT,
@@ -210,6 +257,7 @@ CREATE TABLE "Inquiry" (
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "phone" TEXT,
+    "response" TEXT,
     "propertyId" TEXT NOT NULL,
     "userId" TEXT,
     "assignedTo" TEXT,
@@ -229,8 +277,14 @@ CREATE TABLE "Notification" (
     "message" TEXT NOT NULL,
     "isRead" BOOLEAN NOT NULL DEFAULT false,
     "data" JSONB,
+    "priority" TEXT NOT NULL DEFAULT 'normal',
+    "category" TEXT,
+    "actionUrl" TEXT,
+    "imageUrl" TEXT,
+    "expiresAt" TIMESTAMP(3),
     "userId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "readAt" TIMESTAMP(3),
 
     CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
 );
@@ -332,6 +386,22 @@ CREATE TABLE "AuditLog" (
     CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Favorite" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "propertyId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Favorite_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "UserRoleAssignment_userId_idx" ON "UserRoleAssignment"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserRoleAssignment_userId_role_key" ON "UserRoleAssignment"("userId", "role");
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -340,9 +410,6 @@ CREATE UNIQUE INDEX "User_phone_key" ON "User"("phone");
 
 -- CreateIndex
 CREATE INDEX "User_email_idx" ON "User"("email");
-
--- CreateIndex
-CREATE INDEX "User_role_idx" ON "User"("role");
 
 -- CreateIndex
 CREATE INDEX "User_status_idx" ON "User"("status");
@@ -417,13 +484,19 @@ CREATE INDEX "Payment_status_idx" ON "Payment"("status");
 CREATE INDEX "Payment_createdAt_idx" ON "Payment"("createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Review_bookingId_unique" ON "Review"("bookingId");
+CREATE UNIQUE INDEX "Review_bookingId_key" ON "Review"("bookingId");
 
 -- CreateIndex
 CREATE INDEX "Review_propertyId_idx" ON "Review"("propertyId");
 
 -- CreateIndex
 CREATE INDEX "Review_userId_idx" ON "Review"("userId");
+
+-- CreateIndex
+CREATE INDEX "Review_rating_idx" ON "Review"("rating");
+
+-- CreateIndex
+CREATE INDEX "Review_isVerified_idx" ON "Review"("isVerified");
 
 -- CreateIndex
 CREATE INDEX "Inquiry_propertyId_idx" ON "Inquiry"("propertyId");
@@ -445,6 +518,12 @@ CREATE INDEX "Notification_isRead_idx" ON "Notification"("isRead");
 
 -- CreateIndex
 CREATE INDEX "Notification_createdAt_idx" ON "Notification"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "Notification_type_idx" ON "Notification"("type");
+
+-- CreateIndex
+CREATE INDEX "Notification_priority_idx" ON "Notification"("priority");
 
 -- CreateIndex
 CREATE INDEX "Package_tier_idx" ON "Package"("tier");
@@ -492,10 +571,19 @@ CREATE INDEX "AuditLog_entity_idx" ON "AuditLog"("entity");
 CREATE INDEX "AuditLog_entityId_idx" ON "AuditLog"("entityId");
 
 -- CreateIndex
-CREATE INDEX "AuditLog_performedBy_idx" ON "AuditLog"("performedBy");
+CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
+CREATE INDEX "Favorite_userId_idx" ON "Favorite"("userId");
+
+-- CreateIndex
+CREATE INDEX "Favorite_propertyId_idx" ON "Favorite"("propertyId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Favorite_userId_propertyId_key" ON "Favorite"("userId", "propertyId");
+
+-- AddForeignKey
+ALTER TABLE "UserRoleAssignment" ADD CONSTRAINT "UserRoleAssignment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Property" ADD CONSTRAINT "Property_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -516,13 +604,16 @@ ALTER TABLE "Booking" ADD CONSTRAINT "Booking_propertyId_fkey" FOREIGN KEY ("pro
 ALTER TABLE "Booking" ADD CONSTRAINT "Booking_guestId_fkey" FOREIGN KEY ("guestId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Booking" ADD CONSTRAINT "Booking_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Booking" ADD CONSTRAINT "Booking_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "OwnerPackage"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Review" ADD CONSTRAINT "Review_propertyId_fkey" FOREIGN KEY ("propertyId") REFERENCES "Property"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -559,3 +650,9 @@ ALTER TABLE "AdCampaign" ADD CONSTRAINT "AdCampaign_ownerId_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "Report" ADD CONSTRAINT "Report_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_propertyId_fkey" FOREIGN KEY ("propertyId") REFERENCES "Property"("id") ON DELETE CASCADE ON UPDATE CASCADE;

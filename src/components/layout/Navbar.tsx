@@ -76,6 +76,14 @@ export default function Navbar() {
     try {
       const response = await api.post("/users/become-owner");
       
+      // Update tokens with new OWNER role
+      if (response.data?.data?.accessToken) {
+        localStorage.setItem("accessToken", response.data.data.accessToken);
+      }
+      if (response.data?.data?.refreshToken) {
+        localStorage.setItem("refreshToken", response.data.data.refreshToken);
+      }
+      
       // Update user data in localStorage with new roles
       if (response.data?.data?.user) {
         localStorage.setItem("user", JSON.stringify(response.data.data.user));

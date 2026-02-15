@@ -23,6 +23,7 @@ import { InquiryFilterModal } from "@/components/dashboard/owner/inquiries/Inqui
 import { InquiryList } from "@/components/dashboard/owner/inquiries/InquiryList";
 import { InquiryReplyModal } from "@/components/dashboard/owner/inquiries/InquiryReplyModal";
 import { api } from "@/lib/api";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 
 interface Inquiry {
@@ -154,10 +155,10 @@ export default function OwnerInquiriesPage() {
           prev.map((inq) =>
             inq.id === selectedInquiry.id
               ? {
-                  ...inq,
-                  status: "REPLIED",
-                  ownerResponse: response,
-                }
+                ...inq,
+                status: "REPLIED",
+                ownerResponse: response,
+              }
               : inq
           )
         );
@@ -209,189 +210,191 @@ export default function OwnerInquiriesPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Inquiries</h1>
-        <p className="text-gray-600 mt-2">
-          Manage and respond to property inquiries from potential guests
-        </p>
-      </div>
+    <DashboardLayout defaultRole="owner">
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Inquiries</h1>
+          <p className="text-gray-600 mt-2">
+            Manage and respond to property inquiries from potential guests
+          </p>
+        </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Total Inquiries
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-blue-600">
+                New
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">{stats.new}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-amber-600">
+                Pending Response
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-amber-600">
+                {stats.pendingResponse}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Closed
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-gray-900">{stats.closed}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters Section */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Total Inquiries
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-blue-600">
-              New
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{stats.new}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-amber-600">
-              Pending Response
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-amber-600">
-              {stats.pendingResponse}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Closed
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.closed}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Inquiries</CardTitle>
-              <CardDescription>
-                Showing {inquiries.length} inquiries
-                {hasActiveFilters && " (filtered)"}
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilterModal(true)}
-                className="gap-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-              </Button>
-
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearFilters}
-                  className="text-gray-600"
-                >
-                  Clear Filters
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {/* Search Bar */}
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search by guest name, email, or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-[5px] flex gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-medium text-red-900">Error</h3>
-                <p className="text-sm text-red-800">{error}</p>
+                <CardTitle>Inquiries</CardTitle>
+                <CardDescription>
+                  Showing {inquiries.length} inquiries
+                  {hasActiveFilters && " (filtered)"}
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilterModal(true)}
+                  className="gap-2"
+                >
+                  <Filter className="w-4 h-4" />
+                  Filter
+                </Button>
+
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearFilters}
+                    className="text-gray-600"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
               </div>
             </div>
-          )}
+          </CardHeader>
 
-          {/* Loading State */}
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader className="w-8 h-8 text-green-600 animate-spin" />
-              <p className="text-gray-600 mt-3">Loading inquiries...</p>
+          <CardContent>
+            {/* Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search by guest name, email, or phone..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-          )}
 
-          {/* Empty State */}
-          {!loading && inquiries.length === 0 && (
-            <div className="text-center py-12">
-              <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-900 mb-1">
-                No inquiries found
-              </h3>
-              <p className="text-gray-600">
-                {hasActiveFilters
-                  ? "Try adjusting your filters"
-                  : "You don't have any inquiries yet"}
-              </p>
-            </div>
-          )}
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-[5px] flex gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-red-900">Error</h3>
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            )}
 
-          {/* Inquiries List */}
-          {!loading && inquiries.length > 0 && (
-            <InquiryList
-              inquiries={transformedInquiries}
-              onReply={(inq) => handleOpenReply(inquiries.find(original => original.id === inq.id))}
-            />
-          )}
-        </CardContent>
-      </Card>
+            {/* Loading State */}
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader className="w-8 h-8 text-green-600 animate-spin" />
+                <p className="text-gray-600 mt-3">Loading inquiries...</p>
+              </div>
+            )}
 
-      {/* Modals */}
-      <InquiryFilterModal
-        isOpen={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        onApply={(newFilters) => {
-          setFilters(newFilters);
-          setShowFilterModal(false);
-        }}
-        properties={uniqueProperties}
-        appliedFilters={filters}
-      />
+            {/* Empty State */}
+            {!loading && inquiries.length === 0 && (
+              <div className="text-center py-12">
+                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-gray-900 mb-1">
+                  No inquiries found
+                </h3>
+                <p className="text-gray-600">
+                  {hasActiveFilters
+                    ? "Try adjusting your filters"
+                    : "You don't have any inquiries yet"}
+                </p>
+              </div>
+            )}
 
-      {selectedInquiry && (
-        <InquiryReplyModal
-          isOpen={replyModalOpen}
-          onClose={() => {
-            setReplyModalOpen(false);
-            setSelectedInquiry(null);
+            {/* Inquiries List */}
+            {!loading && inquiries.length > 0 && (
+              <InquiryList
+                inquiries={transformedInquiries}
+                onReply={(inq) => handleOpenReply(inquiries.find(original => original.id === inq.id))}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Modals */}
+        <InquiryFilterModal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onApply={(newFilters) => {
+            setFilters(newFilters);
+            setShowFilterModal(false);
           }}
-          onSubmit={handleReplySubmit}
-          inquiry={{
-            id: selectedInquiry.id,
-            guestName: selectedInquiry.guestName,
-            guestEmail: selectedInquiry.guestEmail,
-            message: selectedInquiry.message,
-            existingResponse: selectedInquiry.ownerResponse,
-            createdAt: selectedInquiry.createdAt,
-          }}
-          loading={submitting}
+          properties={uniqueProperties}
+          appliedFilters={filters}
         />
-      )}
-    </div>
+
+        {selectedInquiry && (
+          <InquiryReplyModal
+            isOpen={replyModalOpen}
+            onClose={() => {
+              setReplyModalOpen(false);
+              setSelectedInquiry(null);
+            }}
+            onSubmit={handleReplySubmit}
+            inquiry={{
+              id: selectedInquiry.id,
+              guestName: selectedInquiry.guestName,
+              guestEmail: selectedInquiry.guestEmail,
+              message: selectedInquiry.message,
+              existingResponse: selectedInquiry.ownerResponse,
+              createdAt: selectedInquiry.createdAt,
+            }}
+            loading={submitting}
+          />
+        )}
+      </div>
+    </DashboardLayout>
   );
 }

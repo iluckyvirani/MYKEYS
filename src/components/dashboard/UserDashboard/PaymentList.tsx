@@ -9,7 +9,7 @@ interface Payment {
   bookingId?: string;
   packageId?: string;
   propertyTitle?: string;
-  type: "BOOKING" | "PACKAGE";
+  paymentType: "BOOKING" | "PACKAGE";
   amount: number;
   status: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "PARTIAL";
   paymentMethod?: string;
@@ -96,7 +96,7 @@ export default function PaymentList({ payments, type, emptyMessage }: PaymentLis
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {getPaymentTypeLabel(payment.type)}
+                      {getPaymentTypeLabel(payment.paymentType)}
                     </h3>
                     <div className="flex items-center gap-4 mt-2 flex-wrap">
                       <div className="flex items-center gap-1 text-sm text-gray-600">

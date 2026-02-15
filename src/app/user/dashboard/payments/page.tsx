@@ -28,7 +28,7 @@ export default function PaymentsPage() {
         // Fetch all payments and filter for BOOKING type only
         const allPaymentsRes = await api.get("/payments?limit=100");
         const allPayments = (allPaymentsRes.data?.data?.items || []).filter(
-          (p: any) => p.type === "BOOKING"
+          (p: any) => p.paymentType === "BOOKING"
         );
 
         const totalPaidAmount = allPayments

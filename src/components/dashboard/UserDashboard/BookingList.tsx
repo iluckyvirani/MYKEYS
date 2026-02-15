@@ -249,7 +249,7 @@ export default function BookingList({
                     size="sm"
                     className="flex-1 cursor-pointer rounded-[5px]"
                   >
-                    <Link href={`/dashboard/bookings/${booking.id}`}>
+                    <Link href={`/user/dashboard/bookings/${booking.id}`}>
                       View Details
                     </Link>
                   </Button>

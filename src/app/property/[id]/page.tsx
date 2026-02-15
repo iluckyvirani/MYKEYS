@@ -59,6 +59,8 @@ const emptyPropertyData = {
     rentalType: "short" as const,
     priceType: "nightly" as const,
     price: "0",
+    cleaningFee: "0",
+    serviceFee: "0",
     beds: 0,
     baths: 0,
     sqft: 0,
@@ -226,6 +228,8 @@ export default function PropertyDetailsPage() {
                         rentalType: apiData.rentalType?.toLowerCase() === "short_term" ? "short" : "long",
                         priceType: apiData.priceType?.toLowerCase() || emptyPropertyData.priceType,
                         price: `£${apiData.price}` || emptyPropertyData.price,
+                        cleaningFee: `£${apiData.cleaningFee}` || emptyPropertyData.cleaningFee,
+                        serviceFee: `£${apiData.serviceFee}` || emptyPropertyData.serviceFee,
                         beds: apiData.bedrooms || emptyPropertyData.beds,
                         baths: apiData.bathrooms || emptyPropertyData.baths,
                         sqft: apiData.sqft || emptyPropertyData.sqft,
@@ -284,8 +288,8 @@ export default function PropertyDetailsPage() {
 
                 const response = await api.get(`/reviews?propertyId=${id}&limit=10`);
 
-                if (response.data?.success && response.data.data) {
-                    const reviewsData = response.data.data;
+                if (response.data.reviews) {
+                    const reviewsData = response.data.reviews;
                     setReviews(reviewsData);
 
                     // Calculate average rating from reviews
@@ -337,24 +341,6 @@ export default function PropertyDetailsPage() {
         fetchUserDetails();
     }, []);
 
-
-
-    // Get documents based on listing type
-    const getRequiredDocuments = () => {
-        const docs = [...property.requiredDocuments.common];
-
-        if (property.listingType === "rent") {
-            if (property.rentalType === "short") {
-                docs.push(...property.requiredDocuments.shortStay);
-            } else {
-                docs.push(...property.requiredDocuments.rent);
-            }
-        } else if (property.listingType === "buy") {
-            docs.push(...property.requiredDocuments.buy);
-        }
-
-        return docs;
-    };
 
     const handleInquirySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -676,13 +662,13 @@ export default function PropertyDetailsPage() {
 
                                 {/* Property Details Tabs */}
                                 <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-                                    <TabsList className="grid w-full grid-cols-6 rounded-[5px]">
+                                    <TabsList className="grid w-full grid-cols-5 rounded-[5px]">
                                         <TabsTrigger className="rounded-[5px]" value="overview">Overview</TabsTrigger>
                                         <TabsTrigger className="rounded-[5px]" value="amenities">Amenities</TabsTrigger>
                                         <TabsTrigger className="rounded-[5px]" value="documents">Documents</TabsTrigger>
                                         <TabsTrigger className="rounded-[5px]" value="location">Location</TabsTrigger>
                                         <TabsTrigger className="rounded-[5px]" value="reviews">Reviews ({totalReviews > 0 ? totalReviews : property.reviewsCount})</TabsTrigger>
-                                        <TabsTrigger className="rounded-[5px]" value="responses">Responses</TabsTrigger>
+                                        {/* <TabsTrigger className="rounded-[5px]" value="responses">Responses</TabsTrigger> */}
                                     </TabsList>
 
                                     <TabsContent value="overview" className="mt-6">
@@ -760,7 +746,7 @@ export default function PropertyDetailsPage() {
                                                     </div>
                                                     <div className="mt-4">
                                                         <h4 className="font-bold mb-2">Cancellation policy</h4>
-                                                        <p className="text-gray-700">{property.cancellationPolicy}</p>
+                                                        <p className="text-gray-700">{property.cancellationPolicy || "Free cancellation up to 48 hours before check-in. Cancel within 48 hours for a 50% refund."}</p>
                                                     </div>
                                                 </div>
                                             )}
@@ -965,11 +951,11 @@ export default function PropertyDetailsPage() {
                                                                 <div className="flex items-center gap-3 mb-3">
                                                                     <img
                                                                         src={review.user?.profileImage || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070"}
-                                                                        alt={review.user?.name || "Reviewer"}
+                                                                        alt={review.user?.firstName || "Reviewer"}
                                                                         className="w-10 h-10 rounded-full object-cover"
                                                                     />
                                                                     <div>
-                                                                        <p className="font-medium">{review.user?.name || "Anonymous"}</p>
+                                                                        <p className="font-medium">{review.user?.firstName || "Anonymous"}</p>
                                                                         <p className="text-sm text-gray-600">
                                                                             {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "Recently"}
                                                                         </p>
@@ -1113,7 +1099,7 @@ export default function PropertyDetailsPage() {
 
                                     </TabsContent>
 
-                                    <TabsContent value="responses" className="mt-6">
+                                    {/* <TabsContent value="responses" className="mt-6">
                                         <div className="space-y-6">
                                             <div className="border rounded-[5px] p-6">
                                                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
@@ -1178,7 +1164,7 @@ export default function PropertyDetailsPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                    </TabsContent>
+                                    </TabsContent> */}
                                 </Tabs>
                             </div>
 

@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 
 interface RecentPayment {
   id: string;
-  type: "BOOKING" | "PACKAGE";
+  paymentType: "BOOKING" | "PACKAGE";
   amount: number;
   status: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "PARTIAL";
   paymentMethod?: string;
@@ -82,7 +82,7 @@ export default function RecentPayments() {
           const recentPayments = (response.data.data.items || [])
             .filter((p: RecentPayment) => {
               return (
-                p.type === "BOOKING" &&
+                p.paymentType === "BOOKING" &&
                 (p.status === "PAID" || p.status === "REFUNDED")
               );
             })

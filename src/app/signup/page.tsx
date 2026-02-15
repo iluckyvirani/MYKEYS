@@ -21,9 +21,37 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const checkPasswordRequirements = (pwd: string) => {
+    const requirements = [
+      { text: "At least 8 characters", check: (p: string) => p.length >= 8 },
+      { text: "Not more than 128 characters", check: (p: string) => p.length <= 128 },
+      { text: "At least one lowercase letter", check: (p: string) => /[a-z]/.test(p) },
+      { text: "At least one uppercase letter", check: (p: string) => /[A-Z]/.test(p) },
+      { text: "At least one number", check: (p: string) => /[0-9]/.test(p) },
+      { text: "At least one special character", check: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
+      { 
+        text: "Not a common password", 
+        check: (p: string) => !["password", "12345678", "qwerty123", "admin123", "letmein"].includes(p.toLowerCase()) 
+      },
+    ];
+    return requirements;
+  };
+
+  const passwordRequirements = checkPasswordRequirements(password);
+  const allRequirementsMet = passwordRequirements.every(req => req.check(password));
+
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+  };
+
   const handleSignup = async () => {
     if (!firstName || !lastName || !email || !password) {
       setError("Please fill in all fields");
+      return;
+    }
+
+    if (!allRequirementsMet) {
+      setError("Please meet all password requirements before registering");
       return;
     }
 
@@ -135,7 +163,7 @@ export default function SignupPage() {
             placeholder="Password"
             className="input-field bg-gray-50 pl-10 pr-10"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => handlePasswordChange(e.target.value)}
             onKeyPress={handleKeyPress}
             disabled={loading}
           />
@@ -148,6 +176,42 @@ export default function SignupPage() {
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
+
+        {password && (
+          <div className={`border rounded-[5px] p-3 ${
+            allRequirementsMet 
+              ? "bg-green-50 border-green-200" 
+              : "bg-yellow-50 border-yellow-200"
+          }`}>
+            <p className={`text-sm font-semibold mb-2 ${
+              allRequirementsMet 
+                ? "text-green-800" 
+                : "text-yellow-800"
+            }`}>
+              Password Requirements:
+            </p>
+            <ul className="space-y-1">
+              {passwordRequirements.map((req, index) => {
+                const isMet = req.check(password);
+                return (
+                  <li 
+                    key={index} 
+                    className={`text-sm flex items-center gap-2 ${
+                      isMet 
+                        ? "text-green-700" 
+                        : "text-yellow-700"
+                    }`}
+                  >
+                    <span className={isMet ? "text-green-600" : "text-red-500"}>
+                      {isMet ? "✓" : "✕"}
+                    </span>
+                    {req.text}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 text-sm">
           <input
@@ -164,7 +228,7 @@ export default function SignupPage() {
 
         <Button
           onClick={handleSignup}
-          disabled={loading}
+          disabled={loading || !firstName || !lastName || !email || !password || !allRequirementsMet || !termsAccepted}
           className="w-full bg-green-600 hover:bg-green-700 rounded-[5px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Registering..." : "Register"}

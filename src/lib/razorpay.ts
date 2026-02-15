@@ -5,7 +5,14 @@
 
 import Razorpay from 'razorpay';
 
-if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+const keyId = process.env.RAZORPAY_KEY_ID;
+const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+console.log('Razorpay Configuration:');
+console.log('- Key ID:', keyId ? `${keyId.substring(0, 10)}...` : 'NOT SET');
+console.log('- Key Secret:', keySecret ? `${keySecret.substring(0, 5)}...` : 'NOT SET');
+
+if (!keyId || !keySecret) {
   throw new Error(
     'Missing Razorpay credentials. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in environment variables.'
   );
@@ -16,17 +23,19 @@ if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
  * Using testing mode - no real money is charged
  */
 export const razorpayInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_id: keyId,
+  key_secret: keySecret,
 });
+
+console.log('Razorpay instance initialized successfully');
 
 /**
  * Razorpay Configuration Object
  */
 export const razorpayConfig = {
-  keyId: process.env.RAZORPAY_KEY_ID,
-  keySecret: process.env.RAZORPAY_KEY_SECRET,
-  isTestMode: process.env.RAZORPAY_KEY_ID.includes('test'),
+  keyId: keyId,
+  keySecret: keySecret,
+  isTestMode: keyId.includes('test'),
 };
 
 /**

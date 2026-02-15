@@ -85,8 +85,8 @@ export default function Notifications() {
         setLoading(true);
         const response = await api.get("/notifications?limit=5");
 
-        if (response.data?.success && response.data.data?.items) {
-          setNotifications(response.data.data.items);
+        if (response.data?.notifications) {
+          setNotifications(response.data.notifications);
           setError(null);
         } else {
           setNotifications([]);

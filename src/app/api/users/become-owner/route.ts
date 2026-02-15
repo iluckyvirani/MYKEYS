@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { verifyAccessToken, generateTokenPair } from "@/lib/auth/jwt";
 import { toUserDTO } from "@/lib/auth/helpers";
 import { ErrorCode, createApiError } from "@/lib/auth/errors";
 import { BecomeOwnerResponse } from "@/types/auth";
@@ -93,14 +93,21 @@ export async function POST(request: NextRequest) {
     // Convert to DTO
     const userDTO = await toUserDTO(updatedUser);
 
+    // Generate new tokens with OWNER role
+    const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await generateTokenPair(
+      user.id,
+      user.email,
+      "OWNER"
+    );
+
     // Prepare response
     const response: BecomeOwnerResponse = {
       success: true,
       message: "You are now an owner! You can start listing properties.",
       data: {
         user: userDTO,
-        accessToken: token, // Return the same token as roles are already validated
-        refreshToken: "", // Not generating new refresh token
+        accessToken: newAccessToken, // New token with OWNER role
+        refreshToken: newRefreshToken,
       },
     };
 

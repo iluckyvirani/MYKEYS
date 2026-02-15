@@ -116,12 +116,17 @@ export const paymentService = {
         errorMessage: error?.message,
         errorResponse: error?.response,
         errorDescription: error?.description,
+        statusCode: error?.statusCode,
+        errorCode: error?.error?.code,
+        description: error?.error?.description,
+        fullError: JSON.stringify(error, null, 2),
       });
       
       // Extract error message from various error object structures
       const errorMessage = 
-        error?.message || 
+        error?.error?.description ||
         error?.description || 
+        error?.message || 
         error?.response?.data?.error?.description || 
         error?.response?.message ||
         'Unknown error occurred';

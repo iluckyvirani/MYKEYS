@@ -15,16 +15,12 @@ import {
   Upload, 
   X, 
   Check, 
-  Calendar,
   Home,
-  Hotel,
-  TrendingUp,
   Plus,
   Image as ImageIcon,
   AlertCircle,
   Loader,
   ChevronLeft,
-  Trash2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -170,7 +166,7 @@ export default function EditPropertyPage() {
         
         // Fetch property
         const propResponse = await api.get(`/properties/${id}`);
-        const property: PropertyData = propResponse.data?.property;
+        const property: PropertyData = propResponse.data?.data;
 
         if (property) {
           const isRent = property.listingType === "RENT";
@@ -231,7 +227,7 @@ export default function EditPropertyPage() {
         // Fetch amenities
         const amenResponse = await api.get("/amenities?pageSize=50");
         if (amenResponse.data?.amenities) {
-          setAmenities(amenResponse.data.amenities);
+          setAmenities(amenResponse.data.data.items);
         }
       } catch (err) {
         console.error("Error loading property:", err);
