@@ -5,8 +5,16 @@ import { Heart, Filter, Share2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import FavoriteGrid from "@/components/dashboard/UserDashboard/FavoriteGrid";
+import { useState } from "react";
 
 export default function FavoritesPage() {
+  const [stats, setStats] = useState({
+    totalSaved: 0,
+    priceDrops: 0,
+    availableNow: 0,
+    recentlyViewed: 0,
+  });
+
   return (
     <DashboardLayout defaultRole="user">
       {/* Header */}
@@ -34,19 +42,21 @@ export default function FavoritesPage() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-5">
         <div className="bg-white p-6 rounded-[5px] border">
-          <div className="text-2xl font-bold text-gray-900">8</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {stats.totalSaved}
+          </div>
           <div className="text-sm text-gray-600">Total Saved</div>
         </div>
         <div className="bg-white p-6 rounded-[5px] border">
-          <div className="text-2xl font-bold text-green-600">3</div>
+          <div className="text-2xl font-bold text-green-600">{stats.priceDrops}</div>
           <div className="text-sm text-gray-600">Price Drops</div>
         </div>
         <div className="bg-white p-6 rounded-[5px] border">
-          <div className="text-2xl font-bold text-blue-600">6</div>
+          <div className="text-2xl font-bold text-blue-600">{stats.availableNow}</div>
           <div className="text-sm text-gray-600">Available Now</div>
         </div>
         <div className="bg-white p-6 rounded-[5px] border">
-          <div className="text-2xl font-bold text-yellow-600">2</div>
+          <div className="text-2xl font-bold text-yellow-600">{stats.recentlyViewed}</div>
           <div className="text-sm text-gray-600">Recently Viewed</div>
         </div>
       </div>
@@ -80,7 +90,15 @@ export default function FavoritesPage() {
       </div>
 
       {/* Favorites Grid */}
-      <FavoriteGrid />
+      <FavoriteGrid
+        onStatsChange={(next) =>
+          setStats((prev) => ({
+            ...prev,
+            totalSaved: next.totalSaved,
+            availableNow: next.availableNow,
+          }))
+        }
+      />
     </DashboardLayout>
   );
 }

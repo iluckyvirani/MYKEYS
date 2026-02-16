@@ -1,16 +1,18 @@
 // components/dashboard/OwnerDashboard/PropertyList.tsx
 "use client";
 
-import { Building, MapPin, Eye, Edit, MoreVertical, Star, Calendar, DollarSign, Users } from "lucide-react";
+import { Building, MapPin, Eye, Edit, MoreVertical, Star, Calendar, DollarSign, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { api } from "@/lib/api";
 
 const mockProperties = [
   {
@@ -125,23 +127,74 @@ const getOccupancyColor = (percentage: number) => {
 };
 
 export default function PropertyList() {
-  const [properties, setProperties] = useState(mockProperties);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const togglePropertyStatus = (id: string) => {
-    setProperties(
-      properties.map((prop) =>
-        prop.id === id
-          ? {
-              ...prop,
-              status: prop.status === "active" ? "inactive" : "active",
-            }
-          : prop
-      )
-    );
+  // Fetch owner's properties
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await api.get("/api/owner/properties");
+      if (response.data.success) {
+        setProperties(response.data.data);
+      } else {
+        setError(response.data.message || "Failed to load properties");
+      }
+    } catch (err: any) {
+      console.error("Error fetching properties:", err);
+      setError(err.response?.data?.message || "Failed to load properties");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteProperty = (id: string) => {
-    setProperties(properties.filter((prop) => prop.id !== id));
+  const togglePropertyStatus = async (id: string) => {
+    try {
+      const property = properties.find((p) => p.id === id);
+      if (!property) return;
+
+      const newStatus = property.status === "active" ? "INACTIVE" : "ACTIVE";
+
+      // Optimistic update
+      setProperties(
+        properties.map((prop) =>
+          prop.id === id
+            ? { ...prop, status: newStatus.toLowerCase() }
+            : prop
+        )
+      );
+
+      // Update on server
+      await api.patch(`/api/properties/${id}`, { status: newStatus });
+    } catch (err: any) {
+      console.error("Error toggling property status:", err);
+      // Revert on error
+      fetchProperties();
+      alert(err.response?.data?.message || "Failed to update property status");
+    }
+  };
+
+  const deleteProperty = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this property?")) return;
+
+    try {
+      // Optimistic update
+      setProperties(properties.filter((prop) => prop.id !== id));
+
+      // Delete on server
+      await api.delete(`/api/properties/${id}`);
+    } catch (err: any) {
+      console.error("Error deleting property:", err);
+      // Revert on error
+      fetchProperties();
+      alert(err.response?.data?.message || "Failed to delete property");
+    }
   };
 
   return (
@@ -154,17 +207,66 @@ export default function PropertyList() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm">
-            <Eye className="w-4 h-4 mr-2" />
-            View Public Listings
-          </Button>
-          <Button className="bg-green-600 hover:bg-green-700">
-            <Building className="w-4 h-4 mr-2" />
-            Add New Property
-          </Button>
+          <Link href="/rent">
+            <Button variant="outline" size="sm">
+              <Eye className="w-4 h-4 mr-2" />
+              View Public Listings
+            </Button>
+          </Link>
+          <Link href="/owner/dashboard/properties/add">
+            <Button className="bg-green-600 hover:bg-green-700">
+              <Building className="w-4 h-4 mr-2" />
+              Add New Property
+            </Button>
+          </Link>
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+          <span className="ml-3 text-gray-600">Loading properties...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 my-4">
+          <p className="text-red-800 text-sm">{error}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchProperties}
+            className="mt-2"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && properties.length === 0 && (
+        <div className="text-center py-12">
+          <Building className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No Properties Yet
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Start by adding your first property to the platform
+          </p>
+          <Link href="/owner/dashboard/properties/add">
+            <Button className="bg-green-600 hover:bg-green-700">
+              <Building className="w-4 h-4 mr-2" />
+              Add Your First Property
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Properties Table */}
+      {!loading && !error && properties.length > 0 && (
+        <>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -263,12 +365,16 @@ export default function PropertyList() {
                   
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <Link href={`/owner/dashboard/properties/${property.id}`}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                      <Link href={`/owner/dashboard/properties/${property.id}/edit`}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </Link>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -324,6 +430,8 @@ export default function PropertyList() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Heart, Star, BedDouble, Bath, Maximize, MapPin, ChevronRight, Home, Moon, Calendar } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -57,6 +57,23 @@ export default function PropertyCard({
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
+
+  useEffect(() => {
+    const fetchFavoriteStatus = async () => {
+      if (!id) return;
+
+      try {
+        const response = await api.get(`/favorites/check/${id}`);
+        if (response.data?.success && response.data.data) {
+          setIsLiked(!!response.data.data.isFavorite);
+        }
+      } catch (error) {
+        setIsLiked(false);
+      }
+    };
+
+    fetchFavoriteStatus();
+  }, [id]);
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();

@@ -49,6 +49,19 @@ import { CreateShortBookingRequest, PaymentMethod } from "@/types/bookings";
 import { formatDateToReadable } from "@/utils/utils";
 import { MeResponse } from "@/types/auth";
 
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+
+// Fix marker icon issue
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+    iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+});
+
+
+
 // Default empty property object
 const emptyPropertyData = {
     id: "",
@@ -85,7 +98,7 @@ const emptyPropertyData = {
     amenities: [] as any[],
     images: [] as string[],
     owner: null,
-    rating: 0,
+    averageRating: 0,
     reviewsCount: 0,
     reviews: [] as any[],
     requiredDocuments: {
@@ -141,16 +154,12 @@ export default function PropertyDetailsPage() {
     const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CREDIT_CARD);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [paymentData, setPaymentData] = useState<{bookingId: string, amount: number, propertyTitle: string} | null>(null);
+    const [paymentData, setPaymentData] = useState<{ bookingId: string, amount: number, propertyTitle: string } | null>(null);
     const [nights, setNights] = useState(0);
     const [subtotal, setSubtotal] = useState(0);
     const [cleaningFeeAmount, setCleaningFeeAmount] = useState(0);
     const [serviceFeeAmount, setServiceFeeAmount] = useState(0);
     const [totalAmount, setTotalAmount] = useState(0);
-    const [reviews, setReviews] = useState<any[]>([]);
-    const [reviewsLoading, setReviewsLoading] = useState(false);
-    const [averageRating, setAverageRating] = useState(0);
-    const [totalReviews, setTotalReviews] = useState(0);
 
     // Helper function to extract numeric value from price strings
     const parsePrice = (priceString: string): number => {
@@ -256,7 +265,7 @@ export default function PropertyDetailsPage() {
                             name: amenity.amenity.name,
                             icon: <Wifi className="w-5 h-5" /> // Fallback icon
                         })) || emptyPropertyData.amenities,
-                        rating: apiData.averageRating || emptyPropertyData.rating,
+                        averageRating: apiData.averageRating || emptyPropertyData.averageRating,
                         reviewsCount: apiData.reviewCount || emptyPropertyData.reviewsCount,
                         reviews: apiData.reviews || emptyPropertyData.reviews,
                         owner: apiData.owner ? {
@@ -279,41 +288,7 @@ export default function PropertyDetailsPage() {
                 setLoading(false);
             }
         };
-
-        const fetchReviews = async () => {
-            try {
-                setReviewsLoading(true);
-                const id = params?.id;
-                if (!id) return;
-
-                const response = await api.get(`/reviews?propertyId=${id}&limit=10`);
-
-                if (response.data.reviews) {
-                    const reviewsData = response.data.reviews;
-                    setReviews(reviewsData);
-
-                    // Calculate average rating from reviews
-                    if (reviewsData.length > 0) {
-                        const avgRating = reviewsData.reduce((sum: number, review: any) => sum + (review.rating || 0), 0) / reviewsData.length;
-                        setAverageRating(Math.round(avgRating * 10) / 10);
-                        setTotalReviews(reviewsData.length);
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching reviews:", error);
-                setReviews([]);
-            } finally {
-                setReviewsLoading(false);
-            }
-        };
-
         fetchProperty();
-        // Fetch reviews after a short delay to ensure property is loaded
-        const reviewTimer = setTimeout(() => {
-            fetchReviews();
-        }, 500);
-
-        return () => clearTimeout(reviewTimer);
     }, [params?.id]);
 
     // Check if user is logged in and prefill form
@@ -340,6 +315,30 @@ export default function PropertyDetailsPage() {
 
         fetchUserDetails();
     }, []);
+
+    useEffect(() => {
+        const fetchFavoriteStatus = async () => {
+            const propertyId = params?.id;
+            if (!propertyId) return;
+
+            if (!isLoggedIn) {
+                setIsLiked(false);
+                return;
+            }
+
+            try {
+                const response = await api.get(`/favorites/check/${propertyId}`);
+                if (response.data?.success && response.data.data) {
+                    setIsLiked(!!response.data.data.isFavorite);
+                }
+            } catch (error) {
+                console.error("Error checking favorite status:", error);
+                setIsLiked(false);
+            }
+        };
+
+        fetchFavoriteStatus();
+    }, [params?.id, isLoggedIn]);
 
 
     const handleInquirySubmit = async (e: React.FormEvent) => {
@@ -372,7 +371,6 @@ export default function PropertyDetailsPage() {
                 setShowInquiryModal(false);
                 setInquiryForm({ name: "", phone: "", message: "", email: "" });
                 setInquirySuccess("Inquiry sent successfully! The owner will review your message and get back to you soon.");
-                // Auto close success modal after 4 seconds
                 setTimeout(() => setInquirySuccess(null), 4000);
             } else {
                 alert(response.data?.message || "Failed to send inquiry");
@@ -412,6 +410,19 @@ export default function PropertyDetailsPage() {
             return;
         }
 
+        // Validate minimum and maximum stay
+        const numberOfNights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (numberOfNights < property.minStay) {
+            setBookingError(`You can book at least ${property.minStay} night${property.minStay !== 1 ? 's' : ''}`);
+            return;
+        }
+
+        if (property.maxStay && numberOfNights > property.maxStay) {
+            setBookingError(`Maximum stay is ${property.maxStay} night${property.maxStay !== 1 ? 's' : ''}`);
+            return;
+        }
+
         try {
             setBookingLoading(true);
 
@@ -429,8 +440,7 @@ export default function PropertyDetailsPage() {
             if (response.data?.success) {
                 // Booking created successfully
                 const bookingData = response.data.data;
-                console.log("Booking created:", bookingData);
-                
+
                 // Set payment data and show payment modal
                 if (bookingData?.id && totalAmount > 0) {
                     setPaymentData({
@@ -440,8 +450,6 @@ export default function PropertyDetailsPage() {
                     });
                     setShowPaymentModal(true);
                 }
-                
-                // Also show initial success message
                 setBookingSuccess("Booking confirmed! Now complete the payment.");
             } else {
                 setBookingError(response.data?.message || "Failed to create booking");
@@ -464,7 +472,6 @@ export default function PropertyDetailsPage() {
             if (response.data?.success) {
                 const action = response.data.data?.action;
                 setIsLiked(action === "added");
-                console.log(`Property ${action} to favorites`);
             }
         } catch (error: any) {
             console.error("Error toggling favorite:", error);
@@ -667,8 +674,7 @@ export default function PropertyDetailsPage() {
                                         <TabsTrigger className="rounded-[5px]" value="amenities">Amenities</TabsTrigger>
                                         <TabsTrigger className="rounded-[5px]" value="documents">Documents</TabsTrigger>
                                         <TabsTrigger className="rounded-[5px]" value="location">Location</TabsTrigger>
-                                        <TabsTrigger className="rounded-[5px]" value="reviews">Reviews ({totalReviews > 0 ? totalReviews : property.reviewsCount})</TabsTrigger>
-                                        {/* <TabsTrigger className="rounded-[5px]" value="responses">Responses</TabsTrigger> */}
+                                        <TabsTrigger className="rounded-[5px]" value="reviews">Reviews ({property.reviewsCount || 0})</TabsTrigger>
                                     </TabsList>
 
                                     <TabsContent value="overview" className="mt-6">
@@ -716,6 +722,14 @@ export default function PropertyDetailsPage() {
                                             {property.rentalType === "short" && property.listingType === "rent" && (
                                                 <div className="mb-8">
                                                     <h3 className="text-xl font-bold mb-4">Short Rent Features</h3>
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">Minimum Stay</p>
+                                                        <p className="font-medium text-lg">{property.minStay} Nights</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">Maximum Stay</p>
+                                                        <p className="font-medium text-lg">{property.maxStay} Nights</p>
+                                                    </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         {property.selfCheckIn && (
                                                             <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
@@ -744,9 +758,14 @@ export default function PropertyDetailsPage() {
                                                             Get a full refund if you change your mind.
                                                         </p>
                                                     </div>
+
                                                     <div className="mt-4">
                                                         <h4 className="font-bold mb-2">Cancellation policy</h4>
-                                                        <p className="text-gray-700">{property.cancellationPolicy || "Free cancellation up to 48 hours before check-in. Cancel within 48 hours for a 50% refund."}</p>
+                                                        <p className="text-gray-700">
+                                                            Free cancellation up to 48 hours before check-in.
+                                                            If you cancel within 48 hours of check-in, a 50% refund will be provided.
+                                                            No refund will be issued after the check-in time.
+                                                        </p>
                                                     </div>
                                                 </div>
                                             )}
@@ -930,32 +949,26 @@ export default function PropertyDetailsPage() {
                                                 <div className="flex items-center gap-4 mb-6">
                                                     <div className="flex items-center">
                                                         <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                                                        <span className="text-2xl font-bold ml-2">{averageRating || property.rating}</span>
+                                                        <span className="text-2xl font-bold ml-2">{property.averageRating || 0}</span>
                                                     </div>
                                                     <div className="text-gray-600">·</div>
                                                     <div>
-                                                        <span className="font-medium">{totalReviews > 0 ? totalReviews : property.reviewsCount} reviews</span>
+                                                        <span className="font-medium">{property.reviewsCount || 0} reviews</span>
                                                     </div>
                                                 </div>
 
-                                                {reviewsLoading ? (
-                                                    <div className="flex justify-center py-8">
-                                                        <div className="animate-spin">
-                                                            <Clock className="w-6 h-6 text-gray-400" />
-                                                        </div>
-                                                    </div>
-                                                ) : reviews.length > 0 ? (
+                                                {property.reviews.length > 0 ? (
                                                     <div className="space-y-6">
-                                                        {reviews.map((review: any) => (
+                                                        {property.reviews.map((review: any) => (
                                                             <div key={review.id} className="border-b pb-6 last:border-0">
                                                                 <div className="flex items-center gap-3 mb-3">
                                                                     <img
-                                                                        src={review.user?.profileImage || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070"}
-                                                                        alt={review.user?.firstName || "Reviewer"}
+                                                                        src={review.user?.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070"}
+                                                                        alt={`${review.user?.firstName} ${review.user?.lastName || ""}` || "Reviewer"}
                                                                         className="w-10 h-10 rounded-full object-cover"
                                                                     />
                                                                     <div>
-                                                                        <p className="font-medium">{review.user?.firstName || "Anonymous"}</p>
+                                                                        <p className="font-medium">{`${review.user?.firstName} ${review.user?.lastName || ""}` || "Anonymous"}</p>
                                                                         <p className="text-sm text-gray-600">
                                                                             {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "Recently"}
                                                                         </p>
@@ -995,42 +1008,28 @@ export default function PropertyDetailsPage() {
                                             </div>
                                         </div>
                                     </TabsContent>
+
                                     <TabsContent value="location" className="mt-6">
                                         <div className="flex flex-col gap-2">
                                             <div className="">
-                                                <div className="h-96 bg-gray-200 rounded-[5px] overflow-hidden relative">
-                                                    {/* Interactive Map Placeholder - You can integrate Google Maps or Mapbox here */}
-                                                    <div className="absolute inset-0 flex items-center justify-center">
-                                                        <div className="text-center">
-                                                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                                <MapPin className="w-8 h-8 text-green-600" />
-                                                            </div>
-                                                            <p className="text-gray-600 font-medium">Interactive Map</p>
-                                                            <p className="text-gray-500 text-sm mt-1">Google Maps or Mapbox integration</p>
-                                                        </div>
-                                                    </div>
+                                                <div className="h-96 rounded-[5px] overflow-hidden">
+                                                    <MapContainer
+                                                        center={[property.latitude, property.longitude]}
+                                                        zoom={13}
+                                                        scrollWheelZoom={true}
+                                                        style={{ height: "100%", width: "100%" }}
+                                                    >
+                                                        <TileLayer
+                                                            attribution='&copy; OpenStreetMap contributors'
+                                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                        />
 
-                                                    {/* Map controls overlay */}
-                                                    <div className="absolute top-4 right-4 flex gap-2">
-                                                        <button className="bg-white p-2 rounded-[5px] shadow-lg hover:bg-gray-50 transition-colors">
-                                                            <span className="text-sm font-medium">Satellite</span>
-                                                        </button>
-                                                        <button className="bg-white p-2 rounded-[5px] shadow-lg hover:bg-gray-50 transition-colors">
-                                                            <span className="text-sm font-medium">Street View</span>
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Location pin */}
-                                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                                        <div className="relative">
-                                                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
-                                                                <MapPin className="w-5 h-5 text-white" />
-                                                            </div>
-                                                            <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-white px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
-                                                                <span className="text-sm font-medium">{property.address.split(',')[0]}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                        <Marker position={[property.latitude, property.longitude]}>
+                                                            <Popup>
+                                                                {property.address}
+                                                            </Popup>
+                                                        </Marker>
+                                                    </MapContainer>
                                                 </div>
                                             </div>
 
@@ -1096,75 +1095,7 @@ export default function PropertyDetailsPage() {
                                                 </div>
                                             </div>
                                         </div>
-
                                     </TabsContent>
-
-                                    {/* <TabsContent value="responses" className="mt-6">
-                                        <div className="space-y-6">
-                                            <div className="border rounded-[5px] p-6">
-                                                <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
-                                                    <MessageCircle className="w-5 h-5" />
-                                                    Property Responses & Messages
-                                                </h3>
-
-                                                <div className="space-y-4">
-                                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                                        <div className="flex items-start gap-3">
-                                                            <Clock className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
-                                                            <div>
-                                                                <p className="font-medium text-blue-900">Sent an inquiry?</p>
-                                                                <p className="text-sm text-blue-700 mt-1">
-                                                                    Your inquiries and owner responses will appear here. Check back soon!
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {isLoggedIn ? (
-                                                        <div className="space-y-3">
-                                                            <h4 className="font-medium text-gray-900">Contact the owner</h4>
-                                                            <Button
-                                                                onClick={() => setShowInquiryModal(true)}
-                                                                className="w-full bg-green-600 hover:bg-green-700"
-                                                            >
-                                                                <MessageCircle className="w-4 h-4 mr-2" />
-                                                                Send Message
-                                                            </Button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-center py-6">
-                                                            <p className="text-gray-600 mb-3">Sign in to send messages to the owner</p>
-                                                            <Button
-                                                                onClick={() => router.push("/login")}
-                                                                variant="outline"
-                                                                className="w-full"
-                                                            >
-                                                                Sign In
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="mt-6 pt-6 border-t">
-                                                    <h4 className="font-medium mb-3">How it works</h4>
-                                                    <ul className="space-y-2 text-sm text-gray-600">
-                                                        <li className="flex items-start gap-2">
-                                                            <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
-                                                            <span>Send an inquiry or booking request</span>
-                                                        </li>
-                                                        <li className="flex items-start gap-2">
-                                                            <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
-                                                            <span>Owner reviews and responds</span>
-                                                        </li>
-                                                        <li className="flex items-start gap-2">
-                                                            <Check className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
-                                                            <span>Finalize booking or rental agreement</span>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </TabsContent> */}
                                 </Tabs>
                             </div>
 

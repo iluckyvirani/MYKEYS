@@ -35,7 +35,7 @@ const userNavigation = [
   { name: "Inquiries", href: "/user/dashboard/inquiries", icon: MessageSquare },
   { name: "Favorites", href: "/user/dashboard/favorites", icon: Heart },
   { name: "Payments", href: "/user/dashboard/payments", icon: CreditCard },
-  { name: "Documents", href: "/user/dashboard/documents", icon: FileText },
+  // { name: "Documents", href: "/user/dashboard/documents", icon: FileText },
   { name: "Profile", href: "/user/dashboard/profile", icon: Settings },
 ];
 

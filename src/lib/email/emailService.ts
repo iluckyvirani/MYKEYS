@@ -207,11 +207,11 @@ export const emailService = {
         from: process.env.EMAIL_FROM || 'noreply@mykeys.com',
         to: guestEmail,
         cc: 'luckyvirani555@gmail.com',
-        subject: `Booking Confirmation for ${propertyTitle} 🎉`,
+        subject: `Booking Request Received for ${propertyTitle}`,
         html: `
-          <h2>Booking Confirmed!</h2>
+          <h2>Booking Request Received</h2>
           <p>Hi ${guestName},</p>
-          <p>Your booking for <strong>${propertyTitle}</strong> has been confirmed.</p>
+          <p>Your booking for <strong>${propertyTitle}</strong> has been received and is awaiting owner confirmation.</p>
           <table style="width: 100%; max-width: 400px; margin: 20px 0; border-collapse: collapse;">
             <tr style="background-color: #f5f5f5;">
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Check-In:</strong></td>
@@ -226,9 +226,10 @@ export const emailService = {
               <td style="padding: 10px; border: 1px solid #ddd;">₹${totalAmount.toFixed(2)}</td>
             </tr>
           </table>
+          <p>We will notify you as soon as the owner confirms your booking.</p>
           <p>
             <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/user/dashboard/bookings/${bookingId}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-              View Booking
+              View Booking Request
             </a>
           </p>
           <p>Best regards,<br/>The MyKeys Team</p>

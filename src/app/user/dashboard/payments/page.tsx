@@ -2,7 +2,6 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { CreditCard, TrendingUp, AlertCircle, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PaymentTabs from "@/components/dashboard/UserDashboard/PaymentTabs";
 import { useState, useEffect } from "react";

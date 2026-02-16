@@ -157,6 +157,8 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
         serviceFee: true,
         guests: true,
         ownerId: true,
+        minStay: true,
+        maxStay: true,
       },
     });
 
@@ -200,6 +202,23 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
 
     // Calculate pricing
     const numberOfNights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (property.minStay && numberOfNights < property.minStay) {
+      return errorResponse(
+        `You can book at least ${property.minStay} night${property.minStay !== 1 ? 's' : ''}`,
+        400,
+        ErrorCode.INVALID_INPUT
+      );
+    }
+
+    if (property.maxStay && numberOfNights > property.maxStay) {
+      return errorResponse(
+        `Maximum stay is ${property.maxStay} night${property.maxStay !== 1 ? 's' : ''}`,
+        400,
+        ErrorCode.INVALID_INPUT
+      );
+    }
+
     const pricePerNight = property.price;
     const subtotal = pricePerNight * numberOfNights;
     const cleaningFee = property.cleaningFee || 0;
@@ -229,10 +248,6 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
         ErrorCode.INVALID_INPUT
       );
     }
-
-    // TODO:
-    // 1. Process payment
-    // 2. Send confirmation email
     
     // Create booking in database
     const bookingData: any = {
@@ -276,7 +291,8 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
         checkIn: createdBooking.checkIn.toISOString().split('T')[0],
         checkOut: createdBooking.checkOut.toISOString().split('T')[0],
       },
-      'created'
+      'created',
+      'guest'
     );
 
     // Notification to property owner
@@ -290,7 +306,8 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
         checkIn: createdBooking.checkIn.toISOString().split('T')[0],
         checkOut: createdBooking.checkOut.toISOString().split('T')[0],
       },
-      'created'
+      'created',
+      'owner'
     );
 
     // Get owner details for email

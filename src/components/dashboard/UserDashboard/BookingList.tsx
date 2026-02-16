@@ -78,9 +78,7 @@ export default function BookingList({
 
     try {
       setIsLoading(true);
-      const response = await api.patch(`/bookings/${selectedBooking.id}`, {
-        status: BookingStatus.CANCELLED,
-      });
+      const response = await api.delete(`/bookings/${selectedBooking.id}`);
 
       if (response.data?.success) {
         setCancelModalOpen(false);

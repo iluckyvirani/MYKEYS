@@ -334,10 +334,11 @@ export const notificationService = {
   async createBookingNotification(
     userId: string,
     data: BookingNotificationData,
-    action: 'created' | 'confirmed' | 'cancelled' | 'completed' | 'reminder'
+    action: 'created' | 'confirmed' | 'cancelled' | 'completed' | 'reminder',
+    recipientRole: 'guest' | 'owner' = 'owner'
   ) {
     const titles = {
-      created: 'New Booking Received',
+      created: recipientRole === 'guest' ? 'Booking Pending Confirmation' : 'New Booking Received',
       confirmed: 'Booking Confirmed',
       cancelled: 'Booking Cancelled',
       completed: 'Booking Completed',
@@ -345,7 +346,10 @@ export const notificationService = {
     };
 
     const messages = {
-      created: `New booking for ${data.propertyTitle} from ${data.guestName || 'a guest'}`,
+      created:
+        recipientRole === 'guest'
+          ? 'Booking successful! Awaiting owner confirmation.'
+          : `New booking for ${data.propertyTitle} from ${data.guestName || 'a guest'}`,
       confirmed: `Your booking for ${data.propertyTitle} has been confirmed`,
       cancelled: `Booking for ${data.propertyTitle} has been cancelled`,
       completed: `Your stay at ${data.propertyTitle} is complete. Please leave a review!`,

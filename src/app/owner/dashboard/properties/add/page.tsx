@@ -66,6 +66,8 @@ export default function AddPropertyPage() {
     state: "",
     country: "India",
     zipCode: "",
+    latitude: "",
+    longitude: "",
     
     // Pricing - RENT
     price: "",
@@ -93,6 +95,9 @@ export default function AddPropertyPage() {
     maxStay: "30",
     checkInTime: "14:00",
     checkOutTime: "11:00",
+    yearBuilt: "",
+    selfCheckIn: false,
+    parking: false,
     
     // Long Term
     minTerm: "1",
@@ -217,6 +222,8 @@ export default function AddPropertyPage() {
         state: formData.state,
         country: formData.country,
         zipCode: formData.zipCode,
+        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
         propertyType: formData.propertyType,
         listingType: listingType === "buy" ? "BUY" : "RENT",
         bedrooms: formData.beds ? parseInt(formData.beds) : 0,
@@ -241,6 +248,9 @@ export default function AddPropertyPage() {
           payload.maxStay = formData.maxStay ? parseInt(formData.maxStay) : null;
           payload.checkInTime = formData.checkInTime;
           payload.checkOutTime = formData.checkOutTime;
+          payload.yearBuilt = formData.yearBuilt ? parseInt(formData.yearBuilt) : null;
+          payload.selfCheckIn = formData.selfCheckIn;
+          payload.parking = formData.parking;
         } else {
           payload.minTerm = formData.minTerm ? parseInt(formData.minTerm) : 1;
           payload.maxTerm = formData.maxTerm ? parseInt(formData.maxTerm) : null;
@@ -248,6 +258,8 @@ export default function AddPropertyPage() {
           payload.billsIncluded = formData.billsIncluded;
           payload.councilTaxBand = formData.councilTaxBand || null;
           payload.epcRating = formData.epcRating || null;
+          payload.yearBuilt = formData.yearBuilt ? parseInt(formData.yearBuilt) : null;
+          payload.parking = formData.parking;
         }
       } else {
         // BUY listing
@@ -257,6 +269,8 @@ export default function AddPropertyPage() {
         payload.leasehold = formData.leasehold;
         payload.leaseYears = formData.leaseYears ? parseInt(formData.leaseYears) : null;
         payload.groundRent = formData.groundRent ? parseInt(formData.groundRent) : null;
+        payload.yearBuilt = formData.yearBuilt ? parseInt(formData.yearBuilt) : null;
+        payload.parking = formData.parking;
         // For BUY, set a dummy price for the database (required field)
         payload.price = parseInt(formData.propertyPrice);
         payload.priceType = "TOTAL";
@@ -430,6 +444,32 @@ export default function AddPropertyPage() {
               value={formData.zipCode}
               onChange={handleInputChange}
               placeholder="e.g., 400001"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="latitude">Latitude</Label>
+            <Input
+              id="latitude"
+              name="latitude"
+              type="number"
+              step="any"
+              value={formData.latitude}
+              onChange={handleInputChange}
+              placeholder="e.g., 19.0760"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="longitude">Longitude</Label>
+            <Input
+              id="longitude"
+              name="longitude"
+              type="number"
+              step="any"
+              value={formData.longitude}
+              onChange={handleInputChange}
+              placeholder="e.g., 72.8777"
             />
           </div>
 
@@ -628,6 +668,33 @@ export default function AddPropertyPage() {
                 </div>
               </>
             )}
+
+            <div>
+              <Label htmlFor="yearBuilt">Year Built</Label>
+              <Input
+                id="yearBuilt"
+                name="yearBuilt"
+                type="number"
+                value={formData.yearBuilt}
+                onChange={handleInputChange}
+                placeholder="e.g., 2020"
+                min="1800"
+                max="2100"
+              />
+            </div>
+
+            <div>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="parking"
+                  checked={formData.parking}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="ml-2 text-gray-700">Parking Available</span>
+              </label>
+            </div>
           </div>
         ) : (
           // Rent Listing Pricing
@@ -733,6 +800,44 @@ export default function AddPropertyPage() {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <Label htmlFor="yearBuilt">Year Built</Label>
+                  <Input
+                    id="yearBuilt"
+                    name="yearBuilt"
+                    type="number"
+                    value={formData.yearBuilt}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 2020"
+                    min="1800"
+                    max="2100"
+                  />
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="selfCheckIn"
+                      checked={formData.selfCheckIn}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-green-600 rounded"
+                    />
+                    <span className="ml-2 text-gray-700">Self Check-in Available</span>
+                  </label>
+
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="parking"
+                      checked={formData.parking}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-green-600 rounded"
+                    />
+                    <span className="ml-2 text-gray-700">Parking Available</span>
+                  </label>
+                </div>
               </>
             )}
 
@@ -827,6 +932,33 @@ export default function AddPropertyPage() {
                     <option value="F">F</option>
                     <option value="G">G (Least efficient)</option>
                   </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="yearBuilt">Year Built</Label>
+                  <Input
+                    id="yearBuilt"
+                    name="yearBuilt"
+                    type="number"
+                    value={formData.yearBuilt}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 2020"
+                    min="1800"
+                    max="2100"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="parking"
+                      checked={formData.parking}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-green-600 rounded"
+                    />
+                    <span className="ml-2 text-gray-700">Parking Available</span>
+                  </label>
                 </div>
               </>
             )}
@@ -1045,55 +1177,6 @@ export default function AddPropertyPage() {
           </div>
         </div>
 
-        {/* Preview Sidebar */}
-        <div className="mt-6 bg-gray-50 rounded-[5px] border p-6">
-          <h4 className="font-semibold text-gray-900 mb-4">Listing Preview</h4>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Listing Type:</span>
-              <span className="font-medium">
-                {listingType === "buy" ? "For Sale" : 
-                 rentalType === "short" ? "Short Stay" : "Long Term Rent"}
-              </span>
-            </div>
-            {formData.title && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Title:</span>
-                <span className="font-medium truncate ml-2">{formData.title}</span>
-              </div>
-            )}
-            {formData.propertyType && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Type:</span>
-                <span className="font-medium">{formData.propertyType}</span>
-              </div>
-            )}
-            {(formData.price || formData.propertyPrice) && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Price:</span>
-                <span className="font-medium">
-                  ₹{listingType === "buy" ? formData.propertyPrice : formData.price}
-                  <span className="text-sm text-gray-500 ml-1">
-                    {listingType === "rent" && (rentalType === "short" ? "/night" : "/month")}
-                    {listingType === "buy" && " total"}
-                  </span>
-                </span>
-              </div>
-            )}
-            {formData.beds && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Bedrooms:</span>
-                <span className="font-medium">{formData.beds}</span>
-              </div>
-            )}
-            {formData.amenities.length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Amenities:</span>
-                <span className="font-medium">{formData.amenities.length} selected</span>
-              </div>
-            )}
-          </div>
-        </div>
       </form>
     </DashboardLayout>
   );

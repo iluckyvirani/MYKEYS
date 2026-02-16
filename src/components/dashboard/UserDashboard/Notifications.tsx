@@ -1,11 +1,10 @@
 // components/dashboard/UserDashboard/Notifications.tsx
 "use client";
 
-import { Bell, CheckCircle, AlertCircle, Info, X, ArrowRight } from "lucide-react";
+import { Bell, CheckCircle, AlertCircle, Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import Link from "next/link";
 
 interface Notification {
   id: string;
@@ -17,6 +16,12 @@ interface Notification {
   isRead?: boolean;
   read?: boolean;
   createdAt: string;
+}
+
+interface NotificationsProps {
+  limit?: number;
+  maxVisible?: number;
+  showHeader?: boolean;
 }
 
 const getNotificationIcon = (type: string) => {
@@ -74,7 +79,11 @@ const getTimeAgo = (createdAt: string) => {
   });
 };
 
-export default function Notifications() {
+export default function Notifications({
+  limit = 5,
+  maxVisible = 4,
+  showHeader = true,
+}: NotificationsProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +92,7 @@ export default function Notifications() {
     const fetchNotifications = async () => {
       try {
         setLoading(true);
-        const response = await api.get("/notifications?limit=5");
+        const response = await api.get(`/notifications?limit=${limit}`);
 
         if (response.data?.notifications) {
           setNotifications(response.data.notifications);
@@ -105,7 +114,7 @@ export default function Notifications() {
 
   const markAsRead = async (id: string) => {
     try {
-      await api.patch(`/notifications/${id}`, { isRead: true });
+      await api.patch(`/notifications/${id}/read`);
       setNotifications(
         notifications.map((notif) =>
           notif.id === id ? { ...notif, isRead: true, read: true } : notif
@@ -118,14 +127,7 @@ export default function Notifications() {
 
   const markAllAsRead = async () => {
     try {
-      // Mark all unread notifications as read
-      const unreadIds = notifications
-        .filter((n) => !n.isRead && !n.read)
-        .map((n) => n.id);
-
-      for (const id of unreadIds) {
-        await api.patch(`/notifications/${id}`, { isRead: true });
-      }
+      await api.patch("/notifications/read-all");
 
       setNotifications(
         notifications.map((notif) => ({
@@ -141,6 +143,7 @@ export default function Notifications() {
 
   const removeNotification = async (id: string) => {
     try {
+      await api.delete(`/notifications/${id}`);
       setNotifications(notifications.filter((notif) => notif.id !== id));
     } catch (error) {
       console.error("Error removing notification:", error);
@@ -148,6 +151,9 @@ export default function Notifications() {
   };
 
   const unreadCount = notifications.filter((n) => !n.isRead && !n.read).length;
+  const visibleNotifications = maxVisible
+    ? notifications.slice(0, maxVisible)
+    : notifications;
 
   if (loading) {
     return (
@@ -164,37 +170,39 @@ export default function Notifications() {
 
   return (
     <div className="bg-white rounded-[5px] border p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-50">
-            <Bell className="w-5 h-5 text-blue-600" />
+      {showHeader && (
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-50">
+              <Bell className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Notifications</h3>
+              <p className="text-xs text-gray-600">
+                {unreadCount} unread notification{unreadCount !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Notifications</h3>
-            <p className="text-xs text-gray-600">
-              {unreadCount} unread notification{unreadCount !== 1 ? "s" : ""}
-            </p>
+          <div className="flex gap-2">
+            {unreadCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={markAllAsRead}
+                className="rounded-[5px]"
+              >
+                Mark all as read
+              </Button>
+            )}
+            {/* <Button asChild variant="outline" size="sm" className="rounded-[5px]">
+              <Link href="/dashboard/notifications">
+                View All
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Link>
+            </Button> */}
           </div>
         </div>
-        <div className="flex gap-2">
-          {unreadCount > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={markAllAsRead}
-              className="rounded-[5px]"
-            >
-              Mark all as read
-            </Button>
-          )}
-          <Button asChild variant="outline" size="sm" className="rounded-[5px]">
-            <Link href="/dashboard/notifications">
-              View All
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Link>
-          </Button>
-        </div>
-      </div>
+      )}
 
       {notifications.length === 0 ? (
         <div className="text-center py-8">
@@ -203,7 +211,7 @@ export default function Notifications() {
         </div>
       ) : (
         <div className="space-y-3">
-          {notifications.slice(0, 4).map((notification) => {
+          {visibleNotifications.map((notification) => {
             const Icon = getNotificationIcon((notification.type || notification.category) as string);
             const isUnread = !notification.isRead && !notification.read;
 
@@ -216,14 +224,14 @@ export default function Notifications() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isUnread ? "" : "opacity-60"}`} />
+                    <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${isUnread ? "" : "opacity-60"}`} />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm font-medium text-gray-900">
                           {notification.title}
                         </h4>
                         {isUnread && (
-                          <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></span>
+                          <span className="w-2 h-2 bg-blue-600 rounded-full shrink-0"></span>
                         )}
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
@@ -234,7 +242,7 @@ export default function Notifications() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-1 flex-shrink-0">
+                  <div className="flex gap-1 shrink-0">
                     {isUnread && (
                       <Button
                         variant="ghost"

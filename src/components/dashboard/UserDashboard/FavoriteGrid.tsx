@@ -9,7 +9,16 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { FavoriteWithProperty } from "@/types/favorite";
 
-export default function FavoriteGrid() {
+interface FavoriteGridStats {
+  totalSaved: number;
+  availableNow: number;
+}
+
+interface FavoriteGridProps {
+  onStatsChange?: (stats: FavoriteGridStats) => void;
+}
+
+export default function FavoriteGrid({ onStatsChange }: FavoriteGridProps) {
   const [favoriteItems, setFavoriteItems] = useState<FavoriteWithProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +170,17 @@ export default function FavoriteGrid() {
   const shortStayCount = favoriteItems.filter(f => f.property.rentalType === "SHORT_TERM").length;
   const longRentCount = favoriteItems.filter(f => f.property.rentalType === "LONG_TERM").length;
   const buyCount = favoriteItems.filter(f => f.property.listingType === "BUY").length;
+  const availableNowCount = favoriteItems.filter(
+    (f) => (f.property.status || "").toLowerCase() === "available"
+  ).length;
+
+  useEffect(() => {
+    if (!onStatsChange) return;
+    onStatsChange({
+      totalSaved: favoriteItems.length,
+      availableNow: availableNowCount,
+    });
+  }, [favoriteItems.length, availableNowCount, onStatsChange]);
 
   if (loading) {
     return (

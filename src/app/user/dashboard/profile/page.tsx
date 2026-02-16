@@ -1,19 +1,23 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { User, Settings, Bell, Shield, CreditCard, FileText } from "lucide-react";
+import { User, Settings, Bell, Shield, CreditCard, FileText, Upload, CheckCircle, Clock, AlertCircle, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileForm from "@/components/dashboard/UserDashboard/ProfileForm";
 import SecuritySettings from "@/components/dashboard/UserDashboard/SecuritySettings";
 import NotificationSettings from "@/components/dashboard/UserDashboard/NotificationSettings";
-import { useState, useEffect } from "react";
+import DocumentList from "@/components/dashboard/UserDashboard/DocumentList";
+import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { MeResponse, UserDTO } from "@/types/auth";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<UserDTO | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchUserData();
@@ -47,6 +51,70 @@ export default function ProfilePage() {
     });
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      setAvatarError('');
+
+      // Convert to base64
+      const base64 = await fileToBase64(file);
+
+      // Upload to Cloudinary
+      const uploadResponse = await api.post('/upload', {
+        image: base64,
+        folder: 'mykeys/avatars'
+      });
+
+      const { url } = uploadResponse.data.data;
+
+      // Update user profile with new avatar URL
+      await api.patch('/auth/profile', { avatar: url });
+
+      // Refresh user data
+      await fetchUserData();
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      setAvatarError(
+        err.response?.data?.message || 'Failed to upload avatar. Please try again.'
+      );
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout defaultRole="user">
@@ -73,9 +141,29 @@ export default function ProfilePage() {
 
       {/* Profile Overview */}
       <div className="bg-white rounded-[5px] p-5 mb-5 border">
+        {avatarError && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-[5px] text-sm mb-4">
+            {avatarError}
+          </div>
+        )}
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-            <User className="w-10 h-10 text-white" />
+          <div className="relative group">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={`${user.firstName} ${user.lastName}`}
+                className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                <User className="w-10 h-10 text-white" />
+              </div>
+            )}
+            {uploadingAvatar && (
+              <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+              </div>
+            )}
           </div>
           <div className="flex-1">
             <h3 className="text-xl font-bold text-gray-900">
@@ -91,7 +179,23 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-          <Button variant="outline">Change Photo</Button>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={handleAvatarClick}
+              disabled={uploadingAvatar}
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              {uploadingAvatar ? 'Uploading...' : 'Change Photo'}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+          </div>
         </div>
       </div>
 
@@ -107,14 +211,14 @@ export default function ProfilePage() {
               <Shield className="w-4 h-4" />
               Security
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
+            {/* <TabsTrigger value="notifications" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
               <Bell className="w-4 h-4" />
               Notifications
-            </TabsTrigger>
-            <TabsTrigger value="payment" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
+            </TabsTrigger> */}
+            {/* <TabsTrigger value="payment" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
               <CreditCard className="w-4 h-4" />
               Payment Methods
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="documents" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
               <FileText className="w-4 h-4" />
               Documents
@@ -130,25 +234,122 @@ export default function ProfilePage() {
               <SecuritySettings />
             </TabsContent>
 
-            <TabsContent value="notifications" className="m-0">
+            {/* <TabsContent value="notifications" className="m-0">
               <NotificationSettings />
-            </TabsContent>
+            </TabsContent> */}
 
-            <TabsContent value="payment" className="m-0">
+            {/* <TabsContent value="payment" className="m-0">
               <div className="text-center py-12">
                 <CreditCard className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Payment Methods</h3>
                 <p className="text-gray-500">Manage your saved payment methods here.</p>
                 <Button className="mt-4">Add Payment Method</Button>
               </div>
-            </TabsContent>
+            </TabsContent> */}
 
             <TabsContent value="documents" className="m-0">
-              <div className="text-center py-12">
-                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Documents</h3>
-                <p className="text-gray-500">Upload and manage your verification documents.</p>
-                <Button className="mt-4">Upload Documents</Button>
+              <div className="space-y-6">
+                {/* Verification Status */}
+                <div className="border rounded-[5px] p-5">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Verification Status</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Complete verification for faster bookings
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium px-3 py-1 bg-green-100 text-green-800 rounded-full">
+                        75% Complete
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="p-4 border rounded-[5px]">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div className="font-medium">Email</div>
+                      </div>
+                      <div className="text-sm text-gray-600">Verified</div>
+                    </div>
+                    
+                    <div className="p-4 border rounded-[5px]">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div className="font-medium">Phone</div>
+                      </div>
+                      <div className="text-sm text-gray-600">Verified</div>
+                    </div>
+                    
+                    <div className="p-4 border rounded-[5px]">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-yellow-100 rounded-lg">
+                          <Clock className="w-5 h-5 text-yellow-600" />
+                        </div>
+                        <div className="font-medium">ID Proof</div>
+                      </div>
+                      <div className="text-sm text-gray-600">Under Review</div>
+                    </div>
+                    
+                    <div className="p-4 border rounded-[5px]">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-red-100 rounded-lg">
+                          <AlertCircle className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div className="font-medium">Address Proof</div>
+                      </div>
+                      <div className="text-sm text-gray-600">Not Uploaded</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Upload Actions */}
+                <div className="border rounded-[5px] p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">All Documents</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Uploaded documents for verification
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button className="rounded-[5px]">
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Document
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <DocumentList />
+                </div>
+
+                {/* Tips Section */}
+                <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
+                  <h4 className="font-semibold text-gray-900 mb-3">Document Tips</h4>
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
+                      <span>Upload clear, readable images of your documents</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
+                      <span>Complete verification for instant booking approval on select properties</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
+                      <span>Documents are securely encrypted and only shared with property owners when required</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
+                      <span>You can update expired documents anytime</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </TabsContent>
           </div>

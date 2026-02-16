@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, Menu, User, Home } from "lucide-react";
+import { Bell, Search, Menu, User, Home, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { MeResponse, UserDTO } from "@/types/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Notifications from "@/components/dashboard/UserDashboard/Notifications";
 
 interface HeaderProps {
   role: "user" | "owner";
@@ -27,6 +28,7 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
   const [loading, setLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
@@ -59,10 +61,13 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
   const fetchUnreadNotifications = async () => {
     try {
       const response = await api.get("/notifications?limit=100");
-      if (response.data?.success && response.data.data?.items) {
-        const notifications: Notification[] = response.data.data.items;
+      const notifications: Notification[] =
+        response.data?.notifications || response.data?.data?.items || [];
+      if (notifications.length > 0) {
         const unread = notifications.filter((n) => !n.isRead && !n.read).length;
         setUnreadCount(unread);
+      } else {
+        setUnreadCount(0);
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -118,20 +123,18 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
 
           {/* Right: Notifications and User */}
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="relative"
-              asChild
+              onClick={() => setShowNotifications(true)}
             >
-              <Link href="/dashboard/notifications">
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-500 text-white text-xs font-semibold rounded-full flex items-center justify-center">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
-              </Link>
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-500 text-white text-xs font-semibold rounded-full flex items-center justify-center">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Button>
 
             <div className="h-8 w-px bg-gray-200"></div>
@@ -168,6 +171,33 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
           </div>
         </div>
       </div>
+
+      {showNotifications && (
+        <div className="fixed inset-0 z-40">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowNotifications(false)}
+          />
+          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-gray-700" />
+                <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowNotifications(false)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="h-[calc(100%-48px)] overflow-y-auto p-4">
+              <Notifications limit={100} maxVisible={undefined} showHeader={false} />
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

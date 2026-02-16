@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { UserDTO, UpdateProfileRequest, MeResponse } from "@/types/auth";
+import { Upload, User } from "lucide-react";
 
 interface ProfileFormProps {
   onSuccess?: () => void;
@@ -24,12 +25,16 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
     country: "",
     emergencyName: "",
     emergencyContact: "",
+    avatar: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchUserProfile();
@@ -54,7 +59,9 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
           country: user.country || "",
           emergencyName: user.emergencyName || "",
           emergencyContact: user.emergencyContact || "",
+          avatar: user.avatar || "",
         });
+        setAvatarPreview(user.avatar || null);
       }
     } catch (err: any) {
       console.error("Failed to fetch user profile:", err);
@@ -72,6 +79,65 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
     }));
     setError("");
     setSuccess("");
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      setError('');
+
+      // Convert to base64
+      const base64 = await fileToBase64(file);
+
+      // Upload to Cloudinary
+      const uploadResponse = await api.post('/upload', {
+        image: base64,
+        folder: 'mykeys/avatars'
+      });
+
+      const { url } = uploadResponse.data.data;
+
+      // Update form data with new avatar URL
+      setFormData((prev) => ({ ...prev, avatar: url }));
+      setAvatarPreview(url);
+      setSuccess('Avatar uploaded successfully. Click Save to update your profile.');
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      setError(
+        err.response?.data?.message || 'Failed to upload avatar. Please try again.'
+      );
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const handleSave = async () => {
@@ -127,6 +193,54 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
           {success}
         </div>
       )}
+
+      {/* Avatar Upload Section */}
+      <div>
+        <h4 className="text-lg font-semibold text-gray-900 mb-4">
+          Profile Picture
+        </h4>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            {avatarPreview ? (
+              <img
+                src={avatarPreview}
+                alt="Avatar preview"
+                className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                <User className="w-12 h-12 text-white" />
+              </div>
+            )}
+            {uploadingAvatar && (
+              <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+              </div>
+            )}
+          </div>
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar || loading}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {uploadingAvatar ? 'Uploading...' : 'Upload Photo'}
+            </Button>
+            <p className="text-sm text-gray-500 mt-2">
+              JPG, PNG or GIF. Max size 5MB.
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+          </div>
+        </div>
+      </div>
 
       <div>
         <h4 className="text-lg font-semibold text-gray-900 mb-4">
