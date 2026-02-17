@@ -16,11 +16,19 @@ export function formatCurrency(amount: number, currency: string = "INR") {
 }
 
 export function formatDate(date: string | Date) {
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
+  try {
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      return "Invalid date";
+    }
+    return new Intl.DateTimeFormat("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(dateObj);
+  } catch (error) {
+    return "Invalid date";
+  }
 }
 
 export function getStatusColor(status: string) {

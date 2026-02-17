@@ -196,10 +196,10 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
 
       {/* Avatar Upload Section */}
       <div>
-        <h4 className="text-lg font-semibold text-gray-900 mb-4">
+        {/* <h4 className="text-lg font-semibold text-gray-900 mb-4">
           Profile Picture
-        </h4>
-        <div className="flex items-center gap-4">
+        </h4> */}
+        {/* <div className="flex items-center gap-4">
           <div className="relative">
             {avatarPreview ? (
               <img
@@ -239,7 +239,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
               className="hidden"
             />
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div>

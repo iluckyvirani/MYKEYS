@@ -33,10 +33,13 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      // Count total inquiries made by user
+      // Count total inquiries made by user (by userId or email match for legacy data)
       prisma.inquiry.count({
         where: {
-          userId: user.userId,
+          OR: [
+            { userId: user.userId },
+            { email: user.email },
+          ],
         },
       }),
       // Calculate total spent on bookings (sum of PAID payments)

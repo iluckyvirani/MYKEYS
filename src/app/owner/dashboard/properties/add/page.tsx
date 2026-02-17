@@ -24,7 +24,7 @@ import {
   AlertCircle,
   Loader
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -48,8 +48,10 @@ interface AmenityOption {
 
 export default function AddPropertyPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [loadingAmenities, setLoadingAmenities] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [listingType, setListingType] = useState<"rent" | "buy">("rent");
@@ -109,7 +111,7 @@ export default function AddPropertyPage() {
     
     // Features
     amenities: [] as string[],
-    images: [] as File[],
+    images: [] as Array<{ url: string; name: string }>,
   });
 
   // Fetch amenities on component mount
@@ -132,6 +134,15 @@ export default function AddPropertyPage() {
     fetchAmenities();
   }, []);
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     
@@ -152,11 +163,60 @@ export default function AddPropertyPage() {
     }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
+    if (!files) return;
+
+    try {
+      setUploadingImages(true);
       const newFiles = Array.from(files);
-      setFormData(prev => ({ ...prev, images: [...prev.images, ...newFiles] }));
+      
+      // Upload each image to Cloudinary
+      for (const file of newFiles) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          setError(`${file.name} is not an image file`);
+          continue;
+        }
+
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          setError(`${file.name} is too large (max 10MB)`);
+          continue;
+        }
+
+        try {
+          // Convert to base64
+          const base64 = await fileToBase64(file);
+
+          // Upload to Cloudinary
+          const uploadResponse = await api.post('/upload', {
+            image: base64,
+            folder: 'mykeys/properties'
+          });
+
+          const { url } = uploadResponse.data.data;
+
+          // Add to form data
+          setFormData(prev => ({
+            ...prev,
+            images: [...prev.images, { url, name: file.name }]
+          }));
+        } catch (err: any) {
+          console.error(`Error uploading ${file.name}:`, err);
+          setError(`Failed to upload ${file.name}`);
+        }
+      }
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (err: any) {
+      console.error('Error handling image upload:', err);
+      setError('Failed to process images');
+    } finally {
+      setUploadingImages(false);
     }
   };
 
@@ -173,6 +233,12 @@ export default function AddPropertyPage() {
     try {
       setLoading(true);
       setError(null);
+
+      // Don't submit while images are uploading
+      if (uploadingImages) {
+        setError("Please wait for images to finish uploading");
+        return;
+      }
       
       // Validate required fields
       if (!formData.title || !formData.address || !formData.propertyType) {
@@ -197,21 +263,11 @@ export default function AddPropertyPage() {
         return;
       }
 
-      // Convert images to base64 or handle upload
-      const imagePromises = formData.images.map(file => {
-        return new Promise<{ url: string; caption?: string; isPrimary?: boolean }>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve({
-              url: reader.result as string,
-              isPrimary: formData.images[0] === file
-            });
-          };
-          reader.readAsDataURL(file);
-        });
-      });
-
-      const uploadedImages = await Promise.all(imagePromises);
+      // Prepare images array with URLs already uploaded to Cloudinary
+      const uploadedImages = formData.images.map((img, index) => ({
+        url: img.url,
+        isPrimary: index === 0
+      }));
 
       // Prepare API payload
       const payload: any = {
@@ -1018,24 +1074,35 @@ export default function AddPropertyPage() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Image Upload Box */}
-          <label className="aspect-video border-2 border-dashed border-gray-300 rounded-[5px] flex flex-col items-center justify-center cursor-pointer hover:border-green-400 transition-colors">
+          <label className="aspect-video border-2 border-dashed border-gray-300 rounded-[5px] flex flex-col items-center justify-center cursor-pointer hover:border-green-400 transition-colors disabled:cursor-not-allowed disabled:opacity-50">
             <input
+              ref={fileInputRef}
               type="file"
               multiple
               accept="image/*"
               className="hidden"
               onChange={handleImageUpload}
+              disabled={uploadingImages}
             />
-            <Upload className="w-12 h-12 text-gray-400 mb-3" />
-            <p className="text-sm font-medium text-gray-700">Upload Photos</p>
-            <p className="text-xs text-gray-500 mt-1">Click or drag & drop</p>
+            {uploadingImages ? (
+              <>
+                <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-2" />
+                <p className="text-sm font-medium text-gray-700">Uploading...</p>
+              </>
+            ) : (
+              <>
+                <Upload className="w-12 h-12 text-gray-400 mb-3" />
+                <p className="text-sm font-medium text-gray-700">Upload Photos</p>
+                <p className="text-xs text-gray-500 mt-1">Click or drag & drop</p>
+              </>
+            )}
           </label>
 
           {/* Uploaded Images */}
           {formData.images.map((image, index) => (
             <div key={index} className="relative aspect-video rounded-[5px] overflow-hidden group bg-gray-100">
               <Image
-                src={URL.createObjectURL(image)}
+                src={image.url}
                 alt={`Property ${index + 1}`}
                 fill
                 className="object-cover"
@@ -1158,13 +1225,18 @@ export default function AddPropertyPage() {
             ) : (
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploadingImages}
                 className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
                     <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Publishing...
+                  </>
+                ) : uploadingImages ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Uploading Images...
                   </>
                 ) : (
                   <>

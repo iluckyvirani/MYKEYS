@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
+import {
   Facebook, Twitter, Instagram, Linkedin, Youtube,
   Mail, Phone, MapPin, ChevronRight, Send,
   ShieldCheck, Award, Clock, Users,
@@ -42,6 +42,7 @@ export default function Footer() {
     { label: "Buy Properties", href: "/buy" },
     { label: "Short Rent Properties", href: "/rent/short-rent" },
     { label: "Long Rent Properties", href: "/rent/long-rent" },
+    { label: "Services", href: "/services" },
     { label: "List property", href: "/how-listing-works" },
   ];
 
@@ -146,7 +147,7 @@ export default function Footer() {
                   </div>
                 </Link>
                 <p className="text-gray-400 max-w-md">
-                  Your trusted partner in finding dream properties. With cutting-edge technology 
+                  Your trusted partner in finding dream properties. With cutting-edge technology
                   and personalized service, we transform your real estate journey into a seamless experience.
                 </p>
               </div>
@@ -189,7 +190,7 @@ export default function Footer() {
                     required
                   />
                 </div>
-                
+
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

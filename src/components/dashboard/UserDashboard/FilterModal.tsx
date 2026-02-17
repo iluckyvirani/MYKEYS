@@ -64,7 +64,7 @@ export default function FilterModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6">
           {/* Booking Status */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">

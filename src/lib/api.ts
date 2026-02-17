@@ -40,6 +40,14 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Check if user had a token before (was authenticated)
+    const hadToken = !!localStorage.getItem("accessToken");
+    
+    // Don't try to refresh if there was no token to begin with
+    if (!hadToken) {
+      return Promise.reject(error);
+    }
+
     // If already refreshing tokens, queue this request
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
@@ -92,7 +100,7 @@ api.interceptors.response.use(
     } catch (refreshError) {
       console.error("Token refresh failed:", refreshError);
 
-      // Clear tokens and redirect to login
+      // Clear tokens
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
@@ -100,9 +108,12 @@ api.interceptors.response.use(
       // Process queued requests with error
       processQueue(refreshError, null);
 
-      // Redirect to login page
+      // Only redirect to login if not already on login page
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes("/login")) {
+          window.location.href = "/login";
+        }
       }
 
       return Promise.reject(refreshError);

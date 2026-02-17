@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
 import { refreshTokenSchema, validateSchema } from "@/lib/auth/validation";
 import { verifyRefreshToken, generateTokenPair } from "@/lib/auth/jwt";
@@ -50,9 +51,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate new token pair
+    // Fetch user's current roles from database (to pick up any role changes)
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      include: {
+        roles: true,
+      },
+    });
+
+    if (!user) {
+      throw createApiError(ErrorCode.USER_NOT_FOUND, "User not found");
+    }
+
+    // Get primary role - select highest privilege role
+    // Priority: ADMIN > OWNER > USER
+    let primaryRole = "USER";
+    if (user.roles && user.roles.length > 0) {
+      if (user.roles.some((r) => r.role === "ADMIN")) {
+        primaryRole = "ADMIN";
+      } else if (user.roles.some((r) => r.role === "OWNER")) {
+        primaryRole = "OWNER";
+      } else {
+        primaryRole = "USER";
+      }
+    }
+
+    // Generate new token pair with current role
     const { accessToken, refreshToken: newRefreshToken } =
-      await generateTokenPair(payload.userId, payload.email, payload.role);
+      await generateTokenPair(payload.userId, payload.email, primaryRole);
 
     // Prepare response
     const response: RefreshTokenResponse = {

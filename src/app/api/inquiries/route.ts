@@ -221,7 +221,7 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
         duration: body.desiredDurationMonths?.toString() || null,
         budget: body.budget || null,
         status: 'NEW',
-        userId: body.userId || null,
+        userId: user.userId,
       },
       include: {
         property: {

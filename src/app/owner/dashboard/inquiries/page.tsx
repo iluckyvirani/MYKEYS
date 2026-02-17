@@ -100,20 +100,21 @@ export default function OwnerInquiriesPage() {
         params.append("status", filters.status);
       }
 
-      const response = await api.get(`/api/inquiries?${params.toString()}`);
+      const response = await api.get(`/inquiries?${params.toString()}`);
 
       if (response.data.success) {
-        const allInquiries = response.data.data || [];
-        setInquiries(allInquiries);
+        const allInquiries = response.data.data?.items || response.data.data || [];
+        const inquiryArray = Array.isArray(allInquiries) ? allInquiries : [];
+        setInquiries(inquiryArray);
 
         // Calculate stats
         const statsData = {
-          total: allInquiries.length,
-          new: allInquiries.filter((i: Inquiry) => i.status === "NEW").length,
-          pendingResponse: allInquiries.filter(
+          total: inquiryArray.length,
+          new: inquiryArray.filter((i: Inquiry) => i.status === "NEW").length,
+          pendingResponse: inquiryArray.filter(
             (i: Inquiry) => i.status === "READ" && !i.ownerResponse
           ).length,
-          closed: allInquiries.filter((i: Inquiry) => i.status === "CLOSED")
+          closed: inquiryArray.filter((i: Inquiry) => i.status === "CLOSED")
             .length,
         };
 
@@ -142,7 +143,7 @@ export default function OwnerInquiriesPage() {
       setSubmitting(true);
 
       const patchResponse = await api.patch(
-        `/api/inquiries/${selectedInquiry.id}`,
+        `/inquiries/${selectedInquiry.id}`,
         {
           status: "REPLIED",
           ownerResponse: response,
@@ -188,7 +189,11 @@ export default function OwnerInquiriesPage() {
 
   // Get unique properties for filter modal
   const uniqueProperties = Array.from(
-    new Map(inquiries.map(i => [i.property.id, i.property])).values()
+    new Map(
+      inquiries
+        .filter(i => i.property && i.property.id)
+        .map(i => [i.property.id, i.property])
+    ).values()
   ).map(p => ({ id: p.id, title: p.title }));
 
   const hasActiveFilters =
@@ -198,7 +203,7 @@ export default function OwnerInquiriesPage() {
   const transformedInquiries = inquiries.map(inq => ({
     id: inq.id,
     propertyId: inq.propertyId,
-    propertyTitle: inq.property.title,
+    propertyTitle: inq.property?.title || "Unknown Property",
     guestName: inq.guestName,
     guestEmail: inq.guestEmail,
     guestPhone: inq.guestPhone || "",

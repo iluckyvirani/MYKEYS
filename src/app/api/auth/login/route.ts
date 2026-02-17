@@ -75,8 +75,18 @@ export async function POST(request: NextRequest) {
       data: { lastLoginAt: new Date() },
     });
 
-    // Get primary role (first role or USER as fallback)
-    const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0].role : "USER";
+    // Get primary role - select highest privilege role
+    // Priority: ADMIN > OWNER > USER
+    let primaryRole = "USER";
+    if (user.roles && user.roles.length > 0) {
+      if (user.roles.some((r) => r.role === "ADMIN")) {
+        primaryRole = "ADMIN";
+      } else if (user.roles.some((r) => r.role === "OWNER")) {
+        primaryRole = "OWNER";
+      } else {
+        primaryRole = "USER";
+      }
+    }
 
     // Generate tokens
     const { accessToken, refreshToken } = await generateTokenPair(

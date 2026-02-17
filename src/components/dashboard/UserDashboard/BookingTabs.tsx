@@ -135,7 +135,7 @@ export default function BookingTabs() {
             <BookingList 
               bookings={cancelledBookings} 
               emptyMessage="No cancelled bookings."
-              emptyAction={{ label: "Browse Properties", href: "/properties" }}
+              emptyAction={{ label: "Browse Properties", href: "/" }}
               onBookingUpdated={handleBookingUpdated}
             />
           </TabsContent>
@@ -144,7 +144,7 @@ export default function BookingTabs() {
             <BookingList 
               bookings={allBookings} 
               emptyMessage="No bookings found."
-              emptyAction={{ label: "Browse Properties", href: "/properties" }}
+              emptyAction={{ label: "Browse Properties", href: "/" }}
               onBookingUpdated={handleBookingUpdated}
             />
           </TabsContent>

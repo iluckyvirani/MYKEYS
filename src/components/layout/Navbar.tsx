@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Home, User, LogIn, LogOut, Menu, X, ChevronDown, LayoutDashboard, User as UserIcon, Building2, HelpCircle, Key, CheckCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { UserDTO } from "@/types/auth";
 import { api } from "@/lib/api";
 
@@ -21,6 +21,7 @@ export default function Navbar() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
+  const pathname = usePathname();
 
   // Fixed: Improved scroll detection
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function Navbar() {
     const checkAuth = () => {
       const token = localStorage.getItem("accessToken");
       const userStr = localStorage.getItem("user");
-      
+
       if (token && userStr) {
         try {
           const userData = JSON.parse(userStr) as UserDTO;
@@ -75,7 +76,7 @@ export default function Navbar() {
     setErrorMessage("");
     try {
       const response = await api.post("/users/become-owner");
-      
+
       // Update tokens with new OWNER role
       if (response.data?.data?.accessToken) {
         localStorage.setItem("accessToken", response.data.data.accessToken);
@@ -83,7 +84,7 @@ export default function Navbar() {
       if (response.data?.data?.refreshToken) {
         localStorage.setItem("refreshToken", response.data.data.refreshToken);
       }
-      
+
       // Update user data in localStorage with new roles
       if (response.data?.data?.user) {
         localStorage.setItem("user", JSON.stringify(response.data.data.user));
@@ -114,6 +115,7 @@ export default function Navbar() {
     { href: "/buy", label: "Buy" },
     { href: "/rent/short-rent", label: "Short Rent" },
     { href: "/rent/long-rent", label: "Long Rent" },
+    { href: "/services", label: "Services" },
     { href: "/how-listing-works", label: "List Property", icon: HelpCircle },
     { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },
@@ -156,17 +158,31 @@ export default function Navbar() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`relative text-sm font-medium transition-colors hover:text-green-600 ${scrolled ? "text-gray-700" : "text-white/90"
+              {navItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`relative text-sm font-medium transition-colors ${
+                      isActive
+                        ? scrolled
+                          ? "text-green-600"
+                          : "text-green-300"
+                        : scrolled
+                          ? "text-gray-700 hover:text-green-600"
+                          : "text-white/90 hover:text-green-300"
                     }`}
-                >
-                  {item.label}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 transition-all group-hover:w-full" />
-                </Link>
-              ))}
+                  >
+                    {item.label}
+                    <span
+                      className={`absolute -bottom-1 left-0 h-0.5 bg-green-500 transition-all duration-300 ${
+                        isActive ? "w-full" : "w-0"
+                      }`}
+                    />
+                  </Link>
+                );
+              })}
             </div>
 
             {/* Right side buttons */}
@@ -322,7 +338,7 @@ export default function Navbar() {
               <p className="text-gray-600 mb-6">
                 Unlock the ability to list properties and grow your rental business. Click the button below to get started!
               </p>
-              
+
               <div className="flex gap-3">
                 <Button
                   onClick={() => setShowBecomeOwnerModal(false)}
@@ -372,7 +388,7 @@ export default function Navbar() {
                 <p className="text-gray-600 mb-6">
                   {successMessage}
                 </p>
-                
+
                 <Button
                   onClick={() => setShowSuccessModal(false)}
                   className="w-full bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
@@ -409,16 +425,23 @@ export default function Navbar() {
                 <div className="flex-1 overflow-y-auto px-4">
                   {/* Mobile Navigation Items */}
                   <div className="space-y-2">
-                    {navItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className="block py-3 px-4 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
+                    {navItems.map((item) => {
+                      const isActive = pathname === item.href;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`block py-3 px-4 rounded-lg transition-colors ${
+                            isActive
+                              ? "bg-green-50 text-green-600 font-medium"
+                              : "text-gray-700 hover:bg-green-50 hover:text-green-600"
+                          }`}
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      );
+                    })}
                   </div>
 
                   {/* Mobile Auth Buttons */}
@@ -437,7 +460,7 @@ export default function Navbar() {
                               User Dashboard
                             </div>
                           </Link>
-                          
+
                           {hasOwnerRole ? (
                             <Link
                               href="/owner/dashboard"

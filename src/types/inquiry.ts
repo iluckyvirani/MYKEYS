@@ -6,6 +6,7 @@
 // ============= ENUMS =============
 
 export enum InquiryStatus {
+  NEW = 'NEW',
   PENDING = 'PENDING',
   REVIEWED = 'REVIEWED',
   INTERESTED = 'INTERESTED',

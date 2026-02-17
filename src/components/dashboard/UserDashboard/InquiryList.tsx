@@ -51,17 +51,27 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
   };
 
   const getTimeAgo = (date: string) => {
-    const now = new Date();
-    const past = new Date(date);
-    const diffMs = now.getTime() - past.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffHours < 1) return "Just now";
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return formatDate(date);
+    try {
+      const now = new Date();
+      const past = new Date(date);
+      
+      // Check if date is valid
+      if (isNaN(past.getTime())) {
+        return "Recently";
+      }
+      
+      const diffMs = now.getTime() - past.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffHours < 1) return "Just now";
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays === 1) return "Yesterday";
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return formatDate(date);
+    } catch (error) {
+      return "Recently";
+    }
   };
 
   if (inquiries.length === 0) {

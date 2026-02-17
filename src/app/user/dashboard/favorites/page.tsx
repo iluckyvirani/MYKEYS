@@ -5,7 +5,7 @@ import { Heart, Filter, Share2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import FavoriteGrid from "@/components/dashboard/UserDashboard/FavoriteGrid";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 export default function FavoritesPage() {
   const [stats, setStats] = useState({
@@ -14,6 +14,15 @@ export default function FavoritesPage() {
     availableNow: 0,
     recentlyViewed: 0,
   });
+
+  // Memoize the callback to prevent infinite effects
+  const handleStatsChange = useCallback((next: any) => {
+    setStats((prev) => ({
+      ...prev,
+      totalSaved: next.totalSaved,
+      availableNow: next.availableNow,
+    }));
+  }, []);
 
   return (
     <DashboardLayout defaultRole="user">
@@ -90,15 +99,7 @@ export default function FavoritesPage() {
       </div>
 
       {/* Favorites Grid */}
-      <FavoriteGrid
-        onStatsChange={(next) =>
-          setStats((prev) => ({
-            ...prev,
-            totalSaved: next.totalSaved,
-            availableNow: next.availableNow,
-          }))
-        }
-      />
+      <FavoriteGrid onStatsChange={handleStatsChange} />
     </DashboardLayout>
   );
 }

@@ -21,7 +21,7 @@ export default function UserDashboardPage() {
     if (userDataStr) {
       try {
         const userData = JSON.parse(userDataStr);
-        const firstName = userData.firstName || userData.name || "User";
+        const firstName = userData.data?.firstName || "User";
         setUserName(firstName);
       } catch (err) {
         console.error("Error parsing user data:", err);
@@ -32,10 +32,10 @@ export default function UserDashboardPage() {
     <DashboardLayout defaultRole="user">
       {/* Welcome Section */}
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-xl font-bold text-gray-900">
           Welcome back, {userName}! 👋
         </h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-gray-600 text-sm mt-2">
           Here's what's happening with your bookings and inquiries today.
         </p>
       </div>
@@ -46,34 +46,29 @@ export default function UserDashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-5">
+      <div className="mb-6">
         <QuickActions />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Recent Bookings */}
+      {/* Main Dashboard Grid */}
+      <div className="space-y-6">
+        {/* Top Row - Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RecentBookings />
-
-          {/* Active Inquiries */}
           <ActiveInquiries />
-
-          {/* Favorite Properties */}
-          <FavoriteProperties />
         </div>
 
-        {/* Right Column */}
-        <div className="space-y-5">
-          {/* Recent Payments */}
+        {/* Favorite Properties - Full Width */}
+        <FavoriteProperties />
+
+        {/* Middle Row - Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RecentPayments />
-
-          {/* Notifications */}
           <Notifications />
-
-          {/* Booking Trend Chart */}
-          <BookingTrendChart />
         </div>
+
+        {/* Bottom Row - Chart Full Width */}
+        <BookingTrendChart />
       </div>
     </DashboardLayout>
   );

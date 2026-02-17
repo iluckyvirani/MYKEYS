@@ -140,7 +140,7 @@ export default function PropertyList() {
     try {
       setLoading(true);
       setError("");
-      const response = await api.get("/api/owner/properties");
+      const response = await api.get("/owner/properties");
       if (response.data.success) {
         setProperties(response.data.data);
       } else {
@@ -171,7 +171,7 @@ export default function PropertyList() {
       );
 
       // Update on server
-      await api.patch(`/api/properties/${id}`, { status: newStatus });
+      await api.patch(`/properties/${id}`, { status: newStatus });
     } catch (err: any) {
       console.error("Error toggling property status:", err);
       // Revert on error
@@ -188,7 +188,7 @@ export default function PropertyList() {
       setProperties(properties.filter((prop) => prop.id !== id));
 
       // Delete on server
-      await api.delete(`/api/properties/${id}`);
+      await api.delete(`/properties/${id}`);
     } catch (err: any) {
       console.error("Error deleting property:", err);
       // Revert on error

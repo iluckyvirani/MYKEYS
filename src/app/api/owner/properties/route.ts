@@ -28,7 +28,7 @@ export const GET = withAuth(
             select: {
               id: true,
               status: true,
-              totalPrice: true,
+              totalAmount: true,
               checkIn: true,
               checkOut: true,
             },
@@ -67,7 +67,7 @@ export const GET = withAuth(
 
         // Calculate revenue for current month
         const monthlyRevenue = currentMonthBookings.reduce(
-          (sum, booking) => sum + (booking.totalPrice || 0),
+          (sum, booking) => sum + (booking.totalAmount || 0),
           0
         );
 

@@ -58,8 +58,8 @@ export default function InquiryTabs() {
       id: inquiry.id,
       property: `Property ${inquiry.propertyId.slice(0, 8)}`, // Placeholder - property title not in response
       owner: inquiry.guestName, // Using guest name as contact person
-      sent: new Date(inquiry.createdAt).toLocaleDateString("en-IN"),
-      lastUpdate: new Date(inquiry.updatedAt).toLocaleDateString("en-IN"),
+      sent: inquiry.createdAt,
+      lastUpdate: inquiry.updatedAt,
       status: getStatusLabel(inquiry.status),
       type: inquiry.inquiryType === "LONG_RENT" ? "long_term" : "buy",
       duration: isLongRent ? `${longRentInquiry.desiredDurationMonths} months` : null,
@@ -88,7 +88,7 @@ export default function InquiryTabs() {
 
   // Categorize inquiries by status
   const pendingInquiries = inquiries
-    .filter(i => i.status === InquiryStatus.PENDING || i.status === InquiryStatus.REVIEWED)
+    .filter(i => i.status === InquiryStatus.NEW || i.status === InquiryStatus.REVIEWED)
     .map(transformInquiry);
 
   const interestedInquiries = inquiries

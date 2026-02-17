@@ -28,7 +28,7 @@ export default function LongRentHero({ onSearchChange, initialCity = "", initial
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-5 mt-10">
+        <div className="text-center mb-2 mt-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -39,7 +39,7 @@ export default function LongRentHero({ onSearchChange, initialCity = "", initial
               <span className="block text-green-400 mt-1">Rental Home</span>
             </h1>
 
-            <p className="font-spartan text-lg sm:text-md text-gray-200 max-w-lg mx-auto mb-10 font-light">
+            <p className="font-spartan text-lg sm:text-md text-gray-200 max-w-lg mx-auto  font-light">
               Rent directly from owners. Minimum 2+ months stays, better prices,
               and direct communication for a smooth rental experience.
             </p>
@@ -55,7 +55,7 @@ export default function LongRentHero({ onSearchChange, initialCity = "", initial
         </motion.div>
 
         {/* Stats */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+        <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
           <div className="text-center p-4 bg-white/10 backdrop-blur-sm rounded-[5px]">
             <div className="text-2xl font-bold text-white">£0</div>
             <div className="text-green-300 text-sm">Agent fees</div>
