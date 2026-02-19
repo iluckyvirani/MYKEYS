@@ -28,7 +28,6 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
   const [loading, setLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
@@ -126,8 +125,8 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="relative"
-              onClick={() => setShowNotifications(true)}
+              className="relative cursor-pointer"
+              onClick={() => router.push(`/${role}/dashboard/notifications`)}
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
@@ -171,33 +170,6 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
           </div>
         </div>
       </div>
-
-      {showNotifications && (
-        <div className="fixed inset-0 z-40">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowNotifications(false)}
-          />
-          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b">
-              <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-gray-700" />
-                <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowNotifications(false)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="h-[calc(100%-48px)] overflow-y-auto p-4">
-              <Notifications limit={100} maxVisible={undefined} showHeader={false} />
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

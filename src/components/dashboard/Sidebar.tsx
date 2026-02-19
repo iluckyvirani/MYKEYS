@@ -18,6 +18,7 @@ import {
   FileBarChart,
   LogOut,
   Key,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -32,6 +33,7 @@ interface SidebarProps {
 const userNavigation = [
   { name: "Dashboard", href: "/user/dashboard", icon: Home },
   { name: "Bookings", href: "/user/dashboard/bookings", icon: Calendar },
+  { name: "Service Bookings", href: "/user/dashboard/service-bookings", icon: Wrench },
   { name: "Inquiries", href: "/user/dashboard/inquiries", icon: MessageSquare },
   { name: "Favorites", href: "/user/dashboard/favorites", icon: Heart },
   { name: "Services", href: "/user/dashboard/services", icon: Megaphone },

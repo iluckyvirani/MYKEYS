@@ -17,6 +17,7 @@ export default function Footer() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [particles, setParticles] = useState<Array<{ left: string; top: string; duration: number; delay: number }>>([]);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
     setParticles(
@@ -27,6 +28,14 @@ export default function Footer() {
         delay: Math.random() * 3,
       }))
     );
+
+    // Handle scroll to show/hide back to top button
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleSubscribe = (e: React.FormEvent) => {
@@ -416,15 +425,21 @@ export default function Footer() {
         </motion.div> */}
 
         {/* Back to Top Button */}
-        <motion.button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          whileHover={{ y: -5 }}
-          className="fixed bottom-6 right-6 w-12 h-12 bg-green-600 rounded-full flex items-center justify-center  z-50"
-        >
-          <ChevronRight className="w-5 h-5 rotate-270 " />
-        </motion.button>
+        {showBackToTop && (
+          <motion.button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            whileHover={{ y: -5, scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className="fixed bottom-6 right-6 w-12 h-12 bg-green-600 hover:bg-green-700 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl z-50 transition-all"
+            title="Back to top"
+          >
+            <ChevronRight className="w-5 h-5 text-white -rotate-90" />
+          </motion.button>
+        )}
 
       </div>
 
