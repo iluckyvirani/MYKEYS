@@ -25,7 +25,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 
 interface SidebarProps {
-  role: "user" | "owner";
+  role: "user" | "owner" | "service";
   isOpen: boolean;
   onClose: () => void;
 }
@@ -55,11 +55,25 @@ const ownerNavigation = [
   { name: "Analytics", href: "/owner/dashboard/analytics", icon: BarChart3 },
 ];
 
+const serviceNavigation = [
+  { name: "Dashboard", href: "/service/dashboard", icon: Home },
+  { name: "Bookings", href: "/service/dashboard/bookings", icon: Calendar },
+  { name: "Requests", href: "/service/dashboard/requests", icon: MessageSquare },
+  { name: "Services", href: "/service/dashboard/services", icon: Wrench },
+  { name: "Earnings", href: "/service/dashboard/earnings", icon: DollarSign },
+  { name: "Reviews", href: "/service/dashboard/reviews", icon: Star },
+  { name: "Profile", href: "/service/dashboard/profile", icon: Settings },
+];
+
 export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const navigation = role === "user" ? userNavigation : ownerNavigation;
+  
+  const navigation = 
+    role === "user" ? userNavigation : 
+    role === "service" ? serviceNavigation : 
+    ownerNavigation;
 
   const handleLogout = async () => {
     try {

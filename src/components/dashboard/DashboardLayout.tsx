@@ -8,14 +8,14 @@ import RoleSwitcher from "./RoleSwitcher";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  defaultRole?: "user" | "owner";
+  defaultRole?: "user" | "owner" | "service";
 }
 
 export default function DashboardLayout({
   children,
   defaultRole = "user",
 }: DashboardLayoutProps) {
-  const [role, setRole] = useState<"user" | "owner">(defaultRole);
+  const [role, setRole] = useState<"user" | "owner" | "service">(defaultRole);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (

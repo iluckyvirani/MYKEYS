@@ -17,8 +17,10 @@ export default function DashboardPage() {
           const data = await response.json();
           const user = data.data;
           
-          // Redirect based on role
-          if (user.role === "OWNER" || user.role === "ADMIN") {
+          // Redirect based on role (check in order: SERVICE, OWNER, USER)
+          if (user.role === "SERVICE") {
+            router.push("/service/dashboard");
+          } else if (user.role === "OWNER" || user.role === "ADMIN") {
             router.push("/owner/dashboard");
           } else {
             router.push("/user/dashboard");
