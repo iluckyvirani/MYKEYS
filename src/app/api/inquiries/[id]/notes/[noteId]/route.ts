@@ -7,9 +7,9 @@ import { JWTPayload } from '@/lib/auth/jwt';
  * DELETE /api/inquiries/[id]/notes/[noteId]
  * Delete a note
  */
-export const DELETE = withAuth(async (req: NextRequest, user: JWTPayload, context?: { params: { id: string; noteId: string } }) => {
+export const DELETE = withAuth(async (req: NextRequest, user: JWTPayload, context?: { params: Promise<{ id: string; noteId: string }> }) => {
   try {
-    const { id: inquiryId, noteId } = context?.params || {};
+    const { id: inquiryId, noteId } = await context?.params || {};
 
     if (!inquiryId || !noteId) {
       return NextResponse.json(
