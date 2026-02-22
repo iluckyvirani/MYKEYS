@@ -9,6 +9,7 @@ datasource db {
 enum RoleType {
   USER
   OWNER
+  SERVICE
   ADMIN
 }
 
@@ -105,6 +106,50 @@ enum SubscriptionStatus {
   PENDING
 }
 
+// ==================== SERVICE ENUMS ====================
+
+enum ServiceCategory {
+  PLUMBING
+  CLEANING
+  AC_REPAIR
+  ELECTRICAL
+  PAINTING
+  CARPENTRY
+  APPLIANCE_REPAIR
+}
+
+enum ServiceBookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceBookingType {
+  INSTANT
+  SCHEDULED
+}
+
+enum ServicePaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ServiceRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ServiceRequestUrgency {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model UserRoleAssignment {
   id     String @id @default(cuid())
 
@@ -162,6 +207,12 @@ model User {
   adCampaigns     AdCampaign[]
   reports         Report[]
   favorites Favorite[]
+
+  // Service Professional Relations
+  serviceProvider     ServiceProvider?
+  serviceBookingsAsClient   ServiceBooking[] @relation("ServiceClient")
+  serviceRequestsAsClient   ServiceRequest[] @relation("ServiceRequester")
+  serviceReviews      ServiceReview[]   @relation("ServiceReviewer")
 
   // Authentication
   resetToken       String?
@@ -678,4 +729,193 @@ model Favorite {
   @@unique([userId, propertyId])
   @@index([userId])
   @@index([propertyId])
+}
+
+// ==================== SERVICE MODELS ====================
+
+model ServiceProvider {
+  id     String @id @default(cuid())
+
+  // Linked user
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Professional Info
+  bio             String?
+  category        ServiceCategory
+  subcategories   Json      // Array of subcategory objects [{id, name, category}]
+  serviceAreas    Json      // Array of service area strings
+  specializations Json?     // Array of specialization strings
+  certifications  Json?     // Array of certification strings
+
+  // Pricing
+  instantBookingEnabled Boolean @default(false)
+  instantBookingPrice   Float?
+
+  // Verification
+  documentVerified Boolean  @default(false)
+  documentsUrl     Json?    // Array of document URLs
+
+  // Stats (cached / denormalized for quick reads)
+  rating       Float @default(0)
+  totalReviews Int   @default(0)
+  completedBookings Int @default(0)
+  totalEarnings Float @default(0)
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Relations
+  services        ServiceListing[]
+  bookings        ServiceBooking[]
+  serviceRequests ServiceRequest[]
+  serviceReviews  ServiceReview[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([category])
+  @@index([isActive])
+  @@index([rating])
+}
+
+model ServiceListing {
+  id String @id @default(cuid())
+
+  // Service details
+  name        String
+  category    String
+  description String?
+  basePrice   Float
+  image       String?
+
+  // Status
+  status String @default("active") // active | inactive
+
+  // Stats (denormalized)
+  rating  Float @default(0)
+  reviews Int   @default(0)
+
+  // Relations
+  providerId String
+  provider   ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  bookings   ServiceBooking[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+  @@index([category])
+  @@index([status])
+}
+
+model ServiceBooking {
+  id String @id @default(cuid())
+
+  // Service details
+  service       String // service name / description
+  category      ServiceCategory
+  subcategory   String?
+  serviceArea   String?
+  bookingType   ServiceBookingType @default(SCHEDULED)
+  description   String?
+
+  // Schedule
+  scheduledDate DateTime?
+  scheduledTime String?
+
+  // Location
+  location String?
+
+  // Status
+  status        ServiceBookingStatus  @default(PENDING)
+  paymentStatus ServicePaymentStatus  @default(PENDING)
+
+  // Pricing
+  totalAmount Float
+  paidAmount  Float @default(0)
+
+  // Relations
+  clientId    String
+  client      User            @relation("ServiceClient", fields: [clientId], references: [id])
+  providerId  String
+  provider    ServiceProvider @relation(fields: [providerId], references: [id])
+  serviceListingId String?
+  serviceListing   ServiceListing? @relation(fields: [serviceListingId], references: [id])
+  review      ServiceReview?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  cancelledAt DateTime?
+
+  @@index([clientId])
+  @@index([providerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([scheduledDate])
+}
+
+model ServiceRequest {
+  id String @id @default(cuid())
+
+  // Request details
+  serviceType String
+  description String?
+  location    String?
+  budget      Float?
+  urgency     ServiceRequestUrgency @default(MEDIUM)
+
+  // Status
+  status ServiceRequestStatus @default(PENDING)
+
+  // Relations
+  clientId   String
+  client     User            @relation("ServiceRequester", fields: [clientId], references: [id])
+  providerId String
+  provider   ServiceProvider @relation(fields: [providerId], references: [id])
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  respondedAt DateTime?
+
+  @@index([clientId])
+  @@index([providerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ServiceReview {
+  id String @id @default(cuid())
+
+  // Review content
+  rating   Int     // 1-5
+  comment  String?
+  response String? // Provider's reply
+
+  // Meta
+  helpfulCount Int @default(0)
+
+  // Relations
+  bookingId  String         @unique
+  booking    ServiceBooking @relation(fields: [bookingId], references: [id])
+  userId     String
+  user       User           @relation("ServiceReviewer", fields: [userId], references: [id])
+  providerId String
+  provider   ServiceProvider @relation(fields: [providerId], references: [id])
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  respondedAt DateTime?
+
+  @@index([providerId])
+  @@index([userId])
+  @@index([rating])
+  @@index([createdAt])
 }

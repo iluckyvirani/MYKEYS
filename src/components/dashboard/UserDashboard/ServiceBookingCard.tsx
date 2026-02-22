@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ServiceRatingModal from "./ServiceRatingModal";
+import { api } from "@/lib/api";
 
 interface ServiceBooking {
   id: string;
@@ -45,6 +46,11 @@ export default function ServiceBookingCard({
 }: ServiceBookingCardProps) {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showModifyModal, setShowModifyModal] = useState(false);
+  const [modifyLoading, setModifyLoading] = useState(false);
+  const [newScheduledDate, setNewScheduledDate] = useState(booking.scheduledDate || "");
+  const [newScheduledTime, setNewScheduledTime] = useState(booking.scheduledTime || "");
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -65,12 +71,48 @@ export default function ServiceBookingCard({
 
   const handleCancel = async () => {
     try {
-      // API call to cancel booking
-      // await api.post(`/service-bookings/${booking.id}/cancel`);
-      onBookingUpdated();
-      setShowCancelConfirm(false);
-    } catch (error) {
+      const response = await api.delete(`/user/service-bookings/${booking.id}`);
+      
+      if (response.data?.success) {
+        alert('Booking cancelled successfully!');
+        onBookingUpdated();
+        setShowCancelConfirm(false);
+      } else {
+        throw new Error(response.data?.message || 'Failed to cancel booking');
+      }
+    } catch (error: any) {
       console.error("Failed to cancel booking:", error);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to cancel booking. Please try again.';
+      alert(errorMsg);
+    }
+  };
+
+  const handleModify = async () => {
+    if (!newScheduledDate || !newScheduledTime) {
+      alert("Please select both date and time");
+      return;
+    }
+
+    setModifyLoading(true);
+    try {
+      const response = await api.patch(`/user/service-bookings/${booking.id}`, {
+        scheduledDate: newScheduledDate,
+        scheduledTime: newScheduledTime,
+      });
+      
+      if (response.data?.success) {
+        alert('Booking updated successfully!');
+        onBookingUpdated();
+        setShowModifyModal(false);
+      } else {
+        throw new Error(response.data?.message || 'Failed to update booking');
+      }
+    } catch (error: any) {
+      console.error("Failed to modify booking:", error);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to update booking. Please try again.';
+      alert(errorMsg);
+    } finally {
+      setModifyLoading(false);
     }
   };
 
@@ -177,6 +219,7 @@ export default function ServiceBookingCard({
                   variant="outline"
                   size="sm"
                   className="text-blue-600 cursor-pointer"
+                  onClick={() => setShowContactModal(true)}
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Contact
@@ -185,6 +228,7 @@ export default function ServiceBookingCard({
                   variant="outline"
                   size="sm"
                   className="text-gray-600 cursor-pointer"
+                  onClick={() => setShowModifyModal(true)}
                 >
                   <Edit2 className="w-4 h-4 mr-2" />
                   Modify
@@ -249,6 +293,151 @@ export default function ServiceBookingCard({
               >
                 Cancel Booking
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Provider Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Contact Provider
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Image
+                  src={booking.providerImage}
+                  alt={booking.providerName}
+                  width={60}
+                  height={60}
+                  className="rounded-lg object-cover"
+                />
+                <div>
+                  <h4 className="font-semibold text-gray-900">{booking.providerName}</h4>
+                  <p className="text-sm text-gray-600">{booking.serviceName}</p>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-700 mb-3">
+                  We'll connect you with {booking.providerName} shortly.
+                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">
+                    <strong>Booking ID:</strong> {booking.id}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <strong>Service:</strong> {booking.serviceName}
+                  </p>
+                  {booking.scheduledDate && (
+                    <p className="text-sm text-gray-600">
+                      <strong>Scheduled:</strong> {formatDate(booking.scheduledDate)} at {booking.scheduledTime}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700 cursor-pointer"
+                  onClick={() => alert("Chat feature coming soon!")}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Send Message
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full cursor-pointer"
+                  onClick={() => alert("Call feature coming soon!")}
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Request Callback
+                </Button>
+              </div>
+            </div>
+            <div className="mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowContactModal(false)}
+                className="w-full cursor-pointer"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modify Booking Modal */}
+      {showModifyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Modify Booking
+            </h3>
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-700 mb-2">
+                  <strong>{booking.serviceName}</strong>
+                </p>
+                <p className="text-sm text-gray-600">Provider: {booking.providerName}</p>
+              </div>
+
+              {booking.bookingType === "schedule" ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      New Date
+                    </label>
+                    <input
+                      type="date"
+                      value={newScheduledDate}
+                      onChange={(e) => setNewScheduledDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      New Time
+                    </label>
+                    <input
+                      type="time"
+                      value={newScheduledTime}
+                      onChange={(e) => setNewScheduledTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    This is an instant booking. Please contact the provider directly to reschedule.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowModifyModal(false)}
+                  className="flex-1 cursor-pointer"
+                  disabled={modifyLoading}
+                >
+                  Cancel
+                </Button>
+                {booking.bookingType === "schedule" && (
+                  <Button
+                    className="flex-1 bg-green-600 hover:bg-green-700 cursor-pointer"
+                    onClick={handleModify}
+                    disabled={modifyLoading}
+                  >
+                    {modifyLoading ? "Updating..." : "Update Booking"}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

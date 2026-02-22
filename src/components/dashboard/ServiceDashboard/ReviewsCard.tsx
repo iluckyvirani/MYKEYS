@@ -1,7 +1,9 @@
 "use client";
 
-import { Star, MessageCircle, User } from "lucide-react";
+import { Star } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 interface Review {
   id: string;
@@ -13,35 +15,29 @@ interface Review {
 }
 
 export default function ReviewsCard() {
-  const reviews: Review[] = [
-    {
-      id: "1",
-      clientName: "Rajesh Kumar",
-      service: "Plumbing Installation",
-      rating: 5,
-      review: "Excellent work! Very professional and timely service. Highly recommended!",
-      date: "2026-02-20",
-    },
-    {
-      id: "2",
-      clientName: "Priya Singh",
-      service: "Electrical Repair",
-      rating: 4,
-      review: "Good services provided. Completed the task efficiently.",
-      date: "2026-02-19",
-    },
-    {
-      id: "3",
-      clientName: "Amit Patel",
-      service: "Maintenance Check",
-      rating: 5,
-      review: "Outstanding! Would definitely hire again for any maintenance work.",
-      date: "2026-02-18",
-    },
-  ];
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const averageRating =
-    (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await api.get("/service/reviews?limit=3&sortOrder=desc");
+        const data = res.data?.data?.items;
+        if (data) {
+          setReviews(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch reviews:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReviews();
+  }, []);
+
+  const averageRating = reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : "0.0";
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
@@ -61,7 +57,12 @@ export default function ReviewsCard() {
       </div>
 
       <div className="space-y-4">
-        {reviews.map((review) => (
+        {loading ? (
+          <p className="text-sm text-gray-500 text-center py-4">Loading reviews...</p>
+        ) : reviews.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-4">No reviews yet</p>
+        ) : (
+        reviews.map((review) => (
           <div
             key={review.id}
             className="border border-gray-100 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -92,7 +93,7 @@ export default function ReviewsCard() {
               {new Date(review.date).toLocaleDateString()}
             </p>
           </div>
-        ))}
+        )))}
       </div>
     </div>
   );

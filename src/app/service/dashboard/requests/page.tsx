@@ -2,10 +2,11 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { useState } from "react";
-import { Clock, MapPin, User, DollarSign, CheckCircle, XCircle, MessageSquare } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Clock, MapPin, User, DollarSign, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "@/lib/api";
 
 interface ServiceRequest {
   id: string;
@@ -20,52 +21,38 @@ interface ServiceRequest {
 }
 
 export default function ServiceRequestsPage() {
-  const [requests] = useState<ServiceRequest[]>([
-    {
-      id: "1",
-      clientName: "Vikram Sharma",
-      serviceType: "Home Painting",
-      location: "North Area",
-      requestDate: "2026-02-19",
-      description: "2-bedroom apartment interior painting needed urgently",
-      budget: 5000,
-      status: "pending",
-      urgency: "high",
-    },
-    {
-      id: "2",
-      clientName: "Neha Desai",
-      serviceType: "Plumbing Work",
-      location: "City Center",
-      requestDate: "2026-02-19",
-      description: "Bathroom renovation and complete fixture installation",
-      budget: 8000,
-      status: "pending",
-      urgency: "medium",
-    },
-    {
-      id: "3",
-      clientName: "Suresh Kumar",
-      serviceType: "Electrical Installation",
-      location: "Suburban",
-      requestDate: "2026-02-18",
-      description: "New circuit setup and wiring for office",
-      budget: 3500,
-      status: "accepted",
-      urgency: "low",
-    },
-    {
-      id: "4",
-      clientName: "Kavya Singh",
-      serviceType: "AC Installation",
-      location: "Downtown",
-      requestDate: "2026-02-17",
-      description: "Split AC installation for 2 rooms",
-      budget: 6000,
-      status: "rejected",
-      urgency: "medium",
-    },
-  ]);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        const res = await api.get("/service/requests?limit=50&sortOrder=desc");
+        const data = res.data?.data?.items;
+        if (data) {
+          setRequests(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch requests:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRequests();
+  }, []);
+
+  const handleRespond = async (id: string, action: "accept" | "reject") => {
+    try {
+      await api.patch(`/service/requests/${id}/respond`, { action });
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, status: action === "accept" ? "accepted" : "rejected" } : r
+        )
+      );
+    } catch (err) {
+      console.error(`Failed to ${action} request:`, err);
+    }
+  };
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
@@ -120,11 +107,11 @@ export default function ServiceRequestsPage() {
         
         {request.status === "pending" && (
           <div className="flex gap-2">
-            <Button size="sm" className="bg-green-600 hover:bg-green-700">
+            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleRespond(request.id, "accept")}>
               <CheckCircle className="w-4 h-4 mr-1" />
               Accept
             </Button>
-            <Button size="sm" variant="outline">
+            <Button size="sm" variant="outline" onClick={() => handleRespond(request.id, "reject")}>
               <XCircle className="w-4 h-4 mr-1" />
               Decline
             </Button>
@@ -172,6 +159,12 @@ export default function ServiceRequestsPage() {
           </TabsList>
 
           <div className="p-5">
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading requests...</p>
+              </div>
+            ) : (
+            <>
             <TabsContent value="pending" className="space-y-4">
               {filterRequests("pending").length > 0 ? (
                 filterRequests("pending").map((request) => (
@@ -207,6 +200,8 @@ export default function ServiceRequestsPage() {
                 </div>
               )}
             </TabsContent>
+            </>
+            )}
           </div>
         </Tabs>
       </div>

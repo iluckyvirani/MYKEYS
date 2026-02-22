@@ -93,7 +93,7 @@ export default function ServiceRegistrationForm({ onSubmit }: ServiceRegistratio
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
+    <div className="min-h-screen bg-linear-to-b from-blue-50 to-white py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -401,7 +401,7 @@ export default function ServiceRegistrationForm({ onSubmit }: ServiceRegistratio
               )}
 
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
                 <div className="text-sm text-blue-900">
                   <p className="font-semibold mb-1">Your documents are secure</p>
                   <p>
@@ -434,7 +434,7 @@ export default function ServiceRegistrationForm({ onSubmit }: ServiceRegistratio
               }
             }}
             disabled={!canProceed()}
-            className="flex-1 bg-green-600 hover:bg-green-700"
+            className="flex-1 bg-green-600 hover:bg-green-700 cursor-pointer text-white"
           >
             {step === 4 ? "Complete Registration" : "Next"}
           </Button>

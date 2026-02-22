@@ -2,8 +2,10 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Star, MessageCircle, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, MessageCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "@/lib/api";
 
 interface Review {
   id: string;
@@ -13,47 +15,45 @@ interface Review {
   review: string;
   date: string;
   helpful: number;
+  response?: string;
 }
 
 export default function ReviewsPage() {
-  const reviews: Review[] = [
-    {
-      id: "1",
-      clientName: "Rajesh Kumar",
-      service: "Plumbing Installation",
-      rating: 5,
-      review: "Excellent work! Very professional and timely service. He arrived on time and completed the work with great quality. Highly recommended for anyone looking for plumbing services!",
-      date: "2026-02-20",
-      helpful: 12,
-    },
-    {
-      id: "2",
-      clientName: "Priya Singh",
-      service: "Electrical Repair",
-      rating: 4,
-      review: "Good services provided and completed the task efficiently. Would have appreciated a bit more communication during the work, but overall satisfied.",
-      date: "2026-02-19",
-      helpful: 8,
-    },
-    {
-      id: "3",
-      clientName: "Amit Patel",
-      service: "Maintenance Check",
-      rating: 5,
-      review: "Outstanding! Professional, punctual, and thorough work. Would definitely hire again for any maintenance work needed.",
-      date: "2026-02-18",
-      helpful: 15,
-    },
-    {
-      id: "4",
-      clientName: "Kavya Singh",
-      service: "AC Installation",
-      rating: 3,
-      review: "Service was okay but took longer than expected. Still got the job done properly.",
-      date: "2026-02-16",
-      helpful: 5,
-    },
-  ];
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await api.get("/service/reviews?limit=50&sortOrder=desc");
+        const data = res.data?.data?.items;
+        if (data) {
+          setReviews(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch reviews:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReviews();
+  }, []);
+
+  const handleReply = async (reviewId: string) => {
+    if (!replyText.trim()) return;
+    try {
+      await api.patch(`/service/reviews/${reviewId}/reply`, { response: replyText });
+      setReviews((prev) =>
+        prev.map((r) => (r.id === reviewId ? { ...r, response: replyText } : r))
+      );
+      setReplyingTo(null);
+      setReplyText("");
+    } catch (err) {
+      console.error("Failed to reply to review:", err);
+    }
+  };
 
   const fiveStarCount = reviews.filter((r) => r.rating === 5).length;
   const fourStarCount = reviews.filter((r) => r.rating === 4).length;
@@ -154,6 +154,16 @@ export default function ReviewsPage() {
           </TabsList>
 
           <div className="p-5 space-y-4">
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading reviews...</p>
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No reviews yet</p>
+              </div>
+            ) : (
+            <>
             <TabsContent value="all" className="space-y-4">
               {reviews.map((review) => (
                 <div
@@ -188,11 +198,47 @@ export default function ReviewsPage() {
 
                   <p className="text-sm text-gray-600 mb-3">{review.review}</p>
 
+                  {review.response && (
+                    <div className="bg-gray-50 rounded p-3 mb-3">
+                      <p className="text-xs text-gray-500 font-medium mb-1">Your Reply:</p>
+                      <p className="text-sm text-gray-700">{review.response}</p>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-4 pt-3 border-t">
-                    <button className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4" />
-                      Reply
-                    </button>
+                    {!review.response && (
+                      replyingTo === review.id ? (
+                        <div className="flex-1 flex gap-2">
+                          <input
+                            type="text"
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Write a reply..."
+                            className="flex-1 text-sm px-3 py-1 border rounded-lg"
+                          />
+                          <button
+                            onClick={() => handleReply(review.id)}
+                            className="text-sm text-white bg-green-600 px-3 py-1 rounded-lg hover:bg-green-700"
+                          >
+                            Send
+                          </button>
+                          <button
+                            onClick={() => { setReplyingTo(null); setReplyText(""); }}
+                            className="text-sm text-gray-600 px-2"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                          onClick={() => setReplyingTo(review.id)}
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          Reply
+                        </button>
+                      )
+                    )}
                     <button className="text-sm text-gray-600 hover:text-gray-900">
                       👍 {review.helpful}
                     </button>
@@ -245,6 +291,8 @@ export default function ReviewsPage() {
                 )}
               </TabsContent>
             ))}
+            </>
+            )}
           </div>
         </Tabs>
       </div>

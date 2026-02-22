@@ -1,6 +1,8 @@
 "use client";
 
 import { BarChart3, Calendar, DollarSign, Star } from "lucide-react";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -11,36 +13,72 @@ interface StatCard {
 }
 
 export default function StatsCards() {
-  const stats: StatCard[] = [
+  const [stats, setStats] = useState<StatCard[]>([
     {
       icon: <Calendar className="w-6 h-6 text-blue-600" />,
       label: "Active Bookings",
-      value: "12",
-      trend: "+2 this week",
-      trendPositive: true,
+      value: "...",
     },
     {
       icon: <DollarSign className="w-6 h-6 text-green-600" />,
       label: "Total Earnings",
-      value: "₹45,230",
-      trend: "+15% this month",
-      trendPositive: true,
+      value: "...",
     },
     {
       icon: <Star className="w-6 h-6 text-yellow-600" />,
       label: "Avg Rating",
-      value: "4.8/5",
-      trend: "From 120 reviews",
-      trendPositive: true,
+      value: "...",
     },
     {
       icon: <BarChart3 className="w-6 h-6 text-purple-600" />,
       label: "Completed Tasks",
-      value: "156",
-      trend: "+8 this week",
-      trendPositive: true,
+      value: "...",
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await api.get("/service/dashboard/stats");
+        const data = res.data?.data;
+        if (data) {
+          setStats([
+            {
+              icon: <Calendar className="w-6 h-6 text-blue-600" />,
+              label: "Active Bookings",
+              value: String(data.activeBookings),
+              trend: `+${data.completedThisWeek} this week`,
+              trendPositive: true,
+            },
+            {
+              icon: <DollarSign className="w-6 h-6 text-green-600" />,
+              label: "Total Earnings",
+              value: `₹${data.totalEarnings.toLocaleString()}`,
+              trend: `₹${data.thisMonthEarnings.toLocaleString()} this month`,
+              trendPositive: true,
+            },
+            {
+              icon: <Star className="w-6 h-6 text-yellow-600" />,
+              label: "Avg Rating",
+              value: `${data.avgRating.toFixed(1)}/5`,
+              trend: `From ${data.totalReviews} reviews`,
+              trendPositive: true,
+            },
+            {
+              icon: <BarChart3 className="w-6 h-6 text-purple-600" />,
+              label: "Completed Tasks",
+              value: String(data.completedTasks),
+              trend: `+${data.completedThisWeek} this week`,
+              trendPositive: true,
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stats:", err);
+      }
+    };
+    fetchStats();
+  }, []);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

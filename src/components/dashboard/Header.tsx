@@ -11,9 +11,9 @@ import Link from "next/link";
 import Notifications from "@/components/dashboard/UserDashboard/Notifications";
 
 interface HeaderProps {
-  role: "user" | "owner";
+  role: "user" | "owner" | "service";
   onMenuClick: () => void;
-  onRoleChange: (role: "user" | "owner") => void;
+  onRoleChange: (role: "user" | "owner" | "service") => void;
 }
 
 interface Notification {
