@@ -43,7 +43,7 @@ export default function EarningsChart() {
               border: "1px solid #e5e7eb",
               borderRadius: "8px",
             }}
-            formatter={(value) => `₹${value.toLocaleString()}`}
+            formatter={(value) => value !== undefined ? `₹${Number(value).toLocaleString()}` : '-'}
           />
           <Legend />
           <Bar dataKey="earnings" fill="#10b981" name="Earnings (₹)" radius={[8, 8, 0, 0]} />
