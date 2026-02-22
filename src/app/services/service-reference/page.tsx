@@ -103,7 +103,7 @@ export default function ServiceReferencePage() {
       <Navbar />
       <main className="min-h-screen bg-gray-50">
         {/* Hero Section */}
-        <section className="py-16 bg-gradient-to-b from-green-50 to-transparent">
+        <section className="py-16 bg-linear-to-b from-green-50 to-transparent">
           <div className="container mx-auto px-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}

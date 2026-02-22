@@ -38,6 +38,8 @@ interface InquiryDetail {
   createdAt: string;
   ownerResponse?: string;
   propertyId: string;
+  budget?: number;
+  duration?: string;
   property: {
     id: string;
     title: string;
@@ -62,7 +64,7 @@ export default function InquiryDetailsPage() {
         setLoading(true);
         setError(null);
 
-        const response = await api.get(`/api/inquiries/${inquiryId}`);
+        const response = await api.get(`/inquiries/${inquiryId}`);
 
         if (response.data.success) {
           setInquiry(response.data.data);
@@ -87,7 +89,7 @@ export default function InquiryDetailsPage() {
     try {
       setSubmitting(true);
 
-      const patchResponse = await api.patch(`/api/inquiries/${inquiry.id}`, {
+      const patchResponse = await api.patch(`/inquiries/${inquiry.id}`, {
         status: "REPLIED",
         ownerResponse: response,
       });
@@ -338,6 +340,25 @@ export default function InquiryDetailsPage() {
                 {inquiry.status.charAt(0) + inquiry.status.slice(1).toLowerCase()}
               </div>
             </div>
+
+            {inquiry.duration && (
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="text-sm text-gray-600 mb-1">Duration</div>
+                <div className="font-semibold text-gray-900">
+                  {inquiry.duration}
+                </div>
+              </div>
+            )}
+
+            {inquiry.budget && (
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="text-sm text-gray-600 mb-1">Budget</div>
+                <div className="font-semibold text-gray-900">
+                  ₹{inquiry.budget.toLocaleString()}
+                  {inquiry.type === "long_term" ? " / month" : inquiry.type === "short_term" ? " / night" : ""}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

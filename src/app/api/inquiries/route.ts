@@ -97,6 +97,7 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
         guestEmail: inquiry.email,
         guestPhone: inquiry.phone || '',
         message: inquiry.message,
+        response: inquiry.response,
         status: inquiry.status,
         priority: inquiry.priority,
         createdAt: inquiry.createdAt.toISOString(),
@@ -109,22 +110,17 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
           ...baseInquiry,
           inquiryType: InquiryType.LONG_RENT,
           type: 'long_term',
-          desiredStartDate: inquiry.createdAt.toISOString().split('T')[0],
           desiredDurationMonths: inquiry.duration ? parseInt(inquiry.duration) : 12,
-          numberOfOccupants: 1,
-          pricePerMonth: inquiry.budget || 0,
-          minLeasePeriod: 12,
-          maxLeasePeriod: 60,
-          securityDeposit: (inquiry.budget || 0) * 1,
-          ownerId: '',
-        } as LongRentInquiry;
+          budget: inquiry.budget || 0,
+          ownerId: ownerId,
+        } as any;
       } else {
         return {
           ...baseInquiry,
           inquiryType: InquiryType.BUY,
           type: 'purchase',
           propertyPrice: inquiry.budget || 0,
-          ownerId: '',
+          ownerId: ownerId,
         } as BuyInquiry;
       }
     });
@@ -218,7 +214,7 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
         email: body.email,
         phone: body.phone || null,
         type: inquiryType,
-        duration: body.desiredDurationMonths?.toString() || null,
+        duration: body.duration?.toString() || null,
         budget: body.budget || null,
         status: 'NEW',
         userId: user.userId,
@@ -291,8 +287,11 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
         guestEmail: inquiry.email,
         guestPhone: inquiry.phone || '',
         message: inquiry.message,
+        response: inquiry.response,
         status: inquiry.status as InquiryStatus,
         type: inquiry.type,
+        duration: inquiry.duration,
+        budget: inquiry.budget,
         createdAt: inquiry.createdAt.toISOString(),
         updatedAt: inquiry.updatedAt.toISOString(),
       } as any,

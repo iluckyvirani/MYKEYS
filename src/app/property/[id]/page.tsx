@@ -48,17 +48,24 @@ import { api } from "@/lib/api";
 import { CreateShortBookingRequest, PaymentMethod } from "@/types/bookings";
 import { formatDateToReadable } from "@/utils/utils";
 import { MeResponse } from "@/types/auth";
+import dynamic from "next/dynamic";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
+// Dynamically import leaflet components with ssr: false to avoid window is not defined error
+const MapContainer = dynamic(() => import("react-leaflet").then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import("react-leaflet").then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import("react-leaflet").then(mod => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import("react-leaflet").then(mod => mod.Popup), { ssr: false });
 
-// Fix marker icon issue
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-    iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-});
+// Initialize marker icon fix only in browser
+if (typeof window !== "undefined") {
+    const L = require("leaflet");
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+        iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+    });
+}
 
 
 
@@ -101,6 +108,8 @@ const emptyPropertyData = {
     averageRating: 0,
     reviewsCount: 0,
     reviews: [] as any[],
+    latitude: 51.5074,
+    longitude: -0.1278,
     requiredDocuments: {
         common: [
             "Proof of identity (Passport/Driving License)",
@@ -144,7 +153,10 @@ export default function PropertyDetailsPage() {
         name: "",
         email: "",
         phone: "",
-        message: ""
+        message: "",
+        budget: "",
+        duration: "",
+        type: ""
     });
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [property, setProperty] = useState<any>(emptyPropertyData);
@@ -276,6 +288,8 @@ export default function PropertyDetailsPage() {
                             responseTime: "within 2 hours",
                             avatar: apiData.owner.profileImage || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070",
                         } : emptyPropertyData.owner,
+                        latitude: apiData.latitude || emptyPropertyData.latitude,
+                        longitude: apiData.longitude || emptyPropertyData.longitude,
                     };
 
                     setProperty(mappedData);
@@ -304,7 +318,10 @@ export default function PropertyDetailsPage() {
                         name: `${userData.firstName || ""} ${userData.lastName || ""}`.trim(),
                         email: userData.email || "",
                         phone: userData.phone || "",
-                        message: ""
+                        message: "",
+                        budget: "",
+                        duration: "",
+                        type: ""
                     });
                 }
             } catch (error) {
@@ -346,22 +363,41 @@ export default function PropertyDetailsPage() {
         setInquirySuccess(null);
 
         try {
+            // Determine inquiry type based on property listing type
+            let inquiryType = "purchase";
+            if (property.listingType === "rent") {
+                inquiryType = property.rentalType === "long" ? "long_term" : "short_term";
+            }
+
+            // Validate budget for long-term rental
+            if (inquiryType === "long_term" && !inquiryForm.budget) {
+                alert("Please enter your budget for long-term rental");
+                return;
+            }
+
+            // Validate budget for buy
+            if (inquiryType === "purchase" && !inquiryForm.budget) {
+                alert("Please enter your expected budget");
+                return;
+            }
+
             let inquiryData: any = {
                 propertyId: property.id,
                 message: inquiryForm.message,
                 name: inquiryForm.name,
                 email: inquiryForm.email,
                 phone: inquiryForm.phone,
+                type: inquiryType,
+                budget: inquiryForm.budget ? parseFloat(inquiryForm.budget) : undefined,
             };
 
-            // Add specific fields based on property type
-            if (property.rentalType === "long") {
-                inquiryData = {
-                    ...inquiryData,
-                    desiredStartDate: new Date().toISOString().split('T')[0],
-                    desiredDurationMonths: property.minTerm || 12,
-                    numberOfOccupants: 1,
-                };
+            // Add duration for long-term rental
+            if (inquiryType === "long_term") {
+                if (!inquiryForm.duration) {
+                    alert("Please enter desired rental duration");
+                    return;
+                }
+                inquiryData.duration = inquiryForm.duration;
             }
 
             const response = await api.post("/inquiries", inquiryData);
@@ -369,7 +405,7 @@ export default function PropertyDetailsPage() {
             if (response.data?.success) {
                 console.log("Inquiry sent successfully:", response.data.data);
                 setShowInquiryModal(false);
-                setInquiryForm({ name: "", phone: "", message: "", email: "" });
+                setInquiryForm({ name: "", phone: "", message: "", email: "", budget: "", duration: "", type: "" });
                 setInquirySuccess("Inquiry sent successfully! The owner will review your message and get back to you soon.");
                 setTimeout(() => setInquirySuccess(null), 4000);
             } else {
@@ -1014,7 +1050,7 @@ export default function PropertyDetailsPage() {
                                             <div className="">
                                                 <div className="h-96 rounded-[5px] overflow-hidden">
                                                     <MapContainer
-                                                        center={[property.latitude, property.longitude]}
+                                                        center={[property?.latitude, property?.longitude]}
                                                         zoom={13}
                                                         scrollWheelZoom={true}
                                                         style={{ height: "100%", width: "100%" }}
@@ -1024,7 +1060,7 @@ export default function PropertyDetailsPage() {
                                                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                                         />
 
-                                                        <Marker position={[property.latitude, property.longitude]}>
+                                                        <Marker position={[property?.latitude, property?.longitude]}>
                                                             <Popup>
                                                                 {property.address}
                                                             </Popup>
@@ -1443,6 +1479,49 @@ export default function PropertyDetailsPage() {
                                                 <p className="font-medium">Logged in as User</p>
                                                 <p className="text-sm text-gray-600">Your details will be shared with the owner</p>
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {/* Budget Field */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Budget {
+                                                property.listingType === "buy" 
+                                                    ? "(Expected purchase price)" 
+                                                    : property.rentalType === "long" 
+                                                        ? "(Monthly budget)" 
+                                                        : "(Per night budget)"
+                                            } (Required)
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-2.5 text-gray-600">₹</span>
+                                            <input
+                                                type="number"
+                                                value={inquiryForm.budget}
+                                                onChange={(e) => setInquiryForm({ ...inquiryForm, budget: e.target.value })}
+                                                className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-[5px]"
+                                                placeholder="Enter amount"
+                                                min="0"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Duration Field - Only for Long-term Rental */}
+                                    {property.listingType === "rent" && property.rentalType === "long" && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Desired Duration (Months) (Required)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={inquiryForm.duration}
+                                                onChange={(e) => setInquiryForm({ ...inquiryForm, duration: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[5px]"
+                                                placeholder="Enter number of months"
+                                                min="1"
+                                                required
+                                            />
                                         </div>
                                     )}
 

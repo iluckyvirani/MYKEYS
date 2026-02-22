@@ -91,7 +91,7 @@ export default function NotificationsPage() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await api.patch(`/notifications/${id}/mark-as-read`);
+      await api.patch(`/notifications/${id}/read`);
       setNotifications(
         notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );

@@ -42,7 +42,7 @@ export default function DashboardLayout({
 
         {/* Main Content Area */}
         <main className="py-5">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-5">
+          <div className="mx-auto max-w-7xl px-4 sm:px-4 lg:px-1">
             {/* Role Switcher Banner */}
             <RoleSwitcher currentRole={role} onSwitch={setRole} />
 

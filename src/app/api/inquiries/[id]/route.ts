@@ -71,6 +71,9 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload, context?:
       ownerResponse: (inquiry as any).response,
       status: inquiry.status as InquiryStatus,
       priority: inquiry.priority,
+      type: inquiry.type,
+      duration: inquiry.duration,
+      budget: inquiry.budget,
       createdAt: inquiry.createdAt.toISOString(),
       updatedAt: inquiry.updatedAt.toISOString(),
     };
@@ -100,7 +103,7 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload, context?:
 export const PATCH = withAuth(async (req: NextRequest, user: JWTPayload, context?: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await context?.params!
-    const body: UpdateInquiryStatusRequest = await req.json();
+    const body: any = await req.json();
 
     if (!id) {
       return NextResponse.json(
@@ -109,9 +112,9 @@ export const PATCH = withAuth(async (req: NextRequest, user: JWTPayload, context
       );
     }
 
-    if (!body.status) {
+    if (!body.status && !body.priority && !body.response) {
       return NextResponse.json(
-        { success: false, message: 'status is required', data: null },
+        { success: false, message: 'status, priority, or response is required', data: null },
         { status: 400 }
       );
     }
@@ -151,14 +154,21 @@ export const PATCH = withAuth(async (req: NextRequest, user: JWTPayload, context
       );
     }
 
-    // Update inquiry status and response
+    // Update inquiry status, priority, and response
     const updateData: any = {
-      status: body.status,
       updatedAt: new Date(),
     };
 
-    if (body.ownerResponse) {
-      updateData.response = body.ownerResponse;
+    if (body.status) {
+      updateData.status = body.status;
+    }
+
+    if (body.priority) {
+      updateData.priority = body.priority;
+    }
+
+    if (body.response) {
+      updateData.response = body.response;
     }
 
     const updatedInquiry = await prisma.inquiry.update({
@@ -175,7 +185,7 @@ export const PATCH = withAuth(async (req: NextRequest, user: JWTPayload, context
     });
 
     // Send notification and email to guest when owner responds
-    if (body.ownerResponse && inquiry.user) {
+    if (body.response && inquiry.user) {
       // Create notification for the guest
       await notificationService.createSystemNotification(
         inquiry.userId || '',
@@ -195,7 +205,7 @@ export const PATCH = withAuth(async (req: NextRequest, user: JWTPayload, context
         `${inquiry.user.firstName} ${inquiry.user.lastName}`,
         owner ? `${owner.firstName} ${owner.lastName}` : 'Property Owner',
         updatedInquiry.property?.title || 'the property',
-        body.ownerResponse,
+        body.response,
         id
       );
     }
@@ -209,7 +219,7 @@ export const PATCH = withAuth(async (req: NextRequest, user: JWTPayload, context
       guestEmail: updatedInquiry.email,
       guestPhone: updatedInquiry.phone || '',
       message: updatedInquiry.message,
-      ownerResponse: (updatedInquiry as any).response,
+      response: updatedInquiry.response,
       status: updatedInquiry.status as InquiryStatus,
       priority: updatedInquiry.priority,
       createdAt: updatedInquiry.createdAt.toISOString(),

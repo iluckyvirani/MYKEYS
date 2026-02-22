@@ -461,6 +461,7 @@ model Inquiry {
   userId     String?
   user       User?    @relation(fields: [userId], references: [id])
   assignedTo String? // User ID of assigned staff
+  notes      InquiryNote[]
 
   // Timestamps
   createdAt   DateTime  @default(now())
@@ -473,6 +474,17 @@ model Inquiry {
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+}
+
+model InquiryNote {
+  id        String   @id @default(cuid())
+  content   String
+  inquiryId String
+  inquiry   Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@index([inquiryId])
 }
 
 model Notification {

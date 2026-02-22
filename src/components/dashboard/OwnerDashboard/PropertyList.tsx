@@ -207,12 +207,12 @@ export default function PropertyList() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/rent">
+          {/* <Link href="/rent">
             <Button variant="outline" size="sm">
               <Eye className="w-4 h-4 mr-2" />
               View Public Listings
             </Button>
-          </Link>
+          </Link> */}
           <Link href="/owner/dashboard/properties/add">
             <Button className="bg-green-600 hover:bg-green-700">
               <Building className="w-4 h-4 mr-2" />
@@ -385,8 +385,8 @@ export default function PropertyList() {
                           <DropdownMenuItem onClick={() => togglePropertyStatus(property.id)}>
                             {property.status === "active" ? "Deactivate" : "Activate"}
                           </DropdownMenuItem>
-                          <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                          <DropdownMenuItem>View Analytics</DropdownMenuItem>
+                          {/* <DropdownMenuItem>Duplicate</DropdownMenuItem> */}
+                          {/* <DropdownMenuItem>View Analytics</DropdownMenuItem> */}
                           <DropdownMenuItem className="text-red-600" onClick={() => deleteProperty(property.id)}>
                             Delete
                           </DropdownMenuItem>

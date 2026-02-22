@@ -11,19 +11,10 @@ import {
   Filter,
   Search,
   Download,
-  CheckCircle,
-  XCircle,
   Clock,
-  AlertCircle,
-  Users,
   DollarSign,
-  Home,
   Plus,
-  MessageSquare,
-  FileText,
   TrendingUp,
-  TrendingDown,
-  Loader,
   X
 } from "lucide-react";
 import Link from "next/link";
@@ -187,7 +178,7 @@ export default function OwnerBookingsPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
+            <Button className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
               <Plus className="w-4 h-4 mr-2" />
               Create Booking
             </Button>

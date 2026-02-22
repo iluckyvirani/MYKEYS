@@ -294,7 +294,7 @@ export default function AddPropertyPage() {
       if (listingType === "rent") {
         payload.rentalType = rentalType === "short" ? "SHORT_TERM" : "LONG_TERM";
         payload.price = parseInt(formData.price);
-        payload.priceType = formData.priceType;
+        payload.priceType = rentalType === "short" ? "NIGHTLY" : "MONTHLY";
         payload.securityDeposit = formData.securityDeposit ? parseInt(formData.securityDeposit) : null;
         payload.cleaningFee = formData.cleaningFee ? parseInt(formData.cleaningFee) : null;
         payload.serviceFee = formData.serviceFee ? parseInt(formData.serviceFee) : null;

@@ -12,6 +12,8 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
 
+type TrendType = "up" | "down" | "same";
+
 interface DashboardStats {
   properties: {
     total: number;
@@ -65,7 +67,7 @@ export default function OwnerStatsCards() {
         setLoading(true);
         setError(null);
         const response = await api.get("/owner/dashboard/stats");
-        
+
         if (response.data?.success) {
           setStats(response.data.data);
         } else {
@@ -110,6 +112,12 @@ export default function OwnerStatsCards() {
     );
   }
 
+  const getTrend = (value: number, threshold?: number): TrendType => {
+    if (value > 0) return "up";
+    if (value < 0) return "down";
+    return "same";
+  };
+
   const enhancedOwnerStats = [
     {
       title: "Total Properties",
@@ -117,7 +125,7 @@ export default function OwnerStatsCards() {
       change: stats.properties.change,
       icon: Building,
       color: "bg-indigo-500",
-      trend: stats.properties.newThisMonth > 0 ? "up" : "same" as "up" | "down" | "same",
+      trend: getTrend(stats.properties.newThisMonth),
       details: `${stats.properties.active} Active • ${stats.properties.pending} Pending`,
     },
     {
@@ -126,7 +134,7 @@ export default function OwnerStatsCards() {
       change: stats.bookings.change,
       icon: Calendar,
       color: "bg-green-500",
-      trend: stats.bookings.occupancyRate >= 70 ? "up" : "same" as "up" | "down" | "same",
+      trend: stats.bookings.occupancyRate >= 70 ? ("up" as TrendType) : ("same" as TrendType),
       details: `${stats.bookings.confirmed} Confirmed • ${stats.bookings.pending} Pending`,
     },
     {
@@ -135,7 +143,7 @@ export default function OwnerStatsCards() {
       change: stats.revenue.changeText,
       icon: DollarSign,
       color: "bg-emerald-500",
-      trend: stats.revenue.change >= 0 ? "up" : "down" as "up" | "down" | "same",
+      trend: getTrend(stats.revenue.change),
       details: `${formatCurrency(stats.revenue.collected)} collected`,
     },
     {
@@ -144,7 +152,7 @@ export default function OwnerStatsCards() {
       change: stats.inquiries.change,
       icon: Inbox,
       color: "bg-orange-500",
-      trend: "same" as "up" | "down" | "same",
+      trend: "same" as TrendType,
       details: `Avg response: ${stats.inquiries.avgResponseTime}h`,
     },
     {
@@ -153,7 +161,7 @@ export default function OwnerStatsCards() {
       change: stats.rating.changeText,
       icon: Star,
       color: "bg-yellow-500",
-      trend: stats.rating.change > 0 ? "up" : stats.rating.change < 0 ? "down" : "same" as "up" | "down" | "same",
+      trend: getTrend(stats.rating.change),
       details: `${stats.rating.total} reviews`,
     },
     {
@@ -162,21 +170,22 @@ export default function OwnerStatsCards() {
       change: stats.conversion.changeText,
       icon: Percent,
       color: "bg-purple-500",
-      trend: stats.conversion.change > 0 ? "up" : stats.conversion.change < 0 ? "down" : "same" as "up" | "down" | "same",
+      trend: getTrend(stats.conversion.change),
       details: "Inquiry to booking",
     },
   ];
+
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
       {enhancedOwnerStats.map((stat) => {
         const Icon = stat.icon;
-
         const trendStyles =
           stat.trend === "up"
             ? "text-green-600 bg-green-50"
             : stat.trend === "down"
-            ? "text-red-600 bg-red-50"
-            : "text-gray-600 bg-gray-100";
+              ? "text-red-600 bg-red-50"
+              : "text-gray-600 bg-gray-100";
 
         const trendIcon =
           stat.trend === "up" ? "↗" : stat.trend === "down" ? "↘" : "→";
@@ -186,34 +195,21 @@ export default function OwnerStatsCards() {
             key={stat.title}
             className="bg-white rounded-[5px] p-3 border shadow-sm hover:shadow-md transition"
           >
-            {/* Top row */}
             <div className="flex items-center justify-between">
               <div className={`${stat.color} p-2.5 rounded-xl`}>
                 <Icon className="w-5 h-5 text-white" />
               </div>
-
-              <span
-                className={`text-xs font-semibold px-1 py-1 rounded-[5px] ml-1 ${trendStyles}`}
-              >
+              <span className={`text-xs font-semibold px-1 py-1 rounded-[5px] ml-1 ${trendStyles}`}>
                 {trendIcon} {stat.change}
               </span>
             </div>
 
-            {/* Content */}
             <div className="mt-5">
-              <p className="text-sm text-gray-500 font-medium">
-                {stat.title}
-              </p>
-
+              <p className="text-sm text-gray-500 font-medium">{stat.title}</p>
               <p className="text-2xl font-bold text-gray-900 mt-2">
-                {stat.title.includes("Revenue")
-                  ? formatCurrency(Number(stat.value))
-                  : stat.value}
+                {stat.title.includes("Revenue") ? formatCurrency(Number(stat.value)) : stat.value}
               </p>
-
-              <p className="text-sm text-gray-500 mt-2">
-                {stat.details}
-              </p>
+              <p className="text-sm text-gray-500 mt-2">{stat.details}</p>
             </div>
           </div>
         );

@@ -41,8 +41,8 @@ export default function ServicesPage() {
             />
 
             {/* Gradient overlays for better text readability */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-b from-black/80 via-black/50 to-black/80" />
+            <div className="absolute inset-0 bg-linear-to-r from-black/40 to-transparent" />
 
             {/* Animated background blobs */}
             <div className="absolute top-20 left-10 w-72 h-72 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
