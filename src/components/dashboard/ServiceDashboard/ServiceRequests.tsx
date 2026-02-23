@@ -1,8 +1,10 @@
 "use client";
 
-import { Clock, MapPin, User, Phone, CheckCircle, XCircle, MessageSquare } from "lucide-react";
+import { Clock, MapPin, User, CheckCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 interface ServiceRequest {
   id: string;
@@ -13,41 +15,38 @@ interface ServiceRequest {
   description: string;
   budget: number;
   urgency: "low" | "medium" | "high";
+  status: string;
 }
 
 export default function ServiceRequests() {
-  const requests: ServiceRequest[] = [
-    {
-      id: "1",
-      clientName: "Vikram Sharma",
-      serviceType: "Home Painting",
-      location: "North Area",
-      requestDate: "2026-02-19",
-      description: "2-bedroom apartment interior painting",
-      budget: 5000,
-      urgency: "medium",
-    },
-    {
-      id: "2",
-      clientName: "Neha Desai",
-      serviceType: "Plumbing Work",
-      location: "City Center",
-      requestDate: "2026-02-19",
-      description: "Bathroom renovation and fixtures",
-      budget: 8000,
-      urgency: "high",
-    },
-    {
-      id: "3",
-      clientName: "Suresh Kumar",
-      serviceType: "Electrical Installation",
-      location: "Suburban",
-      requestDate: "2026-02-18",
-      description: "New circuit setup for office",
-      budget: 3500,
-      urgency: "low",
-    },
-  ];
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        const res = await api.get("/service/requests?status=pending&limit=3&sortOrder=desc");
+        const data = res.data?.data?.items;
+        if (data) {
+          setRequests(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch service requests:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRequests();
+  }, []);
+
+  const handleAccept = async (id: string) => {
+    try {
+      await api.patch(`/service/requests/${id}/respond`, { action: "accept" });
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error("Failed to accept request:", err);
+    }
+  };
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
@@ -75,7 +74,12 @@ export default function ServiceRequests() {
       </div>
 
       <div className="space-y-4">
-        {requests.map((request) => (
+        {loading ? (
+          <p className="text-sm text-gray-500 text-center py-4">Loading requests...</p>
+        ) : requests.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-4">No pending requests</p>
+        ) : (
+        requests.map((request) => (
           <div
             key={request.id}
             className="border border-gray-100 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -118,6 +122,7 @@ export default function ServiceRequests() {
                 <Button
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => handleAccept(request.id)}
                 >
                   <CheckCircle className="w-4 h-4 mr-1" />
                   Accept
@@ -133,7 +138,7 @@ export default function ServiceRequests() {
               </div>
             </div>
           </div>
-        ))}
+        )))}
       </div>
     </div>
   );

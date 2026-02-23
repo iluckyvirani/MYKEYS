@@ -2,37 +2,93 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { useState } from "react";
-import { User, Mail, Phone, MapPin, Award, Clock, Star } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Award, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
+
+interface ProfileData {
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  bio: string;
+  specializations: string[];
+  certifications: string[];
+  joinDate: string;
+  completedBookings: number;
+  rating: number;
+  reviews: number;
+}
 
 export default function ServiceProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({
-    name: "Rajesh Kumar",
-    email: "rajesh@example.com",
-    phone: "+91-98765-43210",
-    city: "Delhi",
-    state: "Delhi",
-    bio: "Professional plumbing and maintenance services with 8+ years of experience.",
-    specializations: ["Plumbing", "Maintenance", "Installation"],
-    certifications: ["Plumbing License", "Building Safety Certificate"],
-    joinDate: "2024-06-15",
-    completedBookings: 156,
-    rating: 4.8,
-    reviews: 120,
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<ProfileData>({
+    name: "",
+    email: "",
+    phone: "",
+    city: "",
+    state: "",
+    bio: "",
+    specializations: [],
+    certifications: [],
+    joinDate: "",
+    completedBookings: 0,
+    rating: 0,
+    reviews: 0,
   });
 
   const [tempProfile, setTempProfile] = useState(profile);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await api.get("/service/profile");
+        const data = res.data?.data;
+        if (data) {
+          setProfile(data);
+          setTempProfile(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleEdit = () => {
     setTempProfile(profile);
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    setProfile(tempProfile);
-    setIsEditing(false);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await api.put("/service/profile", {
+        name: tempProfile.name,
+        email: tempProfile.email,
+        phone: tempProfile.phone,
+        city: tempProfile.city,
+        state: tempProfile.state,
+        bio: tempProfile.bio,
+      });
+      const data = res.data?.data;
+      if (data) {
+        setProfile(data);
+      } else {
+        setProfile(tempProfile);
+      }
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -42,6 +98,16 @@ export default function ServiceProfilePage() {
   const handleInputChange = (field: string, value: string) => {
     setTempProfile({ ...tempProfile, [field]: value });
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout defaultRole="service">
+        <div className="text-center py-12">
+          <p className="text-gray-500">Loading profile...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout defaultRole="service">
@@ -184,8 +250,9 @@ export default function ServiceProfilePage() {
                   <Button
                     onClick={handleSave}
                     className="bg-green-600 hover:bg-green-700 text-white"
+                    disabled={saving}
                   >
-                    Save Changes
+                    {saving ? "Saving..." : "Save Changes"}
                   </Button>
                   <Button variant="outline" onClick={handleCancel}>
                     Cancel

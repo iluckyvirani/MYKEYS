@@ -195,21 +195,21 @@ export default function ServicesPage() {
 
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
+                      <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-1" />
                       <div>
                         <p className="font-semibold text-gray-900">Same-day availability</p>
                         <p className="text-sm text-gray-600">Professionals available to come immediately</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
+                      <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-1" />
                       <div>
                         <p className="font-semibold text-gray-900">Quick arrival</p>
                         <p className="text-sm text-gray-600">Usually arrives within 2-4 hours</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
+                      <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-1" />
                       <div>
                         <p className="font-semibold text-gray-900">Perfect for emergencies</p>
                         <p className="text-sm text-gray-600">Water leaks, electrical issues, broken door locks</p>
@@ -238,21 +238,21 @@ export default function ServicesPage() {
 
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
+                      <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-1" />
                       <div>
                         <p className="font-semibold text-gray-900">Flexible scheduling</p>
                         <p className="text-sm text-gray-600">Choose your preferred date and time window</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
+                      <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-1" />
                       <div>
                         <p className="font-semibold text-gray-900">Better rates</p>
                         <p className="text-sm text-gray-600">Lower pricing than instant service</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
+                      <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-1" />
                       <div>
                         <p className="font-semibold text-gray-900">Plan ahead</p>
                         <p className="text-sm text-gray-600">Deep cleaning, renovations, maintenance work</p>
@@ -290,11 +290,11 @@ export default function ServicesPage() {
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
                     Manage multiple properties
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
                     Property-specific history
                   </li>
                 </ul>
@@ -310,11 +310,11 @@ export default function ServicesPage() {
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
                     Professional providers
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
                     Verified expertise
                   </li>
                 </ul>
@@ -330,11 +330,11 @@ export default function ServicesPage() {
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
                     Real-time updates
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
                     Build trust network
                   </li>
                 </ul>
@@ -500,7 +500,7 @@ export default function ServicesPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-gradient-to-r from-green-600 to-blue-600">
+        <section className="py-16 bg-linear-to-r from-green-600 to-blue-600">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Ready to Get Started?

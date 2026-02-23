@@ -2,10 +2,11 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Eye, Star, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { api } from "@/lib/api";
 
 interface ServiceItem {
   id: string;
@@ -20,63 +21,35 @@ interface ServiceItem {
 }
 
 export default function ServiceManagementPage() {
-  const [services] = useState<ServiceItem[]>([
-    {
-      id: "1",
-      name: "Plumbing Installation",
-      category: "Plumbing",
-      description: "Complete plumbing fixture installation and repairs",
-      basePrice: 1500,
-      rating: 4.8,
-      reviews: 45,
-      status: "active",
-      image: "/api/placeholder/200/150",
-    },
-    {
-      id: "2",
-      name: "Electrical Repair",
-      category: "Electrical",
-      description: "Electrical wiring, repairs, and troubleshooting",
-      basePrice: 1200,
-      rating: 4.6,
-      reviews: 32,
-      status: "active",
-      image: "/api/placeholder/200/150",
-    },
-    {
-      id: "3",
-      name: "Home Maintenance",
-      category: "Maintenance",
-      description: "General home maintenance and safety checks",
-      basePrice: 800,
-      rating: 4.7,
-      reviews: 28,
-      status: "active",
-      image: "/api/placeholder/200/150",
-    },
-    {
-      id: "4",
-      name: "AC Installation & Service",
-      category: "HVAC",
-      description: "AC installation, repair, and servicing",
-      basePrice: 2000,
-      rating: 4.9,
-      reviews: 56,
-      status: "active",
-      image: "/api/placeholder/200/150",
-    },
-    {
-      id: "5",
-      name: "Painting Services",
-      category: "Painting",
-      description: "Interior and exterior painting",
-      basePrice: 3500,
-      rating: 4.5,
-      reviews: 21,
-      status: "inactive",
-      image: "/api/placeholder/200/150",
-    },
-  ]);
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await api.get("/service/services");
+        const data = res.data?.data;
+        if (data) {
+          setServices(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch services:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this service?")) return;
+    try {
+      await api.delete(`/service/services/${id}`);
+      setServices((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      console.error("Failed to delete service:", err);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     return status === "active"
@@ -103,6 +76,15 @@ export default function ServiceManagementPage() {
       </div>
 
       {/* Services Grid */}
+      {loading ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-100">
+          <p className="text-gray-500">Loading services...</p>
+        </div>
+      ) : services.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-100">
+          <p className="text-gray-500">No services yet. Add your first service!</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {services.map((service) => (
           <div
@@ -178,6 +160,7 @@ export default function ServiceManagementPage() {
                   size="sm"
                   variant="outline"
                   className="text-red-600 hover:bg-red-50"
+                  onClick={() => handleDelete(service.id)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -186,6 +169,7 @@ export default function ServiceManagementPage() {
           </div>
         ))}
       </div>
+      )}
     </DashboardLayout>
   );
 }

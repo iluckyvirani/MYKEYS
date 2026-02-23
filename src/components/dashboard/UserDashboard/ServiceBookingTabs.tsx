@@ -25,9 +25,20 @@ interface ServiceBooking {
 
 interface ServiceBookingTabsProps {
   onBookingUpdated?: () => void;
+  searchQuery?: string;
+  filters?: {
+    status?: string;
+    bookingType?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  };
 }
 
-export default function ServiceBookingTabs({ onBookingUpdated }: ServiceBookingTabsProps) {
+export default function ServiceBookingTabs({ 
+  onBookingUpdated,
+  searchQuery = '',
+  filters,
+}: ServiceBookingTabsProps) {
   const [allBookings, setAllBookings] = useState<ServiceBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,54 +46,59 @@ export default function ServiceBookingTabs({ onBookingUpdated }: ServiceBookingT
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      // Mock data for now - replace with actual API call when backend is ready
-      const mockBookings: ServiceBooking[] = [
-        {
-          id: "sb1",
-          serviceId: "1",
-          serviceName: "Plumbing",
-          providerName: "John's Plumbing Services",
-          providerImage: "/api/placeholder/100/100",
-          status: "confirmed",
-          bookingType: "schedule",
-          scheduledDate: "2026-02-25",
-          scheduledTime: "14:00",
-          totalAmount: 550,
-          createdAt: "2026-02-18T10:30:00Z",
-        },
-        {
-          id: "sb2",
-          serviceId: "2",
-          serviceName: "Chef",
-          providerName: "Chef Meera's Kitchen",
-          providerImage: "/api/placeholder/100/100",
-          status: "completed",
-          bookingType: "schedule",
-          scheduledDate: "2026-02-10",
-          scheduledTime: "18:00",
-          totalAmount: 2200,
-          createdAt: "2026-02-08T15:45:00Z",
-          completedAt: "2026-02-10T19:30:00Z",
-          rating: 5,
-          review: "Amazing food! Perfect for our dinner party.",
-        },
-        {
-          id: "sb3",
-          serviceId: "3",
-          serviceName: "Cleaning",
-          providerName: "Fresh Cleaning Services",
-          providerImage: "/api/placeholder/100/100",
-          status: "in-progress",
-          bookingType: "instant",
-          totalAmount: 1100,
-          createdAt: "2026-02-19T09:00:00Z",
-        },
-      ];
-      setAllBookings(mockBookings);
-      setError(null);
+      
+      // Build query params
+      const params = new URLSearchParams({ limit: '100' });
+      if (filters?.status && filters.status !== 'all') {
+        params.append('status', filters.status);
+      }
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+      
+      const response = await api.get(`/user/service-bookings?${params.toString()}`);
+      
+      if (response.data?.success) {
+        // Handle paginated response structure
+        let bookingsData = response.data.data?.items || response.data.data || [];
+        
+        // Ensure bookingsData is an array
+        if (!Array.isArray(bookingsData)) {
+          console.error('Expected array but got:', typeof bookingsData, bookingsData);
+          setAllBookings([]);
+          setError('Invalid data format received');
+          return;
+        }
+        
+        // Apply client-side filters for bookingType and date range
+        if (filters?.bookingType && filters.bookingType !== 'all') {
+          bookingsData = bookingsData.filter((b: ServiceBooking) => 
+            b.bookingType === filters.bookingType
+          );
+        }
+        
+        if (filters?.dateFrom) {
+          bookingsData = bookingsData.filter((b: ServiceBooking) => 
+            new Date(b.scheduledDate || b.createdAt) >= new Date(filters.dateFrom!)
+          );
+        }
+        
+        if (filters?.dateTo) {
+          bookingsData = bookingsData.filter((b: ServiceBooking) => 
+            new Date(b.scheduledDate || b.createdAt) <= new Date(filters.dateTo!)
+          );
+        }
+        
+        setAllBookings(bookingsData);
+        setError(null);
+      } else {
+        setAllBookings([]);
+        throw new Error('Failed to fetch bookings');
+      }
     } catch (err: any) {
       console.error("Error fetching service bookings:", err);
-      setError(err.message || "Failed to fetch service bookings");
+      setAllBookings([]);
+      setError(err.response?.data?.message || err.message || "Failed to fetch service bookings");
     } finally {
       setLoading(false);
     }
@@ -90,7 +106,7 @@ export default function ServiceBookingTabs({ onBookingUpdated }: ServiceBookingT
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [searchQuery, filters]);
 
   const handleBookingUpdated = () => {
     fetchBookings();

@@ -2,53 +2,51 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useState, useEffect } from "react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Download, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
+
+interface EarningsData {
+  stats: {
+    thisMonth: number;
+    thisWeek: number;
+    totalEarned: number;
+    pending: number;
+    thisMonthBookings: number;
+    thisWeekBookings: number;
+  };
+  weeklyChart: { week: string; earnings: number; bookings: number }[];
+  monthlyChart: { month: string; earnings: number }[];
+  transactions: { id: string; date: string; description: string; amount: number; status: string }[];
+}
 
 export default function EarningsPage() {
-  const chartData: Array<{ week: string; earnings: number; bookings: number }> = [
-    { week: "Week 1", earnings: 12000, bookings: 8 },
-    { week: "Week 2", earnings: 15500, bookings: 11 },
-    { week: "Week 3", earnings: 18200, bookings: 13 },
-    { week: "Week 4", earnings: 21800, bookings: 15 },
-  ];
+  const [data, setData] = useState<EarningsData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const monthlyData: Array<{ month: string; earnings: number }> = [
-    { month: "January", earnings: 45000 },
-    { month: "February", earnings: 52000 },
-  ];
+  useEffect(() => {
+    const fetchEarnings = async () => {
+      try {
+        const res = await api.get("/service/earnings");
+        const d = res.data?.data;
+        if (d) {
+          setData(d);
+        }
+      } catch (err) {
+        console.error("Failed to fetch earnings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEarnings();
+  }, []);
 
-  const transactions = [
-    {
-      id: "1",
-      date: "2026-02-20",
-      description: "Plumbing Installation - Rajesh Kumar",
-      amount: 1500,
-      status: "completed",
-    },
-    {
-      id: "2",
-      date: "2026-02-18",
-      description: "Electrical Repair - Priya Singh",
-      amount: 1200,
-      status: "completed",
-    },
-    {
-      id: "3",
-      date: "2026-02-16",
-      description: "Maintenance Check - Amit Patel",
-      amount: 800,
-      status: "completed",
-    },
-    {
-      id: "4",
-      date: "2026-02-15",
-      description: "Bathroom Renovation - Neha Desai",
-      amount: 2000,
-      status: "pending",
-    },
-  ];
+  const stats = data?.stats || { thisMonth: 0, thisWeek: 0, totalEarned: 0, pending: 0, thisMonthBookings: 0, thisWeekBookings: 0 };
+  const chartData = data?.weeklyChart || [];
+  const monthlyData = data?.monthlyChart || [];
+  const transactions = data?.transactions || [];
 
   return (
     <DashboardLayout defaultRole="service">
@@ -61,25 +59,31 @@ export default function EarningsPage() {
       </div>
 
       {/* Stats Cards */}
+      {loading ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-100 mb-6">
+          <p className="text-gray-500">Loading earnings data...</p>
+        </div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
           <p className="text-sm text-gray-600">This Month</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹52,000</p>
-          <p className="text-xs text-green-600 mt-2">+15% from last month</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">₹{stats.thisMonth.toLocaleString()}</p>
+          <p className="text-xs text-green-600 mt-2">{stats.thisMonthBookings || 0} bookings</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
           <p className="text-sm text-gray-600">This Week</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹21,800</p>
-          <p className="text-xs text-green-600 mt-2">From 15 bookings</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">₹{stats.thisWeek.toLocaleString()}</p>
+          <p className="text-xs text-green-600 mt-2">From {stats.thisWeekBookings} bookings</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
           <p className="text-sm text-gray-600">Total Earned</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹97,000</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">₹{stats.totalEarned.toLocaleString()}</p>
           <p className="text-xs text-gray-500 mt-2">Since joining</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
           <p className="text-sm text-gray-600">Pending</p>
-          <p className="text-3xl font-bold text-orange-600 mt-2">₹2,000</p>
+          <p className="text-3xl font-bold text-orange-600 mt-2">₹{stats.pending.toLocaleString()}</p>
           <p className="text-xs text-gray-500 mt-2">Awaiting completion</p>
         </div>
       </div>
@@ -205,6 +209,8 @@ export default function EarningsPage() {
           </table>
         </div>
       </div>
+      </>
+      )}
     </DashboardLayout>
   );
 }

@@ -2,6 +2,8 @@
 
 import { Calendar, Clock, MapPin, User, Eye } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 interface ServiceBooking {
   id: string;
@@ -15,38 +17,25 @@ interface ServiceBooking {
 }
 
 export default function RecentBookings() {
-  const bookings: ServiceBooking[] = [
-    {
-      id: "1",
-      clientName: "Rajesh Kumar",
-      service: "Plumbing Installation",
-      date: "2026-02-25",
-      time: "14:00",
-      location: "Downtown Area",
-      status: "confirmed",
-      amount: 1500,
-    },
-    {
-      id: "2",
-      clientName: "Priya Singh",
-      service: "Electrical Repair",
-      date: "2026-02-24",
-      time: "10:00",
-      location: "Central District",
-      status: "in-progress",
-      amount: 1200,
-    },
-    {
-      id: "3",
-      clientName: "Amit Patel",
-      service: "Maintenance Check",
-      date: "2026-02-23",
-      time: "16:00",
-      location: "Commercial Area",
-      status: "completed",
-      amount: 800,
-    },
-  ];
+  const [bookings, setBookings] = useState<ServiceBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const res = await api.get("/service/bookings?limit=3&sortBy=createdAt&sortOrder=desc");
+        const data = res.data?.data?.items;
+        if (data) {
+          setBookings(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch recent bookings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, []);
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -76,7 +65,12 @@ export default function RecentBookings() {
       </div>
 
       <div className="space-y-4">
-        {bookings.map((booking) => (
+        {loading ? (
+          <p className="text-sm text-gray-500 text-center py-4">Loading bookings...</p>
+        ) : bookings.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-4">No recent bookings</p>
+        ) : (
+        bookings.map((booking) => (
           <div
             key={booking.id}
             className="border border-gray-100 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -126,7 +120,7 @@ export default function RecentBookings() {
               </Link>
             </div>
           </div>
-        ))}
+        )))}
       </div>
     </div>
   );

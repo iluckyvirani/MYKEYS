@@ -2,13 +2,11 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Calendar,
-  CheckCircle,
   Clock,
-  XCircle,
   User,
   MapPin,
   Phone,
@@ -17,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { api } from "@/lib/api";
 
 interface ServiceBooking {
   id: string;
@@ -32,68 +31,25 @@ interface ServiceBooking {
 }
 
 export default function ServiceBookingsPage() {
-  const [allBookings] = useState<ServiceBooking[]>([
-    {
-      id: "1",
-      clientName: "Rajesh Kumar",
-      clientPhone: "+91-9876543210",
-      service: "Plumbing Installation",
-      date: "2026-02-25",
-      time: "14:00",
-      location: "Downtown Area, Block A",
-      status: "confirmed",
-      amount: 1500,
-      description: "Kitchen sink installation with new fixtures",
-    },
-    {
-      id: "2",
-      clientName: "Priya Singh",
-      clientPhone: "+91-9988776655",
-      service: "Electrical Repair",
-      date: "2026-02-24",
-      time: "10:00",
-      location: "Central District, Sector 5",
-      status: "in-progress",
-      amount: 1200,
-      description: "Wall socket and light wiring repair",
-    },
-    {
-      id: "3",
-      clientName: "Amit Patel",
-      clientPhone: "+91-9765432109",
-      service: "Maintenance Check",
-      date: "2026-02-23",
-      time: "16:00",
-      location: "Commercial Area, Complex C",
-      status: "completed",
-      amount: 800,
-      description: "General maintenance and inspection",
-    },
-    {
-      id: "4",
-      clientName: "Neha Desai",
-      clientPhone: "+91-9654321098",
-      service: "Plumbing Work",
-      date: "2026-02-22",
-      time: "09:00",
-      location: "North Area, Colony D",
-      status: "completed",
-      amount: 2000,
-      description: "Bathroom renovation with new pipes",
-    },
-    {
-      id: "5",
-      clientName: "Suresh Singh",
-      clientPhone: "+91-9543210987",
-      service: "AC Installation",
-      date: "2026-02-21",
-      time: "11:00",
-      location: "South District, Tower X",
-      status: "cancelled",
-      amount: 5000,
-      description: "Split AC installation cancelled by client",
-    },
-  ]);
+  const [allBookings, setAllBookings] = useState<ServiceBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const res = await api.get("/service/bookings?limit=50&sortBy=createdAt&sortOrder=desc");
+        const data = res.data?.data?.items;
+        if (data) {
+          setAllBookings(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch bookings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, []);
 
   const getStatusBadge = (status: string) => {
     const badgeStyles: Record<string, string> = {
@@ -204,6 +160,16 @@ export default function ServiceBookingsPage() {
           </TabsList>
 
           <div className="p-5">
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading bookings...</p>
+              </div>
+            ) : allBookings.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No bookings found</p>
+              </div>
+            ) : (
+            <>
             <TabsContent value="all" className="space-y-4">
               {allBookings.map((booking) => (
                 <BookingCard key={booking.id} booking={booking} />
@@ -239,6 +205,8 @@ export default function ServiceBookingsPage() {
                 <BookingCard key={booking.id} booking={booking} />
               ))}
             </TabsContent>
+            </>
+            )}
           </div>
         </Tabs>
       </div>
