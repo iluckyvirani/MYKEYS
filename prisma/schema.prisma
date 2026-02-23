@@ -105,6 +105,29 @@ enum SubscriptionStatus {
   PENDING
 }
 
+enum DocumentType {
+  // User Role Documents
+  PAN_CARD
+  AADHAR_CARD
+  DRIVING_LICENSE
+  PASSPORT
+  VOTER_ID
+  
+  // Owner Role Documents
+  PROPERTY_LICENSE
+  BUSINESS_LICENSE
+  GST_CERTIFICATE
+  TAX_IDENTIFICATION
+  RENTAL_AGREEMENT_TEMPLATE
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
 model UserRoleAssignment {
   id     String @id @default(cuid())
 
@@ -161,7 +184,8 @@ model User {
   payments        Payment[]
   adCampaigns     AdCampaign[]
   reports         Report[]
-  favorites Favorite[]
+  favorites       Favorite[]
+  documents       Document[]     @relation("UserDocuments")
 
   // Authentication
   resetToken       String?
@@ -531,19 +555,28 @@ model Package {
   duration String // monthly, yearly
   isActive Boolean @default(true)
 
-  // Features
-  propertyLimit Int    @default(1)
-  featuredLimit Int    @default(0)
-  storageLimit  Int    @default(5) // in GB
-  supportType   String @default("email")
+  // Core Features
+  propertyLimit    Int @default(1)      // Number of properties can add
+  featuredLimit    Int @default(0)      // Number of featured properties
+  storageLimit     Int @default(5)      // Storage in GB
 
+  // Lead Features
+  dailyLeadsLimit  Int @default(2)      // Leads per day
+  totalLeadsLimit  Int @default(10)     // Total leads allowed
+
+  // Badge & Support
+  hasVerifiedBadge Boolean @default(false)
+  supportType      String @default("email")
+  supportLevel     String @default("standard") // standard, priority, vip
+  
   // Additional Features
-  features Json // Array of feature objects
+  features         Json // Array of feature objects
+  featuresIncluded String[] @default([]) // List of feature names like "API_ACCESS", "CUSTOM_DOMAIN"
 
   // Timestamps
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  ownerPackages OwnerPackage[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  ownerPackages    OwnerPackage[]
 
   // Indexes
   @@index([tier])
@@ -569,10 +602,13 @@ model OwnerPackage {
   nextBilling DateTime?
   cancelledAt DateTime?
 
-  // Usage
-  propertiesUsed Int   @default(0)
-  featuredUsed   Int   @default(0)
-  storageUsed    Float @default(0) // in GB
+  // Usage Tracking
+  propertiesUsed   Int   @default(0)
+  featuredUsed     Int   @default(0)
+  storageUsed      Float @default(0) // in GB
+  leadsUsedToday   Int   @default(0)
+  leadsUsedTotal   Int   @default(0)
+  verifiedBadgeActive Boolean @default(false)
 
   // Payment
   lastPaymentId String?
@@ -584,6 +620,11 @@ model OwnerPackage {
   updatedAt DateTime @updatedAt
 
   // Indexes
+  @@index([ownerId])
+  @@index([packageId])
+  @@index([status])
+  @@index([endDate])
+}
   @@index([ownerId])
   @@index([packageId])
   @@index([status])
@@ -671,6 +712,36 @@ model AuditLog {
   // Indexes
   @@index([entity])
   @@index([entityId])
+  @@index([createdAt])
+}
+
+model Document {
+  id            String           @id @default(cuid())
+  documentType  DocumentType
+  documentUrl   String           // URL to the uploaded document
+  fileName      String
+  fileSize      Int              // File size in bytes
+  mimeType      String?          // e.g., application/pdf, image/jpeg
+  status        DocumentStatus   @default(PENDING)
+  
+  // Admin Verification
+  verifiedNotes String?          // Admin notes/reason for rejection
+  verifiedBy    String?          // Admin user ID who verified
+  verifiedAt    DateTime?        // When document was verified
+  expiresAt     DateTime?        // Document expiration date
+  
+  // Relations
+  userId        String
+  user          User             @relation("UserDocuments", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  
+  // Indexes
+  @@index([userId])
+  @@index([documentType])
+  @@index([status])
   @@index([createdAt])
 }
 

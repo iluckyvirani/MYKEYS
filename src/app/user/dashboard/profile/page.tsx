@@ -8,6 +8,7 @@ import ProfileForm from "@/components/dashboard/UserDashboard/ProfileForm";
 import SecuritySettings from "@/components/dashboard/UserDashboard/SecuritySettings";
 import NotificationSettings from "@/components/dashboard/UserDashboard/NotificationSettings";
 import DocumentList from "@/components/dashboard/UserDashboard/DocumentList";
+import DocumentUploadModal from "@/components/dashboard/UserDashboard/DocumentUploadModal";
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { MeResponse, UserDTO } from "@/types/auth";
@@ -17,6 +18,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState("");
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [documentListKey, setDocumentListKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -39,6 +42,11 @@ export default function ProfilePage() {
 
   const handleProfileUpdate = () => {
     fetchUserData();
+  };
+
+  const handleDocumentUploadSuccess = () => {
+    // Refresh the document list by incrementing the key
+    setDocumentListKey(prev => prev + 1);
   };
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -318,14 +326,20 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button className="rounded-[5px]">
+                      <Button 
+                        className="rounded-[5px]"
+                        onClick={() => setShowDocumentUpload(true)}
+                      >
                         <Upload className="w-4 h-4 mr-2" />
                         Upload Document
                       </Button>
                     </div>
                   </div>
                   
-                  <DocumentList />
+                  <DocumentList 
+                    key={documentListKey}
+                    onDocumentDeleted={handleDocumentUploadSuccess}
+                  />
                 </div>
 
                 {/* Tips Section */}
@@ -355,6 +369,14 @@ export default function ProfilePage() {
           </div>
         </Tabs>
       </div>
+
+      {/* Document Upload Modal */}
+      <DocumentUploadModal
+        isOpen={showDocumentUpload}
+        onClose={() => setShowDocumentUpload(false)}
+        onSuccess={handleDocumentUploadSuccess}
+        userRole="USER"
+      />
     </DashboardLayout>
   );
 }
