@@ -1,34 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, FileUp, AlertCircle, Upload } from "lucide-react";
+import { CheckCircle, FileUp, AlertCircle, Upload, X } from "lucide-react";
 import { SERVICE_CATEGORIES, ServiceCategory } from "@/types/service";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 
 interface ServiceRegistrationFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSubmit?: (data: any) => void;
 }
 
-export default function ServiceRegistrationForm({ onSubmit }: ServiceRegistrationFormProps) {
+export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit }: ServiceRegistrationFormProps) {
+  const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
     serviceAreas: [] as string[],
     instantBooking: false,
     instantPrice: "",
     documents: [] as File[],
-    experience: "",
     bio: "",
   });
+
+  // Check authentication
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    setIsLoggedIn(!!token);
+    
+    if (open && !token) {
+      // If dialog opens and user not logged in, redirect to login
+      onOpenChange(false);
+      router.push("/login?redirect=/");
+    }
+  }, [open, router, onOpenChange]);
 
   const serviceAreas = [
     "Downtown",
@@ -75,10 +94,25 @@ export default function ServiceRegistrationForm({ onSubmit }: ServiceRegistratio
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleClose = () => {
+    // Reset form when closing
+    setStep(1);
+    setSelectedCategory(null);
+    setSelectedSubcategories([]);
+    setFormData({
+      serviceAreas: [] as string[],
+      instantBooking: false,
+      instantPrice: "",
+      documents: [] as File[],
+      bio: "",
+    });
+    onOpenChange(false);
+  };
+
   const canProceed = () => {
     if (step === 1) return selectedCategory && selectedSubcategories.length > 0;
     if (step === 2) return formData.serviceAreas.length > 0;
-    if (step === 3) return formData.fullName && formData.email && formData.phone;
+    if (step === 3) return true; // Bio is optional
     if (step === 4) return formData.documents.length > 0;
     return false;
   };
@@ -92,25 +126,26 @@ export default function ServiceRegistrationForm({ onSubmit }: ServiceRegistratio
     onSubmit?.(data);
   };
 
+  if (!isLoggedIn) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-linear-to-b from-blue-50 to-white py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-3xl font-bold text-gray-900">
             Become a Service Professional
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          </DialogTitle>
+          <p className="text-gray-600">
             Join our platform and reach thousands of customers looking for your services
           </p>
-        </motion.div>
+        </DialogHeader>
 
-        {/* Progress Steps */}
-        <div className="mb-12">
+        <div className="mt-6">
+
+          {/* Progress Steps */}
+          <div className="mb-8">
           <div className="flex items-center justify-between mb-8">
             {[
               { num: 1, label: "Category" },
@@ -147,16 +182,16 @@ export default function ServiceRegistrationForm({ onSubmit }: ServiceRegistratio
               </motion.div>
             ))}
           </div>
-        </div>
+          </div>
 
-        {/* Form Content */}
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          className="bg-white rounded-2xl shadow-lg p-8 mb-8"
-        >
+          {/* Form Content */}
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="bg-gray-50 rounded-xl p-6 mb-6"
+          >
           {/* Step 1: Category Selection */}
           {step === 1 && (
             <div className="space-y-6">
@@ -246,69 +281,23 @@ export default function ServiceRegistrationForm({ onSubmit }: ServiceRegistratio
             </div>
           )}
 
-          {/* Step 3: Personal Details */}
+          {/* Step 3: Service Details */}
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Personal Information</h2>
-                <p className="text-gray-600">Provide your contact details and experience</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Service Details</h2>
+                <p className="text-gray-600">Configure your service offerings and pricing</p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="Your full name"
-                    value={formData.fullName}
-                    onChange={(e) => handleInputChange("fullName", e.target.value)}
-                    className="mt-2"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    className="mt-2"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    placeholder="+91-9876543210"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    className="mt-2"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="experience">Years of Experience</Label>
-                  <Input
-                    id="experience"
-                    type="number"
-                    placeholder="5"
-                    value={formData.experience}
-                    onChange={(e) => handleInputChange("experience", e.target.value)}
-                    className="mt-2"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="bio">Bio (Optional)</Label>
+                  <Label htmlFor="bio">About Your Service (Optional)</Label>
                   <textarea
                     id="bio"
-                    placeholder="Tell customers about yourself..."
+                    placeholder="Tell customers about your service expertise and experience..."
                     value={formData.bio}
                     onChange={(e) => handleInputChange("bio", e.target.value)}
-                    className="mt-2 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none h-24"
+                    className="mt-2 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 resize-none h-24"
                   />
                 </div>
 
@@ -412,34 +401,35 @@ export default function ServiceRegistrationForm({ onSubmit }: ServiceRegistratio
               </div>
             </div>
           )}
-        </motion.div>
+          </motion.div>
 
-        {/* Navigation Buttons */}
-        <div className="flex gap-4 justify-between">
-          <Button
-            onClick={() => setStep((prev) => (prev > 1 ? (prev - 1) as 1 | 2 | 3 | 4 : prev))}
-            variant="outline"
-            disabled={step === 1}
-            className="flex-1"
-          >
-            Previous
-          </Button>
+          {/* Navigation Buttons */}
+          <div className="flex gap-4 justify-between mt-6">
+            <Button
+              onClick={() => setStep((prev) => (prev > 1 ? (prev - 1) as 1 | 2 | 3 | 4 : prev))}
+              variant="outline"
+              disabled={step === 1}
+              className="flex-1"
+            >
+              Previous
+            </Button>
 
-          <Button
-            onClick={() => {
-              if (step === 4) {
-                handleSubmit();
-              } else {
-                setStep((prev) => (prev < 4 ? (prev + 1) as 1 | 2 | 3 | 4 : prev));
-              }
-            }}
-            disabled={!canProceed()}
-            className="flex-1 bg-green-600 hover:bg-green-700 cursor-pointer text-white"
-          >
-            {step === 4 ? "Complete Registration" : "Next"}
-          </Button>
+            <Button
+              onClick={() => {
+                if (step === 4) {
+                  handleSubmit();
+                } else {
+                  setStep((prev) => (prev < 4 ? (prev + 1) as 1 | 2 | 3 | 4 : prev));
+                }
+              }}
+              disabled={!canProceed()}
+              className="flex-1 bg-green-600 hover:bg-green-700 cursor-pointer text-white"
+            >
+              {step === 4 ? "Complete Registration" : "Next"}
+            </Button>
+          </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

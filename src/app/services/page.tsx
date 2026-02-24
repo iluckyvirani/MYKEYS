@@ -1,10 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
+import ServiceRegistrationForm from "@/components/services/ServiceRegistrationForm";
 import {
   Users,
   Home,
@@ -25,6 +28,32 @@ import {
 } from "lucide-react";
 
 export default function ServicesPage() {
+  const router = useRouter();
+  const [showServiceDialog, setShowServiceDialog] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check authentication
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    setIsLoggedIn(!!token);
+  }, []);
+
+  const handleProviderClick = () => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      setShowServiceDialog(true);
+    } else {
+      router.push("/login?redirect=/services");
+    }
+  };
+
+  const handleServiceSubmit = (data: any) => {
+    console.log("Service registration data:", data);
+    // TODO: Submit to API
+    alert("Registration submitted! We'll review your application and get back to you soon.");
+    setShowServiceDialog(false);
+  };
+
   return (
     <>
       <Navbar />
@@ -90,13 +119,14 @@ export default function ServicesPage() {
                 </Button>
               </Link>
 
-              <Link href="/services/register">
-                <Button className="w-full h-auto py-4 flex flex-col items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white cursor-pointer">
-                  <Briefcase className="w-6 h-6" />
-                  <span className="text-lg font-semibold">Become a Provider</span>
-                  <span className="text-sm text-purple-100">Earn money</span>
-                </Button>
-              </Link>
+              <Button 
+                onClick={handleProviderClick}
+                className="w-full h-auto py-4 flex flex-col items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+              >
+                <Briefcase className="w-6 h-6" />
+                <span className="text-lg font-semibold">Become a Provider</span>
+                <span className="text-sm text-purple-100">Earn money</span>
+              </Button>
             </motion.div>
           </div>
         </section>
@@ -516,17 +546,26 @@ export default function ServicesPage() {
                   Book Services
                 </Link>
               </Button>
-              <Button className="border-2 border-white text-white hover:bg-white/10 px-8 py-3 font-semibold cursor-pointer" variant="outline" asChild>
-                <Link href="/services/register">
-                  <Briefcase className="w-5 h-5 mr-2" />
-                  Become a Provider
-                </Link>
+              <Button 
+                onClick={handleProviderClick}
+                className="border-2 border-white text-white hover:bg-white/10 px-8 py-3 font-semibold cursor-pointer" 
+                variant="outline"
+              >
+                <Briefcase className="w-5 h-5 mr-2" />
+                Become a Provider
               </Button>
             </div>
           </div>
         </section>
       </main>
       <Footer />
+      
+      {/* Service Registration Dialog */}
+      <ServiceRegistrationForm
+        open={showServiceDialog}
+        onOpenChange={setShowServiceDialog}
+        onSubmit={handleServiceSubmit}
+      />
     </>
   );
 }

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Users, Building2, Wrench, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import ServiceRegistrationForm from "@/components/services/ServiceRegistrationForm";
 
 const useCases = [
   {
@@ -63,7 +65,33 @@ const useCases = [
 ];
 
 export default function UseCasesSection() {
+  const router = useRouter();
   const [activeCard, setActiveCard] = useState<string>("user");
+  const [showServiceDialog, setShowServiceDialog] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check authentication
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    setIsLoggedIn(!!token);
+  }, []);
+
+  const handleProviderClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      setShowServiceDialog(true);
+    } else {
+      router.push("/login?redirect=/");
+    }
+  };
+
+  const handleServiceSubmit = (data: any) => {
+    console.log("Service registration data:", data);
+    // TODO: Submit to API
+    alert("Registration submitted! We'll review your application and get back to you soon.");
+    setShowServiceDialog(false);
+  };
 
   return (
     <section className="py-20 bg-white">
@@ -102,7 +130,7 @@ export default function UseCasesSection() {
                 <div
                   className={`h-full rounded-2xl p-8 transition-all duration-300 cursor-pointer border-2 ${
                     isActive
-                      ? `border-transparent bg-gradient-to-br ${useCase.color} text-white shadow-2xl transform scale-105`
+                      ? `border-transparent bg-linear-to-br ${useCase.color} text-white shadow-2xl transform scale-105`
                       : `${useCase.lightBg} border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl`
                   }`}
                 >
@@ -111,7 +139,7 @@ export default function UseCasesSection() {
                     animate={{ scale: isActive ? 1.1 : 1 }}
                     transition={{ duration: 0.3 }}
                     className={`inline-block p-4 rounded-xl mb-6 ${
-                      isActive ? "bg-white/20" : `bg-gradient-to-br ${useCase.color} text-white`
+                      isActive ? "bg-white/20" : `bg-linear-to-br ${useCase.color} text-white`
                     }`}
                   >
                     <IconComponent className={`w-8 h-8 ${isActive ? "text-white" : useCase.textColor}`} />
@@ -141,7 +169,7 @@ export default function UseCasesSection() {
                           transition={{ delay: idx * 0.05 }}
                           className="flex items-start gap-3"
                         >
-                          <div className="w-1.5 h-1.5 rounded-full bg-white/60 mt-2 flex-shrink-0" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-white/60 mt-2 shrink-0" />
                           <span className="text-white/90">{benefit}</span>
                         </motion.li>
                       ))}
@@ -149,22 +177,43 @@ export default function UseCasesSection() {
                   </motion.div>
 
                   {/* CTA Button */}
-                  <Link
-                    href={useCase.link}
-                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                      isActive
-                        ? "bg-white text-gray-900 hover:bg-gray-100"
-                        : `bg-gradient-to-r ${useCase.color} text-white hover:shadow-lg`
-                    }`}
-                  >
-                    {useCase.cta}
-                    <ArrowRight className="w-5 h-5" />
-                  </Link>
+                  {useCase.id === "provider" ? (
+                    <button
+                      onClick={handleProviderClick}
+                      className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+                        isActive
+                          ? "bg-white text-gray-900 hover:bg-gray-100"
+                          : `bg-linear-to-r ${useCase.color} text-white hover:shadow-lg`
+                      }`}
+                    >
+                      {useCase.cta}
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
+                  ) : (
+                    <Link
+                      href={useCase.link}
+                      className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+                        isActive
+                          ? "bg-white text-gray-900 hover:bg-gray-100"
+                          : `bg-linear-to-r ${useCase.color} text-white hover:shadow-lg`
+                      }`}
+                    >
+                      {useCase.cta}
+                      <ArrowRight className="w-5 h-5" />
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             );
           })}
         </div>
+
+        {/* Service Registration Dialog */}
+        <ServiceRegistrationForm
+          open={showServiceDialog}
+          onOpenChange={setShowServiceDialog}
+          onSubmit={handleServiceSubmit}
+        />
       </div>
     </section>
   );
