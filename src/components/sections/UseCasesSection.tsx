@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Users, Building2, Wrench, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import ServiceRegistrationForm from "@/components/services/ServiceRegistrationForm";
+import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 const useCases = [
   {
@@ -66,9 +68,11 @@ const useCases = [
 
 export default function UseCasesSection() {
   const router = useRouter();
+  const { toast } = useToast();
   const [activeCard, setActiveCard] = useState<string>("user");
   const [showServiceDialog, setShowServiceDialog] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check authentication
   useEffect(() => {
@@ -86,11 +90,56 @@ export default function UseCasesSection() {
     }
   };
 
-  const handleServiceSubmit = (data: any) => {
-    console.log("Service registration data:", data);
-    // TODO: Submit to API
-    alert("Registration submitted! We'll review your application and get back to you soon.");
-    setShowServiceDialog(false);
+  const handleServiceSubmit = async (data: any) => {
+    setIsSubmitting(true);
+    
+    try {
+      const payload = {
+        category: data.category,
+        subcategories: data.subcategories || [],
+        serviceAreas: data.serviceAreas || [],
+        bio: data.bio || "",
+        instantBookingEnabled: data.instantBooking || false,
+        instantBookingPrice: data.instantPrice ? parseFloat(data.instantPrice) : undefined,
+      };
+
+      const response = await api.post("/users/become-service", payload);
+
+      if (response.data?.success) {
+        // Update tokens if provided
+        if (response.data.data?.accessToken) {
+          localStorage.setItem("accessToken", response.data.data.accessToken);
+        }
+        if (response.data.data?.refreshToken) {
+          localStorage.setItem("refreshToken", response.data.data.refreshToken);
+        }
+
+        toast({
+          title: "Success! 🎉",
+          description: "Your registration has been submitted! We'll review your application and get back to you soon.",
+          variant: "default",
+        });
+
+        setShowServiceDialog(false);
+        
+        // Redirect to service dashboard after a short delay
+        setTimeout(() => {
+          router.push("/service/dashboard");
+        }, 2000);
+      } else {
+        throw new Error(response.data?.message || "Registration failed");
+      }
+    } catch (error: any) {
+      console.error("Service registration error:", error);
+      
+      toast({
+        title: "Registration Failed",
+        description: error.response?.data?.message || error.message || "Failed to submit registration. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

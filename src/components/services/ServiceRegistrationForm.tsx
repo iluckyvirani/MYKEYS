@@ -21,9 +21,10 @@ interface ServiceRegistrationFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (data: any) => void;
+  isSubmitting?: boolean;
 }
 
-export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit }: ServiceRegistrationFormProps) {
+export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, isSubmitting = false }: ServiceRegistrationFormProps) {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -132,12 +133,12 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl min-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-3xl font-bold text-gray-900">
+          <DialogTitle className="text-3xl font-bold text-gray-900 text-center">
             Become a Service Professional
           </DialogTitle>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-center">
             Join our platform and reach thousands of customers looking for your services
           </p>
         </DialogHeader>
@@ -408,7 +409,7 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit }
             <Button
               onClick={() => setStep((prev) => (prev > 1 ? (prev - 1) as 1 | 2 | 3 | 4 : prev))}
               variant="outline"
-              disabled={step === 1}
+              disabled={step === 1 || isSubmitting}
               className="flex-1"
             >
               Previous
@@ -422,10 +423,19 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit }
                   setStep((prev) => (prev < 4 ? (prev + 1) as 1 | 2 | 3 | 4 : prev));
                 }
               }}
-              disabled={!canProceed()}
+              disabled={!canProceed() || isSubmitting}
               className="flex-1 bg-green-600 hover:bg-green-700 cursor-pointer text-white"
             >
-              {step === 4 ? "Complete Registration" : "Next"}
+              {isSubmitting ? (
+                <>
+                  <span className="inline-block animate-spin mr-2">⏳</span>
+                  Submitting...
+                </>
+              ) : step === 4 ? (
+                "Complete Registration"
+              ) : (
+                "Next"
+              )}
             </Button>
           </div>
         </div>
