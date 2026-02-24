@@ -229,7 +229,14 @@ model User {
   payments        Payment[]
   adCampaigns     AdCampaign[]
   reports         Report[]
-  favorites Favorite[]
+  favorites       Favorite[]
+  documents       Document[]     @relation("UserDocuments")
+  
+  // Service Relations
+  serviceProvider  ServiceProvider?
+  serviceBookings  ServiceBooking[]  @relation("ServiceClient")
+  serviceRequests  ServiceRequest[]  @relation("ServiceRequester")
+  serviceReviews   ServiceReview[]   @relation("ServiceReviewer")
 
   // Authentication
   resetToken       String?
@@ -664,11 +671,6 @@ model OwnerPackage {
   updatedAt DateTime @updatedAt
 
   // Indexes
-  @@index([ownerId])
-  @@index([packageId])
-  @@index([status])
-  @@index([endDate])
-}
   @@index([ownerId])
   @@index([packageId])
   @@index([status])
