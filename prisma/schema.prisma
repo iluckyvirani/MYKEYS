@@ -173,6 +173,26 @@ enum DocumentStatus {
   EXPIRED
 }
 
+enum PermissionCategory {
+  USERS
+  PROPERTIES
+  BOOKINGS
+  PAYMENTS
+  DOCUMENTS
+  INQUIRIES
+  PACKAGES
+  MARKETING
+  SERVICES
+  SETTINGS
+  ANALYTICS
+  ADMIN
+}
+
+enum TeamMemberRole {
+  ADMIN
+  SUBADMIN
+}
+
 model UserRoleAssignment {
   id     String @id @default(cuid())
 
@@ -237,6 +257,9 @@ model User {
   serviceBookings  ServiceBooking[]  @relation("ServiceClient")
   serviceRequests  ServiceRequest[]  @relation("ServiceRequester")
   serviceReviews   ServiceReview[]   @relation("ServiceReviewer")
+
+  // Admin/Team Relations
+  teamMember       TeamMember?
 
   // Authentication
   resetToken       String?
@@ -748,9 +771,13 @@ model AuditLog {
   entity      String // User, Property, Booking, etc.
   entityId    String
   changes     Json? // JSON diff of changes
-  performedBy String // User ID
+  performedBy String // User ID or TeamMember ID
   ipAddress   String?
   userAgent   String?
+
+  // Relations (optional - to track which team member or user performed action)
+  teamMemberId String?
+  teamMember   TeamMember? @relation(fields: [teamMemberId], references: [id], onDelete: SetNull)
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -759,6 +786,7 @@ model AuditLog {
   @@index([entity])
   @@index([entityId])
   @@index([createdAt])
+  @@index([teamMemberId])
 }
 
 model Document {
@@ -996,4 +1024,74 @@ model ServiceReview {
   @@index([userId])
   @@index([rating])
   @@index([createdAt])
+}
+
+// ==================== ADMIN & TEAM MANAGEMENT ====================
+
+model AdminPermission {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "manage_users", "manage_properties"
+  label       String   // e.g., "Manage Users"
+  description String?  // e.g., "Can add, edit, delete users"
+  category    PermissionCategory
+  
+  // Relations
+  teamMembers TeamMemberPermission[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String   // hashed password
+  role      TeamMemberRole @default(SUBADMIN)
+  status    String   @default("active") // active, inactive
+  
+  // Related User (optional - if they also have a user account)
+  userId    String?  @unique
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Relations
+  permissions TeamMemberPermission[]
+  auditLogs   AuditLog[]
+  
+  // Activity Tracking
+  joinDate    DateTime @default(now())
+  lastActive  DateTime?
+  loginCount  Int      @default(0)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([joinDate])
+}
+
+model TeamMemberPermission {
+  id          String @id @default(cuid())
+  
+  // Relations
+  teamMemberId String
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  
+  permissionId String
+  permission   AdminPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  grantedAt DateTime @default(now())
+
+  // Unique constraint - each member can have each permission only once
+  @@unique([teamMemberId, permissionId])
+  @@index([teamMemberId])
+  @@index([permissionId])
 }

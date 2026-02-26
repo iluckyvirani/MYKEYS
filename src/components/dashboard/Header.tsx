@@ -11,7 +11,7 @@ import Link from "next/link";
 import Notifications from "@/components/dashboard/UserDashboard/Notifications";
 
 interface HeaderProps {
-  role: "user" | "owner" | "service";
+  role: "user" | "owner" | "service" | "admin";
   onMenuClick: () => void;
   onRoleChange: (role: "user" | "owner" | "service") => void;
 }
@@ -126,7 +126,13 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
               variant="ghost"
               size="icon"
               className="relative cursor-pointer"
-              onClick={() => router.push(`/${role}/dashboard/notifications`)}
+              onClick={() => {
+                if (role === "admin") {
+                  router.push("/admin/dashboard/notifications");
+                } else {
+                  router.push(`/${role}/dashboard/notifications`);
+                }
+              }}
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
