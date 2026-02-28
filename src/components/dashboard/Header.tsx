@@ -44,7 +44,7 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
       const response = await api.get<MeResponse>("/auth/me");
       if (response.data) {
         setUser(response.data.data);
-        localStorage.setItem("user", JSON.stringify(response.data));
+        localStorage.setItem("user", JSON.stringify(response.data.data));
       }
     } catch (error) {
       console.error("Failed to fetch user profile:", error);
@@ -73,17 +73,12 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("user");
-    router.push("/login");
-  };
+
 
   const displayName = user
     ? `${user.firstName} ${user.lastName}`
     : "Loading...";
-  const userRole = user?.roles?.includes("OWNER") ? "Property Owner" : "Tenant";
+  const userRole = user?.roles?.includes("ADMIN") ? "Admin" : user?.roles?.includes("OWNER") ? "Property Owner" : "Tenant";
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b shadow-sm">
@@ -100,16 +95,18 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
               <Menu className="w-5 h-5" />
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              asChild
-              title="Go to home page"
-            >
-              <Link href="/">
-                <Home className="w-5 h-5" />
-              </Link>
-            </Button>
+            {!user?.roles?.includes("ADMIN") && (
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                title="Go to home page"
+              >
+                <Link href="/">
+                  <Home className="w-5 h-5" />
+                </Link>
+              </Button>
+            )}
 
             <div className="relative max-w-md w-full hidden md:block">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />

@@ -1,12 +1,14 @@
 "use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
-import { Card } from "@/components/ui/card";
+import { AdminAdFilterModal } from "@/components/dashboard/admin/ads/AdminAdFilterModal";
+import { AdminAdList } from "@/components/dashboard/admin/ads/AdminAdList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { Plus, Edit, Trash2, Search, Eye, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { useState } from "react";
+import { Search, Plus, Filter, Download, X, Zap, TrendingUp, Users, DollarSign } from "lucide-react";
 
 interface AdCampaign {
   id: string;
@@ -94,193 +96,251 @@ export default function AdsPage() {
   ]);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<any>({});
+  const [showAppliedFilters, setShowAppliedFilters] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<AdCampaign | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const filteredCampaigns = campaigns.filter((campaign) =>
-    campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    campaign.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getPlatformColor = (platform: string) => {
-    switch (platform) {
-      case "facebook":
-        return "bg-blue-100 text-blue-800";
-      case "instagram":
-        return "bg-pink-100 text-pink-800";
-      case "google":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+  const filteredCampaigns = campaigns.filter((campaign) => {
+    const matchesSearch =
+      campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign.ownerName.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = !appliedFilters.status || campaign.status === appliedFilters.status;
+    
+    const matchesPlatform = !appliedFilters.platform || campaign.platform === appliedFilters.platform;
+    
+    let matchesBudget = true;
+    if (appliedFilters.budgetRange) {
+      const ranges: { [key: string]: [number, number] } = {
+        "₹0-5K": [0, 5000],
+        "₹5K-10K": [5000, 10000],
+        "₹10K-20K": [10000, 20000],
+        "₹20K+": [20000, Infinity],
+      };
+      const [min, max] = ranges[appliedFilters.budgetRange] || [0, Infinity];
+      matchesBudget = campaign.budget >= min && campaign.budget <= max;
     }
+
+    return matchesSearch && matchesStatus && matchesPlatform && matchesBudget;
+  });
+
+  const handleApplyFilters = (filters: any) => {
+    setAppliedFilters(filters);
+    setShowAppliedFilters(Object.keys(filters).length > 0);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "paused":
-        return "bg-yellow-100 text-yellow-800";
-      case "completed":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+  const handleClearFilter = (filterKey: string) => {
+    const newFilters = { ...appliedFilters };
+    delete newFilters[filterKey];
+    setAppliedFilters(newFilters);
+    setShowAppliedFilters(Object.keys(newFilters).length > 0);
   };
 
-  const calculateROI = (spent: number, conversions: number) => {
-    if (spent === 0) return 0;
-    return ((conversions * 1000 - spent) / spent * 100).toFixed(2);
+  const handleClearAllFilters = () => {
+    setAppliedFilters({});
+    setShowAppliedFilters(false);
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this campaign?")) {
-      setCampaigns(campaigns.filter((c) => c.id !== id));
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      setCampaigns(campaigns.filter((c) => c.id !== deleteConfirm));
+      setDeleteConfirm(null);
     }
   };
 
-  const handleToggleStatus = (id: string) => {
-    setCampaigns(
-      campaigns.map((c) =>
-        c.id === id
-          ? { ...c, status: c.status === "active" ? "paused" : "active" }
-          : c
-      )
-    );
-  };
+  // Calculate stats
+  const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
+  const pausedCampaigns = campaigns.filter((c) => c.status === "paused").length;
+  const totalBudget = campaigns.reduce((sum, c) => sum + c.budget, 0);
+  const totalSpent = campaigns.reduce((sum, c) => sum + c.spent, 0);
+  const totalConversions = campaigns.reduce((sum, c) => sum + c.conversions, 0);
 
   return (
     <AdminDashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              <Zap className="w-8 h-8 text-green-600" />
-              Ads & Campaigns
-            </h1>
-            <p className="text-gray-600 mt-1">Manage advertising campaigns and featured listings</p>
+            <h1 className="text-2xl font-bold text-gray-900">Ads & Campaigns</h1>
+            <p className="text-gray-600 mt-2">
+              Manage advertising campaigns and featured listings
+            </p>
           </div>
-          <Button className="bg-green-600 hover:bg-green-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Campaign
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+            <Button className="bg-green-600 hover:bg-green-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Campaign
+            </Button>
+          </div>
         </div>
 
-        {/* Search */}
-        <Card className="p-6">
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search campaigns or owner..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{campaigns.length}</div>
+                <div className="text-sm text-gray-600">Total Campaigns</div>
+              </div>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Zap className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm">
+              <span className="text-green-600 font-medium">{activeCampaigns} active</span>
+              <span className="text-gray-500 ml-2">• {pausedCampaigns} paused</span>
             </div>
           </div>
 
-          {/* Campaigns Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Campaign Name</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Owner</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Platform</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Budget</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Performance</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCampaigns.map((campaign) => (
-                  <tr key={campaign.id} className="border-b hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-gray-900">{campaign.name}</div>
-                      <div className="text-sm text-gray-600">{campaign.propertyTitle}</div>
-                    </td>
-                    <td className="py-3 px-4 text-gray-700">{campaign.ownerName}</td>
-                    <td className="py-3 px-4">
-                      <Badge className={`capitalize ${getPlatformColor(campaign.platform)}`}>
-                        {campaign.platform}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge className={`capitalize ${getStatusColor(campaign.status)}`}>
-                        {campaign.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        <div className="font-semibold text-gray-900">₹{campaign.spent.toLocaleString()} / ₹{campaign.budget.toLocaleString()}</div>
-                        <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
-                          <div
-                            className="bg-green-600 h-2 rounded-full"
-                            style={{ width: `${(campaign.spent / campaign.budget) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        <div className="flex gap-2">
-                          <div>
-                            <p className="text-gray-600">Impressions</p>
-                            <p className="font-semibold">{campaign.impressions.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Conversions</p>
-                            <p className="font-semibold text-green-600">{campaign.conversions}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedCampaign(campaign)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleToggleStatus(campaign.id)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-600"
-                          onClick={() => handleDelete(campaign.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">₹{(totalBudget / 100000).toFixed(2)}L</div>
+                <div className="text-sm text-gray-600">Total Budget</div>
+              </div>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <DollarSign className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Allocated budget
+            </div>
           </div>
-        </Card>
 
-        {/* Campaign Details */}
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">₹{(totalSpent / 100000).toFixed(2)}L</div>
+                <div className="text-sm text-gray-600">Total Spent</div>
+              </div>
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-orange-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Funds used
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{totalConversions.toLocaleString()}</div>
+                <div className="text-sm text-gray-600">Total Conversions</div>
+              </div>
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Users className="w-5 h-5 text-purple-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Total leads generated
+            </div>
+          </div>
+        </div>
+
+        {/* Filter and Search Bar */}
+        <div className="bg-white rounded-[5px] border p-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4">
+            <div className="flex-1 w-full">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  placeholder="Search campaigns or owner..."
+                  className="pl-10 w-full rounded-[5px]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setFilterModalOpen(true)}
+              className="rounded-[5px]"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+            </Button>
+          </div>
+
+          {/* Applied Filters Display */}
+          {showAppliedFilters && Object.keys(appliedFilters).length > 0 && (
+            <div className="flex flex-wrap gap-2 items-center">
+              {appliedFilters.status && (
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  Status: {appliedFilters.status}
+                  <X
+                    className="w-3 h-3 cursor-pointer"
+                    onClick={() => handleClearFilter("status")}
+                  />
+                </Badge>
+              )}
+              {appliedFilters.platform && (
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  Platform: {appliedFilters.platform}
+                  <X
+                    className="w-3 h-3 cursor-pointer"
+                    onClick={() => handleClearFilter("platform")}
+                  />
+                </Badge>
+              )}
+              {appliedFilters.budgetRange && (
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  Budget: {appliedFilters.budgetRange}
+                  <X
+                    className="w-3 h-3 cursor-pointer"
+                    onClick={() => handleClearFilter("budgetRange")}
+                  />
+                </Badge>
+              )}
+              {Object.keys(appliedFilters).length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearAllFilters}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  Clear all
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Campaign List */}
+        <AdminAdList
+          campaigns={filteredCampaigns}
+          loading={loading}
+          empty={filteredCampaigns.length === 0}
+          onDelete={handleDelete}
+          onView={setSelectedCampaign}
+          onEdit={() => {}}
+        />
+
+        {/* Campaign Details Modal */}
         {selectedCampaign && (
-          <Card className="border-2 border-green-600 p-6">
+          <Card className="border-2 border-green-600 p-6 rounded-[5px]">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h2 className="text-2xl font-bold">{selectedCampaign.name}</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{selectedCampaign.name}</h2>
                 <p className="text-gray-600 text-sm mt-1">{selectedCampaign.propertyTitle}</p>
               </div>
               <Button
                 variant="ghost"
                 onClick={() => setSelectedCampaign(null)}
+                className="rounded-[5px]"
               >
                 ✕
               </Button>
@@ -301,7 +361,7 @@ export default function AdsPage() {
                   </div>
                   <div>
                     <p className="text-gray-600">Status</p>
-                    <Badge className={`mt-1 ${getStatusColor(selectedCampaign.status)}`}>
+                    <Badge className="mt-1 capitalize">
                       {selectedCampaign.status}
                     </Badge>
                   </div>
@@ -330,7 +390,7 @@ export default function AdsPage() {
                   </div>
                   <div className="w-full bg-gray-300 rounded-full h-3 mt-2">
                     <div
-                      className="bg-gradient-to-r from-green-600 to-emerald-500 h-3 rounded-full"
+                      className="bg-linear-to-r from-green-600 to-emerald-500 h-3 rounded-full"
                       style={{ width: `${(selectedCampaign.spent / selectedCampaign.budget) * 100}%` }}
                     />
                   </div>
@@ -364,6 +424,44 @@ export default function AdsPage() {
             </div>
           </Card>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <Card className="w-full max-w-sm rounded-[5px]">
+              <div className="p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-2">Delete Campaign</h2>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete this campaign? This action cannot be undone.
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteConfirm(null)}
+                    className="rounded-[5px]"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={confirmDelete}
+                    className="rounded-[5px]"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Filter Modal */}
+        <AdminAdFilterModal
+          isOpen={filterModalOpen}
+          onClose={() => setFilterModalOpen(false)}
+          onApply={handleApplyFilters}
+          appliedFilters={appliedFilters}
+        />
       </div>
     </AdminDashboardLayout>
   );

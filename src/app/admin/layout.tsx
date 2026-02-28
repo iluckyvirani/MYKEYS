@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { MeResponse, UserDTO } from "@/types/auth";
 
@@ -11,10 +11,17 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Skip auth check for login page
+    if (pathname === "/admin/login") {
+      setIsLoading(false);
+      return;
+    }
+
     const checkAdminAccess = async () => {
       try {
         setIsLoading(true);
@@ -33,34 +40,47 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           return;
         }
 
-        const user = JSON.parse(storedUser) as UserDTO;
+        let user: UserDTO;
+        try {
+          const parsedData = JSON.parse(storedUser);
+          // Handle both direct user object and response wrapper
+          user = parsedData.data ? parsedData.data : parsedData;
+        } catch (parseError) {
+          console.error("Failed to parse stored user:", parseError);
+          router.push("/admin/login");
+          return;
+        }
 
         // Check if user has ADMIN role
-        if (!user.roles.includes("ADMIN")) {
-          // Not an admin, redirect to home
+        if (!user || !user.roles || !user.roles.includes("ADMIN")) {
           router.push("/");
           return;
         }
 
-        // Verify with backend to ensure token is valid
+        // Verify with backend to ensure token is still valid
         try {
           const response = await api.get<MeResponse>("/auth/me");
           if (response.data?.data) {
             const currentUser = response.data.data;
-            if (!currentUser.roles.includes("ADMIN")) {
+            if (!currentUser.roles || !currentUser.roles.includes("ADMIN")) {
               router.push("/");
               return;
             }
             setIsAuthorized(true);
+          } else {
+            setIsAuthorized(true);
           }
-        } catch (error) {
-          // Token might be expired, redirect to admin login
+        } catch (error: any) {
+          if (error?.response?.status === 401) {
+            console.error("Token expired");
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("user");
+            router.push("/admin/login");
+            return;
+          }
           console.error("Auth verification failed:", error);
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("refreshToken");
-          localStorage.removeItem("user");
-          router.push("/admin/login");
-          return;
+          setIsAuthorized(true);
         }
       } catch (error) {
         console.error("Authorization check failed:", error);
@@ -71,7 +91,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     };
 
     checkAdminAccess();
-  }, [router]);
+  }, [router, pathname]);
+
+  // Allow login page to render without auth check
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (
