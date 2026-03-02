@@ -67,7 +67,7 @@ export default function ServicesPage() {
       const response = await api.post("/users/become-service", payload);
 
       if (response.data?.success) {
-        // Update tokens if provided
+        // Update tokens with new SERVICE role
         if (response.data.data?.accessToken) {
           localStorage.setItem("accessToken", response.data.data.accessToken);
         }
@@ -75,9 +75,14 @@ export default function ServicesPage() {
           localStorage.setItem("refreshToken", response.data.data.refreshToken);
         }
 
+        // Update user data in localStorage with new roles
+        if (response.data.data?.user) {
+          localStorage.setItem("user", JSON.stringify(response.data.data.user));
+        }
+
         toast({
           title: "Success! 🎉",
-          description: "Your registration has been submitted! We'll review your application and get back to you soon.",
+          description: "You are now a service professional! You can start offering services.",
           variant: "default",
         });
 

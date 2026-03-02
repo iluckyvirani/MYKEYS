@@ -11,11 +11,12 @@ export async function toUserDTO(user: User): Promise<UserDTO> {
     where: { userId: user.id },
   });
 
-  const roles = roleAssignments.map((ra) => ra.role as UserRole);
+  // Convert roles to strings (database returns string, ensure consistency)
+  const roles = roleAssignments.map((ra) => ra.role as string);
 
   // If no roles found, default to USER
   if (roles.length === 0) {
-    roles.push(UserRole.USER);
+    roles.push("USER");
   }
 
   return {

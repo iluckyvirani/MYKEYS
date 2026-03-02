@@ -3,7 +3,6 @@
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Plus, Download, Calendar, BarChart3, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -111,28 +110,28 @@ export default function ReportsPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-6 bg-gradient-to-br from-green-600 to-emerald-500">
+          <Card className="p-6 bg-linear-to-br from-green-600 to-emerald-500">
             <div className="text-white">
               <TrendingUp className="w-6 h-6 mb-2 opacity-80" />
               <p className="text-sm opacity-90">Total Revenue</p>
               <p className="text-2xl font-bold mt-1">₹24.5Cr</p>
             </div>
           </Card>
-          <Card className="p-6 bg-gradient-to-br from-blue-600 to-blue-500">
+          <Card className="p-6 bg-linear-to-br from-blue-600 to-blue-500">
             <div className="text-white">
               <BarChart3 className="w-6 h-6 mb-2 opacity-80" />
               <p className="text-sm opacity-90">Active Properties</p>
               <p className="text-2xl font-bold mt-1">8,643</p>
             </div>
           </Card>
-          <Card className="p-6 bg-gradient-to-br from-purple-600 to-purple-500">
+          <Card className="p-6 bg-linear-to-br from-purple-600 to-purple-500">
             <div className="text-white">
               <Calendar className="w-6 h-6 mb-2 opacity-80" />
               <p className="text-sm opacity-90">Total Bookings</p>
               <p className="text-2xl font-bold mt-1">12,450</p>
             </div>
           </Card>
-          <Card className="p-6 bg-gradient-to-br from-orange-600 to-red-500">
+          <Card className="p-6 bg-linear-to-br from-orange-600 to-red-500">
             <div className="text-white">
               <TrendingUp className="w-6 h-6 mb-2 opacity-80" />
               <p className="text-sm opacity-90">Platform Growth</p>

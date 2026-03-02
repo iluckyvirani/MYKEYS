@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Home, User, LogIn, LogOut, Menu, X, ChevronDown, LayoutDashboard, User as UserIcon, Building2, HelpCircle, Key, CheckCircle } from "lucide-react";
+import { Home, User, LogIn, LogOut, Menu, X, ChevronDown, LayoutDashboard, User as UserIcon, Building2, HelpCircle, Key, CheckCircle, Wrench } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
 import { UserDTO } from "@/types/auth";
@@ -17,6 +17,8 @@ export default function Navbar() {
   const [showDashboardDropdown, setShowDashboardDropdown] = useState(false);
   const [showBecomeOwnerModal, setShowBecomeOwnerModal] = useState(false);
   const [becomingOwner, setBecomingOwner] = useState(false);
+  const [showBecomeServiceModal, setShowBecomeServiceModal] = useState(false);
+  const [becomingService, setBecomingService] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -39,7 +41,7 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrolled]);
 
-  // Check authentication
+  // Check authentication (re-run when pathname changes to pick up role updates)
   useEffect(() => {
     const checkAuth = () => {
       const token = localStorage.getItem("accessToken");
@@ -48,6 +50,7 @@ export default function Navbar() {
       if (token && userStr) {
         try {
           const userData = JSON.parse(userStr) as UserDTO;
+          console.log("Navbar: User roles loaded:", userData.roles); // Debug log
           setIsLoggedIn(true);
           setUser(userData);
         } catch (error) {
@@ -60,7 +63,7 @@ export default function Navbar() {
     };
 
     checkAuth();
-  }, []);
+  }, [pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
@@ -108,7 +111,29 @@ export default function Navbar() {
     }
   };
 
-  const hasOwnerRole = user?.roles?.includes("OWNER");
+  const handleBecomeService = async () => {
+    // Redirect to service registration form on services page
+    router.push("/services?register=true");
+    setShowBecomeServiceModal(false);
+  };
+
+  // Robust role checking with safety checks
+  const hasOwnerRole = user && user.roles && Array.isArray(user.roles) 
+    ? user.roles.some(role => role === "OWNER" || role === "OWNER")
+    : false;
+  const hasServiceRole = user && user.roles && Array.isArray(user.roles)
+    ? user.roles.some(role => role === "SERVICE" || role === "SERVICE") 
+    : false;
+  
+  // Debug logs
+  console.log("Navbar: User =", user ? "Loaded" : "null");
+  console.log("Navbar: Roles =", user?.roles);
+  console.log("Navbar: hasOwnerRole =", hasOwnerRole, "hasServiceRole =", hasServiceRole);
+  
+  // Check if user is on a dashboard page
+  const isOnDashboard = pathname?.startsWith("/user/dashboard") || 
+                        pathname?.startsWith("/owner/dashboard") || 
+                        pathname?.startsWith("/service/dashboard");
 
   const navItems = [
     { href: "/", label: "Home", icon: Home },
@@ -257,6 +282,35 @@ export default function Navbar() {
                               </div>
                             </button>
                           )}
+
+                          {/* Service Dashboard */}
+                          {hasServiceRole ? (
+                            <Link
+                              href="/service/dashboard"
+                              className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer`}
+                              onClick={() => setShowDashboardDropdown(false)}
+                            >
+                              <Wrench className="w-4 h-4" />
+                              <div>
+                                <p className="font-medium">Service Dashboard</p>
+                                <p className="text-xs text-gray-500">Manage Services</p>
+                              </div>
+                            </Link>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setShowBecomeServiceModal(true);
+                                setShowDashboardDropdown(false);
+                              }}
+                              className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-purple-50 transition-colors cursor-pointer text-purple-600`}
+                            >
+                              <Wrench className="w-4 h-4" />
+                              <div>
+                                <p className="font-medium">Become Service Provider</p>
+                                <p className="text-xs">Offer your services</p>
+                              </div>
+                            </button>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -360,6 +414,49 @@ export default function Navbar() {
                   {errorMessage}
                 </div>
               )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Become Service Provider Modal */}
+      <AnimatePresence>
+        {showBecomeServiceModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBecomeServiceModal(false)}
+              className="fixed inset-0 bg-black/50 z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 max-w-sm w-full mx-4"
+            >
+              <h3 className="text-xl font-bold mb-2">Become a Service Provider</h3>
+              <p className="text-gray-600 mb-6">
+                Start earning by offering your professional services. Register and connect with customers looking for your expertise!
+              </p>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowBecomeServiceModal(false)}
+                  variant="outline"
+                  className="flex-1 rounded-[5px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBecomeService}
+                  disabled={becomingService}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-[5px]"
+                >
+                  {becomingService ? "Processing..." : "Register Now"}
+                </Button>
+              </div>
             </motion.div>
           </>
         )}
@@ -483,6 +580,32 @@ export default function Navbar() {
                               <div className="flex items-center gap-3">
                                 <Building2 className="w-4 h-4" />
                                 Become Owner
+                              </div>
+                            </button>
+                          )}
+
+                          {hasServiceRole ? (
+                            <Link
+                              href="/service/dashboard"
+                              className="block py-3 px-4 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors mb-2"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Wrench className="w-4 h-4" />
+                                Service Dashboard
+                              </div>
+                            </Link>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setShowBecomeServiceModal(true);
+                                setMobileMenuOpen(false);
+                              }}
+                              className="w-full text-left py-3 px-4 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors mb-2"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Wrench className="w-4 h-4" />
+                                Become Service Provider
                               </div>
                             </button>
                           )}

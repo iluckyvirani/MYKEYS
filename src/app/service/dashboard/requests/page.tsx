@@ -3,143 +3,195 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useState, useEffect } from "react";
-import { Clock, MapPin, User, DollarSign, CheckCircle, XCircle } from "lucide-react";
+import { Clock, MapPin, User, DollarSign, CheckCircle, XCircle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
-interface ServiceRequest {
+interface ServiceBooking {
   id: string;
-  clientName: string;
-  serviceType: string;
-  location: string;
-  requestDate: string;
-  description: string;
-  budget: number;
-  status: "pending" | "accepted" | "rejected";
-  urgency: "low" | "medium" | "high";
+  client?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+  };
+  service?: string;
+  serviceListing?: {
+    id: string;
+    name: string;
+  };
+  category?: string;
+  subcategory?: any;
+  serviceArea?: string;
+  location?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  description?: string;
+  totalAmount?: number;
+  status: "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+  bookingType?: "instant" | "scheduled";
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function ServiceRequestsPage() {
-  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const { toast } = useToast();
+  const [bookings, setBookings] = useState<ServiceBooking[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRequests = async () => {
+    const fetchBookings = async () => {
       try {
-        const res = await api.get("/service/requests?limit=50&sortOrder=desc");
-        const data = res.data?.data?.items;
+        const res = await api.get("/service/bookings?limit=50");
+        const data = res.data?.data;
+        console.log("Service bookings response:", data);
         if (data) {
-          setRequests(data);
+          // Handle both direct array and paginated response
+          const items = Array.isArray(data) ? data : (data.items || []);
+          setBookings(items);
         }
-      } catch (err) {
-        console.error("Failed to fetch requests:", err);
+      } catch (err: any) {
+        console.error("Failed to fetch bookings:", err);
+        console.error("Error details:", err.response?.data);
       } finally {
         setLoading(false);
       }
     };
-    fetchRequests();
+    fetchBookings();
   }, []);
 
   const handleRespond = async (id: string, action: "accept" | "reject") => {
     try {
-      await api.patch(`/service/requests/${id}/respond`, { action });
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === id ? { ...r, status: action === "accept" ? "accepted" : "rejected" } : r
+      const status = action === "accept" ? "confirmed" : "cancelled";
+      await api.patch(`/service/bookings/${id}`, { status });
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === id ? { ...b, status } : b
         )
       );
-    } catch (err) {
-      console.error(`Failed to ${action} request:`, err);
+      toast({
+        title: "Success",
+        description: `Booking ${action === "accept" ? "accepted" : "declined"} successfully`,
+        variant: "default",
+      });
+    } catch (err: any) {
+      console.error(`Failed to ${action} booking:`, err);
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || `Failed to ${action} booking`,
+        variant: "destructive",
+      });
     }
   };
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "high":
-        return "bg-red-100 text-red-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      case "low":
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "confirmed":
         return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "in-progress":
+        return "bg-blue-100 text-blue-800";
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
-  const filterRequests = (status: string) => {
-    return requests.filter((r) => r.status === status);
+  const filterBookings = (status: string) => {
+    return bookings.filter((b) => b.status === status);
   };
 
-  const RequestCard = ({ request }: { request: ServiceRequest }) => (
+  const BookingCard = ({ booking }: { booking: ServiceBooking }) => {
+    const clientName = booking.client 
+      ? `${booking.client.firstName} ${booking.client.lastName}` 
+      : "Unknown Client";
+    const serviceName = booking.serviceListing?.name || booking.service || "Service Booking";
+    const displayDate = booking.scheduledDate || booking.createdAt || new Date().toISOString();
+    const location = booking.location || booking.serviceArea || "Not specified";
+    
+    return (
     <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="font-semibold text-gray-900">{request.serviceType}</h3>
+          <h3 className="font-semibold text-gray-900">{serviceName}</h3>
           <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
             <User className="w-4 h-4" />
-            {request.clientName}
+            {clientName}
           </p>
+          {booking.client?.phone && (
+            <p className="text-xs text-gray-500 mt-1">📞 {booking.client.phone}</p>
+          )}
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getUrgencyColor(request.urgency)}`}>
-          {request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1)}
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
+          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
         </span>
       </div>
 
-      <p className="text-sm text-gray-600 mb-3">{request.description}</p>
+      <p className="text-sm text-gray-600 mb-3">{booking.description || "No description provided"}</p>
 
-      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+      <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
         <span className="flex items-center gap-1">
           <MapPin className="w-4 h-4" />
-          {request.location}
+          {location}
         </span>
         <span className="flex items-center gap-1">
-          <Clock className="w-4 h-4" />
-          {new Date(request.requestDate).toLocaleDateString()}
+          <Calendar className="w-4 h-4" />
+          {new Date(displayDate).toLocaleDateString()}
         </span>
+        {booking.scheduledTime && (
+          <span className="flex items-center gap-1">
+            <Clock className="w-4 h-4" />
+            {booking.scheduledTime}
+          </span>
+        )}
+        {booking.category && (
+          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+            {booking.category}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t">
-        <p className="font-semibold text-gray-900 flex items-center gap-1">
-          <DollarSign className="w-4 h-4" />
-          Budget: ₹{request.budget}
-        </p>
+        {booking.totalAmount ? (
+          <p className="font-semibold text-gray-900 flex items-center gap-1">
+            <DollarSign className="w-4 h-4" />
+            ₹{booking.totalAmount}
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">Amount not specified</p>
+        )}
         
-        {request.status === "pending" && (
+        {booking.status === "pending" && (
           <div className="flex gap-2">
-            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleRespond(request.id, "accept")}>
+            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleRespond(booking.id, "accept")}>
               <CheckCircle className="w-4 h-4 mr-1" />
               Accept
             </Button>
-            <Button size="sm" variant="outline" onClick={() => handleRespond(request.id, "reject")}>
+            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleRespond(booking.id, "reject")}>
               <XCircle className="w-4 h-4 mr-1" />
               Decline
             </Button>
           </div>
         )}
-        
-        {request.status === "accepted" && (
-          <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            Accepted
-          </span>
-        )}
-        
-        {request.status === "rejected" && (
-          <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            Declined
-          </span>
-        )}
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <DashboardLayout defaultRole="service">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Service Requests</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Service Bookings</h1>
         <p className="text-gray-600 mt-2">
-          Review and respond to new service requests from clients.
+          Review and manage service bookings from clients.
         </p>
       </div>
 
@@ -148,55 +200,55 @@ export default function ServiceRequestsPage() {
         <Tabs defaultValue="pending" className="w-full">
           <TabsList className="w-full justify-start border-b rounded-none p-0">
             <TabsTrigger value="pending" className="rounded-none">
-              Pending ({filterRequests("pending").length})
+              Pending ({filterBookings("pending").length})
             </TabsTrigger>
-            <TabsTrigger value="accepted" className="rounded-none">
-              Accepted ({filterRequests("accepted").length})
+            <TabsTrigger value="confirmed" className="rounded-none">
+              Confirmed ({filterBookings("confirmed").length})
             </TabsTrigger>
-            <TabsTrigger value="rejected" className="rounded-none">
-              Declined ({filterRequests("rejected").length})
+            <TabsTrigger value="cancelled" className="rounded-none">
+              Cancelled ({filterBookings("cancelled").length})
             </TabsTrigger>
           </TabsList>
 
           <div className="p-5">
             {loading ? (
               <div className="text-center py-12">
-                <p className="text-gray-500">Loading requests...</p>
+                <p className="text-gray-500">Loading bookings...</p>
               </div>
             ) : (
             <>
             <TabsContent value="pending" className="space-y-4">
-              {filterRequests("pending").length > 0 ? (
-                filterRequests("pending").map((request) => (
-                  <RequestCard key={request.id} request={request} />
+              {filterBookings("pending").length > 0 ? (
+                filterBookings("pending").map((booking) => (
+                  <BookingCard key={booking.id} booking={booking} />
                 ))
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">No pending requests</p>
+                  <p className="text-gray-600">No pending bookings</p>
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="accepted" className="space-y-4">
-              {filterRequests("accepted").length > 0 ? (
-                filterRequests("accepted").map((request) => (
-                  <RequestCard key={request.id} request={request} />
+            <TabsContent value="confirmed" className="space-y-4">
+              {filterBookings("confirmed").length > 0 ? (
+                filterBookings("confirmed").map((booking) => (
+                  <BookingCard key={booking.id} booking={booking} />
                 ))
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">No accepted requests</p>
+                  <p className="text-gray-600">No confirmed bookings</p>
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="rejected" className="space-y-4">
-              {filterRequests("rejected").length > 0 ? (
-                filterRequests("rejected").map((request) => (
-                  <RequestCard key={request.id} request={request} />
+            <TabsContent value="cancelled" className="space-y-4">
+              {filterBookings("cancelled").length > 0 ? (
+                filterBookings("cancelled").map((booking) => (
+                  <BookingCard key={booking.id} booking={booking} />
                 ))
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">No declined requests</p>
+                  <p className="text-gray-600">No cancelled bookings</p>
                 </div>
               )}
             </TabsContent>
