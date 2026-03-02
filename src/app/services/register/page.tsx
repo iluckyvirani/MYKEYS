@@ -11,6 +11,7 @@ import { SERVICE_CATEGORIES, ServiceCategory } from "@/types/service";
 export default function ServiceRegisterPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(true);
 
   const handleRegistrationSubmit = async (data: any) => {
     console.log("Registration data:", data);
@@ -107,7 +108,11 @@ export default function ServiceRegisterPage() {
     <>
       <Navbar />
       <main className="min-h-screen">
-        <ServiceRegistrationForm onSubmit={handleRegistrationSubmit} />
+        <ServiceRegistrationForm 
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSubmit={handleRegistrationSubmit} 
+        />
         {isSubmitting && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
