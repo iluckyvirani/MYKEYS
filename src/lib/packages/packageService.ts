@@ -1,5 +1,5 @@
 import {prisma} from '../prisma';
-import { PackageInput, PACKAGE_CONFIGS } from '@/types/package';
+import { PackageInput, PACKAGE_CONFIGS, PackageTier } from '@/types/package';
 
 export const packageService = {
   // Package Management
@@ -44,7 +44,7 @@ export const packageService = {
     });
   },
 
-  async getByTier(tier: string) {
+  async getByTier(tier: PackageTier) {
     return prisma.package.findFirst({
       where: { tier, isActive: true },
     });

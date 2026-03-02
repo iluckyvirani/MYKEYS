@@ -1,11 +1,14 @@
 "use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
-import { Card } from "@/components/ui/card";
+import { AdminDocumentFilterModal } from "@/components/dashboard/admin/documents/AdminDocumentFilterModal";
+import { AdminDocumentList } from "@/components/dashboard/admin/documents/AdminDocumentList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { Search, Eye, CheckCircle, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useCallback } from "react";
+import { Search, Plus, Filter, Download, X, FileCheck, Clock, CheckCircle, XCircle } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface Document {
   id: string;
@@ -17,152 +20,311 @@ interface Document {
 }
 
 export default function DocumentsPage() {
-  const [documents, setDocuments] = useState<Document[]>([
-    {
-      id: "1",
-      documentType: "Aadhar Card",
-      submittedBy: "Rajesh Kumar",
-      userType: "Owner",
-      submittedDate: "2025-02-15",
-      status: "pending",
-    },
-    {
-      id: "2",
-      documentType: "PAN Card",
-      submittedBy: "Priya Singh",
-      userType: "User",
-      submittedDate: "2025-02-14",
-      status: "approved",
-    },
-    {
-      id: "3",
-      documentType: "Property Registration Certificate",
-      submittedBy: "Suresh Sharma",
-      userType: "Owner",
-      submittedDate: "2025-02-13",
-      status: "pending",
-    },
-  ]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<any>({});
+  const [showAppliedFilters, setShowAppliedFilters] = useState(false);
 
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch =
-      doc.documentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.submittedBy.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || doc.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const fetchDocuments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "50");
+      if (searchTerm) params.append("search", searchTerm);
+      if (appliedFilters.status) {
+        const statusMap: { [key: string]: string } = {
+          pending: "PENDING",
+          approved: "VERIFIED",
+          rejected: "REJECTED",
+        };
+        params.append("status", statusMap[appliedFilters.status] || appliedFilters.status);
+      }
+      if (appliedFilters.documentType) params.append("documentType", appliedFilters.documentType);
+      if (appliedFilters.userType) params.append("userType", appliedFilters.userType);
 
-  const handleApprove = (id: string) => {
-    setDocuments(documents.map((doc) =>
-      doc.id === id ? { ...doc, status: "approved" as const } : doc
-    ));
+      const response = await api.get(`/admin/documents?${params.toString()}`);
+      if (response.data?.success && response.data?.data) {
+        const apiDocs = (response.data.data.items || response.data.data).map((doc: any) => {
+          // Map API status to component status
+          let status: "pending" | "approved" | "rejected" = "pending";
+          if (doc.status === "VERIFIED") status = "approved";
+          else if (doc.status === "REJECTED") status = "rejected";
+
+          // Format document type for display
+          const docTypeMap: { [key: string]: string } = {
+            PAN_CARD: "PAN Card",
+            AADHAR_CARD: "Aadhar Card",
+            DRIVING_LICENSE: "Driving License",
+            PASSPORT: "Passport",
+            VOTER_ID: "Voter ID",
+            PROPERTY_LICENSE: "Property License",
+            BUSINESS_LICENSE: "Business License",
+            GST_CERTIFICATE: "GST Certificate",
+            TAX_IDENTIFICATION: "Tax Identification",
+            RENTAL_AGREEMENT_TEMPLATE: "Rental Agreement",
+            // Service documents
+            SERVICE_CERTIFICATE: "Service Certificate",
+            SERVICE_LICENSE: "Service/Trade License",
+            SERVICE_SKILL_CERTIFICATE: "Skill Certificate",
+            SERVICE_EXPERIENCE_LETTER: "Experience Letter",
+            SERVICE_TRAINING_CERTIFICATE: "Training Certificate",
+          };
+
+          // Map user type for display
+          const userTypeMap: { [key: string]: string } = {
+            USER: "User",
+            OWNER: "Owner",
+            SERVICE: "Service Provider",
+          };
+
+          return {
+            id: doc.id,
+            documentType: docTypeMap[doc.documentType] || doc.documentType,
+            submittedBy: doc.userName || "Unknown",
+            userType: userTypeMap[doc.userType] || doc.userType || "User",
+            submittedDate: doc.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+            status,
+          };
+        });
+        setDocuments(apiDocs);
+      }
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, appliedFilters]);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchDocuments();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Documents are filtered by API
+  const filteredDocuments = documents;
+
+  const handleApplyFilters = (filters: any) => {
+    setAppliedFilters(filters);
+    setShowAppliedFilters(Object.keys(filters).length > 0);
   };
 
-  const handleReject = (id: string) => {
-    setDocuments(documents.map((doc) =>
-      doc.id === id ? { ...doc, status: "rejected" as const } : doc
-    ));
+  const handleClearFilter = (filterKey: string) => {
+    const newFilters = { ...appliedFilters };
+    delete newFilters[filterKey];
+    setAppliedFilters(newFilters);
+    setShowAppliedFilters(Object.keys(newFilters).length > 0);
   };
+
+  const handleClearAllFilters = () => {
+    setAppliedFilters({});
+    setShowAppliedFilters(false);
+  };
+
+  const handleApprove = async (id: string) => {
+    try {
+      await api.patch(`/admin/documents/${id}`, { status: "VERIFIED" });
+      setDocuments(documents.map((doc) =>
+        doc.id === id ? { ...doc, status: "approved" as const } : doc
+      ));
+    } catch (err) {
+      console.error("Error approving document:", err);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await api.patch(`/admin/documents/${id}`, { status: "REJECTED" });
+      setDocuments(documents.map((doc) =>
+        doc.id === id ? { ...doc, status: "rejected" as const } : doc
+      ));
+    } catch (err) {
+      console.error("Error rejecting document:", err);
+    }
+  };
+
+  const pendingDocuments = documents.filter((d) => d.status === "pending").length;
+  const approvedDocuments = documents.filter((d) => d.status === "approved").length;
+  const rejectedDocuments = documents.filter((d) => d.status === "rejected").length;
+  const approvalRate = documents.length > 0 ? (approvedDocuments / documents.length * 100).toFixed(0) : 0;
 
   return (
     <AdminDashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Document Approval</h1>
-          <p className="text-gray-600 mt-1">Review and approve user documents</p>
+      <div className="space-y-5">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Document Approval</h1>
+            <p className="text-gray-600 mt-2">
+              Review and manage user submitted documents
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          </div>
         </div>
 
-        <Card className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search documents..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{documents.length}</div>
+                <div className="text-sm text-gray-600">Total Documents</div>
+              </div>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileCheck className="w-5 h-5 text-blue-600" />
+              </div>
             </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
+            <div className="mt-2 text-sm text-gray-500">
+              All submissions
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-gray-200">
-                <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Document Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Submitted By</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">User Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Date</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDocuments.map((doc) => (
-                  <tr key={doc.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm font-medium text-gray-900">{doc.documentType}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{doc.submittedBy}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{doc.userType}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{doc.submittedDate}</td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
-                          doc.status === "approved"
-                            ? "bg-green-100 text-green-800"
-                            : doc.status === "rejected"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {doc.status === "approved" && <CheckCircle className="w-3 h-3" />}
-                        {doc.status === "rejected" && <XCircle className="w-3 h-3" />}
-                        {doc.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {doc.status === "pending" ? (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleApprove(doc.id)}
-                            className="text-green-600"
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleReject(doc.id)}
-                            className="text-red-600"
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{pendingDocuments}</div>
+                <div className="text-sm text-gray-600">Pending</div>
+              </div>
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="w-5 h-5 text-yellow-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Awaiting review
+            </div>
           </div>
-        </Card>
+
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{approvedDocuments}</div>
+                <div className="text-sm text-gray-600">Approved</div>
+              </div>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Verified documents
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{approvalRate}%</div>
+                <div className="text-sm text-gray-600">Approval Rate</div>
+              </div>
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-purple-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Success ratio
+            </div>
+          </div>
+        </div>
+
+        {/* Filter and Search Bar */}
+        <div className="bg-white rounded-[5px] border p-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4">
+            <div className="flex-1 w-full">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  placeholder="Search documents by type or submitter..."
+                  className="pl-10 w-full rounded-[5px]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setFilterModalOpen(true)}
+              className="rounded-[5px]"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+            </Button>
+          </div>
+
+          {/* Applied Filters Display */}
+          {showAppliedFilters && Object.keys(appliedFilters).length > 0 && (
+            <div className="flex flex-wrap gap-2 items-center">
+              {appliedFilters.status && (
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  Status: {appliedFilters.status}
+                  <X
+                    className="w-3 h-3 cursor-pointer"
+                    onClick={() => handleClearFilter("status")}
+                  />
+                </Badge>
+              )}
+              {appliedFilters.documentType && (
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  Type: {appliedFilters.documentType}
+                  <X
+                    className="w-3 h-3 cursor-pointer"
+                    onClick={() => handleClearFilter("documentType")}
+                  />
+                </Badge>
+              )}
+              {appliedFilters.userType && (
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  User: {appliedFilters.userType}
+                  <X
+                    className="w-3 h-3 cursor-pointer"
+                    onClick={() => handleClearFilter("userType")}
+                  />
+                </Badge>
+              )}
+              {Object.keys(appliedFilters).length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearAllFilters}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  Clear all
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Document List */}
+        <AdminDocumentList
+          documents={filteredDocuments}
+          loading={loading}
+          empty={filteredDocuments.length === 0}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+
+        {/* Filter Modal */}
+        <AdminDocumentFilterModal
+          isOpen={filterModalOpen}
+          onClose={() => setFilterModalOpen(false)}
+          onApply={handleApplyFilters}
+          appliedFilters={appliedFilters}
+        />
       </div>
     </AdminDashboardLayout>
   );

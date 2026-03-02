@@ -8,7 +8,13 @@ export type DocumentType =
   | "BUSINESS_LICENSE"
   | "GST_CERTIFICATE"
   | "TAX_IDENTIFICATION"
-  | "RENTAL_AGREEMENT_TEMPLATE";
+  | "RENTAL_AGREEMENT_TEMPLATE"
+  // Service provider documents
+  | "SERVICE_CERTIFICATE"
+  | "SERVICE_LICENSE"
+  | "SERVICE_SKILL_CERTIFICATE"
+  | "SERVICE_EXPERIENCE_LETTER"
+  | "SERVICE_TRAINING_CERTIFICATE";
 
 export type DocumentStatus = 
   | "PENDING"
@@ -51,6 +57,12 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   GST_CERTIFICATE: "GST Certificate",
   TAX_IDENTIFICATION: "Tax ID",
   RENTAL_AGREEMENT_TEMPLATE: "Rental Agreement",
+  // Service provider documents
+  SERVICE_CERTIFICATE: "Service Certificate",
+  SERVICE_LICENSE: "Service/Trade License",
+  SERVICE_SKILL_CERTIFICATE: "Skill Certificate",
+  SERVICE_EXPERIENCE_LETTER: "Experience Letter",
+  SERVICE_TRAINING_CERTIFICATE: "Training Certificate",
 };
 
 export const USER_REQUIRED_DOCUMENTS: DocumentType[] = [
@@ -73,4 +85,16 @@ export const OWNER_OPTIONAL_DOCUMENTS: DocumentType[] = [
   "BUSINESS_LICENSE",
   "GST_CERTIFICATE",
   "RENTAL_AGREEMENT_TEMPLATE",
+];
+
+export const SERVICE_REQUIRED_DOCUMENTS: DocumentType[] = [
+  "SERVICE_CERTIFICATE",
+  "AADHAR_CARD",
+];
+
+export const SERVICE_OPTIONAL_DOCUMENTS: DocumentType[] = [
+  "SERVICE_LICENSE",
+  "SERVICE_SKILL_CERTIFICATE",
+  "SERVICE_EXPERIENCE_LETTER",
+  "SERVICE_TRAINING_CERTIFICATE",
 ];

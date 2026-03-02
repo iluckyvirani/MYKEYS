@@ -157,13 +157,20 @@ enum DocumentType {
   DRIVING_LICENSE
   PASSPORT
   VOTER_ID
-  
+
   // Owner Role Documents
   PROPERTY_LICENSE
   BUSINESS_LICENSE
   GST_CERTIFICATE
   TAX_IDENTIFICATION
   RENTAL_AGREEMENT_TEMPLATE
+
+  // Service Role Documents
+  SERVICE_CERTIFICATE
+  SERVICE_LICENSE
+  SERVICE_SKILL_CERTIFICATE
+  SERVICE_EXPERIENCE_LETTER
+  SERVICE_TRAINING_CERTIFICATE
 }
 
 enum DocumentStatus {
@@ -194,7 +201,7 @@ enum TeamMemberRole {
 }
 
 model UserRoleAssignment {
-  id     String @id @default(cuid())
+  id String @id @default(cuid())
 
   userId String
   role   RoleType
@@ -207,21 +214,20 @@ model UserRoleAssignment {
   @@index([userId])
 }
 
-
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  phone     String?    @unique
+  id        String               @id @default(cuid())
+  email     String               @unique
+  phone     String?              @unique
   password  String
   firstName String
   lastName  String
   avatar    String?
   roles     UserRoleAssignment[]
-  status    UserStatus @default(ACTIVE)
+  status    UserStatus           @default(ACTIVE)
 
   // Personal Information (for USER role)
   birthDate String?
-  
+
   // Address Information (for USER role)
   address String?
   city    String?
@@ -251,23 +257,23 @@ model User {
   reports         Report[]
   favorites       Favorite[]
   documents       Document[]     @relation("UserDocuments")
-  
+
   // Service Relations
-  serviceProvider  ServiceProvider?
-  serviceBookings  ServiceBooking[]  @relation("ServiceClient")
-  serviceRequests  ServiceRequest[]  @relation("ServiceRequester")
-  serviceReviews   ServiceReview[]   @relation("ServiceReviewer")
+  serviceProvider ServiceProvider?
+  serviceBookings ServiceBooking[] @relation("ServiceClient")
+  serviceRequests ServiceRequest[] @relation("ServiceRequester")
+  serviceReviews  ServiceReview[]  @relation("ServiceReviewer")
 
   // Admin/Team Relations
-  teamMember       TeamMember?
+  teamMember TeamMember?
 
   // Authentication
   resetToken       String?
   resetTokenExpiry DateTime?
 
   // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
 
   // Indexes
@@ -290,7 +296,6 @@ model Property {
   latitude  Float?
   longitude Float?
 
-
   // Property Details
   propertyType PropertyType
   listingType  ListingType
@@ -300,18 +305,15 @@ model Property {
   price           Float
   priceType       PriceType // nightly, monthly, total
   originalPrice   Float?
-  cleaningFee     Float? @default(0)
-  serviceFee      Float? @default(0)
-  securityDeposit Float? @default(0)
-
+  cleaningFee     Float?    @default(0)
+  serviceFee      Float?    @default(0)
+  securityDeposit Float?    @default(0)
 
   // Specifications
   bedrooms  Int
   bathrooms Int
   sqft      Int?
   guests    Int  @default(2)
-
-
 
   // Short Stay specific
   minStay      Int     @default(1)
@@ -329,38 +331,37 @@ model Property {
   featuredUntil DateTime?
 
   // Long Rent specific
-  availableFrom   DateTime?
-  minTerm         Int     @default(1)  // months (standard in UK)
-  maxTerm         Int?
-  billsIncluded   Boolean?
-  councilTaxBand  String?  // UK specific
-  epcRating       String?  // UK Energy Performance Certificate
+  availableFrom  DateTime?
+  minTerm        Int       @default(1) // months (standard in UK)
+  maxTerm        Int?
+  billsIncluded  Boolean?
+  councilTaxBand String? // UK specific
+  epcRating      String? // UK Energy Performance Certificate
 
   // Sale specific
   propertyPrice Float?
-  propertyTax   Float?  // UK council tax year
-  hoaFee        Float?  // Service charge in UK month
+  propertyTax   Float? // UK council tax year
+  hoaFee        Float? // Service charge in UK month
   leasehold     Boolean?
   leaseYears    Int?
   groundRent    Int?
 
-
   // Relations
-  ownerId   String
-  owner     User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  images    PropertyImage[]
-  amenities PropertyAmenity[]
-  bookings  Booking[]
-  reviews   Review[]
-  inquiries Inquiry[]
+  ownerId     String
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  images      PropertyImage[]
+  amenities   PropertyAmenity[]
+  bookings    Booking[]
+  reviews     Review[]
+  inquiries   Inquiry[]
   adCampaigns AdCampaign[]
-  favorites Favorite[]
+  favorites   Favorite[]
 
   // Analytics
-  views      Int   @default(0)
-  saves      Int   @default(0)
-  occupancy  Int   @default(0) // percentage: 0-100
-  revenue    Float @default(0) // monthly revenue for owner dashboard
+  views     Int   @default(0)
+  saves     Int   @default(0)
+  occupancy Int   @default(0) // percentage: 0-100
+  revenue   Float @default(0) // monthly revenue for owner dashboard
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -398,6 +399,18 @@ model Amenity {
   properties PropertyAmenity[]
 
   createdAt DateTime @default(now())
+}
+
+// Service Category for admin management
+model ServiceCategoryInfo {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  status      String   @default("active") // active, inactive
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model PropertyAmenity {
@@ -551,13 +564,13 @@ model Inquiry {
   phone String?
 
   // Owner Response
-  response  String? // Owner's response to the inquiry
-  
+  response String? // Owner's response to the inquiry
+
   // Relations
   propertyId String
-  property   Property @relation(fields: [propertyId], references: [id])
+  property   Property      @relation(fields: [propertyId], references: [id])
   userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
+  user       User?         @relation(fields: [userId], references: [id])
   assignedTo String? // User ID of assigned staff
   notes      InquiryNote[]
 
@@ -592,13 +605,13 @@ model Notification {
   message String
   isRead  Boolean @default(false)
   data    Json? // Additional context data
-  
+
   // Notification metadata
   priority  String  @default("normal") // low, normal, high, urgent
   category  String? // informational, action_required, warning, success
   actionUrl String? // URL to navigate when notification is clicked
   imageUrl  String? // Optional image for rich notifications
-  
+
   // Expiration
   expiresAt DateTime? // Auto-delete after this date
 
@@ -607,7 +620,7 @@ model Notification {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Timestamps
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   readAt    DateTime? // When the notification was read
 
   // Indexes
@@ -630,27 +643,27 @@ model Package {
   isActive Boolean @default(true)
 
   // Core Features
-  propertyLimit    Int @default(1)      // Number of properties can add
-  featuredLimit    Int @default(0)      // Number of featured properties
-  storageLimit     Int @default(5)      // Storage in GB
+  propertyLimit Int @default(1) // Number of properties can add
+  featuredLimit Int @default(0) // Number of featured properties
+  storageLimit  Int @default(5) // Storage in GB
 
   // Lead Features
-  dailyLeadsLimit  Int @default(2)      // Leads per day
-  totalLeadsLimit  Int @default(10)     // Total leads allowed
+  dailyLeadsLimit Int @default(2) // Leads per day
+  totalLeadsLimit Int @default(10) // Total leads allowed
 
   // Badge & Support
   hasVerifiedBadge Boolean @default(false)
-  supportType      String @default("email")
-  supportLevel     String @default("standard") // standard, priority, vip
-  
+  supportType      String  @default("email")
+  supportLevel     String  @default("standard") // standard, priority, vip
+
   // Additional Features
   features         Json // Array of feature objects
   featuresIncluded String[] @default([]) // List of feature names like "API_ACCESS", "CUSTOM_DOMAIN"
 
   // Timestamps
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  ownerPackages    OwnerPackage[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  ownerPackages OwnerPackage[]
 
   // Indexes
   @@index([tier])
@@ -677,16 +690,16 @@ model OwnerPackage {
   cancelledAt DateTime?
 
   // Usage Tracking
-  propertiesUsed   Int   @default(0)
-  featuredUsed     Int   @default(0)
-  storageUsed      Float @default(0) // in GB
-  leadsUsedToday   Int   @default(0)
-  leadsUsedTotal   Int   @default(0)
+  propertiesUsed      Int     @default(0)
+  featuredUsed        Int     @default(0)
+  storageUsed         Float   @default(0) // in GB
+  leadsUsedToday      Int     @default(0)
+  leadsUsedTotal      Int     @default(0)
   verifiedBadgeActive Boolean @default(false)
 
   // Payment
   lastPaymentId String?
-  lastPayment   Payment? @relation("LastPayment", fields: [lastPaymentId], references: [id])
+  lastPayment   Payment?  @relation("LastPayment", fields: [lastPaymentId], references: [id])
   payments      Payment[] @relation("PackagePayment")
 
   // Timestamps
@@ -790,28 +803,28 @@ model AuditLog {
 }
 
 model Document {
-  id            String           @id @default(cuid())
-  documentType  DocumentType
-  documentUrl   String           // URL to the uploaded document
-  fileName      String
-  fileSize      Int              // File size in bytes
-  mimeType      String?          // e.g., application/pdf, image/jpeg
-  status        DocumentStatus   @default(PENDING)
-  
+  id           String         @id @default(cuid())
+  documentType DocumentType
+  documentUrl  String // URL to the uploaded document
+  fileName     String
+  fileSize     Int // File size in bytes
+  mimeType     String? // e.g., application/pdf, image/jpeg
+  status       DocumentStatus @default(PENDING)
+
   // Admin Verification
-  verifiedNotes String?          // Admin notes/reason for rejection
-  verifiedBy    String?          // Admin user ID who verified
-  verifiedAt    DateTime?        // When document was verified
-  expiresAt     DateTime?        // Document expiration date
-  
+  verifiedNotes String? // Admin notes/reason for rejection
+  verifiedBy    String? // Admin user ID who verified
+  verifiedAt    DateTime? // When document was verified
+  expiresAt     DateTime? // Document expiration date
+
   // Relations
-  userId        String
-  user          User             @relation("UserDocuments", fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId String
+  user   User   @relation("UserDocuments", fields: [userId], references: [id], onDelete: Cascade)
+
   // Timestamps
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Indexes
   @@index([userId])
   @@index([documentType])
@@ -840,7 +853,7 @@ model Favorite {
 // ==================== SERVICE MODELS ====================
 
 model ServiceProvider {
-  id     String @id @default(cuid())
+  id String @id @default(cuid())
 
   // Linked user
   userId String @unique
@@ -849,24 +862,24 @@ model ServiceProvider {
   // Professional Info
   bio             String?
   category        ServiceCategory
-  subcategories   Json      // Array of subcategory objects [{id, name, category}]
-  serviceAreas    Json      // Array of service area strings
-  specializations Json?     // Array of specialization strings
-  certifications  Json?     // Array of certification strings
+  subcategories   Json // Array of subcategory objects [{id, name, category}]
+  serviceAreas    Json // Array of service area strings
+  specializations Json? // Array of specialization strings
+  certifications  Json? // Array of certification strings
 
   // Pricing
   instantBookingEnabled Boolean @default(false)
   instantBookingPrice   Float?
 
   // Verification
-  documentVerified Boolean  @default(false)
-  documentsUrl     Json?    // Array of document URLs
+  documentVerified Boolean @default(false)
+  documentsUrl     Json? // Array of document URLs
 
   // Stats (cached / denormalized for quick reads)
-  rating       Float @default(0)
-  totalReviews Int   @default(0)
-  completedBookings Int @default(0)
-  totalEarnings Float @default(0)
+  rating            Float @default(0)
+  totalReviews      Int   @default(0)
+  completedBookings Int   @default(0)
+  totalEarnings     Float @default(0)
 
   // Status
   isActive Boolean @default(true)
@@ -906,7 +919,7 @@ model ServiceListing {
 
   // Relations
   providerId String
-  provider   ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  provider   ServiceProvider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
   bookings   ServiceBooking[]
 
   // Timestamps
@@ -922,12 +935,12 @@ model ServiceBooking {
   id String @id @default(cuid())
 
   // Service details
-  service       String // service name / description
-  category      ServiceCategory
-  subcategory   String?
-  serviceArea   String?
-  bookingType   ServiceBookingType @default(SCHEDULED)
-  description   String?
+  service     String // service name / description
+  category    ServiceCategory
+  subcategory String?
+  serviceArea String?
+  bookingType ServiceBookingType @default(SCHEDULED)
+  description String?
 
   // Schedule
   scheduledDate DateTime?
@@ -937,21 +950,21 @@ model ServiceBooking {
   location String?
 
   // Status
-  status        ServiceBookingStatus  @default(PENDING)
-  paymentStatus ServicePaymentStatus  @default(PENDING)
+  status        ServiceBookingStatus @default(PENDING)
+  paymentStatus ServicePaymentStatus @default(PENDING)
 
   // Pricing
   totalAmount Float
   paidAmount  Float @default(0)
 
   // Relations
-  clientId    String
-  client      User            @relation("ServiceClient", fields: [clientId], references: [id])
-  providerId  String
-  provider    ServiceProvider @relation(fields: [providerId], references: [id])
+  clientId         String
+  client           User            @relation("ServiceClient", fields: [clientId], references: [id])
+  providerId       String
+  provider         ServiceProvider @relation(fields: [providerId], references: [id])
   serviceListingId String?
   serviceListing   ServiceListing? @relation(fields: [serviceListingId], references: [id])
-  review      ServiceReview?
+  review           ServiceReview?
 
   // Timestamps
   createdAt   DateTime  @default(now())
@@ -1000,7 +1013,7 @@ model ServiceReview {
   id String @id @default(cuid())
 
   // Review content
-  rating   Int     // 1-5
+  rating   Int // 1-5
   comment  String?
   response String? // Provider's reply
 
@@ -1008,10 +1021,10 @@ model ServiceReview {
   helpfulCount Int @default(0)
 
   // Relations
-  bookingId  String         @unique
-  booking    ServiceBooking @relation(fields: [bookingId], references: [id])
+  bookingId  String          @unique
+  booking    ServiceBooking  @relation(fields: [bookingId], references: [id])
   userId     String
-  user       User           @relation("ServiceReviewer", fields: [userId], references: [id])
+  user       User            @relation("ServiceReviewer", fields: [userId], references: [id])
   providerId String
   provider   ServiceProvider @relation(fields: [providerId], references: [id])
 
@@ -1029,12 +1042,12 @@ model ServiceReview {
 // ==================== ADMIN & TEAM MANAGEMENT ====================
 
 model AdminPermission {
-  id          String   @id @default(cuid())
-  name        String   @unique // e.g., "manage_users", "manage_properties"
-  label       String   // e.g., "Manage Users"
-  description String?  // e.g., "Can add, edit, delete users"
+  id          String             @id @default(cuid())
+  name        String             @unique // e.g., "manage_users", "manage_properties"
+  label       String // e.g., "Manage Users"
+  description String? // e.g., "Can add, edit, delete users"
   category    PermissionCategory
-  
+
   // Relations
   teamMembers TeamMemberPermission[]
 
@@ -1046,26 +1059,26 @@ model AdminPermission {
 }
 
 model TeamMember {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String   // hashed password
-  role      TeamMemberRole @default(SUBADMIN)
-  status    String   @default("active") // active, inactive
-  
+  id       String         @id @default(cuid())
+  name     String
+  email    String         @unique
+  password String // hashed password
+  role     TeamMemberRole @default(SUBADMIN)
+  status   String         @default("active") // active, inactive
+
   // Related User (optional - if they also have a user account)
-  userId    String?  @unique
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   // Relations
   permissions TeamMemberPermission[]
   auditLogs   AuditLog[]
-  
+
   // Activity Tracking
-  joinDate    DateTime @default(now())
-  lastActive  DateTime?
-  loginCount  Int      @default(0)
-  
+  joinDate   DateTime  @default(now())
+  lastActive DateTime?
+  loginCount Int       @default(0)
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1078,15 +1091,15 @@ model TeamMember {
 }
 
 model TeamMemberPermission {
-  id          String @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Relations
   teamMemberId String
   teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
-  
+
   permissionId String
   permission   AdminPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  
+
   // Timestamps
   grantedAt DateTime @default(now())
 

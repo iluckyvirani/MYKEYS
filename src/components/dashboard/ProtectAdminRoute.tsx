@@ -21,37 +21,57 @@ export default function ProtectAdminRoute({ children }: ProtectAdminRouteProps) 
 
         // Get the stored user data first
         const storedUser = localStorage.getItem("user");
-        if (!storedUser) {
+        const token = localStorage.getItem("accessToken");
+        
+        if (!storedUser || !token) {
           router.push("/admin/login");
           return;
         }
 
-        const user = JSON.parse(storedUser) as UserDTO;
+        let user: UserDTO;
+        try {
+          const parsedData = JSON.parse(storedUser);
+          // Handle both direct user object and response wrapper
+          user = parsedData.data ? parsedData.data : parsedData;
+        } catch (parseError) {
+          console.error("Failed to parse stored user:", parseError);
+          router.push("/admin/login");
+          return;
+        }
 
         // Check if user has ADMIN role
-        if (!user.roles.includes("ADMIN")) {
+        if (!user || !user.roles || !user.roles.includes("ADMIN")) {
           router.push("/");
           return;
         }
 
-        // Optional: Verify with backend
+        // Verify with backend to ensure token is still valid
         try {
           const response = await api.get<MeResponse>("/auth/me");
           if (response.data?.data) {
             const currentUser = response.data.data;
-            if (!currentUser.roles.includes("ADMIN")) {
+            if (!currentUser.roles || !currentUser.roles.includes("ADMIN")) {
               router.push("/");
               return;
             }
+            setIsAuthorized(true);
+          } else {
+            setIsAuthorized(true);
           }
-        } catch (error) {
-          // If auth verification fails, redirect to login
+        } catch (error: any) {
+          // If token is expired or invalid
+          if (error?.response?.status === 401) {
+            console.error("Token expired or invalid");
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("user");
+            router.push("/admin/login");
+            return;
+          }
+          // For other errors, still allow access if locally authorized
           console.error("Auth verification failed:", error);
-          router.push("/admin/login");
-          return;
+          setIsAuthorized(true);
         }
-
-        setIsAuthorized(true);
       } catch (error) {
         console.error("Authorization check failed:", error);
         router.push("/admin/login");

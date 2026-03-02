@@ -4,9 +4,9 @@ import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { Plus, Edit, Trash2, Search, Eye, Users, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { Plus, Search, Eye, Trash2, Users, Lock, Download, Shield, TrendingUp } from "lucide-react";
 
 interface TeamMember {
   id: string;
@@ -101,6 +101,7 @@ export default function TeamManagementPage() {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 
   const filteredMembers = teamMembers.filter(
     (member) =>
@@ -122,6 +123,25 @@ export default function TeamManagementPage() {
     );
   };
 
+  const handlePermissionsChange = (memberId: string, permissionId: string) => {
+    setTeamMembers(
+      teamMembers.map((m) => {
+        if (m.id === memberId) {
+          const newPermissions = m.permissions.includes(permissionId)
+            ? m.permissions.filter((p) => p !== permissionId)
+            : [...m.permissions, permissionId];
+          
+          const updatedMember = { ...m, permissions: newPermissions };
+          if (selectedMember?.id === memberId) {
+            setSelectedMember(updatedMember);
+          }
+          return updatedMember;
+        }
+        return m;
+      })
+    );
+  };
+
   const permissionsByCategory = allPermissions.reduce(
     (acc, perm) => {
       if (!acc[perm.category]) acc[perm.category] = [];
@@ -131,29 +151,98 @@ export default function TeamManagementPage() {
     {} as Record<string, typeof allPermissions>
   );
 
+  // Calculate stats
+  const activeMembers = teamMembers.filter((m) => m.status === "active").length;
+  const subAdmins = teamMembers.filter((m) => m.role === "SUBADMIN").length;
+  const totalAdmins = teamMembers.filter((m) => m.role === "ADMIN").length;
+
   return (
     <AdminDashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              <Users className="w-8 h-8 text-green-600" />
-              Team Management
-            </h1>
-            <p className="text-gray-600 mt-1">Manage admin team members and assign permissions</p>
+            <h1 className="text-2xl font-bold text-gray-900">Team Management</h1>
+            <p className="text-gray-600 mt-2">Manage admin team members and assign permissions</p>
           </div>
-          <div className="flex gap-2">
-            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => setShowAddForm(true)}>
+          <div className="flex items-center gap-3">
+            <Button variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowAddForm(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Member
             </Button>
           </div>
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{teamMembers.length}</div>
+                <div className="text-sm text-gray-600">Total Members</div>
+              </div>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm">
+              <span className="text-green-600 font-medium">{activeMembers} active</span>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-green-600">{activeMembers}</div>
+                <div className="text-sm text-gray-600">Active Members</div>
+              </div>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Currently active
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-purple-600">{subAdmins}</div>
+                <div className="text-sm text-gray-600">SubAdmins</div>
+              </div>
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Shield className="w-5 h-5 text-purple-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              SubAdmin role
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-orange-600">{totalAdmins}</div>
+                <div className="text-sm text-gray-600">Admins</div>
+              </div>
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Lock className="w-5 h-5 text-orange-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Admin role
+            </div>
+          </div>
+        </div>
+
         {/* Add Member Form */}
         {showAddForm && (
-          <Card className="border-2 border-green-600 p-6">
+          <Card className="border-2 border-green-600 p-6 rounded-[5px]">
             <h2 className="text-2xl font-bold mb-4">Add New Team Member</h2>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
@@ -179,7 +268,7 @@ export default function TeamManagementPage() {
             </div>
             <div className="mt-4 flex gap-2">
               <Button
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
                 onClick={() => {
                   setShowAddForm(false);
                   setNewMemberEmail("");
@@ -189,7 +278,7 @@ export default function TeamManagementPage() {
               </Button>
               <Button
                 variant="outline"
-                className="flex-1"
+                className="flex-1 rounded-[5px]"
                 onClick={() => setShowAddForm(false)}
               >
                 Cancel
@@ -198,189 +287,162 @@ export default function TeamManagementPage() {
           </Card>
         )}
 
-        {/* Team Members List */}
-        <Card className="p-6">
+        {/* Team Members Table */}
+        <Card className="p-6 rounded-[5px]">
           <div className="flex gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search team members..."
+                placeholder="Search team members by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 rounded-[5px]"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredMembers.map((member) => (
-              <Card key={member.id} className="border-2 hover:border-green-500 transition-all p-6">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900">{member.name}</h3>
-                    <p className="text-sm text-gray-600">{member.email}</p>
-                  </div>
-                  {member.status === "active" ? (
-                    <Badge className="bg-green-100 text-green-800">Active</Badge>
-                  ) : (
-                    <Badge className="bg-red-100 text-red-800">Inactive</Badge>
-                  )}
-                </div>
-
-                {/* Role */}
-                <div className="mb-4 pb-4 border-b">
-                  <Badge className="bg-purple-100 text-purple-800 capitalize">
-                    {member.role}
-                  </Badge>
-                </div>
-
-                {/* Permissions */}
-                <div className="mb-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">
-                    Permissions ({member.permissions.length})
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {member.permissions.map((perm) => {
-                      const permLabel = allPermissions.find((p) => p.id === perm)?.label;
-                      return permLabel ? (
-                        <Badge key={perm} className="bg-blue-100 text-blue-800 text-xs">
-                          {permLabel}
-                        </Badge>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-
-                {/* Activity */}
-                <div className="mb-4 pb-4 border-b">
-                  <p className="text-xs text-gray-600">
-                    <span className="font-semibold">Joined:</span> {member.joinDate}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    <span className="font-semibold">Last Active:</span> {member.lastActive}
-                  </p>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 border-green-600 text-green-600 hover:bg-green-50"
-                    onClick={() => setSelectedMember(member)}
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
-                    onClick={() => handleToggleStatus(member.id)}
-                  >
-                    {member.status === "active" ? "Deactivate" : "Activate"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 border-red-600 text-red-600 hover:bg-red-50"
-                    onClick={() => handleDelete(member.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Team Member</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Permissions</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMembers.map((member) => (
+                  <tr key={member.id} className="border-b hover:bg-gray-50 transition-colors">
+                    <td className="py-4 px-4 text-sm font-medium text-gray-900">{member.name}</td>
+                    <td className="py-4 px-4 text-sm text-gray-600">{member.email}</td>
+                    <td className="py-4 px-4 text-sm">
+                      <Badge
+                        className={member.role === "ADMIN" ? "bg-orange-100 text-orange-800" : "bg-purple-100 text-purple-800"}
+                      >
+                        {member.role}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4 text-sm">
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        {member.permissions.length} permissions
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4 text-sm">
+                      <Badge className={member.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                        {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setShowPermissionsModal(true);
+                          }}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => handleToggleStatus(member.id)}
+                        >
+                          {member.status === "active" ? "Deactivate" : "Activate"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDelete(member.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
 
-        {/* Member Details & Permission Editor */}
-        {selectedMember && (
-          <Card className="border-2 border-green-600 p-6">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <Lock className="w-6 h-6" />
-                  {selectedMember.name} - Permissions
-                </h2>
-                <p className="text-gray-600 text-sm mt-1">{selectedMember.email}</p>
-              </div>
-              <Button variant="ghost" onClick={() => setSelectedMember(null)}>
-                ✕
-              </Button>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {/* Member Info */}
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-bold text-gray-700 mb-4">Member Info</h3>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-gray-600">Role</p>
-                    <Badge className="mt-1 bg-purple-100 text-purple-800 capitalize">
-                      {selectedMember.role}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Status</p>
-                    <Badge className={`mt-1 ${selectedMember.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                      {selectedMember.status}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Joined Date</p>
-                    <p className="font-semibold">{selectedMember.joinDate}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Last Active</p>
-                    <p className="font-semibold text-xs">{selectedMember.lastActive}</p>
-                  </div>
+        {/* Permissions Modal */}
+        {showPermissionsModal && selectedMember && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-4xl max-h-96 overflow-hidden flex flex-col rounded-[5px]">
+              {/* Modal Header */}
+              <div className="border-b p-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-blue-600" />
+                    {selectedMember.name} - Assign Permissions
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">{selectedMember.email}</p>
                 </div>
+                <button
+                  onClick={() => {
+                    setShowPermissionsModal(false);
+                    setSelectedMember(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Permissions List */}
-              <div className="md:col-span-2">
-                <h3 className="font-bold text-gray-700 mb-4">Current Permissions</h3>
-                <div className="space-y-4">
-                  {Object.entries(permissionsByCategory).map(([category, perms]) => (
-                    <div key={category} className="p-4 bg-gray-50 rounded-lg">
-                      <p className="font-semibold text-gray-700 mb-2">{category}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {perms.map((perm) => (
-                          <Badge
-                            key={perm.id}
-                            className={
-                              selectedMember.permissions.includes(perm.id)
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-200 text-gray-600"
-                            }
-                          >
-                            <input
-                              type="checkbox"
-                              className="mr-1"
-                              checked={selectedMember.permissions.includes(perm.id)}
-                              readOnly
-                            />
-                            {perm.label}
-                          </Badge>
-                        ))}
-                      </div>
+              {/* Modal Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {Object.entries(permissionsByCategory).map(([category, perms]) => (
+                  <div key={category} className="bg-gray-50 rounded-lg p-4 border">
+                    <h3 className="font-bold text-gray-900 mb-4 text-sm">{category}</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {perms.map((perm) => (
+                        <label key={perm.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-white transition">
+                          <input
+                            type="checkbox"
+                            checked={selectedMember.permissions.includes(perm.id)}
+                            onChange={() => handlePermissionsChange(selectedMember.id, perm.id)}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">{perm.label}</span>
+                        </label>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            </div>
 
-            <div className="mt-6 flex gap-2">
-              <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white">
-                Save Permissions
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={() => setSelectedMember(null)}>
-                Close
-              </Button>
-            </div>
-          </Card>
+              {/* Modal Footer */}
+              <div className="border-t p-6 flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  className="rounded-[5px]"
+                  onClick={() => {
+                    setShowPermissionsModal(false);
+                    setSelectedMember(null);
+                  }}
+                >
+                  Close
+                </Button>
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-[5px]"
+                  onClick={() => {
+                    setShowPermissionsModal(false);
+                    alert("Permissions updated successfully!");
+                  }}
+                >
+                  Save Permissions
+                </Button>
+              </div>
+            </Card>
+          </div>
         )}
       </div>
     </AdminDashboardLayout>

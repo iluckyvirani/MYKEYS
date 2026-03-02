@@ -23,7 +23,7 @@ interface Package {
 }
 
 interface Props {
-  onSelectPackage?: (packageId: string, duration: string) => void;
+  onSelectPackage?: (packageId: string, duration: "monthly" | "yearly") => void;
   currentPackageTier?: string;
 }
 

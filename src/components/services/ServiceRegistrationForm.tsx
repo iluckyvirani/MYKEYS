@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, FileUp, AlertCircle, Upload, X } from "lucide-react";
+import { CheckCircle, FileUp, AlertCircle, Upload, X, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES, ServiceCategory } from "@/types/service";
+import { DocumentType, DOCUMENT_TYPE_LABELS, SERVICE_REQUIRED_DOCUMENTS, SERVICE_OPTIONAL_DOCUMENTS } from "@/types/document";
+import { api } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +18,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+
+interface UploadedDocument {
+  id: string;
+  documentType: DocumentType;
+  fileName: string;
+  status: "uploading" | "uploaded" | "error";
+  errorMessage?: string;
+}
 
 interface ServiceRegistrationFormProps {
   open: boolean;
@@ -34,9 +44,21 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
     serviceAreas: [] as string[],
     instantBooking: false,
     instantPrice: "",
-    documents: [] as File[],
     bio: "",
   });
+  
+  // Document upload state
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [selectedDocType, setSelectedDocType] = useState<DocumentType>("SERVICE_CERTIFICATE");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Available service document types
+  const serviceDocumentTypes: DocumentType[] = [
+    ...SERVICE_REQUIRED_DOCUMENTS,
+    ...SERVICE_OPTIONAL_DOCUMENTS,
+  ];
 
   // Check authentication
   useEffect(() => {
@@ -82,13 +104,96 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
     }));
   };
 
-  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFormData((prev) => ({
-        ...prev,
-        documents: [...prev.documents, ...Array.from(e.target.files!)],
-      }));
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError("Please upload a JPG, PNG, WebP, or PDF file");
+      return;
     }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("File size must be less than 10MB");
+      return;
+    }
+
+    // Check if this document type is already uploaded
+    if (uploadedDocuments.some(doc => doc.documentType === selectedDocType && doc.status === "uploaded")) {
+      setUploadError(`${DOCUMENT_TYPE_LABELS[selectedDocType]} is already uploaded`);
+      return;
+    }
+
+    setUploadError("");
+    setIsUploading(true);
+
+    // Add uploading state
+    const tempId = `temp-${Date.now()}`;
+    setUploadedDocuments(prev => [...prev, {
+      id: tempId,
+      documentType: selectedDocType,
+      fileName: file.name,
+      status: "uploading",
+    }]);
+
+    try {
+      // Step 1: Convert to base64 and upload to Cloudinary
+      const base64 = await fileToBase64(file);
+      const uploadResponse = await api.post("/upload", {
+        image: base64,
+        folder: "mykeys/service-documents",
+      });
+
+      const documentUrl = uploadResponse.data.data.url;
+
+      // Step 2: Create document record
+      const response = await api.post("/documents", {
+        documentType: selectedDocType,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+        documentUrl,
+      });
+
+      // Update status to uploaded
+      setUploadedDocuments(prev => prev.map(doc => 
+        doc.id === tempId 
+          ? { ...doc, id: response.data.data?.id || tempId, status: "uploaded" as const }
+          : doc
+      ));
+
+    } catch (error: any) {
+      console.error("Document upload error:", error);
+      // Update status to error
+      setUploadedDocuments(prev => prev.map(doc => 
+        doc.id === tempId 
+          ? { ...doc, status: "error" as const, errorMessage: error.response?.data?.message || "Upload failed" }
+          : doc
+      ));
+      setUploadError(error.response?.data?.message || "Failed to upload document");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const removeDocument = (docId: string) => {
+    setUploadedDocuments(prev => prev.filter(doc => doc.id !== docId));
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -104,9 +209,11 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
       serviceAreas: [] as string[],
       instantBooking: false,
       instantPrice: "",
-      documents: [] as File[],
       bio: "",
     });
+    setUploadedDocuments([]);
+    setSelectedDocType("SERVICE_CERTIFICATE");
+    setUploadError("");
     onOpenChange(false);
   };
 
@@ -114,7 +221,7 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
     if (step === 1) return selectedCategory && selectedSubcategories.length > 0;
     if (step === 2) return formData.serviceAreas.length > 0;
     if (step === 3) return true; // Bio is optional
-    if (step === 4) return formData.documents.length > 0;
+    if (step === 4) return uploadedDocuments.filter(d => d.status === "uploaded").length > 0;
     return false;
   };
 
@@ -349,42 +456,125 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
                 <p className="text-gray-600">Upload documents for verification to build trust with customers</p>
               </div>
 
+              {/* Error Message */}
+              {uploadError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+
+              {/* Document Type Selector */}
+              <div>
+                <Label className="block text-sm font-medium text-gray-900 mb-2">
+                  Select Document Type
+                </Label>
+                <select
+                  value={selectedDocType}
+                  onChange={(e) => setSelectedDocType(e.target.value as DocumentType)}
+                  disabled={isUploading}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                >
+                  {serviceDocumentTypes.map((docType) => (
+                    <option key={docType} value={docType}>
+                      {DOCUMENT_TYPE_LABELS[docType]}
+                      {SERVICE_REQUIRED_DOCUMENTS.includes(docType) ? " *" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Upload Area */}
               <Card className="border-2 border-dashed">
                 <CardContent className="pt-6">
                   <label className="flex flex-col items-center justify-center cursor-pointer">
-                    <Upload className="w-12 h-12 text-blue-600 mb-4" />
-                    <span className="text-lg font-semibold text-gray-900 mb-1">
-                      Upload Documents
-                    </span>
-                    <span className="text-sm text-gray-600 mb-4">
-                      ID, License, Certificates, etc.
-                    </span>
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-12 h-12 text-green-600 mb-4 animate-spin" />
+                        <span className="text-lg font-semibold text-gray-900 mb-1">
+                          Uploading...
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-12 h-12 text-green-600 mb-4" />
+                        <span className="text-lg font-semibold text-gray-900 mb-1">
+                          Upload {DOCUMENT_TYPE_LABELS[selectedDocType]}
+                        </span>
+                        <span className="text-sm text-gray-600 mb-4">
+                          JPG, PNG, WebP or PDF (max 10MB)
+                        </span>
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+                          Browse Files
+                        </Badge>
+                      </>
+                    )}
                     <input
+                      ref={fileInputRef}
                       type="file"
-                      multiple
                       onChange={handleDocumentUpload}
                       className="hidden"
-                      accept=".pdf,.jpg,.jpeg,.png"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp"
+                      disabled={isUploading}
                     />
-                  <Badge className="bg-green-100 text-green-800">Browse Files</Badge>
                   </label>
                 </CardContent>
               </Card>
 
-              {formData.documents.length > 0 && (
+              {/* Required Documents Info */}
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm font-semibold text-yellow-800 mb-2">Required Documents:</p>
+                <ul className="text-sm text-yellow-700 list-disc list-inside">
+                  {SERVICE_REQUIRED_DOCUMENTS.map((docType) => (
+                    <li key={docType} className="flex items-center gap-2">
+                      {uploadedDocuments.some(d => d.documentType === docType && d.status === "uploaded") ? (
+                        <CheckCircle className="w-4 h-4 text-green-600 inline" />
+                      ) : (
+                        <span className="w-4 h-4 inline-block" />
+                      )}
+                      {DOCUMENT_TYPE_LABELS[docType]}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Uploaded Documents List */}
+              {uploadedDocuments.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="space-y-2"
                 >
                   <h4 className="font-semibold text-gray-900">Uploaded Documents</h4>
-                  {formData.documents.map((doc, idx) => (
+                  {uploadedDocuments.map((doc) => (
                     <div
-                      key={idx}
-                      className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+                      key={doc.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        doc.status === "uploaded"
+                          ? "bg-green-50 border-green-200"
+                          : doc.status === "uploading"
+                            ? "bg-blue-50 border-blue-200"
+                            : "bg-red-50 border-red-200"
+                      }`}
                     >
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="text-sm text-gray-700">{doc.name}</span>
+                      <div className="flex items-center gap-3">
+                        {doc.status === "uploaded" && <CheckCircle className="w-5 h-5 text-green-600" />}
+                        {doc.status === "uploading" && <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />}
+                        {doc.status === "error" && <AlertCircle className="w-5 h-5 text-red-600" />}
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{DOCUMENT_TYPE_LABELS[doc.documentType]}</p>
+                          <p className="text-xs text-gray-600">{doc.fileName}</p>
+                          {doc.errorMessage && <p className="text-xs text-red-600">{doc.errorMessage}</p>}
+                        </div>
+                      </div>
+                      {doc.status !== "uploading" && (
+                        <button
+                          onClick={() => removeDocument(doc.id)}
+                          className="text-gray-400 hover:text-red-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </motion.div>
@@ -395,8 +585,8 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
                 <div className="text-sm text-blue-900">
                   <p className="font-semibold mb-1">Your documents are secure</p>
                   <p>
-                    All documents are verified and stored securely. Only approved documents
-                    will be shown on your profile.
+                    All documents are verified by our admin team. You will appear in service
+                    listings after your documents are verified.
                   </p>
                 </div>
               </div>

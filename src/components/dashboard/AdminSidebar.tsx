@@ -83,7 +83,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="mt-5 flex-1 space-y-2 px-4">
+        <nav className="mt-5 flex-1 space-y-2 px-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
           {adminNavigation.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -141,7 +141,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </button>
         </div>
 
-        <nav className="mt-5 px-4 space-y-1">
+        <nav className="mt-5 px-4 space-y-1 overflow-y-auto max-h-[calc(100vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
           {adminNavigation.map((item) => {
             const isActive = pathname === item.href;
             return (
