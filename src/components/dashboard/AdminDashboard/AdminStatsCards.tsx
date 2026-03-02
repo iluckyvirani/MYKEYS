@@ -25,22 +25,37 @@ export default function AdminStatsCards() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        // In a real app, this would be an actual API endpoint
-        // For now, we'll use dummy data
-        setStats({
-          totalUsers: 1250,
-          totalOwners: 320,
-          totalServiceProviders: 85,
-          totalProperties: 450,
-          totalBookings: 2340,
-          activeBookings: 156,
-          totalInquiries: 580,
-          totalRevenue: 125000,
-          pendingDocuments: 34,
-          approvedListings: 312,
-        });
+        const response = await api.get("/admin/stats");
+        if (response.data?.success && response.data?.data) {
+          const apiStats = response.data.data;
+          setStats({
+            totalUsers: apiStats.summary?.totalUsers || 0,
+            totalOwners: apiStats.summary?.totalOwners || 0,
+            totalServiceProviders: apiStats.summary?.totalServiceProviders || 0,
+            totalProperties: apiStats.summary?.totalProperties || 0,
+            totalBookings: apiStats.bookings?.total || 0,
+            activeBookings: apiStats.bookings?.pending || 0,
+            totalInquiries: apiStats.inquiries?.total || 0,
+            totalRevenue: apiStats.payments?.totalRevenue || 0,
+            pendingDocuments: 0, // Not available in stats API
+            approvedListings: apiStats.summary?.activeProperties || 0,
+          });
+        }
       } catch (err) {
         console.error("Error fetching stats:", err);
+        // Fallback to empty stats on error
+        setStats({
+          totalUsers: 0,
+          totalOwners: 0,
+          totalServiceProviders: 0,
+          totalProperties: 0,
+          totalBookings: 0,
+          activeBookings: 0,
+          totalInquiries: 0,
+          totalRevenue: 0,
+          pendingDocuments: 0,
+          approvedListings: 0,
+        });
       } finally {
         setLoading(false);
       }

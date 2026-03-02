@@ -6,8 +6,9 @@ import { AdminServiceProviderList } from "@/components/dashboard/admin/service-p
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, Filter, Download, X, Users, TrendingUp, Star, Zap } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface ServiceProvider {
   id: string;
@@ -28,74 +29,50 @@ export default function ServiceProvidersPage() {
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
 
-  useEffect(() => {
-    const mockProviders: ServiceProvider[] = [
-      {
-        id: "1",
-        firstName: "Amit",
-        lastName: "Patel",
-        email: "amit@example.com",
-        serviceType: "Plumbing",
-        bookings: 45,
-        rating: 4.8,
-        status: "active",
-      },
-      {
-        id: "2",
-        firstName: "Pradeep",
-        lastName: "Singh",
-        email: "pradeep@example.com",
-        serviceType: "Electrical",
-        bookings: 32,
-        rating: 4.6,
-        status: "active",
-      },
-      {
-        id: "3",
-        firstName: "Rohan",
-        lastName: "Kumar",
-        email: "rohan@example.com",
-        serviceType: "Cleaning",
-        bookings: 28,
-        rating: 4.7,
-        status: "active",
-      },
-      {
-        id: "4",
-        firstName: "Vikram",
-        lastName: "Sharma",
-        email: "vikram@example.com",
-        serviceType: "Carpentry",
-        bookings: 22,
-        rating: 4.4,
-        status: "inactive",
-      },
-      {
-        id: "5",
-        firstName: "Sanjay",
-        lastName: "Verma",
-        email: "sanjay@example.com",
-        serviceType: "Painting",
-        bookings: 38,
-        rating: 4.9,
-        status: "active",
-      },
-    ];
-    setProviders(mockProviders);
-    setLoading(false);
-  }, []);
+  const fetchProviders = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "50");
+      if (searchTerm) params.append("search", searchTerm);
+      if (appliedFilters.status) params.append("status", appliedFilters.status.toUpperCase());
+      
+      const response = await api.get(`/admin/service-providers?${params.toString()}`);
+      if (response.data?.success && response.data?.data) {
+        const apiProviders = response.data.data.map((provider: any) => ({
+          id: provider.id,
+          firstName: provider.firstName,
+          lastName: provider.lastName,
+          email: provider.email,
+          serviceType: provider.serviceCategories?.[0] || provider.companyName || "General",
+          bookings: provider.totalBookings || 0,
+          rating: provider.avgRating || 0,
+          status: (provider.status || "ACTIVE").toLowerCase() as "active" | "inactive",
+        }));
+        setProviders(apiProviders);
+      }
+    } catch (err) {
+      console.error("Error fetching service providers:", err);
+      setProviders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, appliedFilters]);
 
-  const filteredProviders = providers.filter((provider) => {
-    const matchesSearch =
-      provider.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      provider.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      provider.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !appliedFilters.status || provider.status === appliedFilters.status;
-    const matchesServiceType =
-      !appliedFilters.serviceType || provider.serviceType === appliedFilters.serviceType;
-    const matchesRating = !appliedFilters.ratingRange || checkRatingRange(provider.rating, appliedFilters.ratingRange);
-    return matchesSearch && matchesStatus && matchesServiceType && matchesRating;
-  });
+  useEffect(() => {
+    fetchProviders();
+  }, [fetchProviders]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProviders();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Providers are already filtered by API
+  const filteredProviders = providers;
 
   const checkRatingRange = (rating: number, range: string) => {
     const ranges: { [key: string]: number } = {

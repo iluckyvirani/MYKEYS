@@ -3,11 +3,13 @@
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { AdminUserFilterModal } from "@/components/dashboard/admin/users/AdminUserFilterModal";
 import { AdminUserList } from "@/components/dashboard/admin/users/AdminUserList";
+import { AdminUserStatusModal } from "@/components/dashboard/admin/users/AdminUserStatusModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, Filter, Download, X, Users, Shield, Package, TrendingUp } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface User {
   id: string;
@@ -26,81 +28,69 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 50, total: 0 });
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("page", pagination.page.toString());
+      params.append("pageSize", pagination.pageSize.toString());
+      if (searchTerm) params.append("search", searchTerm);
+      if (appliedFilters.role) params.append("role", appliedFilters.role);
+      if (appliedFilters.status) params.append("status", appliedFilters.status.toUpperCase());
+      
+      const response = await api.get(`/admin/users?${params.toString()}`);
+      if (response.data?.success && response.data?.data) {
+        const apiUsers = response.data.data.map((user: any) => {
+          // Determine primary role from roles array
+          const roles = user.roles || [];
+          let role: "USER" | "OWNER" | "SERVICE" = "USER";
+          if (roles.includes("OWNER")) role = "OWNER";
+          else if (roles.includes("SERVICE")) role = "SERVICE";
+          
+          return {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: user.phone || "",
+            role,
+            status: (user.status || "ACTIVE").toLowerCase() as "active" | "inactive" | "suspended",
+            createdAt: user.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+            bookings: user.totalBookings || 0,
+          };
+        });
+        setUsers(apiUsers);
+        setPagination(prev => ({ ...prev, total: response.data.pagination?.total || apiUsers.length }));
+      }
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.page, pagination.pageSize, searchTerm, appliedFilters]);
 
   useEffect(() => {
-    // Mock data - in real app, fetch from API
-    const mockUsers: User[] = [
-      {
-        id: "1",
-        firstName: "Rajesh",
-        lastName: "Kumar",
-        email: "rajesh@example.com",
-        phone: "+91-9876543210",
-        role: "OWNER",
-        status: "active",
-        createdAt: "2025-01-15",
-        bookings: 12,
-      },
-      {
-        id: "2",
-        firstName: "Priya",
-        lastName: "Singh",
-        email: "priya@example.com",
-        phone: "+91-9876543211",
-        role: "USER",
-        status: "active",
-        createdAt: "2025-01-20",
-        bookings: 3,
-      },
-      {
-        id: "3",
-        firstName: "Amit",
-        lastName: "Patel",
-        email: "amit@example.com",
-        phone: "+91-9876543212",
-        role: "SERVICE",
-        status: "active",
-        createdAt: "2025-01-10",
-        bookings: 45,
-      },
-      {
-        id: "4",
-        firstName: "Neha",
-        lastName: "Sharma",
-        email: "neha@example.com",
-        phone: "+91-9876543213",
-        role: "USER",
-        status: "inactive",
-        createdAt: "2024-12-05",
-        bookings: 0,
-      },
-      {
-        id: "5",
-        firstName: "Vikram",
-        lastName: "Reddy",
-        email: "vikram@example.com",
-        phone: "+91-9876543214",
-        role: "OWNER",
-        status: "suspended",
-        createdAt: "2025-01-01",
-        bookings: 8,
-      },
-    ];
-    setUsers(mockUsers);
-    setLoading(false);
-  }, []);
+    fetchUsers();
+  }, [fetchUsers]);
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = !appliedFilters.role || user.role === appliedFilters.role;
-    const matchesStatus = !appliedFilters.status || user.status === appliedFilters.status;
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  // Use debounced search - trigger API when search term changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchUsers();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Users are already filtered by API, just use them directly
+  const filteredUsers = users;
 
   const handleApplyFilters = (filters: any) => {
     setAppliedFilters(filters);
@@ -117,6 +107,26 @@ export default function UsersPage() {
   const handleClearAllFilters = () => {
     setAppliedFilters({});
     setShowAppliedFilters(false);
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setStatusModalOpen(true);
+  };
+
+  const handleStatusUpdate = async (userId: string, status: string) => {
+    setUpdatingStatus(true);
+    try {
+      await api.patch("/admin/users", { userId, status });
+      await fetchUsers();
+      setStatusModalOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      alert("Failed to update user status");
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const activeUsers = users.filter(u => u.status === "active").length;
@@ -286,6 +296,7 @@ export default function UsersPage() {
           users={filteredUsers}
           loading={loading}
           empty={filteredUsers.length === 0}
+          onEdit={handleEditUser}
         />
 
         {/* Filter Modal */}
@@ -294,6 +305,18 @@ export default function UsersPage() {
           onClose={() => setFilterModalOpen(false)}
           onApply={handleApplyFilters}
           appliedFilters={appliedFilters}
+        />
+
+        {/* User Status Modal */}
+        <AdminUserStatusModal
+          isOpen={statusModalOpen}
+          onClose={() => {
+            setStatusModalOpen(false);
+            setSelectedUser(null);
+          }}
+          onSave={handleStatusUpdate}
+          user={selectedUser}
+          loading={updatingStatus}
         />
       </div>
     </AdminDashboardLayout>

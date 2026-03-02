@@ -3,6 +3,8 @@
 import { Card } from "@/components/ui/card";
 import { Calendar, MapPin, User } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 
 interface RecentBooking {
   id: string;
@@ -15,60 +17,39 @@ interface RecentBooking {
   nights: number;
 }
 
-const recentBookings: RecentBooking[] = [
-  {
-    id: "BK001",
-    propertyName: "Sunset Villa",
-    location: "Mumbai, MH",
-    guestName: "Arjun Mishra",
-    checkIn: "2024-02-25",
-    checkOut: "2024-02-28",
-    status: "confirmed",
-    nights: 3,
-  },
-  {
-    id: "BK002",
-    propertyName: "Beach House",
-    location: "Goa, GA",
-    guestName: "Divya Sharma",
-    checkIn: "2024-03-01",
-    checkOut: "2024-03-05",
-    status: "pending",
-    nights: 4,
-  },
-  {
-    id: "BK003",
-    propertyName: "Mountain Retreat",
-    location: "Himalayan Hills, HP",
-    guestName: "Rohit Kumar",
-    checkIn: "2024-02-15",
-    checkOut: "2024-02-22",
-    status: "completed",
-    nights: 7,
-  },
-  {
-    id: "BK004",
-    propertyName: "Lake View Cottage",
-    location: "Udaipur, RJ",
-    guestName: "Neha Patel",
-    checkIn: "2024-02-10",
-    checkOut: "2024-02-12",
-    status: "cancelled",
-    nights: 2,
-  },
-  {
-    id: "BK005",
-    propertyName: "City Apartment",
-    location: "Delhi, DL",
-    guestName: "Vikram Singh",
-    checkIn: "2024-02-28",
-    checkOut: "2024-03-02",
-    status: "confirmed",
-    nights: 2,
-  },
-];
-
 export default function AdminRecentBookings() {
+  const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentBookings = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/admin/bookings?pageSize=5&sortBy=createdAt&sortOrder=desc");
+        if (response.data?.success && response.data?.data) {
+          const bookings = response.data.data.map((booking: any) => ({
+            id: booking.id,
+            propertyName: booking.propertyTitle || "Unknown Property",
+            location: "India", // Location not available in booking API response
+            guestName: booking.guestName || "Unknown Guest",
+            checkIn: booking.checkInDate || new Date().toISOString().split("T")[0],
+            checkOut: booking.checkOutDate || new Date().toISOString().split("T")[0],
+            status: (booking.status || "PENDING").toLowerCase() as "confirmed" | "pending" | "completed" | "cancelled",
+            nights: booking.nights || 1,
+          }));
+          setRecentBookings(bookings);
+        }
+      } catch (err) {
+        console.error("Error fetching recent bookings:", err);
+        setRecentBookings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentBookings();
+  }, []);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":
@@ -93,7 +74,25 @@ export default function AdminRecentBookings() {
         </Link>
       </div>
       <div className="space-y-3">
-        {recentBookings.map((booking) => (
+        {loading ? (
+          [...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 border border-gray-100 rounded-[5px] animate-pulse">
+              <div className="flex items-center gap-4 flex-1">
+                <div className="w-10 h-10 rounded-lg bg-gray-200"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-48"></div>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="h-6 bg-gray-200 rounded w-24"></div>
+              </div>
+            </div>
+          ))
+        ) : recentBookings.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">No bookings found</div>
+        ) : (
+        recentBookings.map((booking) => (
           <div key={booking.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-[5px] hover:bg-gray-50 transition-colors">
             <div className="flex items-center gap-4 flex-1">
               <div className="w-10 h-10 rounded-lg bg-linear-to-r from-purple-500 to-pink-500 flex items-center justify-center">
@@ -125,7 +124,8 @@ export default function AdminRecentBookings() {
               </span>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </Card>
   );

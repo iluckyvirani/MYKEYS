@@ -2,10 +2,12 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import DocumentUploadModal from "@/components/dashboard/UserDashboard/DocumentUploadModal";
 import { useState, useEffect } from "react";
-import { Award, Star } from "lucide-react";
+import { Award, Star, FileText, CheckCircle, Clock, XCircle, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { DOCUMENT_TYPE_LABELS, DocumentType } from "@/types/document";
 
 interface ProfileData {
   name: string;
@@ -20,6 +22,14 @@ interface ProfileData {
   completedBookings: number;
   rating: number;
   reviews: number;
+}
+
+interface UserDocument {
+  id: string;
+  documentType: DocumentType;
+  fileName: string;
+  status: "PENDING" | "VERIFIED" | "REJECTED";
+  createdAt: string;
 }
 
 export default function ServiceProfilePage() {
@@ -42,6 +52,11 @@ export default function ServiceProfilePage() {
   });
 
   const [tempProfile, setTempProfile] = useState(profile);
+  
+  // Documents state
+  const [documents, setDocuments] = useState<UserDocument[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -59,7 +74,26 @@ export default function ServiceProfilePage() {
       }
     };
     fetchProfile();
+    fetchDocuments();
   }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      setDocumentsLoading(true);
+      const res = await api.get("/documents");
+      if (res.data?.data) {
+        setDocuments(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch documents:", err);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  const handleDocumentUploadSuccess = () => {
+    fetchDocuments();
+  };
 
   const handleEdit = () => {
     setTempProfile(profile);
@@ -338,15 +372,80 @@ export default function ServiceProfilePage() {
 
           {/* Documents Card */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Documents
-            </h2>
-            <Button variant="outline" className="w-full">
-              Upload Documents
-            </Button>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Documents
+              </h2>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setUploadModalOpen(true)}
+                className="text-green-600 border-green-600 hover:bg-green-50"
+              >
+                <Upload className="w-4 h-4 mr-1" />
+                Upload
+              </Button>
+            </div>
+            
+            {documentsLoading ? (
+              <p className="text-sm text-gray-500">Loading documents...</p>
+            ) : documents.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-500 mb-2">No documents uploaded yet</p>
+                <p className="text-xs text-gray-400">Upload your service certificates to get verified</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {DOCUMENT_TYPE_LABELS[doc.documentType] || doc.documentType}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{doc.fileName}</p>
+                    </div>
+                    <div className="ml-2 shrink-0">
+                      {doc.status === "VERIFIED" && (
+                        <span className="flex items-center text-green-600" title="Verified">
+                          <CheckCircle className="w-4 h-4" />
+                        </span>
+                      )}
+                      {doc.status === "PENDING" && (
+                        <span className="flex items-center text-yellow-600" title="Pending Review">
+                          <Clock className="w-4 h-4" />
+                        </span>
+                      )}
+                      {doc.status === "REJECTED" && (
+                        <span className="flex items-center text-red-600" title="Rejected">
+                          <XCircle className="w-4 h-4" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {documents.length > 0 && (
+              <div className="mt-3 pt-3 border-t">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>{documents.filter(d => d.status === "VERIFIED").length} verified</span>
+                  <span>{documents.filter(d => d.status === "PENDING").length} pending</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+      
+      {/* Document Upload Modal */}
+      <DocumentUploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onSuccess={handleDocumentUploadSuccess}
+        userRole="SERVICE"
+      />
     </DashboardLayout>
   );
 }

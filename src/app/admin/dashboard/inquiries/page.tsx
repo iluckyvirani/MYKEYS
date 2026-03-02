@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Inbox,
   User,
@@ -22,6 +22,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface Inquiry {
   id: string;
@@ -57,83 +58,9 @@ const statusColors = {
 };
 
 export default function AdminInquiriesPage() {
-  const [inquiries, setInquiries] = useState<Inquiry[]>([
-    {
-      id: "1",
-      inquiryId: "INQ001",
-      propertyTitle: "2BHK Apartment",
-      propertyOwnerId: "own1",
-      ownerName: "Rajesh Kumar",
-      ownerEmail: "rajesh@example.com",
-      guestName: "Priya Singh",
-      guestEmail: "priya@example.com",
-      guestPhone: "+91-9876543210",
-      message: "Is parking included in the rent? And what are the amenities available in the building?",
-      createdAt: "2026-02-24",
-      status: "new",
-      priority: "high",
-      type: "long_term",
-      budget: 25000,
-      duration: "12 months",
-    },
-    {
-      id: "2",
-      inquiryId: "INQ002",
-      propertyTitle: "Villa with Garden",
-      propertyOwnerId: "own2",
-      ownerName: "Amit Patel",
-      ownerEmail: "amit@example.com",
-      guestName: "Arjun Nair",
-      guestEmail: "arjun@example.com",
-      guestPhone: "+91-9876543211",
-      message: "Can pets be allowed? What is your pet policy?",
-      createdAt: "2026-02-22",
-      status: "read",
-      priority: "medium",
-      type: "short_term",
-      budget: 5000,
-      duration: "7 nights",
-    },
-    {
-      id: "3",
-      inquiryId: "INQ003",
-      propertyTitle: "Studio Flat",
-      propertyOwnerId: "own3",
-      ownerName: "Priya Sharma",
-      ownerEmail: "priya@example.com",
-      guestName: "Vikram Reddy",
-      guestEmail: "vikram@example.com",
-      guestPhone: "+91-9876543212",
-      message: "Looking to purchase this property. Can you provide more details?",
-      createdAt: "2026-02-20",
-      status: "replied",
-      priority: "high",
-      type: "purchase",
-      budget: 5000000,
-    },
-    {
-      id: "4",
-      inquiryId: "INQ004",
-      propertyTitle: "Luxury Penthouse",
-      propertyOwnerId: "own1",
-      ownerName: "Rajesh Kumar",
-      ownerEmail: "rajesh@example.com",
-      guestName: "Neha Sharma",
-      guestEmail: "neha@example.com",
-      guestPhone: "+91-9876543213",
-      message: "Interested in short-term rental for business stay",
-      createdAt: "2026-02-18",
-      status: "converted",
-      priority: "low",
-      type: "short_term",
-      budget: 8000,
-      duration: "5 nights",
-    },
-  ]);
-
-  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(
-    inquiries.length > 0 ? inquiries[0] : null
-  );
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [showNotesModal, setShowNotesModal] = useState(false);
@@ -141,17 +68,79 @@ export default function AdminInquiriesPage() {
   const [isEditingResponse, setIsEditingResponse] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const filteredInquiries = inquiries.filter((inq) => {
-    if (filter !== "all" && inq.status !== filter) return false;
-    if (
-      search &&
-      !inq.guestName.toLowerCase().includes(search.toLowerCase()) &&
-      !inq.ownerName.toLowerCase().includes(search.toLowerCase()) &&
-      !inq.propertyTitle.toLowerCase().includes(search.toLowerCase())
-    )
-      return false;
-    return true;
-  });
+  const fetchInquiries = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "50");
+      if (search) params.append("search", search);
+      if (filter !== "all") {
+        const statusMap: { [key: string]: string } = {
+          new: "PENDING",
+          read: "PENDING",
+          replied: "RESPONDED",
+          closed: "CLOSED",
+          converted: "CONVERTED",
+        };
+        params.append("status", statusMap[filter] || filter.toUpperCase());
+      }
+      
+      const response = await api.get(`/admin/inquiries?${params.toString()}`);
+      if (response.data?.success && response.data?.data?.inquiries) {
+        const apiInquiries = response.data.data.inquiries.map((inquiry: any) => {
+          // Map API status to component status
+          let status: "new" | "read" | "replied" | "closed" | "converted" = "new";
+          if (inquiry.status === "PENDING") status = "new";
+          else if (inquiry.status === "RESPONDED") status = "replied";
+          else if (inquiry.status === "CLOSED") status = "closed";
+          else if (inquiry.status === "CONVERTED") status = "converted";
+          
+          return {
+            id: inquiry.id,
+            inquiryId: `INQ${inquiry.id.slice(-6).toUpperCase()}`,
+            propertyTitle: inquiry.propertyTitle || "Unknown Property",
+            propertyOwnerId: inquiry.propertyOwnerId || "",
+            ownerName: inquiry.ownerName || "Unknown Owner",
+            ownerEmail: inquiry.ownerEmail || "",
+            guestName: inquiry.userName || "Unknown Guest",
+            guestEmail: inquiry.userEmail || "",
+            guestPhone: inquiry.userPhone || "",
+            message: inquiry.message || "",
+            createdAt: inquiry.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+            status,
+            priority: "medium" as const,
+            type: inquiry.inquiryType || "general",
+            budget: inquiry.budget,
+            duration: inquiry.duration,
+          };
+        });
+        setInquiries(apiInquiries);
+        if (apiInquiries.length > 0 && !selectedInquiry) {
+          setSelectedInquiry(apiInquiries[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching inquiries:", err);
+      setInquiries([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, filter]);
+
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchInquiries();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Inquiries are already filtered by API
+  const filteredInquiries = inquiries;
 
   const newCount = inquiries.filter((inq) => inq.status === "new").length;
   const unreadCount = inquiries.filter((inq) =>

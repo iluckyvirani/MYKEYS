@@ -3,6 +3,7 @@
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import AdminPropertyFilterModal from "@/components/dashboard/AdminPropertyFilterModal";
 import AdminPropertyList from "@/components/dashboard/AdminPropertyList";
+import { AdminPropertyStatusModal } from "@/components/dashboard/AdminPropertyStatusModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,8 @@ import {
   AlertCircle,
   Loader,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { api } from "@/lib/api";
 
 interface Property {
   id: string;
@@ -49,6 +51,9 @@ export default function AdminPropertiesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({
     status: "ALL",
     type: "ALL",
@@ -64,126 +69,56 @@ export default function AdminPropertiesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Mock properties data
-  const mockProperties: Property[] = [
-    {
-      id: "1",
-      title: "2BHK Apartment in Bangalore",
-      owner: "Rajesh Kumar",
-      location: "Bangalore",
-      type: "Apartment",
-      price: 25000,
-      status: "active",
-      bookings: 12,
-      rating: 4.5,
-      reviewCount: 8,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=300&fit=crop",
-          isPrimary: true,
-        },
-      ],
-    },
-    {
-      id: "2",
-      title: "Villa with Garden in Mumbai",
-      owner: "Suresh Sharma",
-      location: "Mumbai",
-      type: "Villa",
-      price: 50000,
-      status: "active",
-      bookings: 8,
-      rating: 4.8,
-      reviewCount: 12,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop",
-          isPrimary: true,
-        },
-      ],
-    },
-    {
-      id: "3",
-      title: "Studio Flat in Delhi",
-      owner: "Rajesh Kumar",
-      location: "Delhi",
-      type: "Studio",
-      price: 15000,
-      status: "pending",
-      bookings: 0,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop",
-          isPrimary: true,
-        },
-      ],
-    },
-    {
-      id: "4",
-      title: "Luxury Penthouse in Hyderabad",
-      owner: "Amit Patel",
-      location: "Hyderabad",
-      type: "Penthouse",
-      price: 75000,
-      status: "active",
-      bookings: 15,
-      rating: 4.9,
-      reviewCount: 20,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop",
-          isPrimary: true,
-        },
-      ],
-    },
-    {
-      id: "5",
-      title: "Cottage near Pune",
-      owner: "Priya Sharma",
-      location: "Pune",
-      type: "Cottage",
-      price: 18000,
-      status: "inactive",
-      bookings: 3,
-      rating: 4.2,
-      reviewCount: 5,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1516455207990-7a41e1d2afff?w=400&h=300&fit=crop",
-          isPrimary: true,
-        },
-      ],
-    },
-    {
-      id: "6",
-      title: "Bungalow in Jaipur",
-      owner: "Vikram Singh",
-      location: "Jaipur",
-      type: "Bungalow",
-      price: 35000,
-      status: "active",
-      bookings: 10,
-      rating: 4.6,
-      reviewCount: 9,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop",
-          isPrimary: true,
-        },
-      ],
-    },
-  ];
+  const fetchProperties = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "50");
+      if (searchTerm) params.append("search", searchTerm);
+      if (appliedFilters.status !== "ALL") params.append("status", appliedFilters.status);
+      if (appliedFilters.type !== "ALL") params.append("propertyType", appliedFilters.type);
+      
+      const response = await api.get(`/admin/properties?${params.toString()}`);
+      if (response.data?.success && response.data?.data) {
+        const apiProperties = response.data.data.map((property: any) => ({
+          id: property.id,
+          title: property.title,
+          owner: property.ownerName || "Unknown Owner",
+          location: property.city || "India",
+          type: property.propertyType || "Property",
+          price: property.price || 0,
+          status: (property.status || "ACTIVE").toLowerCase() as "active" | "inactive" | "pending",
+          bookings: property.bookingsCount || 0,
+          images: property.images?.map((img: any) => ({
+            url: img.imageUrl,
+            isPrimary: img.isPrimary,
+          })) || [],
+          rating: property.avgRating || 0,
+          reviewCount: property.reviewsCount || 0,
+        }));
+        setProperties(apiProperties);
+        calculateStats(apiProperties);
+      }
+    } catch (err) {
+      console.error("Error fetching properties:", err);
+      setProperties([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, appliedFilters]);
 
   // Fetch properties
   useEffect(() => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setProperties(mockProperties);
-      calculateStats(mockProperties);
-      setLoading(false);
-    }, 800);
-  }, []);
+    fetchProperties();
+  }, [fetchProperties]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProperties();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Calculate stats
   const calculateStats = (props: Property[]) => {
@@ -204,22 +139,8 @@ export default function AdminPropertiesPage() {
     });
   };
 
-  // Filter properties
-  const filteredProperties = properties.filter((property) => {
-    const matchesSearch =
-      property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.owner.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      appliedFilters.status === "ALL" ||
-      property.status.toUpperCase() === appliedFilters.status;
-
-    const matchesType =
-      appliedFilters.type === "ALL" || property.type === appliedFilters.type;
-
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // Properties are already filtered by API
+  const filteredProperties = properties;
 
   const handleApplyFilters = (filters: { status: string; type: string }) => {
     setAppliedFilters(filters);
@@ -227,6 +148,26 @@ export default function AdminPropertiesPage() {
 
   const handleResetFilters = () => {
     setAppliedFilters({ status: "ALL", type: "ALL" });
+  };
+
+  const handleEditProperty = (property: Property) => {
+    setEditingProperty(property);
+    setStatusModalOpen(true);
+  };
+
+  const handleStatusUpdate = async (propertyId: string, status: string, notes?: string) => {
+    setUpdatingStatus(true);
+    try {
+      await api.patch("/admin/properties", { propertyId, status, notes });
+      await fetchProperties();
+      setStatusModalOpen(false);
+      setEditingProperty(null);
+    } catch (error) {
+      console.error("Error updating property status:", error);
+      alert("Failed to update property status");
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const removeFilter = (filterType: string) => {
@@ -440,7 +381,7 @@ export default function AdminPropertiesPage() {
               properties={filteredProperties}
               viewMode={viewMode}
               onView={setSelectedProperty}
-              onEdit={() => {}}
+              onEdit={handleEditProperty}
               onDelete={(id) => setDeleteConfirm(id)}
             />
           )}
@@ -489,6 +430,24 @@ export default function AdminPropertiesPage() {
         filters={appliedFilters}
         onApplyFilters={handleApplyFilters}
         onResetFilters={handleResetFilters}
+      />
+
+      {/* Property Status Modal */}
+      <AdminPropertyStatusModal
+        isOpen={statusModalOpen}
+        onClose={() => {
+          setStatusModalOpen(false);
+          setEditingProperty(null);
+        }}
+        onSave={handleStatusUpdate}
+        property={editingProperty ? {
+          id: editingProperty.id,
+          title: editingProperty.title,
+          location: editingProperty.location,
+          status: editingProperty.status.toUpperCase(),
+          ownerName: editingProperty.owner,
+        } : null}
+        loading={updatingStatus}
       />
     </AdminDashboardLayout>
   );

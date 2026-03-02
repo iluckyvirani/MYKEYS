@@ -6,8 +6,9 @@ import { AdminPaymentList } from "@/components/dashboard/admin/payments/AdminPay
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, Filter, Download, X, DollarSign, TrendingUp, Clock, CheckCircle } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface Payment {
   id: string;
@@ -28,72 +29,65 @@ export default function PaymentsPage() {
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
 
-  useEffect(() => {
-    const mockPayments: Payment[] = [
-      {
-        id: "1",
-        transactionId: "TXN20250215001",
-        paidBy: "Priya Singh",
-        amount: 125000,
-        method: "Razorpay",
-        date: "2025-02-15",
-        status: "completed",
-        type: "Booking",
-      },
-      {
-        id: "2",
-        transactionId: "TXN20250214002",
-        paidBy: "Arjun Nair",
-        amount: 250000,
-        method: "Credit Card",
-        date: "2025-02-14",
-        status: "completed",
-        type: "Booking",
-      },
-      {
-        id: "3",
-        transactionId: "TXN20250213003",
-        paidBy: "Neha Sharma",
-        amount: 45000,
-        method: "Google Pay",
-        date: "2025-02-13",
-        status: "pending",
-        type: "Service",
-      },
-      {
-        id: "4",
-        transactionId: "TXN20250212004",
-        paidBy: "Rahul Verma",
-        amount: 180000,
-        method: "UPI",
-        date: "2025-02-12",
-        status: "completed",
-        type: "Subscription",
-      },
-      {
-        id: "5",
-        transactionId: "TXN20250211005",
-        paidBy: "Anjali Gupta",
-        amount: 75000,
-        method: "Net Banking",
-        date: "2025-02-11",
-        status: "failed",
-        type: "Booking",
-      },
-    ];
-    setPayments(mockPayments);
-    setLoading(false);
-  }, []);
+  const fetchPayments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "50");
+      if (searchTerm) params.append("search", searchTerm);
+      if (appliedFilters.status) {
+        const statusMap: { [key: string]: string } = {
+          completed: "PAID",
+          pending: "PENDING",
+          failed: "FAILED",
+        };
+        params.append("status", statusMap[appliedFilters.status] || appliedFilters.status.toUpperCase());
+      }
+      if (appliedFilters.method) params.append("paymentMethod", appliedFilters.method);
+      
+      const response = await api.get(`/admin/payments?${params.toString()}`);
+      if (response.data?.success && response.data?.data?.payments) {
+        const apiPayments = response.data.data.payments.map((payment: any) => {
+          // Map API status to component status
+          let status: "completed" | "pending" | "failed" = "pending";
+          if (payment.status === "PAID") status = "completed";
+          else if (payment.status === "FAILED") status = "failed";
+          
+          return {
+            id: payment.id,
+            transactionId: payment.transactionId || "N/A",
+            paidBy: payment.userName || "Unknown User",
+            amount: payment.amount || 0,
+            method: payment.paymentMethod || "Unknown",
+            date: payment.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+            status,
+            type: "Booking",
+          };
+        });
+        setPayments(apiPayments);
+      }
+    } catch (err) {
+      console.error("Error fetching payments:", err);
+      setPayments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, appliedFilters]);
 
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch =
-      payment.transactionId.includes(searchTerm) ||
-      payment.paidBy.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !appliedFilters.status || payment.status === appliedFilters.status;
-    const matchesMethod = !appliedFilters.method || payment.method === appliedFilters.method;
-    const matchesType = !appliedFilters.type || payment.type === appliedFilters.type;
-    return matchesSearch && matchesStatus && matchesMethod && matchesType;
-  });
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchPayments();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Payments are already filtered by API
+  const filteredPayments = payments;
 
   const handleApplyFilters = (filters: any) => {
     setAppliedFilters(filters);

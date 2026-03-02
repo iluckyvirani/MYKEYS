@@ -71,28 +71,44 @@ export function AdminDocumentFilterModal({
             <label className="text-sm font-semibold text-gray-700 block mb-3">
               Document Type
             </label>
-            <div className="space-y-2">
-              {["Aadhar Card", "PAN Card", "Driving License", "Passport", "Voter ID"].map(
-                (type) => (
-                  <label key={type} className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="documentType"
-                      value={type}
-                      checked={filters.documentType === type}
-                      onChange={(e) =>
-                        setFilters({
-                          ...filters,
-                          documentType:
-                            filters.documentType === e.target.value ? "" : e.target.value,
-                        })
-                      }
-                      className="w-4 h-4 text-blue-600"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{type}</span>
-                  </label>
-                )
-              )}
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {[
+                // Common documents
+                { value: "AADHAR_CARD", label: "Aadhar Card" },
+                { value: "PAN_CARD", label: "PAN Card" },
+                { value: "DRIVING_LICENSE", label: "Driving License" },
+                { value: "PASSPORT", label: "Passport" },
+                { value: "VOTER_ID", label: "Voter ID" },
+                // Owner documents
+                { value: "PROPERTY_LICENSE", label: "Property License" },
+                { value: "BUSINESS_LICENSE", label: "Business License" },
+                { value: "GST_CERTIFICATE", label: "GST Certificate" },
+                { value: "TAX_IDENTIFICATION", label: "Tax Identification" },
+                // Service documents
+                { value: "SERVICE_CERTIFICATE", label: "Service Certificate" },
+                { value: "SERVICE_LICENSE", label: "Service/Trade License" },
+                { value: "SERVICE_SKILL_CERTIFICATE", label: "Skill Certificate" },
+                { value: "SERVICE_EXPERIENCE_LETTER", label: "Experience Letter" },
+                { value: "SERVICE_TRAINING_CERTIFICATE", label: "Training Certificate" },
+              ].map((type) => (
+                <label key={type.value} className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="documentType"
+                    value={type.value}
+                    checked={filters.documentType === type.value}
+                    onChange={(e) =>
+                      setFilters({
+                        ...filters,
+                        documentType:
+                          filters.documentType === e.target.value ? "" : e.target.value,
+                      })
+                    }
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">{type.label}</span>
+                </label>
+              ))}
             </div>
           </div>
 
@@ -102,13 +118,17 @@ export function AdminDocumentFilterModal({
               User Type
             </label>
             <div className="space-y-2">
-              {["Owner", "User", "Service Provider"].map((type) => (
-                <label key={type} className="flex items-center cursor-pointer">
+              {[
+                { value: "USER", label: "User" },
+                { value: "OWNER", label: "Owner" },
+                { value: "SERVICE", label: "Service Provider" },
+              ].map((type) => (
+                <label key={type.value} className="flex items-center cursor-pointer">
                   <input
                     type="radio"
                     name="userType"
-                    value={type}
-                    checked={filters.userType === type}
+                    value={type.value}
+                    checked={filters.userType === type.value}
                     onChange={(e) =>
                       setFilters({
                         ...filters,
@@ -118,7 +138,7 @@ export function AdminDocumentFilterModal({
                     }
                     className="w-4 h-4 text-blue-600"
                   />
-                  <span className="ml-2 text-sm text-gray-700">{type}</span>
+                  <span className="ml-2 text-sm text-gray-700">{type.label}</span>
                 </label>
               ))}
             </div>

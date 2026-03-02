@@ -4,13 +4,13 @@ import { useState, useRef } from "react";
 import { Upload, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { DocumentType, DOCUMENT_TYPE_LABELS, USER_REQUIRED_DOCUMENTS, USER_OPTIONAL_DOCUMENTS } from "@/types/document";
+import { DocumentType, DOCUMENT_TYPE_LABELS, USER_REQUIRED_DOCUMENTS, USER_OPTIONAL_DOCUMENTS, SERVICE_REQUIRED_DOCUMENTS, SERVICE_OPTIONAL_DOCUMENTS } from "@/types/document";
 
 interface DocumentUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  userRole?: "USER" | "OWNER";
+  userRole?: "USER" | "OWNER" | "SERVICE";
 }
 
 export default function DocumentUploadModal({
@@ -29,7 +29,9 @@ export default function DocumentUploadModal({
 
   const availableDocuments = userRole === "USER"
     ? [...USER_REQUIRED_DOCUMENTS, ...USER_OPTIONAL_DOCUMENTS]
-    : ["PROPERTY_LICENSE", "BUSINESS_LICENSE", "GST_CERTIFICATE", "TAX_IDENTIFICATION", "RENTAL_AGREEMENT_TEMPLATE"] as DocumentType[];
+    : userRole === "SERVICE"
+      ? [...SERVICE_REQUIRED_DOCUMENTS, ...SERVICE_OPTIONAL_DOCUMENTS]
+      : ["PROPERTY_LICENSE", "BUSINESS_LICENSE", "GST_CERTIFICATE", "TAX_IDENTIFICATION", "RENTAL_AGREEMENT_TEMPLATE"] as DocumentType[];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];

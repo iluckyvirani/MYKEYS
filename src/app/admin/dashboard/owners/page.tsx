@@ -6,8 +6,9 @@ import { AdminOwnerList } from "@/components/dashboard/admin/owners/AdminOwnerLi
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, Filter, Download, X, Building, TrendingUp, Users, Home } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface Owner {
   id: string;
@@ -29,75 +30,51 @@ export default function OwnersPage() {
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
 
-  useEffect(() => {
-    const mockOwners: Owner[] = [
-      {
-        id: "1",
-        firstName: "Rajesh",
-        lastName: "Kumar",
-        email: "rajesh@example.com",
-        phone: "+91-9876543210",
-        properties: 5,
-        revenue: 125000,
-        status: "active",
-        joinedDate: "2025-01-15",
-      },
-      {
-        id: "2",
-        firstName: "Suresh",
-        lastName: "Sharma",
-        email: "suresh@example.com",
-        phone: "+91-9876543211",
-        properties: 3,
-        revenue: 75000,
-        status: "active",
-        joinedDate: "2025-01-20",
-      },
-      {
-        id: "3",
-        firstName: "Vikram",
-        lastName: "Reddy",
-        email: "vikram@example.com",
-        phone: "+91-9876543214",
-        properties: 2,
-        revenue: 45000,
-        status: "suspended",
-        joinedDate: "2025-01-01",
-      },
-      {
-        id: "4",
-        firstName: "Anita",
-        lastName: "Patel",
-        email: "anita@example.com",
-        phone: "+91-9876543215",
-        properties: 8,
-        revenue: 200000,
-        status: "active",
-        joinedDate: "2024-12-15",
-      },
-      {
-        id: "5",
-        firstName: "Priya",
-        lastName: "Singh",
-        email: "priya@example.com",
-        phone: "+91-9876543216",
-        properties: 1,
-        revenue: 30000,
-        status: "inactive",
-        joinedDate: "2024-11-20",
-      },
-    ];
-    setOwners(mockOwners);
-    setLoading(false);
-  }, []);
+  const fetchOwners = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "50");
+      if (searchTerm) params.append("search", searchTerm);
+      if (appliedFilters.status) params.append("status", appliedFilters.status.toUpperCase());
+      
+      const response = await api.get(`/admin/owners?${params.toString()}`);
+      if (response.data?.success && response.data?.data) {
+        const apiOwners = response.data.data.map((owner: any) => ({
+          id: owner.id,
+          firstName: owner.firstName,
+          lastName: owner.lastName,
+          email: owner.email,
+          phone: owner.phone || "",
+          properties: owner.totalProperties || 0,
+          revenue: 0, // Revenue not available in owner API
+          status: (owner.status || "ACTIVE").toLowerCase() as "active" | "inactive" | "suspended",
+          joinedDate: owner.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+        }));
+        setOwners(apiOwners);
+      }
+    } catch (err) {
+      console.error("Error fetching owners:", err);
+      setOwners([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, appliedFilters]);
 
-  const filteredOwners = owners.filter((owner) => {
-    const matchesSearch =
-      owner.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      owner.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      owner.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !appliedFilters.status || owner.status === appliedFilters.status;
-    return matchesSearch && matchesStatus;
+  useEffect(() => {
+    fetchOwners();
+  }, [fetchOwners]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchOwners();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Owners are already filtered by API
+  const filteredOwners = owners;
   });
 
   const handleApplyFilters = (filters: any) => {
@@ -138,10 +115,7 @@ export default function OwnersPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button className="bg-green-600 hover:bg-green-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Owner
-            </Button>
+            {/* Owners register themselves through the signup flow */}
           </div>
         </div>
 

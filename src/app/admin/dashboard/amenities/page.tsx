@@ -2,6 +2,7 @@
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import AdminAmenityFilterModal from "@/components/dashboard/AdminAmenityFilterModal";
+import AdminAmenityModal from "@/components/dashboard/AdminAmenityModal";
 import AdminAmenityList from "@/components/dashboard/AdminAmenityList";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,8 @@ import {
   Home,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { api } from "@/lib/api";
 
 interface Amenity {
   id: string;
@@ -27,6 +29,7 @@ interface Amenity {
   icon: string;
   propertiesUsing: number;
   status: "active" | "inactive";
+  category?: string;
 }
 
 interface Stats {
@@ -37,68 +40,14 @@ interface Stats {
 }
 
 export default function AmenitiesPage() {
-  const [amenities, setAmenities] = useState<Amenity[]>([
-    {
-      id: "1",
-      name: "WiFi",
-      icon: "📶",
-      propertiesUsing: 245,
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "Swimming Pool",
-      icon: "🏊",
-      propertiesUsing: 87,
-      status: "active",
-    },
-    {
-      id: "3",
-      name: "Air Conditioning",
-      icon: "❄️",
-      propertiesUsing: 312,
-      status: "active",
-    },
-    {
-      id: "4",
-      name: "Kitchen",
-      icon: "🍳",
-      propertiesUsing: 420,
-      status: "active",
-    },
-    {
-      id: "5",
-      name: "Gym",
-      icon: "💪",
-      propertiesUsing: 156,
-      status: "active",
-    },
-    {
-      id: "6",
-      name: "Parking",
-      icon: "🚗",
-      propertiesUsing: 389,
-      status: "active",
-    },
-    {
-      id: "7",
-      name: "Garden",
-      icon: "🌳",
-      propertiesUsing: 78,
-      status: "inactive",
-    },
-    {
-      id: "8",
-      name: "Heating",
-      icon: "🔥",
-      propertiesUsing: 203,
-      status: "active",
-    },
-  ]);
-
+  const [amenities, setAmenities] = useState<Amenity[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [amenityModalOpen, setAmenityModalOpen] = useState(false);
+  const [editingAmenity, setEditingAmenity] = useState<Amenity | null>(null);
+  const [saving, setSaving] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({
     status: "ALL",
     usageLevel: "ALL",
@@ -106,6 +55,45 @@ export default function AmenitiesPage() {
   const [selectedAmenity, setSelectedAmenity] = useState<Amenity | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const fetchAmenities = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "100");
+      if (searchTerm) params.append("search", searchTerm);
+
+      const response = await api.get(`/amenities?${params.toString()}`);
+      if (response.data?.success && response.data?.data) {
+        const apiAmenities = (response.data.data.items || response.data.data).map((amenity: any) => ({
+          id: amenity.id,
+          name: amenity.name,
+          icon: amenity.icon || "✨",
+          propertiesUsing: amenity.propertyCount || 0,
+          status: "active" as const,
+          category: amenity.category,
+        }));
+        setAmenities(apiAmenities);
+      }
+    } catch (err) {
+      console.error("Error fetching amenities:", err);
+      setAmenities([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchAmenities();
+  }, [fetchAmenities]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchAmenities();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Calculate stats
   const stats: Stats = {
@@ -158,13 +146,66 @@ export default function AmenitiesPage() {
     }));
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     setDeleting(true);
-    setTimeout(() => {
+    try {
+      await api.delete(`/amenities/${id}`);
       setAmenities((prev) => prev.filter((a) => a.id !== id));
       setDeleteConfirm(null);
+    } catch (err) {
+      console.error("Error deleting amenity:", err);
+    } finally {
       setDeleting(false);
-    }, 500);
+    }
+  };
+
+  const handleOpenAddModal = () => {
+    setEditingAmenity(null);
+    setAmenityModalOpen(true);
+  };
+
+  const handleOpenEditModal = (amenity: Amenity) => {
+    setEditingAmenity(amenity);
+    setAmenityModalOpen(true);
+  };
+
+  const handleSaveAmenity = async (data: { name: string; category: string; icon: string }) => {
+    setSaving(true);
+    try {
+      if (editingAmenity) {
+        // Update existing amenity
+        const response = await api.put(`/amenities/${editingAmenity.id}`, data);
+        if (response.data?.success) {
+          setAmenities((prev) =>
+            prev.map((a) =>
+              a.id === editingAmenity.id
+                ? { ...a, name: data.name, category: data.category, icon: data.icon }
+                : a
+            )
+          );
+        }
+      } else {
+        // Create new amenity
+        const response = await api.post("/amenities", data);
+        if (response.data?.success && response.data?.data) {
+          const newAmenity: Amenity = {
+            id: response.data.data.id,
+            name: data.name,
+            icon: data.icon,
+            propertiesUsing: 0,
+            status: "active",
+            category: data.category,
+          };
+          setAmenities((prev) => [...prev, newAmenity]);
+        }
+      }
+      setAmenityModalOpen(false);
+      setEditingAmenity(null);
+    } catch (err) {
+      console.error("Error saving amenity:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -180,7 +221,10 @@ export default function AmenitiesPage() {
               Manage property amenities across the platform
             </p>
           </div>
-          <Button className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]">
+          <Button 
+            onClick={handleOpenAddModal}
+            className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
+          >
             <Plus className="w-4 h-4 mr-2" />
             Add Amenity
           </Button>
@@ -351,7 +395,7 @@ export default function AmenitiesPage() {
               amenities={filteredAmenities}
               viewMode={viewMode}
               onView={setSelectedAmenity}
-              onEdit={() => {}}
+              onEdit={handleOpenEditModal}
               onDelete={(id) => setDeleteConfirm(id)}
             />
           )}
@@ -489,6 +533,18 @@ export default function AmenitiesPage() {
         filters={appliedFilters}
         onApplyFilters={handleApplyFilters}
         onResetFilters={handleResetFilters}
+      />
+
+      {/* Add/Edit Modal */}
+      <AdminAmenityModal
+        isOpen={amenityModalOpen}
+        onClose={() => {
+          setAmenityModalOpen(false);
+          setEditingAmenity(null);
+        }}
+        onSave={handleSaveAmenity}
+        amenity={editingAmenity}
+        saving={saving}
       />
     </AdminDashboardLayout>
   );

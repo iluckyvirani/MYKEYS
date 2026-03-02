@@ -164,10 +164,7 @@ export default function ServiceListingsPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button className="bg-green-600 hover:bg-green-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Service
-            </Button>
+            {/* Service providers register themselves through the signup flow */}
           </div>
         </div>
 

@@ -72,16 +72,24 @@ export async function POST(request: NextRequest) {
 
     // Validate document type
     const validDocumentTypes = [
+      // User documents
       "PAN_CARD",
       "AADHAR_CARD",
       "DRIVING_LICENSE",
       "PASSPORT",
       "VOTER_ID",
+      // Owner documents
       "PROPERTY_LICENSE",
       "BUSINESS_LICENSE",
       "GST_CERTIFICATE",
       "TAX_IDENTIFICATION",
       "RENTAL_AGREEMENT_TEMPLATE",
+      // Service provider documents
+      "SERVICE_CERTIFICATE",
+      "SERVICE_LICENSE",
+      "SERVICE_SKILL_CERTIFICATE",
+      "SERVICE_EXPERIENCE_LETTER",
+      "SERVICE_TRAINING_CERTIFICATE",
     ];
 
     if (!validDocumentTypes.includes(documentType)) {

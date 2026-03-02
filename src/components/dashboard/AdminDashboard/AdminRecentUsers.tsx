@@ -3,6 +3,8 @@
 import { Card } from "@/components/ui/card";
 import { Users, Shield, Package, Mail, Phone } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 
 interface RecentUser {
   id: string;
@@ -13,50 +15,44 @@ interface RecentUser {
   status: "active" | "inactive" | "pending";
 }
 
-const recentUsers: RecentUser[] = [
-  {
-    id: "1",
-    name: "Rajesh Kumar",
-    email: "rajesh@example.com",
-    role: "owner",
-    joinDate: "2024-02-20",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Priya Singh",
-    email: "priya@example.com",
-    role: "user",
-    joinDate: "2024-02-18",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Vikram Services",
-    email: "vikram@services.com",
-    role: "service",
-    joinDate: "2024-02-15",
-    status: "pending",
-  },
-  {
-    id: "4",
-    name: "Anita Patel",
-    email: "anita@example.com",
-    role: "owner",
-    joinDate: "2024-02-12",
-    status: "active",
-  },
-  {
-    id: "5",
-    name: "Arjun Nair",
-    email: "arjun@example.com",
-    role: "user",
-    joinDate: "2024-02-10",
-    status: "active",
-  },
-];
-
 export default function AdminRecentUsers() {
+  const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/admin/users?pageSize=5&sortBy=createdAt&sortOrder=desc");
+        if (response.data?.success && response.data?.data) {
+          const users = response.data.data.map((user: any) => {
+            // Determine primary role from roles array
+            const roles = user.roles || [];
+            let role: "owner" | "user" | "service" = "user";
+            if (roles.includes("OWNER")) role = "owner";
+            else if (roles.includes("SERVICE")) role = "service";
+            
+            return {
+              id: user.id,
+              name: `${user.firstName} ${user.lastName}`,
+              email: user.email,
+              role,
+              joinDate: user.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+              status: (user.status || "ACTIVE").toLowerCase() as "active" | "inactive" | "pending",
+            };
+          });
+          setRecentUsers(users);
+        }
+      } catch (err) {
+        console.error("Error fetching recent users:", err);
+        setRecentUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentUsers();
+  }, []);
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "owner":
@@ -110,7 +106,26 @@ export default function AdminRecentUsers() {
         </Link>
       </div>
       <div className="space-y-3">
-        {recentUsers.map((user) => (
+        {loading ? (
+          [...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 border border-gray-100 rounded-[5px] animate-pulse">
+              <div className="flex items-center gap-4 flex-1">
+                <div className="w-10 h-10 rounded-full bg-gray-200"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-48"></div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-6 bg-gray-200 rounded w-20"></div>
+                <div className="h-6 bg-gray-200 rounded w-16"></div>
+              </div>
+            </div>
+          ))
+        ) : recentUsers.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">No users found</div>
+        ) : (
+          recentUsers.map((user) => (
           <div key={user.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-[5px] hover:bg-gray-50 transition-colors">
             <div className="flex items-center gap-4 flex-1">
               <div className="w-10 h-10 rounded-full bg-linear-to-r from-green-500 to-emerald-600 flex items-center justify-center">
@@ -136,7 +151,8 @@ export default function AdminRecentUsers() {
               <span className="text-xs text-gray-500">{new Date(user.joinDate).toLocaleDateString()}</span>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </Card>
   );

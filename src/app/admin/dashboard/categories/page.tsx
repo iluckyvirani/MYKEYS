@@ -2,6 +2,7 @@
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import AdminCategoryFilterModal from "@/components/dashboard/AdminCategoryFilterModal";
+import AdminCategoryModal from "@/components/dashboard/AdminCategoryModal";
 import AdminCategoryList from "@/components/dashboard/AdminCategoryList";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,8 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { api } from "@/lib/api";
 
 interface ServiceCategory {
   id: string;
@@ -37,60 +39,14 @@ interface Stats {
 }
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<ServiceCategory[]>([
-    {
-      id: "1",
-      name: "Plumbing",
-      description: "All plumbing services including repairs, installation, and maintenance",
-      services: 12,
-      status: "active",
-      createdDate: "2025-01-10",
-    },
-    {
-      id: "2",
-      name: "Electrical",
-      description: "Electrical repair and installation services for homes and offices",
-      services: 8,
-      status: "active",
-      createdDate: "2025-01-12",
-    },
-    {
-      id: "3",
-      name: "Cleaning",
-      description: "Professional home and office cleaning services",
-      services: 15,
-      status: "active",
-      createdDate: "2025-01-15",
-    },
-    {
-      id: "4",
-      name: "Carpentry",
-      description: "Woodwork and carpentry services for custom furniture and repairs",
-      services: 6,
-      status: "active",
-      createdDate: "2025-01-18",
-    },
-    {
-      id: "5",
-      name: "Painting",
-      description: "Interior and exterior painting services",
-      services: 9,
-      status: "inactive",
-      createdDate: "2025-01-20",
-    },
-    {
-      id: "6",
-      name: "Gardening",
-      description: "Landscaping and gardening services for outdoor spaces",
-      services: 7,
-      status: "active",
-      createdDate: "2025-01-22",
-    },
-  ]);
-
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ServiceCategory | null>(null);
+  const [saving, setSaving] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({
     status: "ALL",
   });
@@ -98,29 +54,58 @@ export default function CategoriesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "100");
+      if (searchTerm) params.append("search", searchTerm);
+      if (appliedFilters.status !== "ALL") params.append("status", appliedFilters.status);
+
+      const response = await api.get(`/admin/categories?${params.toString()}`);
+      if (response.data?.success && response.data?.data) {
+        const apiCategories = (response.data.data.items || response.data.data).map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          description: cat.description || "",
+          services: cat.serviceCount || 0,
+          status: cat.status as "active" | "inactive",
+          createdDate: cat.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+        }));
+        setCategories(apiCategories);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, appliedFilters]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchCategories();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   // Calculate stats
   const stats: Stats = {
     totalCategories: categories.length,
     activeCategories: categories.filter((c) => c.status === "active").length,
     totalServices: categories.reduce((sum, c) => sum + c.services, 0),
-    averageServicesPerCategory: Math.round(
-      categories.reduce((sum, c) => sum + c.services, 0) / categories.length
-    ),
+    averageServicesPerCategory: categories.length > 0
+      ? Math.round(categories.reduce((sum, c) => sum + c.services, 0) / categories.length)
+      : 0,
   };
 
-  // Filter categories
-  const filteredCategories = categories.filter((category) => {
-    const matchesSearch =
-      category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      category.description.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      appliedFilters.status === "ALL" ||
-      (appliedFilters.status === "ACTIVE" && category.status === "active") ||
-      (appliedFilters.status === "INACTIVE" && category.status === "inactive");
-
-    return matchesSearch && matchesStatus;
-  });
+  // Filter categories (already filtered by API, but keep for local filtering)
+  const filteredCategories = categories;
 
   const handleApplyFilters = (filters: { status: string }) => {
     setAppliedFilters(filters);
@@ -137,13 +122,49 @@ export default function CategoriesPage() {
     }));
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     setDeleting(true);
-    setTimeout(() => {
-      setCategories((prev) => prev.filter((c) => c.id !== id));
+    try {
+      await api.delete(`/admin/categories/${id}`);
+      await fetchCategories();
       setDeleteConfirm(null);
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      alert("Failed to delete category");
+    } finally {
       setDeleting(false);
-    }, 500);
+    }
+  };
+
+  const handleOpenAddModal = () => {
+    setEditingCategory(null);
+    setCategoryModalOpen(true);
+  };
+
+  const handleOpenEditModal = (category: ServiceCategory) => {
+    setEditingCategory(category);
+    setCategoryModalOpen(true);
+  };
+
+  const handleSaveCategory = async (data: { name: string; description: string; status: "active" | "inactive" }) => {
+    setSaving(true);
+    try {
+      if (editingCategory) {
+        // Update existing category
+        await api.patch(`/admin/categories/${editingCategory.id}`, data);
+      } else {
+        // Create new category
+        await api.post("/admin/categories", data);
+      }
+      await fetchCategories();
+      setCategoryModalOpen(false);
+      setEditingCategory(null);
+    } catch (err) {
+      console.error("Error saving category:", err);
+      alert("Failed to save category");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -157,7 +178,10 @@ export default function CategoriesPage() {
               Manage and organize all service categories
             </p>
           </div>
-          <Button className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]">
+          <Button 
+            onClick={handleOpenAddModal}
+            className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
+          >
             <Plus className="w-4 h-4 mr-2" />
             Add Category
           </Button>
@@ -298,7 +322,12 @@ export default function CategoriesPage() {
 
         {/* Categories Section */}
         <Card className="p-6 rounded-[5px]">
-          {filteredCategories.length === 0 && categories.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+              <p className="text-gray-600 mt-3">Loading categories...</p>
+            </div>
+          ) : filteredCategories.length === 0 && categories.length > 0 ? (
             <div className="text-center py-12">
               <Layers className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-gray-900 mb-1">
@@ -308,12 +337,22 @@ export default function CategoriesPage() {
                 Try adjusting your search or filters
               </p>
             </div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="text-center py-12">
+              <Layers className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-gray-900 mb-1">
+                No categories yet
+              </h3>
+              <p className="text-gray-600">
+                Create your first service category
+              </p>
+            </div>
           ) : (
             <AdminCategoryList
               categories={filteredCategories}
               viewMode={viewMode}
               onView={setSelectedCategory}
-              onEdit={() => {}}
+              onEdit={handleOpenEditModal}
               onDelete={(id) => setDeleteConfirm(id)}
             />
           )}
@@ -458,6 +497,18 @@ export default function CategoriesPage() {
         filters={appliedFilters}
         onApplyFilters={handleApplyFilters}
         onResetFilters={handleResetFilters}
+      />
+
+      {/* Add/Edit Modal */}
+      <AdminCategoryModal
+        isOpen={categoryModalOpen}
+        onClose={() => {
+          setCategoryModalOpen(false);
+          setEditingCategory(null);
+        }}
+        onSave={handleSaveCategory}
+        category={editingCategory}
+        saving={saving}
       />
     </AdminDashboardLayout>
   );

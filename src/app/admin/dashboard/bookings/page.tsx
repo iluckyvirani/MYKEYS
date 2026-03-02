@@ -3,11 +3,13 @@
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { AdminBookingFilterModal } from "@/components/dashboard/admin/bookings/AdminBookingFilterModal";
 import { AdminBookingList } from "@/components/dashboard/admin/bookings/AdminBookingList";
+import { AdminBookingStatusModal } from "@/components/dashboard/AdminBookingStatusModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, Filter, Download, X, Calendar, TrendingUp, Users, DollarSign } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface Booking {
   id: string;
@@ -18,6 +20,7 @@ interface Booking {
   checkOutDate: string;
   totalAmount: number;
   status: "confirmed" | "pending" | "cancelled";
+  paymentStatus?: string;
 }
 
 export default function BookingsPage() {
@@ -25,65 +28,53 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
 
+  const fetchBookings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "50");
+      if (searchTerm) params.append("searchTerm", searchTerm);
+      if (appliedFilters.status) params.append("status", appliedFilters.status.toUpperCase());
+      
+      const response = await api.get(`/admin/bookings?${params.toString()}`);
+      if (response.data?.success && response.data?.data) {
+        const apiBookings = response.data.data.map((booking: any) => ({
+          id: booking.id,
+          bookingId: booking.id.substring(0, 8).toUpperCase(),
+          propertyTitle: booking.propertyTitle || "Unknown Property",
+          guestName: booking.guestName || "Unknown Guest",
+          checkInDate: booking.checkInDate || new Date().toISOString().split("T")[0],
+          checkOutDate: booking.checkOutDate || new Date().toISOString().split("T")[0],
+          totalAmount: booking.totalAmount || 0,
+          status: (booking.status || "PENDING").toLowerCase() as "confirmed" | "pending" | "cancelled",
+        }));
+        setBookings(apiBookings);
+      }
+    } catch (err) {
+      console.error("Error fetching bookings:", err);
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, appliedFilters]);
+
   useEffect(() => {
-    const mockBookings: Booking[] = [
-      {
-        id: "1",
-        bookingId: "BK001",
-        propertyTitle: "2BHK Apartment",
-        guestName: "Priya Singh",
-        checkInDate: "2025-03-10",
-        checkOutDate: "2025-03-15",
-        totalAmount: 125000,
-        status: "confirmed",
-      },
-      {
-        id: "2",
-        bookingId: "BK002",
-        propertyTitle: "Villa with Garden",
-        guestName: "Arjun Nair",
-        checkInDate: "2025-03-12",
-        checkOutDate: "2025-03-20",
-        totalAmount: 400000,
-        status: "confirmed",
-      },
-      {
-        id: "3",
-        bookingId: "BK003",
-        propertyTitle: "Studio Flat",
-        guestName: "Neha Sharma",
-        checkInDate: "2025-03-15",
-        checkOutDate: "2025-03-18",
-        totalAmount: 45000,
-        status: "pending",
-      },
-      {
-        id: "4",
-        bookingId: "BK004",
-        propertyTitle: "Luxury Penthouse",
-        guestName: "Rahul Verma",
-        checkInDate: "2025-03-05",
-        checkOutDate: "2025-03-25",
-        totalAmount: 750000,
-        status: "confirmed",
-      },
-      {
-        id: "5",
-        bookingId: "BK005",
-        propertyTitle: "Cozy Studio",
-        guestName: "Anjali Gupta",
-        checkInDate: "2025-02-28",
-        checkOutDate: "2025-03-02",
-        totalAmount: 35000,
-        status: "cancelled",
-      },
-    ];
-    setBookings(mockBookings);
-    setLoading(false);
-  }, []);
+    fetchBookings();
+  }, [fetchBookings]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchBookings();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const calculateNights = (checkIn: string, checkOut: string) => {
     const start = new Date(checkIn);
@@ -92,18 +83,8 @@ export default function BookingsPage() {
     return nights;
   };
 
-  const filteredBookings = bookings.filter((booking) => {
-    const matchesSearch =
-      booking.bookingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.propertyTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.guestName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !appliedFilters.status || booking.status === appliedFilters.status;
-    const matchesDuration =
-      !appliedFilters.duration || checkDurationRange(calculateNights(booking.checkInDate, booking.checkOutDate), appliedFilters.duration);
-    const matchesPriceRange =
-      !appliedFilters.priceRange || checkPriceRange(booking.totalAmount, appliedFilters.priceRange);
-    return matchesSearch && matchesStatus && matchesDuration && matchesPriceRange;
-  });
+  // Bookings are already filtered by API
+  const filteredBookings = bookings;
 
   const checkDurationRange = (nights: number, range: string) => {
     const ranges: { [key: string]: [number, number] } = {
@@ -149,6 +130,30 @@ export default function BookingsPage() {
       setBookings(bookings.filter((b) => b.id !== id));
     }
   };
+
+  const handleEditBooking = (id: string) => {
+    setSelectedBookingId(id);
+    setStatusModalOpen(true);
+  };
+
+  const handleStatusUpdate = async (bookingId: string, status: string, paymentStatus?: string, notes?: string) => {
+    setUpdatingStatus(true);
+    try {
+      await api.patch("/admin/bookings", { bookingId, status, paymentStatus, notes });
+      await fetchBookings();
+      setStatusModalOpen(false);
+      setSelectedBookingId(null);
+    } catch (error) {
+      console.error("Error updating booking status:", error);
+      alert("Failed to update booking status");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const selectedBooking = selectedBookingId 
+    ? bookings.find(b => b.id === selectedBookingId)
+    : null;
 
   const confirmedBookings = bookings.filter((b) => b.status === "confirmed").length;
   const pendingBookings = bookings.filter((b) => b.status === "pending").length;
@@ -319,6 +324,7 @@ export default function BookingsPage() {
           bookings={filteredBookings}
           loading={loading}
           empty={filteredBookings.length === 0}
+          onEdit={handleEditBooking}
           onDelete={handleDelete}
         />
 
@@ -328,6 +334,26 @@ export default function BookingsPage() {
           onClose={() => setFilterModalOpen(false)}
           onApply={handleApplyFilters}
           appliedFilters={appliedFilters}
+        />
+
+        {/* Booking Status Modal */}
+        <AdminBookingStatusModal
+          isOpen={statusModalOpen}
+          onClose={() => {
+            setStatusModalOpen(false);
+            setSelectedBookingId(null);
+          }}
+          onSave={handleStatusUpdate}
+          booking={selectedBooking ? {
+            id: selectedBooking.id,
+            guestName: selectedBooking.guestName,
+            propertyTitle: selectedBooking.propertyTitle,
+            checkIn: selectedBooking.checkInDate,
+            checkOut: selectedBooking.checkOutDate,
+            status: selectedBooking.status,
+            paymentStatus: selectedBooking.paymentStatus,
+          } : null}
+          loading={updatingStatus}
         />
       </div>
     </AdminDashboardLayout>

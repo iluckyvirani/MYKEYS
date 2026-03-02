@@ -6,8 +6,9 @@ import { AdminDocumentList } from "@/components/dashboard/admin/documents/AdminD
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, Filter, Download, X, FileCheck, Clock, CheckCircle, XCircle } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface Document {
   id: string;
@@ -26,62 +27,91 @@ export default function DocumentsPage() {
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
 
-  useEffect(() => {
-    const mockDocuments: Document[] = [
-      {
-        id: "1",
-        documentType: "Aadhar Card",
-        submittedBy: "Rajesh Kumar",
-        userType: "Owner",
-        submittedDate: "2025-02-15",
-        status: "pending",
-      },
-      {
-        id: "2",
-        documentType: "PAN Card",
-        submittedBy: "Priya Singh",
-        userType: "User",
-        submittedDate: "2025-02-14",
-        status: "approved",
-      },
-      {
-        id: "3",
-        documentType: "Property Registration Certificate",
-        submittedBy: "Suresh Sharma",
-        userType: "Owner",
-        submittedDate: "2025-02-13",
-        status: "pending",
-      },
-      {
-        id: "4",
-        documentType: "Driving License",
-        submittedBy: "Anita Patel",
-        userType: "Service Provider",
-        submittedDate: "2025-02-12",
-        status: "approved",
-      },
-      {
-        id: "5",
-        documentType: "Passport",
-        submittedBy: "Vikram Reddy",
-        userType: "User",
-        submittedDate: "2025-02-11",
-        status: "rejected",
-      },
-    ];
-    setDocuments(mockDocuments);
-    setLoading(false);
-  }, []);
+  const fetchDocuments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("pageSize", "50");
+      if (searchTerm) params.append("search", searchTerm);
+      if (appliedFilters.status) {
+        const statusMap: { [key: string]: string } = {
+          pending: "PENDING",
+          approved: "VERIFIED",
+          rejected: "REJECTED",
+        };
+        params.append("status", statusMap[appliedFilters.status] || appliedFilters.status);
+      }
+      if (appliedFilters.documentType) params.append("documentType", appliedFilters.documentType);
+      if (appliedFilters.userType) params.append("userType", appliedFilters.userType);
 
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch =
-      doc.documentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.submittedBy.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !appliedFilters.status || doc.status === appliedFilters.status;
-    const matchesDocType = !appliedFilters.documentType || doc.documentType === appliedFilters.documentType;
-    const matchesUserType = !appliedFilters.userType || doc.userType === appliedFilters.userType;
-    return matchesSearch && matchesStatus && matchesDocType && matchesUserType;
-  });
+      const response = await api.get(`/admin/documents?${params.toString()}`);
+      if (response.data?.success && response.data?.data) {
+        const apiDocs = (response.data.data.items || response.data.data).map((doc: any) => {
+          // Map API status to component status
+          let status: "pending" | "approved" | "rejected" = "pending";
+          if (doc.status === "VERIFIED") status = "approved";
+          else if (doc.status === "REJECTED") status = "rejected";
+
+          // Format document type for display
+          const docTypeMap: { [key: string]: string } = {
+            PAN_CARD: "PAN Card",
+            AADHAR_CARD: "Aadhar Card",
+            DRIVING_LICENSE: "Driving License",
+            PASSPORT: "Passport",
+            VOTER_ID: "Voter ID",
+            PROPERTY_LICENSE: "Property License",
+            BUSINESS_LICENSE: "Business License",
+            GST_CERTIFICATE: "GST Certificate",
+            TAX_IDENTIFICATION: "Tax Identification",
+            RENTAL_AGREEMENT_TEMPLATE: "Rental Agreement",
+            // Service documents
+            SERVICE_CERTIFICATE: "Service Certificate",
+            SERVICE_LICENSE: "Service/Trade License",
+            SERVICE_SKILL_CERTIFICATE: "Skill Certificate",
+            SERVICE_EXPERIENCE_LETTER: "Experience Letter",
+            SERVICE_TRAINING_CERTIFICATE: "Training Certificate",
+          };
+
+          // Map user type for display
+          const userTypeMap: { [key: string]: string } = {
+            USER: "User",
+            OWNER: "Owner",
+            SERVICE: "Service Provider",
+          };
+
+          return {
+            id: doc.id,
+            documentType: docTypeMap[doc.documentType] || doc.documentType,
+            submittedBy: doc.userName || "Unknown",
+            userType: userTypeMap[doc.userType] || doc.userType || "User",
+            submittedDate: doc.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+            status,
+          };
+        });
+        setDocuments(apiDocs);
+      }
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, appliedFilters]);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchDocuments();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Documents are filtered by API
+  const filteredDocuments = documents;
 
   const handleApplyFilters = (filters: any) => {
     setAppliedFilters(filters);
@@ -100,16 +130,26 @@ export default function DocumentsPage() {
     setShowAppliedFilters(false);
   };
 
-  const handleApprove = (id: string) => {
-    setDocuments(documents.map((doc) =>
-      doc.id === id ? { ...doc, status: "approved" as const } : doc
-    ));
+  const handleApprove = async (id: string) => {
+    try {
+      await api.patch(`/admin/documents/${id}`, { status: "VERIFIED" });
+      setDocuments(documents.map((doc) =>
+        doc.id === id ? { ...doc, status: "approved" as const } : doc
+      ));
+    } catch (err) {
+      console.error("Error approving document:", err);
+    }
   };
 
-  const handleReject = (id: string) => {
-    setDocuments(documents.map((doc) =>
-      doc.id === id ? { ...doc, status: "rejected" as const } : doc
-    ));
+  const handleReject = async (id: string) => {
+    try {
+      await api.patch(`/admin/documents/${id}`, { status: "REJECTED" });
+      setDocuments(documents.map((doc) =>
+        doc.id === id ? { ...doc, status: "rejected" as const } : doc
+      ));
+    } catch (err) {
+      console.error("Error rejecting document:", err);
+    }
   };
 
   const pendingDocuments = documents.filter((d) => d.status === "pending").length;

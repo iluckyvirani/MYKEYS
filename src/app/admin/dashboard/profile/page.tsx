@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { User, Lock, Bell, Save, Camera, Shield } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface AdminProfile {
   firstName: string;
@@ -22,20 +23,57 @@ interface AdminProfile {
 
 export default function AdminProfilePage() {
   const [profile, setProfile] = useState<AdminProfile>({
-    firstName: "Admin",
-    lastName: "User",
-    email: "admin@mykeys.com",
-    phone: "+91-9876543210",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
     department: "Administration",
-    role: "Super Admin",
-    joinedDate: "2024-01-15",
-    lastLoginDate: "2026-02-28",
+    role: "Admin",
+    joinedDate: new Date().toISOString().split("T")[0],
+    lastLoginDate: new Date().toISOString().split("T")[0],
   });
-
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/auth/me");
+      if (response.data?.success && response.data?.data) {
+        const userData = response.data.data;
+        // Parse name into first and last name
+        const nameParts = (userData.name || "").split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+        
+        // Get role from roles array
+        const role = userData.roles?.[0] || "Admin";
+        
+        setProfile({
+          firstName,
+          lastName,
+          email: userData.email || "",
+          phone: userData.phone || "",
+          department: "Administration",
+          role: role.charAt(0).toUpperCase() + role.slice(1).toLowerCase(),
+          joinedDate: userData.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+          avatar: userData.profileImage || undefined,
+          lastLoginDate: userData.lastLoginAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -57,8 +95,16 @@ export default function AdminProfilePage() {
     }));
   };
 
-  const handleSaveProfile = () => {
-    setIsEditing(false);
+  const handleSaveProfile = async () => {
+    try {
+      await api.put("/auth/profile", {
+        name: `${profile.firstName} ${profile.lastName}`.trim(),
+        phone: profile.phone,
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Error saving profile:", err);
+    }
   };
 
   const handleAvatarClick = () => {

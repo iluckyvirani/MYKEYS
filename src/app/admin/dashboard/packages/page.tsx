@@ -2,6 +2,7 @@
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import AdminPackageFilterModal from "@/components/dashboard/AdminPackageFilterModal";
+import AdminPackageModal from "@/components/dashboard/AdminPackageModal";
 import AdminPackageList from "@/components/dashboard/AdminPackageList";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,8 @@ import {
   DollarSign,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { api } from "@/lib/api";
 
 interface PackageData {
   id: string;
@@ -44,54 +46,14 @@ interface Stats {
 }
 
 export default function PackagesPage() {
-  const [packages, setPackages] = useState<PackageData[]>([
-    {
-      id: "1",
-      name: "Starter Pack",
-      tier: "BASIC",
-      price: 299,
-      duration: "monthly",
-      propertyLimit: 3,
-      featuredLimit: 1,
-      storageLimit: 10,
-      dailyLeadsLimit: 5,
-      isActive: true,
-      subscribers: 245,
-      supportLevel: "standard",
-    },
-    {
-      id: "2",
-      name: "Professional Pack",
-      tier: "STANDARD",
-      price: 699,
-      duration: "monthly",
-      propertyLimit: 10,
-      featuredLimit: 5,
-      storageLimit: 50,
-      dailyLeadsLimit: 20,
-      isActive: true,
-      subscribers: 487,
-      supportLevel: "priority",
-    },
-    {
-      id: "3",
-      name: "Enterprise Pack",
-      tier: "PREMIUM",
-      price: 1499,
-      duration: "monthly",
-      propertyLimit: 50,
-      featuredLimit: 20,
-      storageLimit: 200,
-      dailyLeadsLimit: 100,
-      isActive: true,
-      subscribers: 156,
-      supportLevel: "vip",
-    },
-  ]);
-
+  const [packages, setPackages] = useState<PackageData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [packageModalOpen, setPackageModalOpen] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<PackageData | null>(null);
+  const [saving, setSaving] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({
     status: "ALL",
     tier: "ALL",
@@ -100,6 +62,81 @@ export default function PackagesPage() {
   const [selectedPackage, setSelectedPackage] = useState<PackageData | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const fetchPackages = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/packages");
+      if (response.data?.success && response.data?.data) {
+        const apiPackages = response.data.data.map((pkg: any) => ({
+          id: pkg.id,
+          name: pkg.name,
+          tier: pkg.tier || "BASIC",
+          price: pkg.price || 0,
+          duration: pkg.duration || "monthly",
+          propertyLimit: pkg.propertyLimit || 3,
+          featuredLimit: pkg.featuredLimit || 1,
+          storageLimit: pkg.storageLimit || 10,
+          dailyLeadsLimit: pkg.dailyLeadsLimit || 5,
+          isActive: pkg.isActive ?? true,
+          subscribers: pkg._count?.subscribers || 0,
+          supportLevel: pkg.supportLevel || "standard",
+        }));
+        setPackages(apiPackages);
+      }
+    } catch (err) {
+      console.error("Error fetching packages:", err);
+      setPackages([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPackages();
+  }, [fetchPackages]);
+
+  const handleOpenAddModal = () => {
+    setEditingPackage(null);
+    setPackageModalOpen(true);
+  };
+
+  const handleOpenEditModal = (pkg: PackageData) => {
+    setEditingPackage(pkg);
+    setPackageModalOpen(true);
+  };
+
+  const handleSavePackage = async (packageData: any) => {
+    setSaving(true);
+    try {
+      if (editingPackage) {
+        await api.patch(`/packages/${editingPackage.id}`, packageData);
+      } else {
+        await api.post("/packages", packageData);
+      }
+      await fetchPackages();
+      setPackageModalOpen(false);
+    } catch (error) {
+      console.error("Error saving package:", error);
+      alert("Failed to save package");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeleting(true);
+    try {
+      await api.delete(`/packages/${id}`);
+      await fetchPackages();
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error("Error deleting package:", error);
+      alert("Failed to delete package");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Calculate stats
   const stats: Stats = {
@@ -153,15 +190,6 @@ export default function PackagesPage() {
     }));
   };
 
-  const handleDelete = (id: string) => {
-    setDeleting(true);
-    setTimeout(() => {
-      setPackages((prev) => prev.filter((p) => p.id !== id));
-      setDeleteConfirm(null);
-      setDeleting(false);
-    }, 500);
-  };
-
   const formatCurrency = (amount: number) => {
     if (amount >= 100000) {
       return `₹${(amount / 100000).toFixed(1)}L`;
@@ -182,7 +210,10 @@ export default function PackagesPage() {
               Create and manage subscription packages for property owners
             </p>
           </div>
-          <Button className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]">
+          <Button 
+            className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
+            onClick={handleOpenAddModal}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Create Package
           </Button>
@@ -353,7 +384,12 @@ export default function PackagesPage() {
 
         {/* Packages Section */}
         <Card className="p-6 rounded-[5px]">
-          {filteredPackages.length === 0 && packages.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+              <p className="text-gray-600 mt-3">Loading packages...</p>
+            </div>
+          ) : filteredPackages.length === 0 && packages.length > 0 ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-gray-900 mb-1">
@@ -363,12 +399,22 @@ export default function PackagesPage() {
                 Try adjusting your search or filters
               </p>
             </div>
+          ) : filteredPackages.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-gray-900 mb-1">
+                No packages yet
+              </h3>
+              <p className="text-gray-600">
+                Create your first package to get started
+              </p>
+            </div>
           ) : (
             <AdminPackageList
               packages={filteredPackages}
               viewMode={viewMode}
               onView={setSelectedPackage}
-              onEdit={() => {}}
+              onEdit={handleOpenEditModal}
               onDelete={(id) => setDeleteConfirm(id)}
             />
           )}
@@ -528,6 +574,15 @@ export default function PackagesPage() {
         filters={appliedFilters}
         onApplyFilters={handleApplyFilters}
         onResetFilters={handleResetFilters}
+      />
+
+      {/* Package Add/Edit Modal */}
+      <AdminPackageModal
+        isOpen={packageModalOpen}
+        onClose={() => setPackageModalOpen(false)}
+        onSave={handleSavePackage}
+        package={editingPackage}
+        saving={saving}
       />
     </AdminDashboardLayout>
   );

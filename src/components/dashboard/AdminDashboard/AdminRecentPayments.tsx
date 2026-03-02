@@ -3,6 +3,8 @@
 import { Card } from "@/components/ui/card";
 import { CreditCard, CheckCircle, Clock, XCircle } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 
 interface RecentPayment {
   id: string;
@@ -16,65 +18,48 @@ interface RecentPayment {
   description: string;
 }
 
-const recentPayments: RecentPayment[] = [
-  {
-    id: "1",
-    transactionId: "TXN-2024-0001",
-    userId: "USR-123",
-    userName: "Rajesh Kumar",
-    amount: 15000,
-    paymentMethod: "Razorpay",
-    date: "2024-02-25",
-    status: "completed",
-    description: "Booking Payment - Sunset Villa",
-  },
-  {
-    id: "2",
-    transactionId: "TXN-2024-0002",
-    userId: "USR-124",
-    userName: "Priya Singh",
-    amount: 22500,
-    paymentMethod: "Credit Card",
-    date: "2024-02-24",
-    status: "completed",
-    description: "Booking Payment - Beach House",
-  },
-  {
-    id: "3",
-    transactionId: "TXN-2024-0003",
-    userId: "USR-125",
-    userName: "Vikram Nair",
-    amount: 18000,
-    paymentMethod: "Razorpay",
-    date: "2024-02-23",
-    status: "pending",
-    description: "Booking Payment - Mountain Retreat",
-  },
-  {
-    id: "4",
-    transactionId: "TXN-2024-0004",
-    userId: "USR-126",
-    userName: "Anita Patel",
-    amount: 12000,
-    paymentMethod: "UPI",
-    date: "2024-02-22",
-    status: "completed",
-    description: "Booking Payment - Lake View Cottage",
-  },
-  {
-    id: "5",
-    transactionId: "TXN-2024-0005",
-    userId: "USR-127",
-    userName: "Neha Desai",
-    amount: 8500,
-    paymentMethod: "Credit Card",
-    date: "2024-02-21",
-    status: "failed",
-    description: "Booking Payment - City Apartment",
-  },
-];
-
 export default function AdminRecentPayments() {
+  const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentPayments = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/admin/payments?pageSize=5&sortBy=createdAt&sortOrder=desc");
+        if (response.data?.success && response.data?.data?.payments) {
+          const payments = response.data.data.payments.map((payment: any) => {
+            // Map API status to component status
+            let status: "completed" | "pending" | "failed" | "refunded" = "pending";
+            if (payment.status === "PAID") status = "completed";
+            else if (payment.status === "FAILED") status = "failed";
+            else if (payment.status === "REFUNDED") status = "refunded";
+            
+            return {
+              id: payment.id,
+              transactionId: payment.transactionId || "N/A",
+              userId: payment.userId || "",
+              userName: payment.userName || "Unknown User",
+              amount: payment.amount || 0,
+              paymentMethod: payment.paymentMethod || "Unknown",
+              date: payment.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+              status,
+              description: payment.propertyTitle ? `Booking Payment - ${payment.propertyTitle}` : (payment.description || "Payment"),
+            };
+          });
+          setRecentPayments(payments);
+        }
+      } catch (err) {
+        console.error("Error fetching recent payments:", err);
+        setRecentPayments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentPayments();
+  }, []);
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
@@ -114,7 +99,25 @@ export default function AdminRecentPayments() {
         </Link>
       </div>
       <div className="space-y-3">
-        {recentPayments.map((payment) => (
+        {loading ? (
+          [...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 border border-gray-100 rounded-[5px] animate-pulse">
+              <div className="flex items-center gap-4 flex-1">
+                <div className="w-10 h-10 rounded-lg bg-gray-200"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-48"></div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-6 bg-gray-200 rounded w-20"></div>
+              </div>
+            </div>
+          ))
+        ) : recentPayments.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">No payments found</div>
+        ) : (
+        recentPayments.map((payment) => (
           <div key={payment.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-[5px] hover:bg-gray-50 transition-colors">
             <div className="flex items-center gap-4 flex-1">
               <div className="w-10 h-10 rounded-lg bg-linear-to-r from-emerald-500 to-teal-600 flex items-center justify-center">
@@ -144,7 +147,8 @@ export default function AdminRecentPayments() {
               </div>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </Card>
   );
