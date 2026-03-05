@@ -4,10 +4,12 @@ import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { AdminUserFilterModal } from "@/components/dashboard/admin/users/AdminUserFilterModal";
 import { AdminUserList } from "@/components/dashboard/admin/users/AdminUserList";
 import { AdminUserStatusModal } from "@/components/dashboard/admin/users/AdminUserStatusModal";
+import { AdminUserDeleteModal } from "@/components/dashboard/admin/users/AdminUserDeleteModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Plus, Filter, Download, X, Users, Shield, Package, TrendingUp } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -17,20 +19,23 @@ interface User {
   lastName: string;
   email: string;
   phone: string;
-  role: "USER" | "OWNER" | "SERVICE";
+  roles: string[];
   status: "active" | "inactive" | "suspended";
   createdAt: string;
   bookings?: number;
 }
 
 export default function UsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 50, total: 0 });
@@ -46,28 +51,22 @@ export default function UsersPage() {
       if (appliedFilters.status) params.append("status", appliedFilters.status.toUpperCase());
       
       const response = await api.get(`/admin/users?${params.toString()}`);
-      if (response.data?.success && response.data?.data) {
-        const apiUsers = response.data.data.map((user: any) => {
-          // Determine primary role from roles array
-          const roles = user.roles || [];
-          let role: "USER" | "OWNER" | "SERVICE" = "USER";
-          if (roles.includes("OWNER")) role = "OWNER";
-          else if (roles.includes("SERVICE")) role = "SERVICE";
-          
+      if (response.data?.success && response.data?.data?.items) {
+        const apiUsers = response.data.data.items.map((user: any) => {
           return {
             id: user.id,
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
             phone: user.phone || "",
-            role,
+            roles: Array.isArray(user.roles) ? user.roles : (user.roles?.map?.((r: any) => r.role) || []),
             status: (user.status || "ACTIVE").toLowerCase() as "active" | "inactive" | "suspended",
             createdAt: user.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
             bookings: user.totalBookings || 0,
           };
         });
         setUsers(apiUsers);
-        setPagination(prev => ({ ...prev, total: response.data.pagination?.total || apiUsers.length }));
+        setPagination(prev => ({ ...prev, total: response.data.data.pagination?.total || apiUsers.length }));
       }
     } catch (err) {
       console.error("Error fetching users:", err);
@@ -114,6 +113,30 @@ export default function UsersPage() {
     setStatusModalOpen(true);
   };
 
+  const handleViewUser = (user: User) => {
+    router.push(`/admin/dashboard/users/${user.id}`);
+  };
+
+  const handleDeleteClick = (user: User) => {
+    setSelectedUser(user);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async (userId: string) => {
+    setDeletingUser(true);
+    try {
+      await api.delete(`/users/${userId}`);
+      await fetchUsers();
+      setDeleteModalOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      throw error;
+    } finally {
+      setDeletingUser(false);
+    }
+  };
+
   const handleStatusUpdate = async (userId: string, status: string) => {
     setUpdatingStatus(true);
     try {
@@ -131,8 +154,8 @@ export default function UsersPage() {
 
   const activeUsers = users.filter(u => u.status === "active").length;
   const suspendedUsers = users.filter(u => u.status === "suspended").length;
-  const ownerCount = users.filter(u => u.role === "OWNER").length;
-  const serviceCount = users.filter(u => u.role === "SERVICE").length;
+  const ownerCount = users.filter(u => u.roles?.includes("OWNER")).length;
+  const serviceCount = users.filter(u => u.roles?.includes("SERVICE")).length;
 
   return (
     <AdminDashboardLayout>
@@ -296,7 +319,9 @@ export default function UsersPage() {
           users={filteredUsers}
           loading={loading}
           empty={filteredUsers.length === 0}
+          onView={handleViewUser}
           onEdit={handleEditUser}
+          onDelete={handleDeleteClick}
         />
 
         {/* Filter Modal */}
@@ -317,6 +342,17 @@ export default function UsersPage() {
           onSave={handleStatusUpdate}
           user={selectedUser}
           loading={updatingStatus}
+        />
+
+        {/* User Delete Modal */}
+        <AdminUserDeleteModal
+          isOpen={deleteModalOpen}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setSelectedUser(null);
+          }}
+          onConfirm={handleDeleteConfirm}
+          user={selectedUser}
         />
       </div>
     </AdminDashboardLayout>

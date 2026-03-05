@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Plus, Filter, Download, X, DollarSign, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -22,6 +23,7 @@ interface Payment {
 }
 
 export default function PaymentsPage() {
+  const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,8 +48,8 @@ export default function PaymentsPage() {
       if (appliedFilters.method) params.append("paymentMethod", appliedFilters.method);
       
       const response = await api.get(`/admin/payments?${params.toString()}`);
-      if (response.data?.success && response.data?.data?.payments) {
-        const apiPayments = response.data.data.payments.map((payment: any) => {
+      if (response.data?.success && response.data?.data?.items?.payments) {
+        const apiPayments = response.data.data.items.payments.map((payment: any) => {
           // Map API status to component status
           let status: "completed" | "pending" | "failed" = "pending";
           if (payment.status === "PAID") status = "completed";
@@ -106,10 +108,8 @@ export default function PaymentsPage() {
     setShowAppliedFilters(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this payment record?")) {
-      setPayments(payments.filter((p) => p.id !== id));
-    }
+  const handleViewPayment = (payment: Payment) => {
+    router.push(`/admin/dashboard/payments/${payment.id}`);
   };
 
   const completedPayments = payments.filter((p) => p.status === "completed");
@@ -276,7 +276,7 @@ export default function PaymentsPage() {
           payments={filteredPayments}
           loading={loading}
           empty={filteredPayments.length === 0}
-          onDelete={handleDelete}
+          onView={handleViewPayment}
         />
 
         {/* Filter Modal */}

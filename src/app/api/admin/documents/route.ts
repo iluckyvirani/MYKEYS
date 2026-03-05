@@ -31,7 +31,8 @@ export const GET = withAuth(
       if (search) {
         where.OR = [
           { fileName: { contains: search, mode: "insensitive" } },
-          { user: { name: { contains: search, mode: "insensitive" } } },
+          { user: { firstName: { contains: search, mode: "insensitive" } } },
+          { user: { lastName: { contains: search, mode: "insensitive" } } },
           { user: { email: { contains: search, mode: "insensitive" } } },
         ];
       }
@@ -66,7 +67,8 @@ export const GET = withAuth(
             user: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 email: true,
                 roles: {
                   select: {
@@ -99,7 +101,7 @@ export const GET = withAuth(
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
         userId: doc.userId,
-        userName: doc.user?.name || "Unknown",
+        userName: doc.user ? `${doc.user?.firstName} ${doc.user?.lastName}`.trim() : "Unknown",
         userEmail: doc.user?.email || "",
         userType: doc.user?.roles?.[0]?.role || "USER",
       }));

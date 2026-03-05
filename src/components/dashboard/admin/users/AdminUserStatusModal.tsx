@@ -11,7 +11,7 @@ interface UserType {
   lastName: string;
   email: string;
   phone: string;
-  role: "USER" | "OWNER" | "SERVICE";
+  roles: string[];
   status: "active" | "inactive" | "suspended";
   createdAt: string;
 }
@@ -66,11 +66,11 @@ export function AdminUserStatusModal({
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "OWNER":
-        return "Property Owner";
+        return "Owner";
       case "SERVICE":
-        return "Service Provider";
+        return "Service";
       default:
-        return "Tenant";
+        return "User";
     }
   };
 
@@ -101,8 +101,14 @@ export function AdminUserStatusModal({
                 </p>
                 <p className="text-sm text-gray-600">{user.email}</p>
                 <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
-                  {getRoleIcon(user.role)}
-                  <span>{getRoleLabel(user.role)}</span>
+                  {user.roles && user.roles.length > 0 ? (
+                    <>
+                      {getRoleIcon(user.roles[0])}
+                      <span>{getRoleLabel(user.roles[0])}</span>
+                    </>
+                  ) : (
+                    <span>No role assigned</span>
+                  )}
                 </div>
               </div>
             </div>

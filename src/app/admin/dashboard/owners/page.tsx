@@ -3,10 +3,13 @@
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { AdminOwnerFilterModal } from "@/components/dashboard/admin/owners/AdminOwnerFilterModal";
 import { AdminOwnerList } from "@/components/dashboard/admin/owners/AdminOwnerList";
+import { AdminOwnerDeleteModal } from "@/components/dashboard/admin/owners/AdminOwnerDeleteModal";
+import { AdminOwnerStatusModal } from "@/components/dashboard/admin/owners/AdminOwnerStatusModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Plus, Filter, Download, X, Building, TrendingUp, Users, Home } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -23,12 +26,18 @@ interface Owner {
 }
 
 export default function OwnersPage() {
+  const router = useRouter();
   const [owners, setOwners] = useState<Owner[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
+  const [selectedOwner, setSelectedOwner] = useState<Owner | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [deletingOwner, setDeletingOwner] = useState(false);
+  const [updatingOwner, setUpdatingOwner] = useState(false);
 
   const fetchOwners = useCallback(async () => {
     try {
@@ -39,8 +48,8 @@ export default function OwnersPage() {
       if (appliedFilters.status) params.append("status", appliedFilters.status.toUpperCase());
       
       const response = await api.get(`/admin/owners?${params.toString()}`);
-      if (response.data?.success && response.data?.data) {
-        const apiOwners = response.data.data.map((owner: any) => ({
+      if (response.data?.success && response.data?.data?.items) {
+        const apiOwners = response.data.data.items.map((owner: any) => ({
           id: owner.id,
           firstName: owner.firstName,
           lastName: owner.lastName,
@@ -75,7 +84,6 @@ export default function OwnersPage() {
 
   // Owners are already filtered by API
   const filteredOwners = owners;
-  });
 
   const handleApplyFilters = (filters: any) => {
     setAppliedFilters(filters);
@@ -92,6 +100,50 @@ export default function OwnersPage() {
   const handleClearAllFilters = () => {
     setAppliedFilters({});
     setShowAppliedFilters(false);
+  };
+
+  const handleViewOwner = (owner: Owner) => {
+    router.push(`/admin/dashboard/owners/${owner.id}`);
+  };
+
+  const handleEditOwner = (owner: Owner) => {
+    setSelectedOwner(owner);
+    setStatusModalOpen(true);
+  };
+
+  const handleDeleteClick = (owner: Owner) => {
+    setSelectedOwner(owner);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async (ownerId: string) => {
+    setDeletingOwner(true);
+    try {
+      await api.delete(`/admin/owners/${ownerId}`);
+      await fetchOwners();
+      setDeleteModalOpen(false);
+      setSelectedOwner(null);
+    } catch (error) {
+      console.error("Error deleting owner:", error);
+      throw error;
+    } finally {
+      setDeletingOwner(false);
+    }
+  };
+
+  const handleStatusUpdate = async (ownerId: string, data: any) => {
+    setUpdatingOwner(true);
+    try {
+      await api.patch(`/admin/owners/${ownerId}`, data);
+      await fetchOwners();
+      setStatusModalOpen(false);
+      setSelectedOwner(null);
+    } catch (error) {
+      console.error("Error updating owner:", error);
+      throw error;
+    } finally {
+      setUpdatingOwner(false);
+    }
   };
 
   const activeOwners = owners.filter(o => o.status === "active").length;
@@ -258,6 +310,9 @@ export default function OwnersPage() {
           owners={filteredOwners}
           loading={loading}
           empty={filteredOwners.length === 0}
+          onView={handleViewOwner}
+          onEdit={handleEditOwner}
+          onDelete={handleDeleteClick}
         />
 
         {/* Filter Modal */}
@@ -266,6 +321,23 @@ export default function OwnersPage() {
           onClose={() => setFilterModalOpen(false)}
           onApply={handleApplyFilters}
           appliedFilters={appliedFilters}
+        />
+
+        {/* Status/Edit Modal */}
+        <AdminOwnerStatusModal
+          isOpen={statusModalOpen}
+          onClose={() => setStatusModalOpen(false)}
+          onSave={handleStatusUpdate}
+          owner={selectedOwner}
+          loading={updatingOwner}
+        />
+
+        {/* Delete Modal */}
+        <AdminOwnerDeleteModal
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          onConfirm={handleDeleteConfirm}
+          owner={selectedOwner}
         />
       </div>
     </AdminDashboardLayout>

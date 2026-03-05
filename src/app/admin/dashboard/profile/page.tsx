@@ -44,23 +44,19 @@ export default function AdminProfilePage() {
       const response = await api.get("/auth/me");
       if (response.data?.success && response.data?.data) {
         const userData = response.data.data;
-        // Parse name into first and last name
-        const nameParts = (userData.name || "").split(" ");
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(" ") || "";
         
         // Get role from roles array
         const role = userData.roles?.[0] || "Admin";
         
         setProfile({
-          firstName,
-          lastName,
+          firstName: userData.firstName || "",
+          lastName: userData.lastName || "",
           email: userData.email || "",
           phone: userData.phone || "",
           department: "Administration",
           role: role.charAt(0).toUpperCase() + role.slice(1).toLowerCase(),
           joinedDate: userData.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
-          avatar: userData.profileImage || undefined,
+          avatar: userData.avatar || undefined,
           lastLoginDate: userData.lastLoginAt?.split("T")[0] || new Date().toISOString().split("T")[0],
         });
       }
@@ -81,12 +77,7 @@ export default function AdminProfilePage() {
     confirmPassword: "",
   });
 
-  const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    smsAlerts: true,
-    pushNotifications: false,
-    weeklyReports: true,
-  });
+
 
   const handleProfileChange = (field: string, value: string) => {
     setProfile((prev) => ({
@@ -97,14 +88,24 @@ export default function AdminProfilePage() {
 
   const handleSaveProfile = async () => {
     try {
-      await api.put("/auth/profile", {
-        name: `${profile.firstName} ${profile.lastName}`.trim(),
+      await api.patch("/auth/profile", {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
         phone: profile.phone,
       });
       setIsEditing(false);
     } catch (err) {
       console.error("Error saving profile:", err);
     }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   };
 
   const handleAvatarClick = () => {
@@ -128,15 +129,39 @@ export default function AdminProfilePage() {
     try {
       setUploadingAvatar(true);
       setAvatarError("");
-      // Simulate upload
-      setTimeout(() => {
-        setUploadingAvatar(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      }, 1000);
-    } catch (err) {
-      setAvatarError("Failed to upload avatar");
+
+      // Convert to base64
+      const base64 = await fileToBase64(file);
+
+      // Upload to Cloudinary
+      const uploadResponse = await api.post('/upload', {
+        image: base64,
+        folder: 'mykeys/avatars'
+      });
+
+      const { url } = uploadResponse.data.data;
+
+      // Update profile with new avatar URL
+      setProfile((prev) => ({ ...prev, avatar: url }));
+
+      // Optionally save to backend
+      await api.patch("/auth/profile", {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        avatar: url,
+      });
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      setAvatarError(
+        err.response?.data?.message || 'Failed to upload avatar. Please try again.'
+      );
+    } finally {
       setUploadingAvatar(false);
     }
   };
@@ -234,10 +259,6 @@ export default function AdminProfilePage() {
             <TabsTrigger value="security" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
               <Shield className="w-4 h-4" />
               Security
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
-              <Bell className="w-4 h-4" />
-              Notifications
             </TabsTrigger>
           </TabsList>
 
@@ -427,83 +448,6 @@ export default function AdminProfilePage() {
               </div>
             </TabsContent>
 
-            {/* Notifications Tab */}
-            <TabsContent value="notifications" className="m-0">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Notification Preferences</h3>
-                  <p className="text-sm text-gray-600 mt-1">Manage how you receive notifications</p>
-                </div>
-
-                <div className="border rounded-lg p-6 space-y-4">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">Email Notifications</span>
-                      <p className="text-xs text-gray-600 mt-1">Receive important updates via email</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifications.emailNotifications}
-                      onChange={(e) =>
-                        setNotifications({ ...notifications, emailNotifications: e.target.checked })
-                      }
-                      className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">SMS Alerts</span>
-                      <p className="text-xs text-gray-600 mt-1">Get alerts via SMS for urgent matters</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifications.smsAlerts}
-                      onChange={(e) =>
-                        setNotifications({ ...notifications, smsAlerts: e.target.checked })
-                      }
-                      className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">Push Notifications</span>
-                      <p className="text-xs text-gray-600 mt-1">Receive browser push notifications</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifications.pushNotifications}
-                      onChange={(e) =>
-                        setNotifications({ ...notifications, pushNotifications: e.target.checked })
-                      }
-                      className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">Weekly Reports</span>
-                      <p className="text-xs text-gray-600 mt-1">Get weekly summary reports</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifications.weeklyReports}
-                      onChange={(e) =>
-                        setNotifications({ ...notifications, weeklyReports: e.target.checked })
-                      }
-                      className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-4 border-t">
-                  <Button className="bg-green-600 hover:bg-green-700 rounded-[5px]">
-                    Save Preferences
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
           </div>
         </Tabs>
       </div>

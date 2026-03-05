@@ -32,10 +32,14 @@ export const GET = withAuth(
 
       // Build where clause
       const where: any = {
-        role: "OWNER",
+        roles: { some: { role: "OWNER" } },
       };
 
       if (status && status !== "ALL") where.status = status;
+
+      if (city && city !== "ALL") {
+        where.properties = { some: { city: city } };
+      }
 
       if (search) {
         where.OR = [

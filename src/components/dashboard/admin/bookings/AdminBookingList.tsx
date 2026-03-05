@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Edit, Trash2, CheckCircle, Clock, XCircle, Calendar } from "lucide-react";
+import { Eye, Edit, CheckCircle, Clock, XCircle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -20,7 +20,6 @@ interface AdminBookingListProps {
   loading?: boolean;
   empty?: boolean;
   onEdit?: (id: string) => void;
-  onDelete?: (id: string) => void;
   onView?: (booking: Booking) => void;
 }
 
@@ -29,7 +28,6 @@ export function AdminBookingList({
   loading = false,
   empty = false,
   onEdit,
-  onDelete,
   onView,
 }: AdminBookingListProps) {
   const getStatusIcon = (status: "confirmed" | "pending" | "cancelled") => {
@@ -149,14 +147,6 @@ export function AdminBookingList({
                     onClick={() => onEdit?.(booking.id)}
                   >
                     <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => onDelete?.(booking.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </td>

@@ -38,8 +38,8 @@ export default function ServiceProvidersPage() {
       if (appliedFilters.status) params.append("status", appliedFilters.status.toUpperCase());
       
       const response = await api.get(`/admin/service-providers?${params.toString()}`);
-      if (response.data?.success && response.data?.data) {
-        const apiProviders = response.data.data.map((provider: any) => ({
+      if (response.data?.success && response.data?.data.items) {
+        const apiProviders = response.data.data.items.map((provider: any) => ({
           id: provider.id,
           firstName: provider.firstName,
           lastName: provider.lastName,
@@ -128,10 +128,10 @@ export default function ServiceProvidersPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button className="bg-green-600 hover:bg-green-700">
+            {/* <Button className="bg-green-600 hover:bg-green-700">
               <Plus className="w-4 h-4 mr-2" />
               Add Provider
-            </Button>
+            </Button> */}
           </div>
         </div>
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Bell, Trash2, Check } from "lucide-react";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { api } from "@/lib/api";
 
 interface Notification {
@@ -17,7 +17,7 @@ interface Notification {
   relatedId?: string;
 }
 
-export default function UserNotificationsPage() {
+export default function AdminNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "unread" | "read">("all");
   const [loading, setLoading] = useState(true);
@@ -31,7 +31,7 @@ export default function UserNotificationsPage() {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/notifications?limit=100");
+      const response = await api.get("/notifications?limit=1000");
       const data = response.data?.data?.items || response.data?.notifications || [];
       setNotifications(data);
     } catch (error) {
@@ -115,12 +115,12 @@ export default function UserNotificationsPage() {
   };
 
   return (
-    <DashboardLayout defaultRole="user">
+    <AdminDashboardLayout>
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
               <Bell className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -164,7 +164,7 @@ export default function UserNotificationsPage() {
           onClick={() => setActiveTab("all")}
           className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
             activeTab === "all"
-              ? "border-green-500 text-green-600"
+              ? "border-indigo-500 text-indigo-600"
               : "border-transparent text-gray-600 hover:text-gray-900"
           }`}
         >
@@ -177,7 +177,7 @@ export default function UserNotificationsPage() {
           onClick={() => setActiveTab("unread")}
           className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
             activeTab === "unread"
-              ? "border-green-500 text-green-600"
+              ? "border-indigo-500 text-indigo-600"
               : "border-transparent text-gray-600 hover:text-gray-900"
           }`}
         >
@@ -190,7 +190,7 @@ export default function UserNotificationsPage() {
           onClick={() => setActiveTab("read")}
           className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
             activeTab === "read"
-              ? "border-green-500 text-green-600"
+              ? "border-indigo-500 text-indigo-600"
               : "border-transparent text-gray-600 hover:text-gray-900"
           }`}
         >
@@ -205,7 +205,7 @@ export default function UserNotificationsPage() {
       <div className="bg-white rounded-lg border">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
           </div>
         ) : filteredNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6">
@@ -228,7 +228,7 @@ export default function UserNotificationsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 className={`p-6 hover:bg-gray-50 transition-colors ${
-                  !notification.isRead ? "bg-green-50" : ""
+                  !notification.isRead ? "bg-indigo-50" : ""
                 }`}
               >
                 <div className="flex gap-4 items-start">
@@ -237,14 +237,14 @@ export default function UserNotificationsPage() {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                         !notification.isRead
-                          ? "bg-green-100"
+                          ? "bg-indigo-100"
                           : "bg-gray-100"
                       }`}
                     >
                       <Bell
                         className={`w-5 h-5 ${
                           !notification.isRead
-                            ? "text-green-600"
+                            ? "text-indigo-600"
                             : "text-gray-600"
                         }`}
                       />
@@ -301,6 +301,6 @@ export default function UserNotificationsPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </AdminDashboardLayout>
   );
 }

@@ -14,13 +14,13 @@ import {
   Download,
   Grid,
   List as ListIcon,
-  MapPin,
   X,
   Home,
   AlertCircle,
   Loader,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 interface Property {
@@ -46,6 +46,7 @@ interface Stats {
 }
 
 export default function AdminPropertiesPage() {
+  const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -79,8 +80,8 @@ export default function AdminPropertiesPage() {
       if (appliedFilters.type !== "ALL") params.append("propertyType", appliedFilters.type);
       
       const response = await api.get(`/admin/properties?${params.toString()}`);
-      if (response.data?.success && response.data?.data) {
-        const apiProperties = response.data.data.map((property: any) => ({
+      if (response.data?.success && response.data?.data?.items) {
+        const apiProperties = response.data.data.items.map((property: any) => ({
           id: property.id,
           title: property.title,
           owner: property.ownerName || "Unknown Owner",
@@ -90,7 +91,7 @@ export default function AdminPropertiesPage() {
           status: (property.status || "ACTIVE").toLowerCase() as "active" | "inactive" | "pending",
           bookings: property.bookingsCount || 0,
           images: property.images?.map((img: any) => ({
-            url: img.imageUrl,
+            url: img.url,
             isPrimary: img.isPrimary,
           })) || [],
           rating: property.avgRating || 0,
@@ -153,6 +154,10 @@ export default function AdminPropertiesPage() {
   const handleEditProperty = (property: Property) => {
     setEditingProperty(property);
     setStatusModalOpen(true);
+  };
+
+  const handleViewProperty = (property: Property) => {
+    router.push(`/admin/dashboard/properties/${property.id}`);
   };
 
   const handleStatusUpdate = async (propertyId: string, status: string, notes?: string) => {
@@ -380,7 +385,7 @@ export default function AdminPropertiesPage() {
             <AdminPropertyList
               properties={filteredProperties}
               viewMode={viewMode}
-              onView={setSelectedProperty}
+              onView={handleViewProperty}
               onEdit={handleEditProperty}
               onDelete={(id) => setDeleteConfirm(id)}
             />
