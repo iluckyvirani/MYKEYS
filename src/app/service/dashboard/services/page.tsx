@@ -147,9 +147,6 @@ export default function ServiceManagementPage() {
                   <h3 className="font-semibold text-gray-900">
                     {service.name}
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {service.category}
-                  </p>
                 </div>
                 <span
                   className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(
