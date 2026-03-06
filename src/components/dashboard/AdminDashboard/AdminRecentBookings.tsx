@@ -26,8 +26,8 @@ export default function AdminRecentBookings() {
       try {
         setLoading(true);
         const response = await api.get("/admin/bookings?pageSize=5&sortBy=createdAt&sortOrder=desc");
-        if (response.data?.success && response.data?.data) {
-          const bookings = response.data.data.map((booking: any) => ({
+        if (response.data?.success && response.data?.data?.items) {
+          const bookings = response.data.data.items.map((booking: any) => ({
             id: booking.id,
             propertyName: booking.propertyTitle || "Unknown Property",
             location: "India", // Location not available in booking API response

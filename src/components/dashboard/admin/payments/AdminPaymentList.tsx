@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Edit, Trash2, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Eye, Edit, CheckCircle, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -20,7 +20,6 @@ interface AdminPaymentListProps {
   loading?: boolean;
   empty?: boolean;
   onEdit?: (id: string) => void;
-  onDelete?: (id: string) => void;
   onView?: (payment: Payment) => void;
 }
 
@@ -29,7 +28,6 @@ export function AdminPaymentList({
   loading = false,
   empty = false,
   onEdit,
-  onDelete,
   onView,
 }: AdminPaymentListProps) {
   const getStatusIcon = (status: "completed" | "pending" | "failed") => {
@@ -139,14 +137,6 @@ export function AdminPaymentList({
                     onClick={() => onEdit?.(payment.id)}
                   >
                     <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => onDelete?.(payment.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </td>

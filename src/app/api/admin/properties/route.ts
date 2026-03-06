@@ -90,7 +90,7 @@ export const GET = withAuth(
             images: {
               select: {
                 id: true,
-                imageUrl: true,
+                url: true,
                 isPrimary: true,
               },
               take: 1,

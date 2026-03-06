@@ -26,14 +26,14 @@ export const GET = withAuth(
       const sortOrder = (searchParams.get("sortOrder") || "desc") as "asc" | "desc";
 
       // Filters
-      const role = searchParams.get("role");
+      const role = searchParams.get("role") || "USER"; // Default to USER role
       const status = searchParams.get("status");
       const search = searchParams.get("search");
 
       // Build where clause
       const where: any = {};
 
-      if (role && role !== "ALL") {
+      if (role !== "ALL") {
         where.roles = { some: { role: role } };
       }
       if (status && status !== "ALL") where.status = status;

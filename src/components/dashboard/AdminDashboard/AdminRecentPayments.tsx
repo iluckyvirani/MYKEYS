@@ -27,8 +27,8 @@ export default function AdminRecentPayments() {
       try {
         setLoading(true);
         const response = await api.get("/admin/payments?pageSize=5&sortBy=createdAt&sortOrder=desc");
-        if (response.data?.success && response.data?.data?.payments) {
-          const payments = response.data.data.payments.map((payment: any) => {
+        if (response.data?.success && response.data?.data?.items?.payments) {
+          const payments = response.data.data.items.payments.map((payment: any) => {
             // Map API status to component status
             let status: "completed" | "pending" | "failed" | "refunded" = "pending";
             if (payment.status === "PAID") status = "completed";

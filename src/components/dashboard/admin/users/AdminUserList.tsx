@@ -1,8 +1,7 @@
 "use client";
 
-import { Users, Mail, Phone, CheckCircle, XCircle, Eye, Edit, Trash2, Shield, Package } from "lucide-react";
+import { Users, CheckCircle, XCircle, Eye, Edit, Trash2, Shield, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 interface User {
   id: string;
@@ -10,7 +9,7 @@ interface User {
   lastName: string;
   email: string;
   phone: string;
-  role: "USER" | "OWNER" | "SERVICE";
+  roles: string[];
   status: "active" | "inactive" | "suspended";
   createdAt: string;
   bookings?: number;
@@ -33,36 +32,48 @@ export function AdminUserList({
   onDelete,
   onView,
 }: AdminUserListProps) {
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "OWNER":
-        return <Shield className="w-4 h-4" />;
+        return <Shield className="w-3 h-3" />;
       case "SERVICE":
-        return <Package className="w-4 h-4" />;
+        return <Package className="w-3 h-3" />;
       default:
-        return <Users className="w-4 h-4" />;
+        return <Users className="w-3 h-3" />;
     }
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleColorBg = (role: string) => {
     switch (role) {
       case "OWNER":
         return "bg-blue-100 text-blue-700";
       case "SERVICE":
         return "bg-purple-100 text-purple-700";
       default:
-        return "bg-green-100 text-green-700";
+        return "bg-green-600 text-green-700";
+    }
+  };
+
+  const getRoleColorBg1 = (role: string) => {
+    switch (role) {
+      case "OWNER":
+        return "bg-blue-100 text-blue-700";
+      case "SERVICE":
+        return "bg-purple-100 text-purple-700";
+      default:
+        return "bg-green-100  text-green-700";
     }
   };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "OWNER":
-        return "Property Owner";
+        return "Owner";
       case "SERVICE":
-        return "Service Provider";
+        return "Service";
       default:
-        return "Tenant";
+        return "User";
     }
   };
 
@@ -134,9 +145,9 @@ export function AdminUserList({
               <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                 <td className="py-4 px-6">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg ${getRoleColor(user.role)} flex items-center justify-center flex-shrink-0`}>
-                      {getRoleIcon(user.role) && (
-                        <span className="text-white">{getRoleIcon(user.role)}</span>
+                    <div className={`w-10 h-10 rounded-lg ${getRoleColorBg(user.roles[0] || "USER")} flex items-center justify-center flex-shrink-0`}>
+                      {getRoleIcon(user.roles[0] || "USER") && (
+                        <span className="text-white">{getRoleIcon(user.roles[0] || "USER")}</span>
                       )}
                     </div>
                     <div>
@@ -153,9 +164,18 @@ export function AdminUserList({
                   <p className="text-sm text-gray-600">{user.phone}</p>
                 </td>
                 <td className="py-4 px-6">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                    {getRoleLabel(user.role)}
-                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {user.roles && user.roles.length > 0 ? (
+                      user.roles.map((role: string) => (
+                        <div key={role} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getRoleColorBg1(role)}`}>
+                          {getRoleIcon(role)}
+                          <span>{getRoleLabel(role)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-500">No roles</span>
+                    )}
+                  </div>
                 </td>
                 <td className="py-4 px-6">
                   <div className="flex items-center gap-2">

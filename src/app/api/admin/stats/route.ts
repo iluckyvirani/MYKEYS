@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from "@/lib/response";
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { RoleType, PaymentStatus, BookingStatus, ServiceBookingStatus, InquiryStatus, PropertyStatus } from "@prisma/client";
 
 /**
  * GET /api/admin/stats
@@ -46,32 +47,32 @@ export const GET = withAuth(
         bookingsTrend,
       ] = await Promise.all([
         // Users stats
-        prisma.user.count({ where: { roles: { some: { role: "USER" } } } }),
+        prisma.user.count({ where: { roles: { some: { role: RoleType.USER } } } }),
 
         // Owners stats
-        prisma.user.count({ where: { roles: { some: { role: "OWNER" } } } }),
+        prisma.user.count({ where: { roles: { some: { role: RoleType.OWNER } } } }),
 
         // Service providers stats
-        prisma.user.count({ where: { roles: { some: { role: "SERVICE" } } } }),
+        prisma.user.count({ where: { roles: { some: { role: RoleType.SERVICE } } } }),
 
         // Properties stats
-        prisma.property.count({ where: { status: "ACTIVE" } }),
+        prisma.property.count({ where: { status: PropertyStatus.ACTIVE } }),
         prisma.property.count(),
 
         // Bookings stats
         prisma.booking.count(),
-        prisma.booking.count({ where: { status: "COMPLETED" } }),
-        prisma.booking.count({ where: { status: "PENDING" } }),
+        prisma.booking.count({ where: { status: BookingStatus.COMPLETED } }),
+        prisma.booking.count({ where: { status: BookingStatus.PENDING } }),
 
         // Payments stats
         prisma.payment.count(),
-        prisma.payment.count({ where: { status: "PAID" } }),
-        prisma.payment.count({ where: { status: "FAILED" } }),
+        prisma.payment.count({ where: { status: PaymentStatus.PAID } }),
+        prisma.payment.count({ where: { status: PaymentStatus.FAILED } }),
 
         // Revenue
         prisma.payment
           .aggregate({
-            where: { status: "PAID" },
+            where: { status: PaymentStatus.PAID },
             _sum: { amount: true },
           })
           .then((result) => result._sum?.amount || 0),
@@ -85,11 +86,11 @@ export const GET = withAuth(
 
         // Inquiries stats
         prisma.inquiry.count(),
-        prisma.inquiry.count({ where: { status: "NEW" } }),
+        prisma.inquiry.count({ where: { status: InquiryStatus.NEW } }),
 
         // Service requests
         prisma.serviceRequest.count(),
-        prisma.serviceBooking.count({ where: { status: "CONFIRMED" } }),
+        prisma.serviceBooking.count({ where: { status: ServiceBookingStatus.CONFIRMED } }),
 
         // Users by role
         prisma.userRoleAssignment.groupBy({
@@ -243,8 +244,8 @@ export const PATCH = withAuth(
             where: { createdAt: dateFilter },
           });
 
-          const userStats = await prisma.user.groupBy({
-            by: ["role", "status"],
+          const userStats = await prisma.userRoleAssignment.groupBy({
+            by: ["role"],
             _count: true,
           });
 
@@ -258,12 +259,12 @@ export const PATCH = withAuth(
           });
 
           const topProperties = await prisma.property.findMany({
-            orderBy: { avgRating: "desc" },
+            orderBy: { views: "desc" },
             take: 10,
             select: {
               id: true,
               title: true,
-              avgRating: true,
+              views: true,
               city: true,
               price: true,
             },
@@ -280,7 +281,7 @@ export const PATCH = withAuth(
           });
 
           const bookingsByOwner = await prisma.booking.groupBy({
-            by: ["property"],
+            by: ["propertyId"],
             _count: true,
             where: { createdAt: dateFilter },
           });
@@ -294,7 +295,7 @@ export const PATCH = withAuth(
             _sum: { amount: true },
             _count: true,
             where: {
-              status: "PAID",
+              status: PaymentStatus.PAID,
               createdAt: dateFilter,
             },
           });
@@ -303,7 +304,7 @@ export const PATCH = withAuth(
             by: ["createdAt"],
             _sum: { amount: true },
             where: {
-              status: "PAID",
+              status: PaymentStatus.PAID,
               createdAt: dateFilter,
             },
           });

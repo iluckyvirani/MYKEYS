@@ -20,11 +20,8 @@ export const packageService = {
       supportType: data.supportType ?? 'email',
       supportLevel: data.supportLevel ?? 'standard',
       featuresIncluded: data.featuresIncluded ?? [],
+      features: data.features ?? [],
     };
-    
-    if (data.features) {
-      input.features = data.features;
-    }
     
     return prisma.package.create({
       data: input,

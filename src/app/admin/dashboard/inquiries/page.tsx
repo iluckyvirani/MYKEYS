@@ -86,8 +86,8 @@ export default function AdminInquiriesPage() {
       }
       
       const response = await api.get(`/admin/inquiries?${params.toString()}`);
-      if (response.data?.success && response.data?.data?.inquiries) {
-        const apiInquiries = response.data.data.inquiries.map((inquiry: any) => {
+      if (response.data?.success && response.data?.data?.items) {
+        const apiInquiries = response.data.data.items.map((inquiry: any) => {
           // Map API status to component status
           let status: "new" | "read" | "replied" | "closed" | "converted" = "new";
           if (inquiry.status === "PENDING") status = "new";

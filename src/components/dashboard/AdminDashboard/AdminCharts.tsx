@@ -2,39 +2,112 @@
 
 import { Card } from "@/components/ui/card";
 import { BarChart3, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
+
+interface Stats {
+  summary: {
+    totalUsers: number;
+    totalOwners: number;
+    totalServiceProviders: number;
+    totalProperties: number;
+    activeProperties: number;
+    conversionRate: string;
+    occupancyRate: string;
+  };
+  bookings: {
+    total: number;
+    completed: number;
+    pending: number;
+    completionRate: string;
+  };
+  payments: {
+    total: number;
+    paid: number;
+    failed: number;
+    totalRevenue: number;
+    successRate: string;
+  };
+}
 
 export default function AdminCharts() {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/admin/stats");
+        
+        if (response.data?.success && response.data?.data) {
+          setStats(response.data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching admin stats:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="p-6 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-32 mb-6"></div>
+            <div className="space-y-4">
+              <div className="h-4 bg-gray-200 rounded w-full"></div>
+              <div className="h-4 bg-gray-200 rounded w-full"></div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return <div className="text-center py-8 text-gray-500">Failed to load statistics</div>;
+  }
+
+  const bookingCompletionRate = parseFloat(stats.bookings.completionRate);
+  const paymentSuccessRate = parseFloat(stats.payments.successRate);
+  const occupancyRate = parseFloat(stats.summary.occupancyRate);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Revenue Chart */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">Monthly Revenue</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Total Revenue</h2>
           <BarChart3 className="w-5 h-5 text-gray-400" />
         </div>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Revenue Growth</span>
-            <span className="text-sm font-semibold text-green-600">+18.5%</span>
+            <span className="text-sm text-gray-600">Payment Success Rate</span>
+            <span className="text-sm font-semibold text-green-600">{stats.payments.successRate}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-linear-to-r from-green-600 to-emerald-500 h-2 rounded-full"
-              style={{ width: "82%" }}
+              className="bg-gradient-to-r from-green-600 to-emerald-500 h-2 rounded-full"
+              style={{ width: `${paymentSuccessRate}%` }}
             ></div>
           </div>
           <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t">
             <div>
-              <p className="text-xs text-gray-600">This Month</p>
-              <p className="text-lg font-bold text-gray-900">₹2.5L</p>
+              <p className="text-xs text-gray-600">Total Revenue</p>
+              <p className="text-lg font-bold text-gray-900">₹{(stats.payments.totalRevenue / 100000).toFixed(2)}L</p>
             </div>
             <div>
-              <p className="text-xs text-gray-600">Last Month</p>
-              <p className="text-lg font-bold text-gray-900">₹2.1L</p>
+              <p className="text-xs text-gray-600">Paid</p>
+              <p className="text-lg font-bold text-gray-900">{stats.payments.paid}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-600">Increase</p>
-              <p className="text-lg font-bold text-green-600">₹40K</p>
+              <p className="text-xs text-gray-600">Failed</p>
+              <p className="text-lg font-bold text-red-600">{stats.payments.failed}</p>
             </div>
           </div>
         </div>
@@ -43,32 +116,32 @@ export default function AdminCharts() {
       {/* Booking Trends */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">Booking Trends</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Booking Stats</h2>
           <TrendingUp className="w-5 h-5 text-gray-400" />
         </div>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Booking Rate</span>
-            <span className="text-sm font-semibold text-blue-600">+12.3%</span>
+            <span className="text-sm text-gray-600">Completion Rate</span>
+            <span className="text-sm font-semibold text-blue-600">{stats.bookings.completionRate}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-linear-to-r from-blue-600 to-cyan-500 h-2 rounded-full"
-              style={{ width: "68%" }}
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 h-2 rounded-full"
+              style={{ width: `${bookingCompletionRate}%` }}
             ></div>
           </div>
           <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t">
             <div>
               <p className="text-xs text-gray-600">Total Bookings</p>
-              <p className="text-lg font-bold text-gray-900">2,340</p>
+              <p className="text-lg font-bold text-gray-900">{stats.bookings.total}</p>
             </div>
             <div>
               <p className="text-xs text-gray-600">Completed</p>
-              <p className="text-lg font-bold text-gray-900">1,856</p>
+              <p className="text-lg font-bold text-gray-900">{stats.bookings.completed}</p>
             </div>
             <div>
               <p className="text-xs text-gray-600">Pending</p>
-              <p className="text-lg font-bold text-orange-600">234</p>
+              <p className="text-lg font-bold text-orange-600">{stats.bookings.pending}</p>
             </div>
           </div>
         </div>
@@ -83,19 +156,19 @@ export default function AdminCharts() {
         <div className="space-y-4">
           <div className="flex items-center justify-between pb-3 border-b">
             <span className="text-sm text-gray-600">Total Users</span>
-            <span className="text-sm font-semibold text-gray-900">1,250</span>
+            <span className="text-sm font-semibold text-gray-900">{stats.summary.totalUsers}</span>
           </div>
           <div className="flex items-center justify-between pb-3 border-b">
             <span className="text-sm text-gray-600">Properties Listed</span>
-            <span className="text-sm font-semibold text-gray-900">450</span>
+            <span className="text-sm font-semibold text-gray-900">{stats.summary.totalProperties}</span>
           </div>
           <div className="flex items-center justify-between pb-3 border-b">
             <span className="text-sm text-gray-600">Active Properties</span>
-            <span className="text-sm font-semibold text-green-600">312</span>
+            <span className="text-sm font-semibold text-green-600">{stats.summary.activeProperties}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Pending Approval</span>
-            <span className="text-sm font-semibold text-orange-600">138</span>
+            <span className="text-sm text-gray-600">Occupancy Rate</span>
+            <span className="text-sm font-semibold text-orange-600">{stats.summary.occupancyRate}</span>
           </div>
         </div>
       </Card>
@@ -109,19 +182,19 @@ export default function AdminCharts() {
         <div className="space-y-4">
           <div className="flex items-center justify-between pb-3 border-b">
             <span className="text-sm text-gray-600">Total Owners</span>
-            <span className="text-sm font-semibold text-gray-900">320</span>
+            <span className="text-sm font-semibold text-gray-900">{stats.summary.totalOwners}</span>
           </div>
           <div className="flex items-center justify-between pb-3 border-b">
             <span className="text-sm text-gray-600">Regular Users</span>
-            <span className="text-sm font-semibold text-gray-900">845</span>
+            <span className="text-sm font-semibold text-gray-900">{stats.summary.totalUsers - stats.summary.totalOwners - stats.summary.totalServiceProviders}</span>
           </div>
           <div className="flex items-center justify-between pb-3 border-b">
             <span className="text-sm text-gray-600">Service Providers</span>
-            <span className="text-sm font-semibold text-gray-900">85</span>
+            <span className="text-sm font-semibold text-gray-900">{stats.summary.totalServiceProviders}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">This Month Growth</span>
-            <span className="text-sm font-semibold text-green-600">+85 users</span>
+            <span className="text-sm text-gray-600">Conversion Rate</span>
+            <span className="text-sm font-semibold text-green-600">{stats.summary.conversionRate}</span>
           </div>
         </div>
       </Card>

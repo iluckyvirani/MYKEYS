@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Plus, Filter, Download, X, Calendar, TrendingUp, Users, DollarSign } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -24,6 +25,7 @@ interface Booking {
 }
 
 export default function BookingsPage() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,8 +45,8 @@ export default function BookingsPage() {
       if (appliedFilters.status) params.append("status", appliedFilters.status.toUpperCase());
       
       const response = await api.get(`/admin/bookings?${params.toString()}`);
-      if (response.data?.success && response.data?.data) {
-        const apiBookings = response.data.data.map((booking: any) => ({
+      if (response.data?.success && response.data?.data?.items) {
+        const apiBookings = response.data.data.items.map((booking: any) => ({
           id: booking.id,
           bookingId: booking.id.substring(0, 8).toUpperCase(),
           propertyTitle: booking.propertyTitle || "Unknown Property",
@@ -97,15 +99,8 @@ export default function BookingsPage() {
     return nights >= min && nights <= max;
   };
 
-  const checkPriceRange = (amount: number, range: string) => {
-    const ranges: { [key: string]: [number, number] } = {
-      "₹0-50K": [0, 50000],
-      "₹50K-100K": [50000, 100000],
-      "₹100K-200K": [100000, 200000],
-      "₹200K+": [200000, Infinity],
-    };
-    const [min, max] = ranges[range] || [0, Infinity];
-    return amount >= min && amount <= max;
+  const handleViewBooking = (booking: Booking) => {
+    router.push(`/admin/dashboard/bookings/${booking.id}`);
   };
 
   const handleApplyFilters = (filters: any) => {
@@ -123,12 +118,6 @@ export default function BookingsPage() {
   const handleClearAllFilters = () => {
     setAppliedFilters({});
     setShowAppliedFilters(false);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this booking?")) {
-      setBookings(bookings.filter((b) => b.id !== id));
-    }
   };
 
   const handleEditBooking = (id: string) => {
@@ -324,8 +313,8 @@ export default function BookingsPage() {
           bookings={filteredBookings}
           loading={loading}
           empty={filteredBookings.length === 0}
+          onView={handleViewBooking}
           onEdit={handleEditBooking}
-          onDelete={handleDelete}
         />
 
         {/* Filter Modal */}
