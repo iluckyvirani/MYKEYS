@@ -130,7 +130,7 @@ export default function ServiceBookingCard({
       <div className="border rounded-lg p-6 hover:shadow-lg transition-shadow">
         <div className="flex gap-6">
           {/* Provider Image */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <Image
               src={booking.providerImage}
               alt={booking.providerName}
@@ -210,7 +210,7 @@ export default function ServiceBookingCard({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex-shrink-0 flex flex-col gap-2">
+          <div className="shrink-0 flex flex-col gap-2">
             {booking.status === "confirmed" ||
             booking.status === "pending" ||
             booking.status === "in-progress" ? (

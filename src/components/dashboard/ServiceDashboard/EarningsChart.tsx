@@ -52,11 +52,11 @@ export default function EarningsChart() {
       </h2>
 
       {loading ? (
-        <div className="flex items-center justify-center h-[300px]">
+        <div className="flex items-center justify-center h-75">
           <p className="text-sm text-gray-500">Loading earnings data...</p>
         </div>
       ) : data.length === 0 ? (
-        <div className="flex items-center justify-center h-[300px]">
+        <div className="flex items-center justify-center h-75">
           <p className="text-sm text-gray-500">No earnings data yet</p>
         </div>
       ) : (
