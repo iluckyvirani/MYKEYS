@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: "https://mykeysnew.vercel.app/api",
 });
 
 let isRefreshing = false;
@@ -73,7 +73,7 @@ api.interceptors.response.use(
 
       // Call refresh endpoint
       const response = await axios.post(
-        "http://localhost:3000/api/auth/refresh",
+        "https://mykeysnew.vercel.app/api/auth/refresh",
         { refreshToken }
       );
 

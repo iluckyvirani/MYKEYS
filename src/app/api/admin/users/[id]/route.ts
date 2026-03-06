@@ -5,6 +5,11 @@ import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
 
+/**
+ * GET /api/admin/users/[id]
+ * Get a specific user with all associated data
+ * Roles: ADMIN only
+ */
 export const GET = withAuth(
   async (request: NextRequest, user: JWTPayload) => {
     try {
@@ -187,4 +192,57 @@ export const GET = withAuth(
     }
   },
   { roles: ["ADMIN"] }
+);
+
+/**
+ * DELETE /api/admin/users/[id]
+ * Delete a user account and all associated data
+ * Roles: ADMIN only
+ */
+export const DELETE = withAuth(
+  async (request: NextRequest, user: JWTPayload, context?: any) => {
+    try {
+      // Extract userId from URL path
+      const userId = request.nextUrl.pathname.split("/").pop();
+
+      if (!userId) {
+        return errorResponse("User ID is required", 400);
+      }
+
+      // Prevent self-deletion
+      if (userId === user.userId) {
+        return errorResponse("You cannot delete your own account", 400);
+      }
+
+      // Check if user exists
+      const userToDelete = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!userToDelete) {
+        return errorResponse("User not found", 404);
+      }
+
+      // Delete user and all associated data (cascade delete is handled by Prisma)
+      await prisma.user.delete({
+        where: { id: userId },
+      });
+
+      return successResponse(
+        { id: userId },
+        "User deleted successfully"
+      );
+    } catch (error: any) {
+      console.error("Delete user error:", error);
+      if (error.code === "P2025") {
+        return errorResponse("User not found", 404);
+      }
+      return errorResponse(
+        error.message || "Failed to delete user",
+        500,
+        ErrorCode.INTERNAL_SERVER_ERROR
+      );
+    }
+  },
+  { roles: ["ADMIN" as any] }
 );

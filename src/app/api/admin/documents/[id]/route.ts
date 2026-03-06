@@ -19,7 +19,8 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
           user: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               email: true,
               phone: true,
               roles: {
@@ -43,7 +44,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
       return successResponse(
         {
           ...document,
-          userName: document.user?.name || "Unknown",
+          userName: document.user ? `${document.user.firstName} ${document.user.lastName}`.trim() : "Unknown",
           userEmail: document.user?.email || "",
           userPhone: document.user?.phone || "",
           userType: document.user?.roles?.[0]?.role || "USER",
@@ -123,7 +124,8 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
           user: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               email: true,
             },
           },
@@ -197,7 +199,7 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
       return successResponse(
         {
           ...updatedDocument,
-          userName: updatedDocument.user?.name || "Unknown",
+          userName: updatedDocument.user ? `${updatedDocument.user.firstName} ${updatedDocument.user.lastName}`.trim() : "Unknown",
           userEmail: updatedDocument.user?.email || "",
         },
         `Document ${status === "VERIFIED" ? "approved" : status === "REJECTED" ? "rejected" : "updated"} successfully`

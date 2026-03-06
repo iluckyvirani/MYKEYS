@@ -139,11 +139,17 @@ export const GET = withAuth(
           .reduce((sum: number, p: any) => sum + p.amount, 0),
       };
 
-      return paginatedResponse(
-        { payments: paymentDTOs, stats },
-        total,
-        page,
-        pageSize,
+      const totalPages = Math.ceil(total / pageSize);
+
+      return successResponse(
+        {
+          items: paymentDTOs,
+          total,
+          page,
+          pageSize,
+          totalPages,
+          stats,
+        },
         "Payments retrieved successfully"
       );
     } catch (error) {
