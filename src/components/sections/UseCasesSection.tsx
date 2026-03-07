@@ -90,9 +90,19 @@ export default function UseCasesSection() {
     }
   };
 
+  const handleOwnerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      router.push("/owner/dashboard");
+    } else {
+      router.push("/signup");
+    }
+  };
+
   const handleServiceSubmit = async (data: any) => {
     setIsSubmitting(true);
-    
+
     try {
       const payload = {
         category: data.category,
@@ -121,7 +131,7 @@ export default function UseCasesSection() {
         });
 
         setShowServiceDialog(false);
-        
+
         // Redirect to service dashboard after a short delay
         setTimeout(() => {
           router.push("/service/dashboard");
@@ -131,7 +141,7 @@ export default function UseCasesSection() {
       }
     } catch (error: any) {
       console.error("Service registration error:", error);
-      
+
       toast({
         title: "Registration Failed",
         description: error.response?.data?.message || error.message || "Failed to submit registration. Please try again.",
@@ -153,7 +163,11 @@ export default function UseCasesSection() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+          <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-50 to-emerald-50 text-green-700 px-4 py-2 rounded-full mb-4">
+            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            <span className="text-sm font-medium">Featured Properties</span>
+          </div>
+          <h2 className="font-spartan text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
             Discover Your Role
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -177,21 +191,19 @@ export default function UseCasesSection() {
                 onClick={() => setActiveCard(useCase.id)}
               >
                 <div
-                  className={`h-full rounded-2xl p-8 transition-all duration-300 cursor-pointer border-2 ${
-                    isActive
-                      ? `border-transparent bg-linear-to-br ${useCase.color} text-white shadow-2xl transform scale-105`
-                      : `${useCase.lightBg} border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl`
-                  }`}
+                  className={`h-full rounded-2xl p-8 transition-all duration-300 cursor-pointer border-2 ${isActive
+                    ? `border-transparent bg-linear-to-br from-green-500 to-emerald-500 text-white shadow-2xl transform scale-105`
+                    : `bg-green-50 border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl`
+                    }`}
                 >
                   {/* Icon */}
                   <motion.div
                     animate={{ scale: isActive ? 1.1 : 1 }}
                     transition={{ duration: 0.3 }}
-                    className={`inline-block p-4 rounded-xl mb-6 ${
-                      isActive ? "bg-white/20" : `bg-linear-to-br ${useCase.color} text-white`
-                    }`}
+                    className={`inline-block p-4 rounded-xl mb-6 ${isActive ? "bg-white/20" : `bg-linear-to-br from-green-500 to-emerald-500 text-white`
+                      }`}
                   >
-                    <IconComponent className={`w-8 h-8 ${isActive ? "text-white" : useCase.textColor}`} />
+                    <IconComponent className={`w-8 h-8 ${isActive ? "text-white" : "text-green-900"}`} />
                   </motion.div>
 
                   {/* Content */}
@@ -229,11 +241,21 @@ export default function UseCasesSection() {
                   {useCase.id === "provider" ? (
                     <button
                       onClick={handleProviderClick}
-                      className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                        isActive
-                          ? "bg-white text-gray-900 hover:bg-gray-100"
-                          : `bg-linear-to-r ${useCase.color} text-white hover:shadow-lg`
-                      }`}
+                      className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${isActive
+                        ? "bg-white text-gray-900 hover:bg-gray-100"
+                        : `bg-linear-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg`
+                        }`}
+                    >
+                      {useCase.cta}
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
+                  ) : useCase.id === "owner" ? (
+                    <button
+                      onClick={handleOwnerClick}
+                      className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${isActive
+                        ? "bg-white text-gray-900 hover:bg-gray-100"
+                        : `bg-linear-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg`
+                        }`}
                     >
                       {useCase.cta}
                       <ArrowRight className="w-5 h-5" />
@@ -241,11 +263,10 @@ export default function UseCasesSection() {
                   ) : (
                     <Link
                       href={useCase.link}
-                      className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                        isActive
-                          ? "bg-white text-gray-900 hover:bg-gray-100"
-                          : `bg-linear-to-r ${useCase.color} text-white hover:shadow-lg`
-                      }`}
+                      className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${isActive
+                        ? "bg-white text-gray-900 hover:bg-gray-100"
+                        : `bg-linear-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg`
+                        }`}
                     >
                       {useCase.cta}
                       <ArrowRight className="w-5 h-5" />

@@ -70,7 +70,11 @@ export default function PropertyTypesSection() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+          <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-50 to-emerald-50 text-green-700 px-4 py-2 rounded-full mb-4">
+            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            <span className="text-sm font-medium">Property Categories</span>
+          </div>
+          <h2 className="font-spartan text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
             Explore Property Options
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -91,15 +95,13 @@ export default function PropertyTypesSection() {
                 viewport={{ once: true }}
                 onMouseEnter={() => setHoveredCard(property.id)}
                 onMouseLeave={() => setHoveredCard(null)}
-                className={`relative group cursor-pointer transition-all duration-300 ${
-                  hoveredCard === property.id ? "scale-105" : ""
-                }`}
+                className={`relative group cursor-pointer transition-all duration-300 ${hoveredCard === property.id ? "scale-105" : ""
+                  }`}
               >
                 {/* Card */}
                 <div
-                  className={`h-full ${property.bgColor} border ${property.borderColor} rounded-2xl p-8 transition-all duration-300 ${
-                    hoveredCard === property.id ? "shadow-2xl" : "shadow-lg"
-                  }`}
+                  className={`h-full ${property.bgColor} border ${property.borderColor} rounded-2xl p-8 transition-all duration-300 ${hoveredCard === property.id ? "shadow-2xl" : "shadow-lg"
+                    }`}
                 >
                   {/* Icon */}
                   <div className={`inline-block p-4 rounded-xl bg-gradient-to-br ${property.color} mb-6`}>
@@ -123,9 +125,8 @@ export default function PropertyTypesSection() {
                   {/* CTA Button */}
                   <Link
                     href={property.link}
-                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r ${property.color} text-white font-semibold transition-all duration-300 ${
-                      hoveredCard === property.id ? "gap-3 pr-4" : ""
-                    }`}
+                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r ${property.color} text-white font-semibold transition-all duration-300 ${hoveredCard === property.id ? "gap-3 pr-4" : ""
+                      }`}
                   >
                     Explore {property.title}
                     <ChevronRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
@@ -134,9 +135,8 @@ export default function PropertyTypesSection() {
 
                 {/* Floating decoration */}
                 <div
-                  className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${property.color} opacity-0 blur-xl transition-opacity duration-300 -z-10 ${
-                    hoveredCard === property.id ? "opacity-20" : ""
-                  }`}
+                  className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${property.color} opacity-0 blur-xl transition-opacity duration-300 -z-10 ${hoveredCard === property.id ? "opacity-20" : ""
+                    }`}
                 />
               </motion.div>
             );

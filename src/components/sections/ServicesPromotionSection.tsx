@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { span } from "framer-motion/client";
 import { Wrench, Sparkles, Users, Clock, Shield, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
+import ServiceRegistrationForm from "@/components/services/ServiceRegistrationForm";
+import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 const serviceHighlights = [
   {
@@ -40,6 +44,73 @@ const serviceHighlights = [
 ];
 
 export default function ServicesPromotionSection() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [showServiceDialog, setShowServiceDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleProviderClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      setShowServiceDialog(true);
+    } else {
+      router.push("/login?redirect=/");
+    }
+  };
+
+  const handleServiceSubmit = async (data: any) => {
+    setIsSubmitting(true);
+
+    try {
+      const payload = {
+        category: data.category,
+        subcategories: data.subcategories || [],
+        serviceAreas: data.serviceAreas || [],
+        bio: data.bio || "",
+        instantBookingEnabled: data.instantBooking || false,
+        instantBookingPrice: data.instantPrice ? parseFloat(data.instantPrice) : undefined,
+      };
+
+      const response = await api.post("/users/become-service", payload);
+
+      if (response.data?.success) {
+        // Update tokens if provided
+        if (response.data.data?.accessToken) {
+          localStorage.setItem("accessToken", response.data.data.accessToken);
+        }
+        if (response.data.data?.refreshToken) {
+          localStorage.setItem("refreshToken", response.data.data.refreshToken);
+        }
+
+        toast({
+          title: "Success! 🎉",
+          description: "Your registration has been submitted! We'll review your application and get back to you soon.",
+          variant: "default",
+        });
+
+        setShowServiceDialog(false);
+
+        // Redirect to service dashboard after a short delay
+        setTimeout(() => {
+          router.push("/service/dashboard");
+        }, 2000);
+      } else {
+        throw new Error(response.data?.message || "Registration failed");
+      }
+    } catch (error: any) {
+      console.error("Service registration error:", error);
+
+      toast({
+        title: "Registration Failed",
+        description: error.response?.data?.message || error.message || "Failed to submit registration. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <section className="relative py-20 bg-gradient-to-b from-gray-50 to-white overflow-hidden">
       {/* Decorative background elements */}
@@ -99,14 +170,14 @@ export default function ServicesPromotionSection() {
                 href="/services"
                 className="px-8 py-4 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold hover:shadow-lg transition-all duration-300"
               >
-                Book a Service
+                Explore Services
               </Link>
-              <Link
-                href="/signup"
-                className="px-8 py-4 rounded-lg border-2 border-green-500 text-green-600 font-semibold hover:bg-green-50 transition-all duration-300"
+              <button
+                onClick={handleProviderClick}
+                className="px-8 py-4 rounded-lg border-2 border-green-500 text-green-600 font-semibold hover:bg-green-50 transition-all duration-300 cursor-pointer"
               >
                 Become a Provider
-              </Link>
+              </button>
             </div>
           </motion.div>
 
@@ -192,6 +263,13 @@ export default function ServicesPromotionSection() {
             </Link>
           </div>
         </motion.div>
+
+        {/* Service Registration Dialog */}
+        <ServiceRegistrationForm
+          open={showServiceDialog}
+          onOpenChange={setShowServiceDialog}
+          onSubmit={handleServiceSubmit}
+        />
       </div>
     </section>
   );

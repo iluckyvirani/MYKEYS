@@ -514,6 +514,35 @@ export default function PropertyDetailsPage() {
         }
     };
 
+    const handleShare = async () => {
+        const shareUrl = window.location.href;
+        const shareText = `Check out this property: ${property.title}`;
+
+        try {
+            // Try using Web Share API if available
+            if (navigator.share) {
+                await navigator.share({
+                    title: property.title,
+                    text: shareText,
+                    url: shareUrl,
+                });
+            } else {
+                // Fallback: Copy to clipboard
+                await navigator.clipboard.writeText(shareUrl);
+                alert("Link copied to clipboard!");
+            }
+        } catch (error) {
+            console.error("Error sharing:", error);
+            // Fallback on error
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                alert("Link copied to clipboard!");
+            } catch (clipboardError) {
+                alert("Could not copy link. Please try again.");
+            }
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Back Navigation */}
@@ -561,12 +590,16 @@ export default function PropertyDetailsPage() {
                                     <Button
                                         variant="outline"
                                         onClick={handleToggleFavorite}
-                                        className="flex items-center gap-2"
+                                        className="flex items-center gap-2 cursor-pointer"
                                     >
                                         <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                                         {isLiked ? "Saved" : "Save"}
                                     </Button>
-                                    <Button variant="outline" className="flex items-center gap-2">
+                                    <Button 
+                                        variant="outline" 
+                                        onClick={handleShare}
+                                        className="flex items-center gap-2 cursor-pointer"
+                                    >
                                         <Share2 className="w-5 h-5" />
                                         Share
                                     </Button>
@@ -656,8 +689,11 @@ export default function PropertyDetailsPage() {
                                 </div>
 
                                 <div className="absolute top-4 right-4 flex gap-4 text-white">
-                                    <Share2 className="w-5 h-5 cursor-pointer" />
-                                    <Heart className="w-5 h-5 cursor-pointer" />
+                                    <Share2 
+                                        className="w-5 h-5 cursor-pointer hover:opacity-80 transition-opacity" 
+                                        onClick={handleShare}
+                                    />
+                                    <Heart className="w-5 h-5 cursor-pointer hover:opacity-80 transition-opacity" />
                                 </div>
 
                                 <div className="absolute top-4 text-white text-sm">

@@ -18,13 +18,14 @@ interface FilterModalProps {
   onApply: (filters: {
     status?: string;
     paymentStatus?: string;
+    bookingType?: string;
     fromDate?: string;
     toDate?: string;
     sortBy?: string;
   }) => void;
 }
 
-export default function FilterModal({
+export  function FilterModal({
   isOpen,
   onClose,
   onApply,
@@ -105,6 +106,149 @@ export default function FilterModal({
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Check-in Date Range
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  placeholder="From"
+                  className="rounded-[5px]"
+                />
+              </div>
+              <div>
+                <Input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  placeholder="To"
+                  className="rounded-[5px]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Sort By */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Sort By
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full px-3 py-2 border rounded-[5px] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="recent">Most Recent</option>
+              <option value="oldest">Oldest First</option>
+              <option value="amount-high">Amount: High to Low</option>
+              <option value="amount-low">Amount: Low to High</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            className="flex-1 rounded-[5px]"
+          >
+            Reset
+          </Button>
+          <Button
+            onClick={handleApply}
+            className="flex-1 rounded-[5px]"
+          >
+            Apply Filters
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+export  function ServicebookingFilterModal({
+  isOpen,
+  onClose,
+  onApply,
+}: FilterModalProps) {
+  const [status, setStatus] = useState<string>("");
+  const [bookingType, setBookingType] = useState<string>("");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("recent");
+
+  const handleApply = () => {
+    onApply({
+      status: status || undefined,
+      bookingType: bookingType || undefined,
+      fromDate: fromDate || undefined,
+      toDate: toDate || undefined,
+      sortBy,
+    });
+    onClose();
+  };
+
+  const handleReset = () => {
+    setStatus("");
+    setBookingType("");
+    setFromDate("");
+    setToDate("");
+    setSortBy("recent");
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md rounded-[5px]">
+        <DialogHeader>
+          <DialogTitle>Filter Service Bookings</DialogTitle>
+          <DialogDescription>
+            Apply filters to view specific service bookings
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Service Booking Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Status
+            </label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full px-3 py-2 border rounded-[5px] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          {/* Booking Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Booking Type
+            </label>
+            <select
+              value={bookingType}
+              onChange={(e) => setBookingType(e.target.value)}
+              className="w-full px-3 py-2 border rounded-[5px] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">All Types</option>
+              <option value="instant">Instant Booking</option>
+              <option value="scheduled">Scheduled</option>
+            </select>
+          </div>
+
+          {/* Service Date Range */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Service Date Range
             </label>
             <div className="grid grid-cols-2 gap-2">
               <div>

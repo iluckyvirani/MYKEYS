@@ -6,40 +6,15 @@ import { Zap, Filter, Download, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ServiceBookingTabs from "@/components/dashboard/UserDashboard/ServiceBookingTabs";
+import { ServicebookingFilterModal } from "@/components/dashboard/UserDashboard/FilterModal";
 import { useRouter } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export default function ServiceBookingsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
-  const [appliedFilters, setAppliedFilters] = useState<{
-    status?: string;
-    bookingType?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  } | null>(null);
-  const [tempFilters, setTempFilters] = useState<{
-    status?: string;
-    bookingType?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }>({});
+  const [appliedFilters, setAppliedFilters] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Debounce search
@@ -51,23 +26,16 @@ export default function ServiceBookingsPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleApplyFilters = () => {
-    setAppliedFilters(tempFilters);
-    setFilterModalOpen(false);
-    setRefreshKey(prev => prev + 1);
-  };
-
   const handleClearFilters = () => {
     setAppliedFilters(null);
-    setTempFilters({});
     setRefreshKey(prev => prev + 1);
   };
 
   const handleRemoveFilter = (key: string) => {
-    setAppliedFilters(prev => {
+    setAppliedFilters((prev: any) => {
       if (!prev) return null;
       const newFilters = { ...prev };
-      delete newFilters[key as keyof typeof newFilters];
+      delete newFilters[key];
       return Object.keys(newFilters).length > 0 ? newFilters : null;
     });
     setRefreshKey(prev => prev + 1);
@@ -87,7 +55,7 @@ export default function ServiceBookingsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button 
+            <Button
               variant="outline"
               onClick={() => router.push('/user/dashboard/services')}
               className="cursor-pointer"
@@ -123,7 +91,7 @@ export default function ServiceBookingsPage() {
             className="w-full md:w-auto"
           >
             <Filter className="w-4 h-4 mr-2" />
-            Filters
+            Advanced Filters
           </Button>
         </div>
 
@@ -153,22 +121,22 @@ export default function ServiceBookingsPage() {
                 </button>
               </div>
             )}
-            {appliedFilters.dateFrom && (
+            {(appliedFilters.fromDate || appliedFilters.toDate) && (
               <div className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full flex items-center gap-2">
-                From: {appliedFilters.dateFrom}
+                Date: {appliedFilters.fromDate || "Any"} to {appliedFilters.toDate || "Any"}
                 <button
-                  onClick={() => handleRemoveFilter('dateFrom')}
+                  onClick={() => handleRemoveFilter('fromDate')}
                   className="hover:text-purple-900"
                 >
                   <X className="w-3 h-3" />
                 </button>
               </div>
             )}
-            {appliedFilters.dateTo && (
+            {appliedFilters.sortBy && appliedFilters.sortBy !== 'recent' && (
               <div className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full flex items-center gap-2">
-                To: {appliedFilters.dateTo}
+                Sort: {appliedFilters.sortBy}
                 <button
-                  onClick={() => handleRemoveFilter('dateTo')}
+                  onClick={() => handleRemoveFilter('sortBy')}
                   className="hover:text-purple-900"
                 >
                   <X className="w-3 h-3" />
@@ -188,105 +156,21 @@ export default function ServiceBookingsPage() {
       </div>
 
       {/* Service Booking Tabs */}
-      <ServiceBookingTabs 
-        key={refreshKey} 
+      <ServiceBookingTabs
+        key={refreshKey}
         searchQuery={debouncedSearch}
         filters={appliedFilters || undefined}
       />
 
-      {/* Filter Modal */}
-      <Dialog open={filterModalOpen} onOpenChange={setFilterModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Filter Service Bookings</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select
-                value={tempFilters.status || ''}
-                onValueChange={(value) =>
-                  setTempFilters({ ...tempFilters, status: value || undefined })
-                }
-              >
-                <SelectTrigger id="status-filter">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Booking Type Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="type-filter">Booking Type</Label>
-              <Select
-                value={tempFilters.bookingType || ''}
-                onValueChange={(value) =>
-                  setTempFilters({ ...tempFilters, bookingType: value || undefined })
-                }
-              >
-                <SelectTrigger id="type-filter">
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="instant">Instant</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Date Range Filters */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date-from">From Date</Label>
-                <Input
-                  id="date-from"
-                  type="date"
-                  value={tempFilters.dateFrom || ''}
-                  onChange={(e) =>
-                    setTempFilters({ ...tempFilters, dateFrom: e.target.value || undefined })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="date-to">To Date</Label>
-                <Input
-                  id="date-to"
-                  type="date"
-                  value={tempFilters.dateTo || ''}
-                  onChange={(e) =>
-                    setTempFilters({ ...tempFilters, dateTo: e.target.value || undefined })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setTempFilters({});
-                setFilterModalOpen(false);
-              }}
-              className="cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleApplyFilters} className="cursor-pointer">
-              Apply Filters
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Service Booking Filter Modal */}
+      <ServicebookingFilterModal
+        isOpen={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        onApply={(filters) => {
+          setAppliedFilters(filters);
+          setRefreshKey(prev => prev + 1);
+        }}
+      />
     </DashboardLayout>
   );
 }

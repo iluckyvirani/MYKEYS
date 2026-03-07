@@ -6,7 +6,7 @@ import { Calendar, Filter, Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BookingTabs from "@/components/dashboard/UserDashboard/BookingTabs";
-import FilterModal from "@/components/dashboard/UserDashboard/FilterModal";
+import {FilterModal} from "@/components/dashboard/UserDashboard/FilterModal";
 
 export default function BookingsPage() {
   const [filterModalOpen, setFilterModalOpen] = useState(false);
@@ -30,10 +30,10 @@ export default function BookingsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline">
+            {/* <Button variant="outline">
               <Calendar className="w-4 h-4 mr-2" />
               Booking Calendar
-            </Button>
+            </Button> */}
             <Button>
               <Download className="w-4 h-4 mr-2" />
               Export Bookings
@@ -72,7 +72,9 @@ export default function BookingsPage() {
             {appliedFilters.status && (
               <div className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full flex items-center gap-2">
                 Status: {appliedFilters.status}
-                <button onClick={() => setAppliedFilters({ ...appliedFilters, status: null })} className="ml-1">×</button>
+                <button 
+                onClick={() => setAppliedFilters({ ...appliedFilters, status: null })} 
+                className="ml-1 cursor-pointer">×</button>
               </div>
             )}
             {appliedFilters.paymentStatus && (

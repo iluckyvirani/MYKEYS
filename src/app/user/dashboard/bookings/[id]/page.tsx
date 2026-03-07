@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { ShortBookingDTO, BookingStatus } from "@/types/bookings";
-import { Calendar, Users, MapPin, CreditCard, AlertCircle, Check, X, Clock } from "lucide-react";
+import { Calendar, Users, MapPin, CreditCard, AlertCircle, Check, X, Clock, ChevronLeft } from "lucide-react";
 import CancelBookingModal from "@/components/dashboard/UserDashboard/CancelBookingModal";
 import ReviewModal from "@/components/dashboard/UserDashboard/ReviewModal";
 import Link from "next/link";
@@ -200,8 +200,13 @@ export default function BookingDetailsPage() {
     <DashboardLayout defaultRole="user">
       {/* Header */}
       <div className="mb-5">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-          ← Back
+        <Button 
+          variant="outline" 
+          onClick={() => router.back()} 
+          className="mb-4 rounded-[5px] flex items-center gap-2 cursor-pointer"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Go Back
         </Button>
         <div className="flex items-center justify-between">
           <div>

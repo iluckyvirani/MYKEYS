@@ -17,6 +17,7 @@ import {
   Zap,
   ArrowRight,
   Loader2,
+  ChevronLeft,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -323,15 +324,17 @@ export default function UserServicesPage() {
         <>
           {/* Back Button */}
           <div className="mb-6">
-            <button
+            <Button
+              variant="outline"
               onClick={() => {
                 setSelectedService(null);
                 setSearchQuery("");
               }}
-              className="text-green-600 hover:text-green-700 font-medium flex items-center gap-2 mb-4"
+              className="mb-4 rounded-[5px] flex items-center gap-2"
             >
-              ← Back to Services
-            </button>
+              <ChevronLeft className="w-4 h-4" />
+              Go Back
+            </Button>
 
             <div className="flex items-center justify-between">
               <div>

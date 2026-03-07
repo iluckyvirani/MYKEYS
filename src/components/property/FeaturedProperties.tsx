@@ -76,13 +76,17 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
     }
   }, [activeFilter]);
 
-  // Sync with hero section and fetch properties
+  // Sync with hero section (parent control)
   useEffect(() => {
     if (selectedTab) {
       setActiveFilter(selectedTab);
     }
+  }, [selectedTab]);
+
+  // Fetch properties when activeFilter changes
+  useEffect(() => {
     fetchProperties();
-  }, [selectedTab, activeFilter, fetchProperties]);
+  }, [activeFilter, fetchProperties]);
 
   const filteredProperties = properties.filter(property => {
     if (activeFilter === "all") return true;
@@ -131,7 +135,7 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
               className={`px-5 py-2.5 rounded-[5px] text-sm font-medium transition-all duration-300 whitespace-nowrap ${
                 activeFilter === filter.id
                   ? "bg-linear-to-r from-green-600 to-emerald-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "bg-gray-100 text-gray-600"
               }`}
             >
               {filter.label}
