@@ -19,6 +19,7 @@ interface TransformedInquiry {
   budget: number;
   message: string;
   unread: number;
+  response?: string | null;
 }
 
 interface InquiryTabsProps {
@@ -75,7 +76,7 @@ export default function InquiryTabs({ searchQuery = '', filters }: InquiryTabsPr
 
     return {
       id: inquiry.id,
-      property: `Property ${inquiry.propertyId.slice(0, 8)}`, // Placeholder - property title not in response
+      property: inquiry.propertyTitle || `Property ${inquiry.propertyId.slice(0, 8)}`,
       owner: inquiry.guestName, // Using guest name as contact person
       sent: inquiry.createdAt,
       lastUpdate: inquiry.updatedAt,
@@ -85,6 +86,7 @@ export default function InquiryTabs({ searchQuery = '', filters }: InquiryTabsPr
       budget: isLongRent ? longRentInquiry.desiredDurationMonths * 35000 : buyInquiry.propertyPrice,
       message: inquiry.message,
       unread: 0,
+      response: (inquiry as any).response || null,
     };
   };
 

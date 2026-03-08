@@ -1031,9 +1031,9 @@ export default function EditPropertyPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <Link href={`/owner/dashboard/properties/${id}`}>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="cursor-pointer">
               <ChevronLeft className="w-4 h-4 mr-1" />
-              Back to Property
+              Go Back
             </Button>
           </Link>
           <Link href="/owner/dashboard/properties">

@@ -19,6 +19,7 @@ interface Inquiry {
   budget: number;
   message: string;
   unread: number;
+  response?: string | null;
 }
 
 interface InquiryListProps {
@@ -226,6 +227,16 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                     <p className="text-gray-700">{inquiry.message}</p>
                   </div>
                 </div>
+
+                {/* Owner's Response */}
+                {inquiry.response && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-3">Owner's Response</h4>
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-gray-700">{inquiry.response}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-3 pt-6 border-t">

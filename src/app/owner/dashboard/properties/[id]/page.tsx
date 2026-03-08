@@ -177,9 +177,9 @@ export default function PropertyDetailsPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Property Not Found</h2>
             <p className="text-gray-600 mb-6">{error || "The property you're looking for doesn't exist."}</p>
             <Link href="/owner/dashboard/properties">
-              <Button>
+              <Button variant="outline" className="flex items-center gap-2 rounded-[5px]">
                 <ChevronLeft className="w-4 h-4 mr-2" />
-                Back to Properties
+                Go Back
               </Button>
             </Link>
           </div>
@@ -270,10 +270,15 @@ export default function PropertyDetailsPage() {
           <div>
             <Link 
               href="/owner/dashboard/properties" 
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+              className="flex items-center gap-2 hover:text-gray-900 mb-4"
             >
-              <ChevronLeft className="w-4 h-4" />
-              Back to Properties
+            <Button
+            variant="outline"
+            className="rounded-[5px] flex items-center gap-2 cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Go Back
+          </Button>
             </Link>
             <h1 className="text-2xl font-bold text-gray-900">{property.title}</h1>
             <div className="flex items-center gap-3 mt-2">
@@ -294,12 +299,8 @@ export default function PropertyDetailsPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            <Button variant="outline">
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
-            </Button>
             <Link href={`/owner/dashboard/properties/${property.id}/edit`}>
-              <Button>
+              <Button className="cursor-pointer">
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Property
               </Button>
@@ -453,12 +454,59 @@ export default function PropertyDetailsPage() {
               <p className="text-gray-500 text-center py-4">No amenities listed</p>
             )}
           </div>
+
+          {/* Reviews */}
+          <div className="bg-white rounded-[5px] border p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Reviews</h3>
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <span className="text-xl font-bold text-gray-900">{property.averageRating?.toFixed(1) || "0.0"}</span>
+                <span className="text-gray-600">({property.reviewCount || 0} reviews)</span>
+              </div>
+            </div>
+            
+            {property.reviews && property.reviews.length > 0 ? (
+              <div className="space-y-4">
+                {property.reviews.map((review: any) => (
+                  <div key={review.id} className="border-b pb-4 last:border-b-0">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <div className="font-semibold text-gray-900">{review.user?.firstName || 'Anonymous'} {review.user?.lastName || ''}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center">
+                            {[...Array(5)].map((_, i) => (
+                              <Star 
+                                key={i} 
+                                className={`w-4 h-4 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {review.comment && (
+                      <p className="text-gray-700 text-sm mt-2">{review.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Star className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500">No reviews yet</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right Column - Stats & Actions */}
         <div className="space-y-6">
           {/* Status & Actions */}
-          <div className="bg-white rounded-[5px] border p-6">
+          <div className="bg-white rounded-[5px] border p-6 space-y-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <StatusIcon className={`w-5 h-5 ${statusBadge.color.includes('green') ? 'text-green-600' : 
@@ -470,20 +518,14 @@ export default function PropertyDetailsPage() {
               </div>
             </div>
             
-            <div className="space-y-3">
-              <Link href={`/property/${property.id}`} target="_blank">
-                <Button variant="outline" className="w-full justify-start">
-                  <Eye className="w-4 h-4 mr-2" />
-                  View Public Listing
-                </Button>
-              </Link>
+            <div className="flex gap-2 flex-col">
               <Link href={`/owner/dashboard/properties/${property.id}/bookings`}>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start cursor-pointer">
                   <Calendar className="w-4 h-4 mr-2" />
                   View Bookings
                 </Button>
               </Link>
-              <Button variant="outline" className="w-full justify-start" onClick={() => {
+              <Button variant="outline" className="w-full justify-start cursor-pointer" onClick={() => {
                 const data = JSON.stringify(property, null, 2);
                 const blob = new Blob([data], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);

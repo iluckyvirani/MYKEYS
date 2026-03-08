@@ -54,6 +54,7 @@ const statusColors = {
 };
 
 export default function InquiryInbox() {
+  const { toast } = useToast();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [filter, setFilter] = useState("all");
@@ -179,10 +180,17 @@ export default function InquiryInbox() {
       setSelectedInquiry({ ...selectedInquiry, status: "replied", response: responseMessage });
       setResponseMessage("");
       setIsEditingResponse(false);
-      alert("Response sent to user!");
+      toast({
+        title: "Success",
+        description: "Response sent to user successfully!",
+      });
     } catch (err) {
       console.error("Error saving response:", err);
-      alert("Failed to save response");
+      toast({
+        title: "Error",
+        description: "Failed to save response",
+        variant: "destructive",
+      });
     } finally {
       setUpdatingId(null);
     }
@@ -200,13 +208,20 @@ export default function InquiryInbox() {
       await api.post(`/inquiries/${selectedInquiry.id}/notes`, { content: newNote });
 
       setNewNote("");
-      alert("Note added successfully!");
+      toast({
+        title: "Success",
+        description: "Note added successfully!",
+      });
       
       // Refresh notes
       fetchNotes(selectedInquiry.id);
     } catch (err) {
       console.error("Error adding note:", err);
-      alert("Failed to add note");
+      toast({
+        title: "Error",
+        description: "Failed to add note",
+        variant: "destructive",
+      });
     } finally {
       setUpdatingId(null);
     }
