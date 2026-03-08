@@ -24,7 +24,7 @@ export default function BuySellRentTabs({ selectedTab, onTabChange }: { selected
     >
       <div
         ref={containerRef}
-        className="relative bg-white/10 backdrop-blur-sm rounded-[5px] rounded-br-none rounded-bl-none p-2"
+        className="relative bg-white/10 backdrop-blur-sm rounded-[5px] p-2"
       >
         {/* Smooth Sliding Background - Only show when tab is selected */}
         {activeTabIndex !== -1 && (

@@ -62,9 +62,8 @@ export default function UserDashboardPage() {
         <FavoriteProperties />
 
         {/* Middle Row - Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           <RecentPayments />
-          <Notifications />
         </div>
 
         {/* Bottom Row - Chart Full Width */}

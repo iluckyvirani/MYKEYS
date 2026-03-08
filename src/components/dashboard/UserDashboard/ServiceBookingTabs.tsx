@@ -29,8 +29,9 @@ interface ServiceBookingTabsProps {
   filters?: {
     status?: string;
     bookingType?: string;
-    dateFrom?: string;
-    dateTo?: string;
+    fromDate?: string;
+    toDate?: string;
+    sortBy?: string;
   };
 }
 
@@ -47,46 +48,39 @@ export default function ServiceBookingTabs({
     try {
       setLoading(true);
       
-      // Build query params
-      const params = new URLSearchParams({ limit: '100' });
+      // Build query params — all filters sent to backend
+      const params = new URLSearchParams({ limit: '20' });
       if (filters?.status && filters.status !== 'all') {
         params.append('status', filters.status);
       }
+      if (filters?.bookingType && filters.bookingType !== 'all') {
+        params.append('bookingType', filters.bookingType);
+      }
       if (searchQuery) {
         params.append('search', searchQuery);
+      }
+      if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+      if (filters?.toDate) params.append('toDate', filters.toDate);
+      if (filters?.sortBy && filters.sortBy !== 'recent') {
+        if (filters.sortBy === 'oldest') {
+          params.append('sortBy', 'createdAt');
+          params.append('sortOrder', 'asc');
+        } else if (filters.sortBy === 'amount-high' || filters.sortBy === 'amount-low') {
+          params.append('sortBy', 'totalAmount');
+          params.append('sortOrder', filters.sortBy === 'amount-high' ? 'desc' : 'asc');
+        }
       }
       
       const response = await api.get(`/user/service-bookings?${params.toString()}`);
       
       if (response.data?.success) {
-        // Handle paginated response structure
-        let bookingsData = response.data.data?.items || response.data.data || [];
+        const bookingsData = response.data.data?.items || response.data.data || [];
         
-        // Ensure bookingsData is an array
         if (!Array.isArray(bookingsData)) {
           console.error('Expected array but got:', typeof bookingsData, bookingsData);
           setAllBookings([]);
           setError('Invalid data format received');
           return;
-        }
-        
-        // Apply client-side filters for bookingType and date range
-        if (filters?.bookingType && filters.bookingType !== 'all') {
-          bookingsData = bookingsData.filter((b: ServiceBooking) => 
-            b.bookingType === filters.bookingType
-          );
-        }
-        
-        if (filters?.dateFrom) {
-          bookingsData = bookingsData.filter((b: ServiceBooking) => 
-            new Date(b.scheduledDate || b.createdAt) >= new Date(filters.dateFrom!)
-          );
-        }
-        
-        if (filters?.dateTo) {
-          bookingsData = bookingsData.filter((b: ServiceBooking) => 
-            new Date(b.scheduledDate || b.createdAt) <= new Date(filters.dateTo!)
-          );
         }
         
         setAllBookings(bookingsData);

@@ -1,7 +1,15 @@
 "use client";
 
-import { FileText, Download, Eye, Trash2, Clock, CheckCircle, XCircle } from "lucide-react";
+import { FileText, Download, Eye, Trash2, Clock, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
@@ -30,6 +38,9 @@ export default function DocumentList({ onDocumentDeleted }: DocumentListProps) {
   const [docs, setDocs] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -39,8 +50,11 @@ export default function DocumentList({ onDocumentDeleted }: DocumentListProps) {
     try {
       setLoading(true);
       setError("");
-      const response = await api.get<Document[]>("/documents");
-      if (response.data) {
+      const response = await api.get("/documents");
+      if (response.data?.success && response.data?.data) {
+        setDocs(response.data.data);
+      } else if (Array.isArray(response.data)) {
+        // Fallback for direct array response
         setDocs(response.data);
       }
     } catch (err: any) {
@@ -51,20 +65,77 @@ export default function DocumentList({ onDocumentDeleted }: DocumentListProps) {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this document?")) {
-      return;
+  const handleView = (doc: Document) => {
+    // Check if it's a PDF (raw type)
+    const isPdf = doc.mimeType === 'application/pdf' || doc.fileName.toLowerCase().endsWith('.pdf');
+    
+    if (isPdf) {
+      // For PDFs, trigger download instead of opening
+      handleDownload(doc.documentUrl, doc.fileName);
+    } else {
+      // For images, open in new tab
+      window.open(doc.documentUrl, "_blank");
     }
+  };
 
+  const handleDownload = async (url: string, fileName: string) => {
     try {
+      // Get auth token from localStorage
+      const token = localStorage.getItem("accessToken");
+      
+      // Fetch the file with authentication
+      const response = await fetch(url, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      });
+      
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      
+      const blob = await response.blob();
+      
+      // Create blob URL
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Create download link and trigger
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download error:", error);
+      // Fallback: open in new tab
+      window.open(url, "_blank");
+    }
+  };
+
+  const handleDeleteClick = (doc: Document) => {
+    setDocumentToDelete(doc);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      setDeleting(true);
       await api.delete(`/documents/${id}`);
       setDocs(docs.filter(doc => doc.id !== id));
       if (onDocumentDeleted) {
         onDocumentDeleted();
       }
+      setDeleteDialogOpen(false);
+      setDocumentToDelete(null);
     } catch (err: any) {
       console.error("Error deleting document:", err);
       alert("Failed to delete document");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -139,7 +210,7 @@ export default function DocumentList({ onDocumentDeleted }: DocumentListProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.open(doc.documentUrl, "_blank")}
+                  onClick={() => handleView(doc)}
                 >
                   <Eye className="w-4 h-4 mr-2" />
                   View
@@ -147,12 +218,7 @@ export default function DocumentList({ onDocumentDeleted }: DocumentListProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    const a = document.createElement("a");
-                    a.href = doc.documentUrl;
-                    a.download = doc.fileName;
-                    a.click();
-                  }}
+                  onClick={() => handleDownload(doc.documentUrl, doc.fileName)}
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download
@@ -161,7 +227,7 @@ export default function DocumentList({ onDocumentDeleted }: DocumentListProps) {
                   variant="ghost"
                   size="sm"
                   className="text-red-600 hover:text-red-700"
-                  onClick={() => handleDelete(doc.id)}
+                  onClick={() => handleDeleteClick(doc)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -176,6 +242,51 @@ export default function DocumentList({ onDocumentDeleted }: DocumentListProps) {
           <p className="text-gray-500">Upload your verification documents to get started</p>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <DialogTitle>Delete Document</DialogTitle>
+            </div>
+            <DialogDescription>
+              Are you sure you want to delete this document? This action cannot be undone.
+              {documentToDelete && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900">
+                    {DOCUMENT_TYPE_LABELS[documentToDelete.documentType]}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {documentToDelete.fileName}
+                  </p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => documentToDelete && handleDelete(documentToDelete.id)}
+              disabled={deleting}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

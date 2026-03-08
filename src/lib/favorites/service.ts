@@ -92,19 +92,54 @@ export async function removeFavorite(
   });
 }
 
+interface FavoriteFilters {
+  search?: string;
+  propertyType?: string; // 'short' | 'long' | 'buy'
+  sortBy?: string;       // 'recent' | 'price_low' | 'price_high'
+}
+
 /**
- * Get user's favorite properties with pagination
+ * Get user's favorite properties with pagination and optional filters
  */
 export async function getUserFavorites(
   userId: string,
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  filters: FavoriteFilters = {}
 ): Promise<{ items: FavoriteWithProperty[]; total: number }> {
   const skip = (page - 1) * pageSize;
 
+  // Build property where clause
+  const propertyWhere: any = {};
+  if (filters.search) {
+    propertyWhere.OR = [
+      { title: { contains: filters.search, mode: 'insensitive' } },
+      { city: { contains: filters.search, mode: 'insensitive' } },
+    ];
+  }
+  if (filters.propertyType === 'buy') {
+    propertyWhere.listingType = 'BUY';
+  } else if (filters.propertyType === 'short') {
+    propertyWhere.listingType = 'RENT';
+    propertyWhere.rentalType = 'SHORT_TERM';
+  } else if (filters.propertyType === 'long') {
+    propertyWhere.listingType = 'RENT';
+    propertyWhere.rentalType = 'LONG_TERM';
+  }
+
+  const where: any = { userId };
+  if (Object.keys(propertyWhere).length > 0) {
+    where.property = propertyWhere;
+  }
+
+  // Build orderBy
+  let orderBy: any = { createdAt: 'desc' };
+  if (filters.sortBy === 'price_low') orderBy = { property: { price: 'asc' } };
+  else if (filters.sortBy === 'price_high') orderBy = { property: { price: 'desc' } };
+
   const [favorites, total] = await Promise.all([
     prisma.favorite.findMany({
-      where: { userId },
+      where,
       skip,
       take: pageSize,
       include: {
@@ -138,13 +173,9 @@ export async function getUserFavorites(
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy,
     }),
-    prisma.favorite.count({
-      where: { userId },
-    }),
+    prisma.favorite.count({ where }),
   ]);
 
   return { items: favorites, total };

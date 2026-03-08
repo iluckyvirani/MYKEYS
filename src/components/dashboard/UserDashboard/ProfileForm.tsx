@@ -32,6 +32,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [success, setSuccess] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +79,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
       [name]: value,
     }));
     setError("");
+    setFieldErrors({});
     setSuccess("");
   };
 
@@ -140,10 +142,36 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
     }
   };
 
+  const validatePhone = (phone: string): boolean => {
+    if (!phone) return true; // Optional field
+    // Indian phone number: 10 digits starting with 6-9
+    const phoneRegex = /^[6-9]\d{9}$/;
+    return phoneRegex.test(phone.replace(/[\s-]/g, ''));
+  };
+
   const handleSave = async () => {
     setLoading(true);
     setError("");
+    setFieldErrors({});
     setSuccess("");
+
+    // Frontend validation
+    const errors: Record<string, string[]> = {};
+    
+    if (formData.phone && !validatePhone(formData.phone)) {
+      errors.phone = ["Invalid phone number format. Please enter a valid 10-digit Indian phone number starting with 6-9."];
+    }
+    
+    if (formData.emergencyContact && !validatePhone(formData.emergencyContact)) {
+      errors.emergencyContact = ["Invalid phone number format. Please enter a valid 10-digit Indian phone number starting with 6-9."];
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError("Please fix the validation errors below.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await api.patch<UserDTO>("/auth/profile", formData);
@@ -161,12 +189,19 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
         setTimeout(() => setSuccess(""), 3000);
       }
     } catch (err: any) {
-      const message =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to update profile. Please try again.";
-      setError(message);
       console.error("Update profile error:", err);
+      
+      // Handle structured validation errors
+      if (err.response?.data?.code === "VALIDATION_ERROR" && err.response?.data?.errors) {
+        setFieldErrors(err.response.data.errors);
+        setError(err.response.data.message || "Validation failed. Please check the fields below.");
+      } else {
+        const message =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to update profile. Please try again.";
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -274,9 +309,15 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              placeholder="6-9 digit Indian phone number"
+              placeholder="e.g., 9876543210"
               disabled={loading}
+              className={fieldErrors.phone ? "border-red-500" : ""}
             />
+            {fieldErrors.phone && (
+              <p className="text-red-600 text-xs mt-1">
+                {fieldErrors.phone.join(", ")}
+              </p>
+            )}
           </div>
           <div>
             <Label htmlFor="birthDate">Date of Birth</Label>
@@ -373,9 +414,15 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
               name="emergencyContact"
               value={formData.emergencyContact}
               onChange={handleChange}
-              placeholder="6-9 digit Indian phone number"
+              placeholder="e.g., 9876543210"
               disabled={loading}
+              className={fieldErrors.emergencyContact ? "border-red-500" : ""}
             />
+            {fieldErrors.emergencyContact && (
+              <p className="text-red-600 text-xs mt-1">
+                {fieldErrors.emergencyContact.join(", ")}
+              </p>
+            )}
           </div>
         </div>
       </div>

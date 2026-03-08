@@ -341,29 +341,6 @@ export default function ProfilePage() {
                     onDocumentDeleted={handleDocumentUploadSuccess}
                   />
                 </div>
-
-                {/* Tips Section */}
-                <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
-                  <h4 className="font-semibold text-gray-900 mb-3">Document Tips</h4>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
-                      <span>Upload clear, readable images of your documents</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
-                      <span>Complete verification for instant booking approval on select properties</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
-                      <span>Documents are securely encrypted and only shared with property owners when required</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
-                      <span>You can update expired documents anytime</span>
-                    </li>
-                  </ul>
-                </div>
               </div>
             </TabsContent>
           </div>

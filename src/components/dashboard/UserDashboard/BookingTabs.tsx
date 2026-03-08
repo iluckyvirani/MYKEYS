@@ -7,7 +7,18 @@ import { api } from "@/lib/api";
 import BookingList from "./BookingList";
 import { ShortBookingDTO, BookingStatus } from "@/types/bookings";
 
-export default function BookingTabs() {
+interface BookingTabsProps {
+  searchQuery?: string;
+  filters?: {
+    status?: string;
+    paymentStatus?: string;
+    fromDate?: string;
+    toDate?: string;
+    sortBy?: string;
+  };
+}
+
+export default function BookingTabs({ searchQuery = '', filters }: BookingTabsProps) {
   const [allBookings, setAllBookings] = useState<ShortBookingDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +26,19 @@ export default function BookingTabs() {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/bookings?pageSize=100");
+      const params = new URLSearchParams({ pageSize: '20' });
+      if (searchQuery.trim()) params.append('search', searchQuery.trim());
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
+      if (filters?.fromDate) params.append('from', filters.fromDate);
+      if (filters?.toDate) params.append('to', filters.toDate);
+      if (filters?.sortBy && filters.sortBy !== 'recent') {
+        if (filters.sortBy === 'oldest') { params.append('sortBy', 'createdAt'); params.append('sortOrder', 'asc'); }
+        else if (filters.sortBy === 'amount-high') { params.append('sortBy', 'totalAmount'); params.append('sortOrder', 'desc'); }
+        else if (filters.sortBy === 'amount-low') { params.append('sortBy', 'totalAmount'); params.append('sortOrder', 'asc'); }
+        else if (filters.sortBy === 'checkin') { params.append('sortBy', 'checkIn'); params.append('sortOrder', 'asc'); }
+      }
+      const response = await api.get(`/bookings?${params.toString()}`);
 
       if (response.data?.success && response.data.data?.items) {
         setAllBookings(response.data.data.items);
@@ -33,7 +56,7 @@ export default function BookingTabs() {
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [searchQuery, filters]);
 
   // Reload bookings when a booking is updated
   const handleBookingUpdated = () => {

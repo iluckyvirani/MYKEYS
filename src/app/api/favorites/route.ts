@@ -19,9 +19,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
+    const search = searchParams.get("search") || undefined;
+    const propertyType = searchParams.get("propertyType") || undefined;
+    const sortBy = searchParams.get("sortBy") || "recent";
 
     // Get favorites
-    const { items, total } = await getUserFavorites(user.userId, page, pageSize);
+    const { items, total } = await getUserFavorites(user.userId, page, pageSize, { search, propertyType, sortBy });
 
     // Calculate average rating for each property
     const favoritesWithRating = items.map((favorite: FavoriteWithProperty) => {

@@ -21,33 +21,52 @@ interface TransformedInquiry {
   unread: number;
 }
 
-export default function InquiryTabs() {
+interface InquiryTabsProps {
+  searchQuery?: string;
+  filters?: {
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+    sortBy?: string;
+  };
+}
+
+export default function InquiryTabs({ searchQuery = '', filters }: InquiryTabsProps) {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchInquiries = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get<InquiryListResponse>("/inquiries?pageSize=100");
-
-        if (response.data?.success && response.data.data?.items) {
-          setInquiries(response.data.data.items);
-          setError(null);
-        } else {
-          setError("Failed to load inquiries");
-        }
-      } catch (err: any) {
-        console.error("Error fetching inquiries:", err);
-        setError(err.message || "Failed to fetch inquiries");
-      } finally {
-        setLoading(false);
+  const fetchInquiries = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({ pageSize: '20' });
+      if (searchQuery.trim()) params.append('search', searchQuery.trim());
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+      if (filters?.toDate) params.append('toDate', filters.toDate);
+      if (filters?.sortBy && filters.sortBy !== 'recent') {
+        params.append('sortBy', 'createdAt');
+        params.append('sortOrder', filters.sortBy === 'oldest' ? 'asc' : 'desc');
       }
-    };
+      const response = await api.get<InquiryListResponse>(`/inquiries?${params.toString()}`);
 
+      if (response.data?.success && response.data.data?.items) {
+        setInquiries(response.data.data.items);
+        setError(null);
+      } else {
+        setError("Failed to load inquiries");
+      }
+    } catch (err: any) {
+      console.error("Error fetching inquiries:", err);
+      setError(err.message || "Failed to fetch inquiries");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchInquiries();
-  }, []);
+  }, [searchQuery, filters]);
 
   const transformInquiry = (inquiry: Inquiry): TransformedInquiry => {
     const isLongRent = inquiry.inquiryType === "LONG_RENT";

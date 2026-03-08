@@ -95,12 +95,18 @@ export default function BookingsPage() {
                 <button onClick={() => setAppliedFilters({ ...appliedFilters, sortBy: 'recent' })} className="ml-1">×</button>
               </div>
             )}
+            <button
+              className="text-xs text-gray-500 underline hover:text-gray-700 cursor-pointer"
+              onClick={() => setAppliedFilters(null)}
+            >
+              Clear all
+            </button>
           </div>
         )}
       </div>
 
       {/* Booking Tabs Content */}
-      <BookingTabs />
+      <BookingTabs searchQuery={searchQuery} filters={appliedFilters || undefined} />
 
       {/* Filter Modal */}
       <FilterModal 

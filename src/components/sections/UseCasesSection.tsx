@@ -203,7 +203,7 @@ export default function UseCasesSection() {
                     className={`inline-block p-4 rounded-xl mb-6 ${isActive ? "bg-white/20" : `bg-linear-to-br from-green-500 to-emerald-500 text-white`
                       }`}
                   >
-                    <IconComponent className={`w-8 h-8 ${isActive ? "text-white" : "text-green-900"}`} />
+                    <IconComponent className={`w-8 h-8 text-white`} />
                   </motion.div>
 
                   {/* Content */}

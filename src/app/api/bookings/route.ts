@@ -32,6 +32,9 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
     const paymentStatus = searchParams.get('paymentStatus');
     const from = searchParams.get('from');
     const to = searchParams.get('to');
+    const search = searchParams.get('search');
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
 
     if (propertyId) where.propertyId = propertyId;
     if (status) where.status = status;
@@ -43,13 +46,24 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
       if (to) where.checkIn.lte = new Date(to);
     }
 
+    if (search) {
+      where.property = { title: { contains: search, mode: 'insensitive' } };
+    }
+
+    const validSortFields: Record<string, object> = {
+      createdAt: { createdAt: sortOrder },
+      totalAmount: { totalAmount: sortOrder },
+      checkIn: { checkIn: sortOrder },
+    };
+    const orderBy = validSortFields[sortBy] || { createdAt: 'desc' };
+
     // Fetch bookings from database
     const [bookingsData, total] = await Promise.all([
       prisma.booking.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: {
           property: {
             select: {

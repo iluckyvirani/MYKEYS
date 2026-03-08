@@ -22,7 +22,17 @@ interface Payment {
   reason?: string;
 }
 
-export default function PaymentTabs() {
+interface PaymentTabsProps {
+  searchQuery?: string;
+  filters?: {
+    paymentMethod?: string;
+    fromDate?: string;
+    toDate?: string;
+    sortBy?: string;
+  };
+}
+
+export default function PaymentTabs({ searchQuery = "", filters }: PaymentTabsProps) {
   const [allPayments, setAllPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +41,18 @@ export default function PaymentTabs() {
     const fetchPayments = async () => {
       try {
         setLoading(true);
-        const response = await api.get("/payments?limit=100");
+        const params = new URLSearchParams({ limit: '20', paymentType: 'BOOKING' });
+        if (searchQuery) params.append('search', searchQuery);
+        if (filters?.paymentMethod) params.append('paymentMethod', filters.paymentMethod);
+        if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+        if (filters?.toDate) params.append('toDate', filters.toDate);
+        if (filters?.sortBy && filters.sortBy !== 'recent') {
+          if (filters.sortBy === 'oldest') { params.append('sortBy', 'createdAt'); params.append('sortOrder', 'asc'); }
+          else if (filters.sortBy === 'amount_high') { params.append('sortBy', 'amount'); params.append('sortOrder', 'desc'); }
+          else if (filters.sortBy === 'amount_low') { params.append('sortBy', 'amount'); params.append('sortOrder', 'asc'); }
+        }
+
+        const response = await api.get(`/payments?${params.toString()}`);
 
         if (response.data?.success && response.data.data?.items) {
           // Filter only BOOKING type payments (excluding PACKAGE payments for owners)
@@ -52,7 +73,7 @@ export default function PaymentTabs() {
     };
 
     fetchPayments();
-  }, []);
+  }, [searchQuery, filters]);
 
   // Categorize payments by status
   const pendingPayments = allPayments.filter((p) => p.status === "PENDING");

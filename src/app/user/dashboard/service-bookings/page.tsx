@@ -143,14 +143,12 @@ export default function ServiceBookingsPage() {
                 </button>
               </div>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              className="text-xs text-gray-500 underline hover:text-gray-700 cursor-pointer"
               onClick={handleClearFilters}
-              className="text-red-600 hover:text-red-700 cursor-pointer"
             >
               Clear all
-            </Button>
+            </button>
           </div>
         )}
       </div>

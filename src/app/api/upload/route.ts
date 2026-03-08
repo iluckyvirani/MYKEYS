@@ -17,12 +17,12 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
     const { image, folder = 'mykeys/avatars' } = body;
 
     if (!image) {
-      return errorResponse('Image data is required', 400, ErrorCode.VALIDATION_ERROR);
+      return errorResponse('File data is required', 400, ErrorCode.VALIDATION_ERROR);
     }
 
-    // Validate base64 format
-    if (!image.startsWith('data:image/')) {
-      return errorResponse('Invalid image format. Must be base64 encoded', 400, ErrorCode.INVALID_INPUT);
+    // Validate base64 format - accept both images and PDFs
+    if (!image.startsWith('data:image/') && !image.startsWith('data:application/pdf')) {
+      return errorResponse('Invalid file format. Must be base64 encoded image or PDF', 400, ErrorCode.INVALID_INPUT);
     }
 
     // Upload to Cloudinary
@@ -33,13 +33,13 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
         url: result.url,
         publicId: result.publicId,
       },
-      'Image uploaded successfully',
+      'File uploaded successfully',
       201
     );
   } catch (error: any) {
-    console.error('Error uploading image:', error);
+    console.error('Error uploading file:', error);
     return errorResponse(
-      error.message || 'Failed to upload image',
+      error.message || 'Failed to upload file',
       500,
       ErrorCode.INTERNAL_SERVER_ERROR
     );

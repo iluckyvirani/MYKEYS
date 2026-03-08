@@ -1,9 +1,11 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { ServiceFilterModal } from "@/components/dashboard/UserDashboard/FilterModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import {
   Wrench,
   ChefHat,
@@ -121,6 +123,8 @@ export default function UserServicesPage() {
   const [bookingType, setBookingType] = useState<"instant" | "schedule">("instant");
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<{ category?: string; bookingType?: string }>({});
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [bookingLocation, setBookingLocation] = useState("");
@@ -160,9 +164,13 @@ export default function UserServicesPage() {
     }
   };
 
-  const filteredServices = services.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredServices = services.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !appliedFilters.category || s.category === appliedFilters.category;
+    const matchesBookingType = !appliedFilters.bookingType || s.types.includes(appliedFilters.bookingType as "instant" | "schedule");
+    return matchesSearch && matchesCategory && matchesBookingType;
+  });
 
   const handleBookService = (provider: Provider, listing: Provider['services'][0] | null, type: "instant" | "schedule") => {
     setSelectedProvider(provider);
@@ -247,6 +255,23 @@ export default function UserServicesPage() {
 
   return (
     <DashboardLayout defaultRole="user">
+      {/* Go Back Button - Show when service is selected */}
+      {selectedService && (
+        <div className="mb-4">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSelectedService(null);
+              setSearchQuery("");
+            }}
+            className="rounded-[5px] flex items-center gap-2"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Go Back
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-5">
         <div className="flex items-center justify-between">
@@ -269,7 +294,7 @@ export default function UserServicesPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
-                    placeholder="Search services (Plumbing, Cooking, etc.)"
+                    placeholder="Search services (Plumbing, Cleaning, etc.)"
                     className="pl-10 w-full"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -277,19 +302,49 @@ export default function UserServicesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto">
-                <Button variant="outline" className="flex-1 md:flex-none">
+                <Button
+                  variant="outline"
+                  className="flex-1 md:flex-none relative"
+                  onClick={() => setFilterModalOpen(true)}
+                >
                   <Filter className="w-4 h-4 mr-2" />
-                  Filter
+                  Advanced Filters
+                  {(appliedFilters.category || appliedFilters.bookingType) && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-green-600 text-white text-xs rounded-full flex items-center justify-center">
+                      {[appliedFilters.category, appliedFilters.bookingType].filter(Boolean).length}
+                    </span>
+                  )}
                 </Button>
-                <select className="border rounded-[5px] px-4 py-2 text-sm w-full md:w-auto">
-                  <option>All Services</option>
-                  <option>Instant Available</option>
-                  <option>Schedule Available</option>
-                  <option>Maintenance</option>
-                  <option>Cooking</option>
-                </select>
               </div>
             </div>
+
+            {/* Applied Filter Chips */}
+            {(appliedFilters.category || appliedFilters.bookingType) && (
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
+                {appliedFilters.category && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 border border-green-200 text-green-700 rounded-full text-sm">
+                    {appliedFilters.category}
+                    <button onClick={() => setAppliedFilters(p => ({ ...p, category: undefined }))}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {appliedFilters.bookingType && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 border border-green-200 text-green-700 rounded-full text-sm">
+                    {appliedFilters.bookingType === "instant" ? "Instant Available" : "Schedule Only"}
+                    <button onClick={() => setAppliedFilters(p => ({ ...p, bookingType: undefined }))}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                <button
+                  onClick={() => setAppliedFilters({})}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Services Grid */}
@@ -322,20 +377,8 @@ export default function UserServicesPage() {
         </>
       ) : (
         <>
-          {/* Back Button */}
+          {/* Provider List Header */}
           <div className="mb-6">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedService(null);
-                setSearchQuery("");
-              }}
-              className="mb-4 rounded-[5px] flex items-center gap-2"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Go Back
-            </Button>
-
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
@@ -506,6 +549,13 @@ export default function UserServicesPage() {
           )}
         </>
       )}
+
+      {/* Service Filter Modal */}
+      <ServiceFilterModal
+        isOpen={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        onApply={(filters) => setAppliedFilters(filters)}
+      />
 
       {/* Booking Modal */}
       {showBookingModal && selectedProvider && (

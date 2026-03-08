@@ -49,6 +49,11 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
       where.userId = userId;
     }
     
+    const fromDate = searchParams.get('fromDate');
+    const toDate = searchParams.get('toDate');
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
+
     if (status) where.status = status;
     
     // Search by guest name or email
@@ -60,12 +65,27 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
       ];
     }
 
+    if (fromDate || toDate) {
+      where.createdAt = {};
+      if (fromDate) where.createdAt.gte = new Date(fromDate);
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
+
+    const validSortFields: Record<string, object> = {
+      createdAt: { createdAt: sortOrder },
+    };
+    const orderBy = validSortFields[sortBy] || { createdAt: 'desc' };
+
     const [inquiries, total] = await Promise.all([
       prisma.inquiry.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: {
           property: {
             select: {

@@ -16,20 +16,26 @@ interface FavoriteGridStats {
 
 interface FavoriteGridProps {
   onStatsChange?: (stats: FavoriteGridStats) => void;
+  searchQuery?: string;
+  filter?: string;
+  sortBy?: string;
 }
 
-export default function FavoriteGrid({ onStatsChange }: FavoriteGridProps) {
+export default function FavoriteGrid({ onStatsChange, searchQuery = '', filter = 'all', sortBy = 'recent' }: FavoriteGridProps) {
   const [favoriteItems, setFavoriteItems] = useState<FavoriteWithProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState("recent");
-  const [filter, setFilter] = useState("all"); // all, short, long, buy, available
 
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
         setLoading(true);
-        const response = await api.get("/favorites?pageSize=100");
+        const params = new URLSearchParams({ pageSize: '20' });
+        if (searchQuery.trim()) params.append('search', searchQuery.trim());
+        if (filter && filter !== 'all') params.append('propertyType', filter);
+        if (sortBy && sortBy !== 'recent') params.append('sortBy', sortBy);
+
+        const response = await api.get(`/favorites?${params.toString()}`);
 
         if (response.data?.success && response.data.data?.items) {
           setFavoriteItems(response.data.data.items);
@@ -46,7 +52,7 @@ export default function FavoriteGrid({ onStatsChange }: FavoriteGridProps) {
     };
 
     fetchFavorites();
-  }, []);
+  }, [searchQuery, filter, sortBy]);
 
   const getListingTypeBadge = (listingType: string, rentalType?: string | null) => {
     if (listingType === "buy") {
@@ -135,37 +141,16 @@ export default function FavoriteGrid({ onStatsChange }: FavoriteGridProps) {
     }).format(amount);
   };
 
-  // Filter and sort
-  const filteredFavorites = favoriteItems.filter(item => {
-    const property = item.property;
-    if (filter === "all") return true;
-    if (filter === "short") return property.rentalType === "SHORT_TERM";
-    if (filter === "long") return property.rentalType === "LONG_TERM";
-    if (filter === "buy") return property.listingType === "BUY";
-    return true;
-  });
-
-  const sortedFavorites = [...filteredFavorites].sort((a, b) => {
-    const propA = a.property;
-    const propB = b.property;
-    switch (sortBy) {
-      case "price_low":
-        return propA.price - propB.price;
-      case "price_high":
-        return propB.price - propA.price;
-      case "rating":
-        const ratingA = propA.reviews?.length > 0 
-          ? propA.reviews.reduce((sum, r) => sum + r.rating, 0) / propA.reviews.length 
-          : 0;
-        const ratingB = propB.reviews?.length > 0 
-          ? propB.reviews.reduce((sum, r) => sum + r.rating, 0) / propB.reviews.length 
-          : 0;
+  // Sort: rating-based is client-side since it's a computed field
+  const sortedFavorites = sortBy === "rating"
+    ? [...favoriteItems].sort((a, b) => {
+        const ratingA = a.property.reviews?.length > 0
+          ? a.property.reviews.reduce((sum, r) => sum + r.rating, 0) / a.property.reviews.length : 0;
+        const ratingB = b.property.reviews?.length > 0
+          ? b.property.reviews.reduce((sum, r) => sum + r.rating, 0) / b.property.reviews.length : 0;
         return ratingB - ratingA;
-      case "recent":
-      default:
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
-  });
+      })
+    : favoriteItems;
 
   const shortStayCount = favoriteItems.filter(f => f.property.rentalType === "SHORT_TERM").length;
   const longRentCount = favoriteItems.filter(f => f.property.rentalType === "LONG_TERM").length;
@@ -205,76 +190,18 @@ export default function FavoriteGrid({ onStatsChange }: FavoriteGridProps) {
 
   return (
     <div className="space-y-8">
-      {/* Controls */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        <div className="flex-1">
-          {/* Filter Buttons */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilter("all")}
-              className={`px-4 py-2 rounded-[5px] text-sm font-medium border ${filter === "all"
-                  ? "bg-green-600 text-white border-green-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
-                }`}
-            >
-              All Properties ({favoriteItems.length})
-            </button>
-            <button
-              onClick={() => setFilter("short")}
-              className={`px-4 py-2 rounded-[5px] text-sm font-medium border ${filter === "short"
-                  ? "bg-green-600 text-white border-green-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
-                }`}
-            >
-              Short Stay ({shortStayCount})
-            </button>
-            <button
-              onClick={() => setFilter("long")}
-              className={`px-4 py-2 rounded-[5px] text-sm font-medium border ${filter === "long"
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
-                }`}
-            >
-              Long Rent ({longRentCount})
-            </button>
-            <button
-              onClick={() => setFilter("buy")}
-              className={`px-4 py-2 rounded-[5px] text-sm font-medium border ${filter === "buy"
-                  ? "bg-purple-600 text-white border-purple-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
-                }`}
-            >
-              For Sale ({buyCount})
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Filter className="w-4 h-4" />
-            <span>Sort by:</span>
-          </div>
-          <select
-            className="border rounded-[5px] px-3 py-2 text-sm bg-white"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
+      {/* Clear All */}
+      {favoriteItems.length > 0 && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            onClick={handleClearAll}
+            className="border-red-300 text-red-600 hover:bg-red-50 rounded-[5px]"
           >
-            <option value="recent">Recently Added</option>
-            <option value="price_low">Price: Low to High</option>
-            <option value="price_high">Price: High to Low</option>
-            <option value="rating">Highest Rated</option>
-          </select>
-          {favoriteItems.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={handleClearAll}
-              className="border-red-300 text-red-600 hover:bg-red-50 rounded-[5px]"
-            >
-              Clear All
-            </Button>
-          )}
+            Clear All
+          </Button>
         </div>
-      </div>
+      )}
 
       {/* Favorites Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -453,7 +380,7 @@ export default function FavoriteGrid({ onStatsChange }: FavoriteGridProps) {
               asChild
               className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8 py-3"
             >
-              <Link href="/short-rent">
+              <Link href="/rent/short-rent">
                 <Hotel className="w-5 h-5 mr-2" />
                 Browse Short Stays
               </Link>
@@ -463,7 +390,7 @@ export default function FavoriteGrid({ onStatsChange }: FavoriteGridProps) {
               asChild
               className="px-8 py-3"
             >
-              <Link href="/long-rent">
+              <Link href="/rent/long-rent">
                 <Calendar className="w-5 h-5 mr-2" />
                 Browse Long Rentals
               </Link>

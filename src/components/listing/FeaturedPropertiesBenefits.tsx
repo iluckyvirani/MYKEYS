@@ -184,7 +184,6 @@ export default function FeaturedPropertiesBenefits() {
               </h3>
               
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-white rounded-full"></div>
                 <div>
                   <p className="font-bold">Sarah Johnson</p>
                   <p className="text-emerald-200">Property Owner in London</p>

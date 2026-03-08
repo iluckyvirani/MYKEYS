@@ -296,7 +296,7 @@ export default function OwnersPage() {
                   variant="ghost"
                   size="sm"
                   onClick={handleClearAllFilters}
-                  className="text-red-600 hover:text-red-700"
+                  className="text-red-600 hover:text-red-700 cursor-pointer"
                 >
                   Clear all
                 </Button>

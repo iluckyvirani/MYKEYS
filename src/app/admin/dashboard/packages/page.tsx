@@ -374,7 +374,7 @@ export default function PackagesPage() {
                 size="sm"
                 variant="ghost"
                 onClick={handleResetFilters}
-                className="text-gray-600 hover:text-gray-900"
+                className="text-gray-600 hover:text-gray-900 cursor-pointer"
               >
                 Clear all
               </Button>

@@ -19,6 +19,9 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
     const search = searchParams.get('search') || undefined;
+    const bookingType = searchParams.get('bookingType') || undefined;
+    const fromDate = searchParams.get('fromDate') || undefined;
+    const toDate = searchParams.get('toDate') || undefined;
 
     // Get user's service bookings with enhanced data
     const where: any = {
@@ -27,6 +30,20 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
 
     if (status && status !== 'all') {
       where.status = status.toUpperCase().replace(/-/g, '_');
+    }
+
+    if (bookingType && bookingType !== 'all') {
+      where.bookingType = bookingType.toUpperCase();
+    }
+
+    if (fromDate || toDate) {
+      where.createdAt = {};
+      if (fromDate) where.createdAt.gte = new Date(fromDate);
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
     }
 
     const skip = (page - 1) * limit;
