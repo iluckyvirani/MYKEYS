@@ -54,9 +54,9 @@ export default function InquiriesPage() {
 
   // Calculate stats (unfiltered)
   const totalInquiries = inquiries.length;
-  const respondedInquiries = inquiries.filter(i => i.status === InquiryStatus.REVIEWED).length;
-  const pendingInquiries = inquiries.filter(i => i.status === InquiryStatus.NEW).length;
-  const interestedInquiries = inquiries.filter(i => i.status === InquiryStatus.INTERESTED).length;
+  const repliedInquiries = inquiries.filter(i => i.status === InquiryStatus.REPLIED).length;
+  const pendingInquiries = inquiries.filter(i => i.status === InquiryStatus.NEW || i.status === InquiryStatus.READ).length;
+  const convertedInquiries = inquiries.filter(i => i.status === InquiryStatus.CONVERTED).length;
 
   return (
     <DashboardLayout defaultRole="user">
@@ -77,16 +77,16 @@ export default function InquiriesPage() {
           <div className="text-sm text-gray-600">Total Inquiries</div>
         </div>
         <div className="bg-white p-6 rounded-[5px] border">
-          <div className="text-2xl font-bold text-green-600">{respondedInquiries}</div>
-          <div className="text-sm text-gray-600">Responded</div>
+          <div className="text-2xl font-bold text-blue-600">{repliedInquiries}</div>
+          <div className="text-sm text-gray-600">Replied</div>
         </div>
         <div className="bg-white p-6 rounded-[5px] border">
           <div className="text-2xl font-bold text-yellow-600">{pendingInquiries}</div>
           <div className="text-sm text-gray-600">Pending</div>
         </div>
         <div className="bg-white p-6 rounded-[5px] border">
-          <div className="text-2xl font-bold text-blue-600">{interestedInquiries}</div>
-          <div className="text-sm text-gray-600">Interested in Booking</div>
+          <div className="text-2xl font-bold text-green-600">{convertedInquiries}</div>
+          <div className="text-sm text-gray-600">Converted</div>
         </div>
       </div>
 

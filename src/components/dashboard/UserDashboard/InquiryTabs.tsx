@@ -90,32 +90,32 @@ export default function InquiryTabs({ searchQuery = '', filters }: InquiryTabsPr
 
   const getStatusLabel = (status: string): string => {
     switch (status) {
-      case InquiryStatus.PENDING:
-        return "pending";
-      case InquiryStatus.REVIEWED:
-        return "reviewed";
-      case InquiryStatus.INTERESTED:
-        return "interested";
-      case InquiryStatus.REJECTED:
-        return "rejected";
+      case InquiryStatus.NEW:
+        return "new";
+      case InquiryStatus.READ:
+        return "read";
+      case InquiryStatus.REPLIED:
+        return "replied";
+      case InquiryStatus.CONVERTED:
+        return "converted";
       case InquiryStatus.CLOSED:
         return "closed";
       default:
-        return "pending";
+        return "new";
     }
   };
 
   // Categorize inquiries by status
   const pendingInquiries = inquiries
-    .filter(i => i.status === InquiryStatus.NEW || i.status === InquiryStatus.REVIEWED)
+    .filter(i => i.status === InquiryStatus.NEW || i.status === InquiryStatus.READ)
     .map(transformInquiry);
 
-  const interestedInquiries = inquiries
-    .filter(i => i.status === InquiryStatus.INTERESTED)
+  const repliedInquiries = inquiries
+    .filter(i => i.status === InquiryStatus.REPLIED)
     .map(transformInquiry);
 
-  const rejectedInquiries = inquiries
-    .filter(i => i.status === InquiryStatus.REJECTED)
+  const convertedInquiries = inquiries
+    .filter(i => i.status === InquiryStatus.CONVERTED)
     .map(transformInquiry);
 
   const closedInquiries = inquiries
@@ -151,18 +151,18 @@ export default function InquiryTabs({ searchQuery = '', filters }: InquiryTabsPr
               {pendingInquiries.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="interested" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
-            <CheckCircle className="w-4 h-4" />
-            Interested
+          <TabsTrigger value="replied" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
+            <MessageSquare className="w-4 h-4" />
+            Replied
             <span className="ml-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
-              {interestedInquiries.length}
+              {repliedInquiries.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="rejected" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
-            <MessageSquare className="w-4 h-4" />
-            Rejected
-            <span className="ml-1 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
-              {rejectedInquiries.length}
+          <TabsTrigger value="converted" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
+            <CheckCircle className="w-4 h-4" />
+            Converted
+            <span className="ml-1 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+              {convertedInquiries.length}
             </span>
           </TabsTrigger>
           <TabsTrigger value="closed" className="flex items-center gap-2 py-5 cursor-pointer rounded-[5px]">
@@ -179,22 +179,22 @@ export default function InquiryTabs({ searchQuery = '', filters }: InquiryTabsPr
             <InquiryList 
               inquiries={pendingInquiries} 
               emptyMessage="No pending inquiries. Start inquiring about properties!"
-              emptyAction={{ label: "Browse Properties", href: "/properties" }}
+              emptyAction={{ label: "Browse Properties", href: "/buy" }}
             />
           </TabsContent>
           
-          <TabsContent value="interested" className="m-0">
+          <TabsContent value="replied" className="m-0">
             <InquiryList 
-              inquiries={interestedInquiries} 
-              emptyMessage="No interested inquiries yet."
+              inquiries={repliedInquiries} 
+              emptyMessage="No replied inquiries yet."
               emptyAction={{ label: "View Pending", href: "#" }}
             />
           </TabsContent>
           
-          <TabsContent value="rejected" className="m-0">
+          <TabsContent value="converted" className="m-0">
             <InquiryList 
-              inquiries={rejectedInquiries} 
-              emptyMessage="No rejected inquiries."
+              inquiries={convertedInquiries} 
+              emptyMessage="No converted inquiries."
               emptyAction={{ label: "Browse Properties", href: "/properties" }}
             />
           </TabsContent>

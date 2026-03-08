@@ -7,10 +7,9 @@
 
 export enum InquiryStatus {
   NEW = 'NEW',
-  PENDING = 'PENDING',
-  REVIEWED = 'REVIEWED',
-  INTERESTED = 'INTERESTED',
-  REJECTED = 'REJECTED',
+  READ = 'READ',
+  REPLIED = 'REPLIED',
+  CONVERTED = 'CONVERTED',
   CLOSED = 'CLOSED',
 }
 

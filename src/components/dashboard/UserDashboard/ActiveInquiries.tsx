@@ -11,14 +11,14 @@ import { Inquiry, InquiryStatus, LongRentInquiry, BuyInquiry, InquiryListRespons
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case InquiryStatus.PENDING:
+    case InquiryStatus.NEW:
       return Clock;
-    case InquiryStatus.REVIEWED:
+    case InquiryStatus.READ:
       return CheckCircle;
-    case InquiryStatus.INTERESTED:
+    case InquiryStatus.REPLIED:
       return MessageSquare;
-    case InquiryStatus.REJECTED:
-      return XCircle;
+    case InquiryStatus.CONVERTED:
+      return CheckCircle;
     case InquiryStatus.CLOSED:
       return XCircle;
     default:
@@ -39,12 +39,12 @@ const getTypeIcon = (type: string) => {
 
 const getPriorityColor = (status: string) => {
   switch (status) {
-    case InquiryStatus.PENDING:
-    case InquiryStatus.REVIEWED:
+    case InquiryStatus.NEW:
+    case InquiryStatus.READ:
       return "border-l-4 border-l-red-500";
-    case InquiryStatus.INTERESTED:
+    case InquiryStatus.REPLIED:
       return "border-l-4 border-l-orange-500";
-    case InquiryStatus.REJECTED:
+    case InquiryStatus.CONVERTED:
     case InquiryStatus.CLOSED:
       return "border-l-4 border-l-green-500";
     default:
@@ -124,18 +124,18 @@ export default function ActiveInquiries() {
 
 const getStatusText = (status: string) => {
   switch (status) {
-    case InquiryStatus.PENDING:
-      return "Pending";
-    case InquiryStatus.REVIEWED:
-      return "Reviewed";
-    case InquiryStatus.INTERESTED:
-      return "Interested";
-    case InquiryStatus.REJECTED:
-      return "Rejected";
+    case InquiryStatus.NEW:
+      return "New";
+    case InquiryStatus.READ:
+      return "Read";
+    case InquiryStatus.REPLIED:
+      return "Replied";
+    case InquiryStatus.CONVERTED:
+      return "Converted";
     case InquiryStatus.CLOSED:
       return "Closed";
     default:
-      return "Pending";
+      return "New";
   }
 };
 

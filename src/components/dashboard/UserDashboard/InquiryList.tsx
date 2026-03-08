@@ -191,10 +191,12 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                       </span>
                     </div>
                   </div>
-                  <Button variant="outline">
-                    View Property
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <Link href={`/property/${inquiry.property}`} className="ml-4">
+                    <Button variant="outline">
+                      View Property
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
                 </div>
 
                 {/* Inquiry Details */}
@@ -225,48 +227,8 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                   </div>
                 </div>
 
-                {/* Conversation Thread */}
-                {/* <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 mb-3">Conversation</h4>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <User className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="bg-gray-100 rounded-lg p-4">
-                          <p className="text-gray-700">Hi, I'm interested in your property. Can you share more details about availability?</p>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">You • {getTimeAgo(inquiry.sent)}</div>
-                      </div>
-                    </div>
-                    
-                    {inquiry.status === "responded" && (
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                          <User className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-                            <p className="text-gray-700">Hello! Thanks for your interest. The property is available for your requested dates. Would you like to schedule a virtual tour?</p>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">{inquiry.owner} • 2 hours ago</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div> */}
-
                 {/* Actions */}
                 <div className="flex flex-wrap gap-3 pt-6 border-t">
-                  {/* <Button className="flex-1">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Send Message
-                  </Button> */}
-                  <Button variant="outline" className="flex-1 cursor-pointer rounded-[5px]">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Schedule Tour
-                  </Button>
                   {inquiry.status === "pending" && (
                     <Button variant="outline" className="text-red-600 hover:text-red-700 cursor-pointer rounded-[5px]">
                       Withdraw Inquiry
