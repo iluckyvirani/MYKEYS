@@ -223,7 +223,7 @@ export function OwnerBookingList({
                   </td>
 
                   <td className="py-4 px-4">
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2">
                       <Link href={`/owner/dashboard/bookings/${booking.id}`}>
                         <Button
                           variant="ghost"
@@ -235,33 +235,30 @@ export function OwnerBookingList({
                         </Button>
                       </Link>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {booking.status?.toUpperCase() === "PENDING" && (
-                            <DropdownMenuItem onClick={() => onConfirm?.(booking.id)}>
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Confirm Booking
-                            </DropdownMenuItem>
-                          )}
-                          {["PENDING", "CONFIRMED"].includes(
-                            booking.status?.toUpperCase() || ""
-                          ) && (
-                            <DropdownMenuItem onClick={() => onCancel?.(booking.id)}>
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Cancel Booking
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {booking.status?.toUpperCase() === "PENDING" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 hover:text-green-700 border-green-600"
+                          onClick={() => onConfirm?.(booking.id)}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Confirm
+                        </Button>
+                      )}
+                      {["PENDING", "CONFIRMED"].includes(
+                        booking.status?.toUpperCase() || ""
+                      ) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 border-red-600"
+                          onClick={() => onCancel?.(booking.id)}
+                        >
+                          <XCircle className="w-4 h-4 mr-1" />
+                          Cancel
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

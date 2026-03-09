@@ -2,9 +2,12 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import InquiryInbox from "@/components/dashboard/OwnerDashboard/InquiryInbox";
-import { Inbox, Clock, AlertCircle, TrendingUp, CheckCircle } from "lucide-react";
+import { OwnerInquiryFilterModal } from "@/components/dashboard/UserDashboard/FilterModal";
+import { Inbox, Clock, AlertCircle, TrendingUp, CheckCircle, Filter, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface InquiryStats {
   total: number;
@@ -26,6 +29,8 @@ export default function OwnerInquiriesPage() {
     converted: 0,
     highPriority: 0,
   });
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<{ status?: string; priority?: string; type?: string }>({});
 
   useEffect(() => {
     fetchStats();
@@ -56,12 +61,66 @@ export default function OwnerInquiriesPage() {
     <DashboardLayout defaultRole="owner">
       {/* Main Content */}
       <div className="mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inquiries Management</h1>
-          <p className="text-gray-600 mt-2">
-            Manage and respond to property inquiries from potential guests
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Inquiries Management</h1>
+            <p className="text-gray-600 mt-2">
+              Manage and respond to property inquiries from potential guests
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setFilterModalOpen(true)}
+          >
+            <Filter className="w-4 h-4" />
+            Advanced Filters
+            {(appliedFilters.status || appliedFilters.priority || appliedFilters.type) && (
+              <span className="ml-1 px-1.5 py-0.5 bg-green-600 text-white text-xs rounded-full">
+                {[appliedFilters.status, appliedFilters.priority, appliedFilters.type].filter(Boolean).length}
+              </span>
+            )}
+          </Button>
         </div>
+
+        {/* Applied Filter Chips */}
+        {(appliedFilters.status || appliedFilters.priority || appliedFilters.type) && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {appliedFilters.status && (
+              <Badge variant="secondary" className="flex items-center gap-2">
+                Status: {appliedFilters.status}
+                <X
+                  className="w-3 h-3 cursor-pointer"
+                  onClick={() => setAppliedFilters(p => ({ ...p, status: undefined }))}
+                />
+              </Badge>
+            )}
+            {appliedFilters.priority && (
+              <Badge variant="secondary" className="flex items-center gap-2">
+                Priority: {appliedFilters.priority}
+                <X
+                  className="w-3 h-3 cursor-pointer"
+                  onClick={() => setAppliedFilters(p => ({ ...p, priority: undefined }))}
+                />
+              </Badge>
+            )}
+            {appliedFilters.type && (
+              <Badge variant="secondary" className="flex items-center gap-2">
+                Type: {appliedFilters.type.replace('_', ' ')}
+                <X
+                  className="w-3 h-3 cursor-pointer"
+                  onClick={() => setAppliedFilters(p => ({ ...p, type: undefined }))}
+                />
+              </Badge>
+            )}
+            <button
+              onClick={() => setAppliedFilters({})}
+              className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
@@ -128,7 +187,14 @@ export default function OwnerInquiriesPage() {
       </div>
 
       {/* Inquiry Inbox Component */}
-      <InquiryInbox />
+      <InquiryInbox filters={appliedFilters} />
+
+      {/* Filter Modal */}
+      <OwnerInquiryFilterModal
+        isOpen={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        onApply={(filters) => setAppliedFilters(filters)}
+      />
     </DashboardLayout>
   );
 }

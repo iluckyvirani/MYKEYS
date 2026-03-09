@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { OwnerFilterModal } from "@/components/dashboard/owner/bookings/OwnerFilterModal";
 import { OwnerBookingList } from "@/components/dashboard/owner/bookings/OwnerBookingList";
 import { ConfirmBookingModal } from "@/components/dashboard/owner/bookings/ConfirmBookingModal";
-import { BookingCalendar } from "@/components/dashboard/owner/bookings/BookingCalendar";
+import BookingCalendar from "@/components/dashboard/OwnerDashboard/BookingCalendar";
 import { Button } from "@/components/ui/button";
 import {
   Calendar,
@@ -178,7 +178,7 @@ export default function OwnerBookingsPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
+            <Button className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 cursor-pointer">
               <Plus className="w-4 h-4 mr-2" />
               Create Booking
             </Button>
@@ -299,15 +299,16 @@ export default function OwnerBookingsPage() {
               variant="outline" 
               size="sm"
               onClick={() => setFilterModalOpen(true)}
+              className="cursor-pointer"
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              Advanced Filters
             </Button>
           </div>
         </div>
 
         {/* Applied Filters Display */}
-        {showAppliedFilters && Object.keys(appliedFilters).length > 0 && (
+        {showAppliedFilters && Object.keys(appliedFilters).filter(k => k !== 'sortBy' && k !== 'search').length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2 items-center">
             {appliedFilters.status && (
               <Badge variant="secondary" className="flex items-center gap-2">
@@ -361,16 +362,14 @@ export default function OwnerBookingsPage() {
                 />
               </Badge>
             )}
-            {(appliedFilters.search || Object.keys(appliedFilters).length > 0) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearAllFilters}
-                className="text-red-600 hover:text-red-700"
-              >
-                Clear all
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearAllFilters}
+              className="text-red-600 hover:text-red-700"
+            >
+              Clear all
+            </Button>
           </div>
         )}
       </div>
@@ -385,7 +384,7 @@ export default function OwnerBookingsPage() {
           onCancel={handleCancelBooking}
         />
       ) : (
-        <BookingCalendar bookings={bookings} />
+        <BookingCalendar />
       )}
 
       {/* Modals */}

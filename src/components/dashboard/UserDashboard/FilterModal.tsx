@@ -552,3 +552,78 @@ export function ServiceFilterModal({ isOpen, onClose, onApply }: ServiceFilterMo
     </Dialog>
   );
 }
+
+// ─── Inquiry Filter Modal (Owner) ─────────────────────────────────────────────
+
+interface OwnerInquiryFilterModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onApply: (filters: { status?: string; priority?: string; type?: string }) => void;
+}
+
+export function OwnerInquiryFilterModal({ isOpen, onClose, onApply }: OwnerInquiryFilterModalProps) {
+  const [status, setStatus] = useState<string>("");
+  const [priority, setPriority] = useState<string>("");
+  const [type, setType] = useState<string>("");
+
+  const handleApply = () => {
+    onApply({ 
+      status: status || undefined, 
+      priority: priority || undefined, 
+      type: type || undefined 
+    });
+    onClose();
+  };
+
+  const handleReset = () => { 
+    setStatus(""); 
+    setPriority(""); 
+    setType(""); 
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md rounded-[5px]">
+        <DialogHeader>
+          <DialogTitle>Filter Inquiries</DialogTitle>
+          <DialogDescription>Filter inquiries by status, priority, or type</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Status</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-3 py-2 border rounded-[5px] text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              <option value="">All Statuses</option>
+              <option value="NEW">New</option>
+              <option value="READ">Read</option>
+              <option value="REPLIED">Replied</option>
+              <option value="CLOSED">Closed</option>
+              <option value="CONVERTED">Converted</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Priority</label>
+            <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full px-3 py-2 border rounded-[5px] text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              <option value="">All Priorities</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Inquiry Type</label>
+            <select value={type} onChange={(e) => setType(e.target.value)} className="w-full px-3 py-2 border rounded-[5px] text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+              <option value="">All Types</option>
+              <option value="short_term">Short Term</option>
+              <option value="long_term">Long Term</option>
+              <option value="purchase">Purchase</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={handleReset} className="flex-1 rounded-[5px]">Reset</Button>
+          <Button onClick={handleApply} className="flex-1 rounded-[5px]">Apply Filters</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

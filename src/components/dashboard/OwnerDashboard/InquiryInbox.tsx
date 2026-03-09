@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface Inquiry {
   id: string;
@@ -53,7 +54,11 @@ const statusColors = {
   CONVERTED: "bg-indigo-100 text-indigo-800",
 };
 
-export default function InquiryInbox() {
+interface InquiryInboxProps {
+  filters?: { status?: string; priority?: string; type?: string };
+}
+
+export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
   const { toast } = useToast();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
@@ -94,6 +99,7 @@ export default function InquiryInbox() {
           type: inq.type,
           duration: inq.type === "long_term" ? `${inq.desiredDurationMonths || 12} months` : inq.desiredDurationMonths,
           budget: inq.budget || inq.pricePerMonth,
+          response: inq.response || null,
         }));
         setInquiries(inquiriesList);
         if (inquiriesList.length > 0) {
@@ -328,6 +334,10 @@ export default function InquiryInbox() {
     if (filter !== "all" && inq.status !== filter) return false;
     if (search && !inq.guestName.toLowerCase().includes(search.toLowerCase()) && 
         !inq.propertyTitle.toLowerCase().includes(search.toLowerCase())) return false;
+    // Apply advanced filters
+    if (filters.status && inq.status.toUpperCase() !== filters.status) return false;
+    if (filters.priority && inq.priority !== filters.priority) return false;
+    if (filters.type && inq.type !== filters.type) return false;
     return true;
   });
 

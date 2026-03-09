@@ -48,9 +48,9 @@ const ownerNavigation = [
   { name: "Bookings", href: "/owner/dashboard/bookings", icon: Calendar },
   { name: "Inquiries", href: "/owner/dashboard/inquiries", icon: MessageSquare },
   { name: "Services", href: "/owner/dashboard/services", icon: Megaphone },
-  { name: "Finance", href: "/owner/dashboard/finance", icon: DollarSign },
+  { name: "Payments", href: "/owner/dashboard/finance", icon: DollarSign },
   // { name: "Ads", href: "/owner/dashboard/ads", icon: Megaphone },
-  { name: "packages", href: "/owner/dashboard/packages", icon: Star },
+  { name: "Packages", href: "/owner/dashboard/packages", icon: Star },
   { name: "Reports", href: "/owner/dashboard/reports", icon: FileBarChart },
   { name: "Analytics", href: "/owner/dashboard/analytics", icon: BarChart3 },
 ];

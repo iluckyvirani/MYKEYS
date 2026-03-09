@@ -89,18 +89,6 @@ export function OwnerFilterModal({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Search */}
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Search
-            </label>
-            <Input
-              placeholder="Search by guest name, email, or booking ID..."
-              value={filters.search || ""}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value || undefined }))}
-            />
-          </div>
-
           {/* Properties */}
           {properties.length > 0 && (
             <div>
@@ -108,7 +96,7 @@ export function OwnerFilterModal({
                 Property
               </label>
               <select
-                className="w-full border rounded-[5px] px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-[5px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 value={filters.propertyId || ""}
                 onChange={(e) => setFilters(prev => ({ ...prev, propertyId: e.target.value || undefined }))}
               >
@@ -125,21 +113,18 @@ export function OwnerFilterModal({
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Booking Status
             </label>
-            <div className="flex flex-wrap gap-2">
-              {["PENDING", "CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED"].map(status => (
-                <button
-                  key={status}
-                  onClick={() => handleStatusChange(status)}
-                  className={`px-3 py-2 rounded-[5px] text-sm border transition-colors ${
-                    filters.status === status
-                      ? "bg-green-600 text-white border-green-600"
-                      : "border-gray-300 text-gray-700 hover:border-gray-400"
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
+            <select
+              className="w-full border border-gray-300 rounded-[5px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              value={filters.status || ""}
+              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value || undefined }))}
+            >
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="CONFIRMED">Confirmed</option>
+              <option value="ACTIVE">Active</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
           </div>
 
           {/* Payment Status */}
@@ -147,21 +132,18 @@ export function OwnerFilterModal({
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Payment Status
             </label>
-            <div className="flex flex-wrap gap-2">
-              {["PENDING", "PAID", "PARTIAL", "REFUNDED", "FAILED"].map(status => (
-                <button
-                  key={status}
-                  onClick={() => handlePaymentStatusChange(status)}
-                  className={`px-3 py-2 rounded-[5px] text-sm border transition-colors ${
-                    filters.paymentStatus === status
-                      ? "bg-green-600 text-white border-green-600"
-                      : "border-gray-300 text-gray-700 hover:border-gray-400"
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
+            <select
+              className="w-full border border-gray-300 rounded-[5px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              value={filters.paymentStatus || ""}
+              onChange={(e) => setFilters(prev => ({ ...prev, paymentStatus: e.target.value || undefined }))}
+            >
+              <option value="">All Payment Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="PAID">Paid</option>
+              <option value="PARTIAL">Partial</option>
+              <option value="REFUNDED">Refunded</option>
+              <option value="FAILED">Failed</option>
+            </select>
           </div>
 
           {/* Date Range */}
@@ -193,21 +175,16 @@ export function OwnerFilterModal({
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Sort By
             </label>
-            <div className="flex flex-wrap gap-2">
-              {["checkIn", "createdAt", "totalAmount"].map(sort => (
-                <button
-                  key={sort}
-                  onClick={() => handleSortChange(sort)}
-                  className={`px-3 py-2 rounded-[5px] text-sm border transition-colors ${
-                    filters.sortBy === sort
-                      ? "bg-green-600 text-white border-green-600"
-                      : "border-gray-300 text-gray-700 hover:border-gray-400"
-                  }`}
-                >
-                  {sort === "checkIn" ? "Check-in" : sort === "createdAt" ? "Booking Date" : "Amount"}
-                </button>
-              ))}
-            </div>
+            <select
+              className="w-full border border-gray-300 rounded-[5px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              value={filters.sortBy || ""}
+              onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value || undefined }))}
+            >
+              <option value="">Default (Recent)</option>
+              <option value="checkIn">Check-in Date</option>
+              <option value="createdAt">Booking Date</option>
+              <option value="totalAmount">Amount</option>
+            </select>
           </div>
         </div>
 
