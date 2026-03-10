@@ -266,7 +266,7 @@ export default function UsersPage() {
               className="rounded-[5px]"
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              Advanced Filters
             </Button>
           </div>
 

@@ -1,7 +1,14 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState } from "react";
 
 interface AdminPaymentFilterModalProps {
@@ -17,121 +24,131 @@ export function AdminPaymentFilterModal({
   onApply,
   appliedFilters = {},
 }: AdminPaymentFilterModalProps) {
-  const [filters, setFilters] = useState(appliedFilters);
+  const [filters, setFilters] = useState({
+    status: appliedFilters?.status || "ALL",
+    method: appliedFilters?.method || "ALL",
+    type: appliedFilters?.type || "ALL",
+  });
 
   const handleApply = () => {
-    const cleanFilters = Object.fromEntries(
-      Object.entries(filters).filter(([, value]) => value)
-    );
+    const cleanFilters: any = {};
+    if (filters.status && filters.status !== "ALL") cleanFilters.status = filters.status;
+    if (filters.method && filters.method !== "ALL") cleanFilters.method = filters.method;
+    if (filters.type && filters.type !== "ALL") cleanFilters.type = filters.type;
+    
     onApply(cleanFilters);
     onClose();
   };
 
   const handleReset = () => {
-    setFilters({});
+    setFilters({
+      status: "ALL",
+      method: "ALL",
+      type: "ALL",
+    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Filter Payments</DialogTitle>
+          <DialogTitle>Advanced Filters</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 py-4">
           {/* Status Filter */}
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Payment Status
             </label>
-            <div className="space-y-2">
-              {["completed", "pending", "failed"].map((status) => (
-                <label key={status} className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value={status}
-                    checked={filters.status === status}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        status: filters.status === e.target.value ? "" : e.target.value,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 capitalize">{status}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.status}
+              onValueChange={(value) =>
+                setFilters({ ...filters, status: value })
+              }
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                {["completed", "pending", "failed"].map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Payment Method Filter */}
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Payment Method
             </label>
-            <div className="space-y-2">
-              {["Razorpay", "Credit Card", "Google Pay", "UPI", "Net Banking"].map(
-                (method) => (
-                  <label key={method} className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="method"
-                      value={method}
-                      checked={filters.method === method}
-                      onChange={(e) =>
-                        setFilters({
-                          ...filters,
-                          method:
-                            filters.method === e.target.value ? "" : e.target.value,
-                        })
-                      }
-                      className="w-4 h-4 text-blue-600"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{method}</span>
-                  </label>
-                )
-              )}
-            </div>
+            <Select
+              value={filters.method}
+              onValueChange={(value) =>
+                setFilters({ ...filters, method: value })
+              }
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Methods" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Methods</SelectItem>
+                {["Razorpay", "Credit Card", "Google Pay", "UPI", "Net Banking"].map(
+                  (method) => (
+                    <SelectItem key={method} value={method}>
+                      {method}
+                    </SelectItem>
+                  )
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Payment Type Filter */}
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Transaction Type
             </label>
-            <div className="space-y-2">
-              {["Booking", "Service", "Subscription"].map((type) => (
-                <label key={type} className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="type"
-                    value={type}
-                    checked={filters.type === type}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        type: filters.type === e.target.value ? "" : e.target.value,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">{type}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.type}
+              onValueChange={(value) =>
+                setFilters({ ...filters, type: value })
+              }
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Types</SelectItem>
+                {["Booking", "Service", "Subscription"].map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleReset}>
+        <div className="flex gap-3 pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            className="flex-1 rounded-[5px]"
+          >
             Reset
           </Button>
-          <Button onClick={handleApply} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            onClick={handleApply}
+            className="flex-1 bg-green-600 hover:bg-green-700 rounded-[5px]"
+          >
             Apply Filters
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

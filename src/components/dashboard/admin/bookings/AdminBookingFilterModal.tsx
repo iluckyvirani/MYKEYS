@@ -1,7 +1,8 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 
 interface AdminBookingFilterModalProps {
@@ -17,122 +18,119 @@ export function AdminBookingFilterModal({
   onApply,
   appliedFilters = {},
 }: AdminBookingFilterModalProps) {
-  const [filters, setFilters] = useState(appliedFilters);
+  const [filters, setFilters] = useState({
+    status: appliedFilters?.status || "ALL",
+    duration: appliedFilters?.duration || "ALL",
+    priceRange: appliedFilters?.priceRange || "ALL",
+  });
 
   const handleApply = () => {
-    const cleanFilters = Object.fromEntries(
-      Object.entries(filters).filter(([, value]) => value)
-    );
+    const cleanFilters: any = {};
+    if (filters.status && filters.status !== "ALL") cleanFilters.status = filters.status;
+    if (filters.duration && filters.duration !== "ALL") cleanFilters.duration = filters.duration;
+    if (filters.priceRange && filters.priceRange !== "ALL") cleanFilters.priceRange = filters.priceRange;
+    
     onApply(cleanFilters);
     onClose();
   };
 
   const handleReset = () => {
-    setFilters({});
+    setFilters({
+      status: "ALL",
+      duration: "ALL",
+      priceRange: "ALL",
+    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Filter Bookings</DialogTitle>
+          <DialogTitle>Advanced Filters</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 py-4">
           {/* Status Filter */}
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Booking Status
             </label>
-            <div className="space-y-2">
-              {["confirmed", "pending", "cancelled"].map((status) => (
-                <label key={status} className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value={status}
-                    checked={filters.status === status}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        status: filters.status === e.target.value ? "" : e.target.value,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 capitalize">{status}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.status}
+              onValueChange={(value) => setFilters({ ...filters, status: value })}
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Duration Filter */}
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Stay Duration
             </label>
-            <div className="space-y-2">
-              {["1-3 nights", "4-7 nights", "8-15 nights", "15+ nights"].map(
-                (duration) => (
-                  <label key={duration} className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="duration"
-                      value={duration}
-                      checked={filters.duration === duration}
-                      onChange={(e) =>
-                        setFilters({
-                          ...filters,
-                          duration:
-                            filters.duration === e.target.value ? "" : e.target.value,
-                        })
-                      }
-                      className="w-4 h-4 text-blue-600"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{duration}</span>
-                  </label>
-                )
-              )}
-            </div>
+            <Select
+              value={filters.duration}
+              onValueChange={(value) => setFilters({ ...filters, duration: value })}
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Durations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Durations</SelectItem>
+                <SelectItem value="1-3 nights">1-3 nights</SelectItem>
+                <SelectItem value="4-7 nights">4-7 nights</SelectItem>
+                <SelectItem value="8-15 nights">8-15 nights</SelectItem>
+                <SelectItem value="15+ nights">15+ nights</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Price Range Filter */}
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Booking Value
             </label>
-            <div className="space-y-2">
-              {["₹0-50K", "₹50K-100K", "₹100K-200K", "₹200K+"].map((range) => (
-                <label key={range} className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="priceRange"
-                    value={range}
-                    checked={filters.priceRange === range}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        priceRange:
-                          filters.priceRange === e.target.value ? "" : e.target.value,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">{range}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.priceRange}
+              onValueChange={(value) => setFilters({ ...filters, priceRange: value })}
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Values" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Values</SelectItem>
+                <SelectItem value="₹0-50K">₹0-50K</SelectItem>
+                <SelectItem value="₹50K-100K">₹50K-100K</SelectItem>
+                <SelectItem value="₹100K-200K">₹100K-200K</SelectItem>
+                <SelectItem value="₹200K+">₹200K+</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleReset}>
+        <div className="flex gap-3 pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            className="flex-1 rounded-[5px]"
+          >
             Reset
           </Button>
-          <Button onClick={handleApply} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            onClick={handleApply}
+            className="flex-1 bg-green-600 hover:bg-green-700 rounded-[5px]"
+          >
             Apply Filters
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

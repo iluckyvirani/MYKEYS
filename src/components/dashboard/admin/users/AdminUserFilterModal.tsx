@@ -2,6 +2,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 
 interface AdminUserFilterModalProps {
@@ -18,27 +19,27 @@ export function AdminUserFilterModal({
   appliedFilters,
 }: AdminUserFilterModalProps) {
   const [filters, setFilters] = useState({
-    role: appliedFilters?.role || "",
-    status: appliedFilters?.status || "",
-    accountType: appliedFilters?.accountType || "",
-    verificationStatus: appliedFilters?.verificationStatus || "",
+    role: appliedFilters?.role || "ALL",
+    status: appliedFilters?.status || "ALL",
+    accountType: appliedFilters?.accountType || "ALL",
+    verificationStatus: appliedFilters?.verificationStatus || "ALL",
   });
 
   useEffect(() => {
     setFilters({
-      role: appliedFilters?.role || "",
-      status: appliedFilters?.status || "",
-      accountType: appliedFilters?.accountType || "",
-      verificationStatus: appliedFilters?.verificationStatus || "",
+      role: appliedFilters?.role || "ALL",
+      status: appliedFilters?.status || "ALL",
+      accountType: appliedFilters?.accountType || "ALL",
+      verificationStatus: appliedFilters?.verificationStatus || "ALL",
     });
   }, [appliedFilters]);
 
   const handleApply = () => {
     const cleanFilters: any = {};
-    if (filters.role) cleanFilters.role = filters.role;
-    if (filters.status) cleanFilters.status = filters.status;
-    if (filters.accountType) cleanFilters.accountType = filters.accountType;
-    if (filters.verificationStatus) cleanFilters.verificationStatus = filters.verificationStatus;
+    if (filters.role && filters.role !== "ALL") cleanFilters.role = filters.role;
+    if (filters.status && filters.status !== "ALL") cleanFilters.status = filters.status;
+    if (filters.accountType && filters.accountType !== "ALL") cleanFilters.accountType = filters.accountType;
+    if (filters.verificationStatus && filters.verificationStatus !== "ALL") cleanFilters.verificationStatus = filters.verificationStatus;
     
     onApply(cleanFilters);
     onClose();
@@ -46,10 +47,10 @@ export function AdminUserFilterModal({
 
   const handleReset = () => {
     setFilters({
-      role: "",
-      status: "",
-      accountType: "",
-      verificationStatus: "",
+      role: "ALL",
+      status: "ALL",
+      accountType: "ALL",
+      verificationStatus: "ALL",
     });
     onApply({});
     onClose();
@@ -59,89 +60,71 @@ export function AdminUserFilterModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Filter Users</DialogTitle>
+          <DialogTitle>Advanced Filters</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 py-4">
           {/* Role Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               User Role
             </label>
-            <div className="space-y-2">
-              {[
-                { value: "", label: "All Roles" },
-                { value: "USER", label: "Tenant" },
-                { value: "OWNER", label: "Property Owner" },
-                { value: "SERVICE", label: "Service Provider" },
-              ].map((role) => (
-                <label key={role.value} className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="role"
-                    value={role.value}
-                    checked={filters.role === role.value}
-                    onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">{role.label}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.role}
+              onValueChange={(value) => setFilters({ ...filters, role: value })}
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Roles</SelectItem>
+                <SelectItem value="USER">Tenant</SelectItem>
+                <SelectItem value="OWNER">Property Owner</SelectItem>
+                <SelectItem value="SERVICE">Service Provider</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Status Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Account Status
             </label>
-            <div className="space-y-2">
-              {[
-                { value: "", label: "All Status" },
-                { value: "active", label: "Active" },
-                { value: "inactive", label: "Inactive" },
-                { value: "suspended", label: "Suspended" },
-              ].map((status) => (
-                <label key={status.value} className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="status"
-                    value={status.value}
-                    checked={filters.status === status.value}
-                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">{status.label}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.status}
+              onValueChange={(value) => setFilters({ ...filters, status: value })}
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Verification Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Verification Status
             </label>
-            <div className="space-y-2">
-              {[
-                { value: "", label: "All" },
-                { value: "verified", label: "Verified" },
-                { value: "pending", label: "Pending" },
-                { value: "rejected", label: "Rejected" },
-              ].map((status) => (
-                <label key={status.value} className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="verification"
-                    value={status.value}
-                    checked={filters.verificationStatus === status.value}
-                    onChange={(e) => setFilters({ ...filters, verificationStatus: e.target.value })}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">{status.label}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.verificationStatus}
+              onValueChange={(value) => setFilters({ ...filters, verificationStatus: value })}
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All</SelectItem>
+                <SelectItem value="verified">Verified</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

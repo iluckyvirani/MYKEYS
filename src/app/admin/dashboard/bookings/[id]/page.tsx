@@ -99,13 +99,13 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
         </div>
       ) : error ? (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[5px] flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <AlertCircle className="w-5 h-5 shrink-0" />
           <span>{error}</span>
         </div>
       ) : bookingData ? (
         <div className="space-y-6">
           {/* Booking Status */}
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-[8px] p-6">
+          <div className="bg-linear-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{bookingData.property.title}</h2>
@@ -124,7 +124,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
 
           {/* Booking Timeline */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="rounded-[8px] p-4 border-l-4 border-l-indigo-500">
+            <Card className="rounded-xl p-4 border-l-4 border-l-indigo-500">
               <p className="text-sm text-gray-600 mb-2">Check-in</p>
               <p className="text-lg font-bold text-gray-900">
                 {new Date(bookingData.booking.checkIn).toLocaleDateString("en-IN", {
@@ -141,7 +141,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
               </p>
             </Card>
 
-            <Card className="rounded-[8px] p-4 border-l-4 border-l-purple-500">
+            <Card className="rounded-xl p-4 border-l-4 border-l-purple-500">
               <p className="text-sm text-gray-600 mb-2">Check-out</p>
               <p className="text-lg font-bold text-gray-900">
                 {new Date(bookingData.booking.checkOut).toLocaleDateString("en-IN", {
@@ -158,7 +158,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
               </p>
             </Card>
 
-            <Card className="rounded-[8px] p-4 border-l-4 border-l-blue-500">
+            <Card className="rounded-xl p-4 border-l-4 border-l-blue-500">
               <p className="text-sm text-gray-600 mb-2">Duration</p>
               <p className="text-lg font-bold text-gray-900">{bookingData.booking.nights} nights</p>
               <p className="text-xs text-gray-500 mt-1">{bookingData.booking.guests} guest(s)</p>
@@ -170,7 +170,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
             {/* Guest Info */}
             <div>
               <h3 className="font-semibold text-gray-900 mb-4">Guest Information</h3>
-              <div className="bg-blue-50 border border-blue-200 rounded-[8px] p-4 space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   {bookingData.guest.avatar ? (
                     <img
@@ -208,7 +208,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
             {/* Owner Info */}
             <div>
               <h3 className="font-semibold text-gray-900 mb-4">Property Owner</h3>
-              <div className="bg-orange-50 border border-orange-200 rounded-[8px] p-4 space-y-3">
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   {bookingData.owner.avatar ? (
                     <img
@@ -241,7 +241,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
           {/* Pricing Breakdown */}
           <div>
             <h3 className="font-semibold text-gray-900 mb-4">Pricing Breakdown</h3>
-            <Card className="rounded-[8px] p-6 space-y-3">
+            <Card className="rounded-xl p-6 space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-gray-700">Base Price ({bookingData.booking.nights} nights)</span>
                 <span className="font-semibold text-gray-900">₹{bookingData.booking.basePrice.toLocaleString("en-IN")}</span>
@@ -268,7 +268,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
           {/* Payment Information */}
           <div>
             <h3 className="font-semibold text-gray-900 mb-4">Payment Information</h3>
-            <Card className="rounded-[8px] p-6 space-y-4">
+            <Card className="rounded-xl p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Paid Amount</p>
@@ -302,7 +302,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
               {bookingData.booking.specialRequests && (
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Special Requests</h3>
-                  <Card className="rounded-[8px] p-4 bg-yellow-50 border-yellow-200">
+                  <Card className="rounded-xl p-4 bg-yellow-50 border-yellow-200">
                     <p className="text-gray-700">{bookingData.booking.specialRequests}</p>
                   </Card>
                 </div>
@@ -311,7 +311,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
               {bookingData.booking.notes && (
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Notes</h3>
-                  <Card className="rounded-[8px] p-4 bg-blue-50 border-blue-200">
+                  <Card className="rounded-xl p-4 bg-blue-50 border-blue-200">
                     <p className="text-gray-700">{bookingData.booking.notes}</p>
                   </Card>
                 </div>
@@ -323,7 +323,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
           {bookingData.review && (
             <div>
               <h3 className="font-semibold text-gray-900 mb-4">Guest Review</h3>
-              <Card className="rounded-[8px] p-6 border-l-4 border-l-yellow-500">
+              <Card className="rounded-xl p-6 border-l-4 border-l-yellow-500">
                 <div className="flex items-center gap-4 mb-3">
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (

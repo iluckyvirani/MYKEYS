@@ -225,7 +225,9 @@ export default function BookingsPage() {
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">{(confirmedBookings / bookings.length * 100).toFixed(0)}%</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {bookings.length > 0 ? (confirmedBookings / bookings.length * 100).toFixed(0) : "0"}%
+                </div>
                 <div className="text-sm text-gray-600">Confirmation Rate</div>
               </div>
               <div className="p-2 bg-purple-100 rounded-lg">
@@ -260,7 +262,7 @@ export default function BookingsPage() {
               className="rounded-[5px]"
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              Advanced Filters
             </Button>
           </div>
 

@@ -110,7 +110,9 @@ export default function ServiceProvidersPage() {
   const activeProviders = providers.filter((p) => p.status === "active").length;
   const inactiveProviders = providers.filter((p) => p.status === "inactive").length;
   const totalBookings = providers.reduce((sum, p) => sum + p.bookings, 0);
-  const avgRating = (providers.reduce((sum, p) => sum + p.rating, 0) / providers.length).toFixed(1);
+  const avgRating = providers.length > 0 
+    ? (providers.reduce((sum, p) => sum + p.rating, 0) / providers.length).toFixed(1)
+    : "0.0";
 
   return (
     <AdminDashboardLayout>
@@ -186,7 +188,9 @@ export default function ServiceProvidersPage() {
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">{(totalBookings / providers.length).toFixed(0)}</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {providers.length > 0 ? (totalBookings / providers.length).toFixed(0) : "0"}
+                </div>
                 <div className="text-sm text-gray-600">Avg Bookings</div>
               </div>
               <div className="p-2 bg-purple-100 rounded-lg">
@@ -221,7 +225,7 @@ export default function ServiceProvidersPage() {
               className="rounded-[5px]"
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              Advanced Filters
             </Button>
           </div>
 

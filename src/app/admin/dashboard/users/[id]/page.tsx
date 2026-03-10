@@ -55,7 +55,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           className="flex items-center gap-2 text-green-600 hover:text-green-700 mb-4 font-medium"
         >
           <ArrowLeft className="w-5 h-5" />
-          Back
+          Go Back
         </button>
         <div className="flex items-center justify-between">
           <div>

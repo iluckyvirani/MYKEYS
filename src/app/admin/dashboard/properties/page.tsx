@@ -284,7 +284,7 @@ export default function AdminPropertiesPage() {
               className="rounded-[5px]"
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              Advanced Filters
             </Button>
             <Button
               variant="outline"
@@ -306,14 +306,10 @@ export default function AdminPropertiesPage() {
 
           {/* Applied Filters Display */}
           {(appliedFilters.status !== "ALL" || appliedFilters.type !== "ALL") && (
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-gray-600">Applied Filters:</span>
+            <div className="flex flex-wrap gap-2 items-center">
               {appliedFilters.status !== "ALL" && (
-                <Badge
-                  variant="secondary"
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-[5px]"
-                >
-                  {appliedFilters.status}
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  Status: {appliedFilters.status}
                   <X
                     className="w-3 h-3 cursor-pointer"
                     onClick={() => removeFilter("status")}
@@ -321,11 +317,8 @@ export default function AdminPropertiesPage() {
                 </Badge>
               )}
               {appliedFilters.type !== "ALL" && (
-                <Badge
-                  variant="secondary"
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-[5px]"
-                >
-                  {appliedFilters.type}
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  Type: {appliedFilters.type}
                   <X
                     className="w-3 h-3 cursor-pointer"
                     onClick={() => removeFilter("type")}
@@ -333,10 +326,10 @@ export default function AdminPropertiesPage() {
                 </Badge>
               )}
               <Button
-                size="sm"
                 variant="ghost"
+                size="sm"
                 onClick={handleResetFilters}
-                className="text-gray-600 hover:text-gray-900 cursor-pointer"
+                className="text-red-600 hover:text-red-700 cursor-pointer"
               >
                 Clear all
               </Button>

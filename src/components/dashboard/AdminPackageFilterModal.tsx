@@ -6,8 +6,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState } from "react";
 
 interface AdminPackageFilterModalProps {
@@ -53,113 +59,98 @@ export default function AdminPackageFilterModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Filter Packages</DialogTitle>
+          <DialogTitle>Advanced Filters</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 py-4">
           {/* Status Filter */}
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Status
             </label>
-            <div className="space-y-2">
-              {statuses.map((status) => (
-                <label key={status} className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value={status}
-                    checked={localFilters.status === status}
-                    onChange={(e) =>
-                      setLocalFilters({
-                        ...localFilters,
-                        status: e.target.value,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    {status === "ALL" ? "All Status" : status}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={localFilters.status}
+              onValueChange={(value) =>
+                setLocalFilters({ ...localFilters, status: value })
+              }
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status === "ALL" ? "All Status" : status.charAt(0) + status.slice(1).toLowerCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Tier Filter */}
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Package Tier
             </label>
-            <div className="space-y-2">
-              {tiers.map((tier) => (
-                <label key={tier} className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tier"
-                    value={tier}
-                    checked={localFilters.tier === tier}
-                    onChange={(e) =>
-                      setLocalFilters({
-                        ...localFilters,
-                        tier: e.target.value,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    {tier === "ALL" ? "All Tiers" : tier}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={localFilters.tier}
+              onValueChange={(value) =>
+                setLocalFilters({ ...localFilters, tier: value })
+              }
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Tiers" />
+              </SelectTrigger>
+              <SelectContent>
+                {tiers.map((tier) => (
+                  <SelectItem key={tier} value={tier}>
+                    {tier === "ALL" ? "All Tiers" : tier.charAt(0) + tier.slice(1).toLowerCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Price Range Filter */}
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Price Range (₹)
             </label>
-            <div className="space-y-2">
-              {priceRanges.map((range) => (
-                <label key={range} className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="priceRange"
-                    value={range}
-                    checked={localFilters.priceRange === range}
-                    onChange={(e) =>
-                      setLocalFilters({
-                        ...localFilters,
-                        priceRange: e.target.value,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
+            <Select
+              value={localFilters.priceRange}
+              onValueChange={(value) =>
+                setLocalFilters({ ...localFilters, priceRange: value })
+              }
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Prices" />
+              </SelectTrigger>
+              <SelectContent>
+                {priceRanges.map((range) => (
+                  <SelectItem key={range} value={range}>
                     {range === "ALL" ? "All Prices" : `₹${range}`}
-                  </span>
-                </label>
-              ))}
-            </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <div className="flex gap-3 pt-4 border-t">
           <Button
             variant="outline"
             onClick={handleReset}
-            className="flex-1"
+            className="flex-1 rounded-[5px]"
           >
             Reset
           </Button>
           <Button
             onClick={handleApply}
-            className="flex-1 bg-green-600 hover:bg-green-700"
+            className="flex-1 bg-green-600 hover:bg-green-700 rounded-[5px]"
           >
             Apply Filters
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

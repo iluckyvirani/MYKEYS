@@ -2,6 +2,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 
 interface AdminOwnerFilterModalProps {
@@ -18,34 +19,34 @@ export function AdminOwnerFilterModal({
   appliedFilters,
 }: AdminOwnerFilterModalProps) {
   const [filters, setFilters] = useState({
-    status: appliedFilters?.status || "",
-    propertyRange: appliedFilters?.propertyRange || "",
-    revenueRange: appliedFilters?.revenueRange || "",
+    status: appliedFilters?.status || "ALL",
+    propertyRange: appliedFilters?.propertyRange || "ALL",
+    revenueRange: appliedFilters?.revenueRange || "ALL",
   });
 
   useEffect(() => {
     setFilters({
-      status: appliedFilters?.status || "",
-      propertyRange: appliedFilters?.propertyRange || "",
-      revenueRange: appliedFilters?.revenueRange || "",
+      status: appliedFilters?.status || "ALL",
+      propertyRange: appliedFilters?.propertyRange || "ALL",
+      revenueRange: appliedFilters?.revenueRange || "ALL",
     });
   }, [appliedFilters]);
 
   const handleApply = () => {
     const cleanFilters: any = {};
-    if (filters.status) cleanFilters.status = filters.status;
-    if (filters.propertyRange) cleanFilters.propertyRange = filters.propertyRange;
-    if (filters.revenueRange) cleanFilters.revenueRange = filters.revenueRange;
-    
+    if (filters.status && filters.status !== "ALL") cleanFilters.status = filters.status;
+    if (filters.propertyRange && filters.propertyRange !== "ALL") cleanFilters.propertyRange = filters.propertyRange;
+    if (filters.revenueRange && filters.revenueRange !== "ALL") cleanFilters.revenueRange = filters.revenueRange;
+
     onApply(cleanFilters);
     onClose();
   };
 
   const handleReset = () => {
     setFilters({
-      status: "",
-      propertyRange: "",
-      revenueRange: "",
+      status: "ALL",
+      propertyRange: "ALL",
+      revenueRange: "ALL",
     });
     onApply({});
     onClose();
@@ -55,89 +56,71 @@ export function AdminOwnerFilterModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Filter Owners</DialogTitle>
+          <DialogTitle>Advanced Filters</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 py-4">
           {/* Status Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Account Status
             </label>
-            <div className="space-y-2">
-              {[
-                { value: "", label: "All Status" },
-                { value: "active", label: "Active" },
-                { value: "inactive", label: "Inactive" },
-                { value: "suspended", label: "Suspended" },
-              ].map((status) => (
-                <label key={status.value} className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="status"
-                    value={status.value}
-                    checked={filters.status === status.value}
-                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">{status.label}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.status}
+              onValueChange={(value) => setFilters({ ...filters, status: value })}
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Property Range Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Number of Properties
             </label>
-            <div className="space-y-2">
-              {[
-                { value: "", label: "All Ranges" },
-                { value: "1-2", label: "1-2 properties" },
-                { value: "3-5", label: "3-5 properties" },
-                { value: "6+", label: "6+ properties" },
-              ].map((range) => (
-                <label key={range.value} className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="propertyRange"
-                    value={range.value}
-                    checked={filters.propertyRange === range.value}
-                    onChange={(e) => setFilters({ ...filters, propertyRange: e.target.value })}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">{range.label}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.propertyRange}
+              onValueChange={(value) => setFilters({ ...filters, propertyRange: value })}
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Ranges" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Ranges</SelectItem>
+                <SelectItem value="1-2">1-2 properties</SelectItem>
+                <SelectItem value="3-5">3-5 properties</SelectItem>
+                <SelectItem value="6+">6+ properties</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Revenue Range Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-3">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Revenue Range
             </label>
-            <div className="space-y-2">
-              {[
-                { value: "", label: "All Ranges" },
-                { value: "0-50k", label: "₹0 - ₹50K" },
-                { value: "50k-100k", label: "₹50K - ₹100K" },
-                { value: "100k+", label: "₹100K+" },
-              ].map((range) => (
-                <label key={range.value} className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="revenueRange"
-                    value={range.value}
-                    checked={filters.revenueRange === range.value}
-                    onChange={(e) => setFilters({ ...filters, revenueRange: e.target.value })}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">{range.label}</span>
-                </label>
-              ))}
-            </div>
+            <Select
+              value={filters.revenueRange}
+              onValueChange={(value) => setFilters({ ...filters, revenueRange: value })}
+            >
+              <SelectTrigger className="w-full rounded-[5px]">
+                <SelectValue placeholder="All Ranges" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Ranges</SelectItem>
+                <SelectItem value="0-50k">₹0 - ₹50K</SelectItem>
+                <SelectItem value="50k-100k">₹50K - ₹100K</SelectItem>
+                <SelectItem value="100k+">₹100K+</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -159,4 +142,11 @@ export function AdminOwnerFilterModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+interface AdminOwnerFilterModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onApply: (filters: any) => void;
+  appliedFilters: any;
 }
