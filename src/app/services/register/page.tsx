@@ -6,7 +6,6 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ServiceRegistrationForm from "@/components/services/ServiceRegistrationForm";
 import { api } from "@/lib/api";
-import { SERVICE_CATEGORIES, ServiceCategory } from "@/types/service";
 
 export default function ServiceRegisterPage() {
   const router = useRouter();
@@ -29,29 +28,16 @@ export default function ServiceRegisterPage() {
     setIsSubmitting(true);
 
     try {
-      // Map subcategories from IDs to full objects
-      const category = data.category as ServiceCategory;
-      const subcategoriesData = SERVICE_CATEGORIES[category]?.subcategories || [];
-      const selectedSubcategories = subcategoriesData
-        .filter((sub: any) => data.subcategories.includes(sub.id))
-        .map((sub: any) => ({
-          id: sub.id,
-          name: sub.name,
-          category: category,
-        }));
-
       // Map form data to API format
       const payload = {
         bio: data.bio || "",
-        category: category || "plumbing",
-        subcategories: selectedSubcategories,
+        category: data.categoryId,  // ServiceCategoryInfo.id
+        subcategories: [],
         serviceAreas: data.serviceAreas || [],
-        specializations: selectedSubcategories.map((s: any) => s.name),
+        specializations: [],
         certifications: [],
         instantBookingEnabled: data.instantBooking || false,
         instantBookingPrice: data.instantBooking ? parseInt(data.instantPrice) || 0 : undefined,
-        phone: data.phone,
-        // Note: Document upload would need separate handling with file upload endpoint
       };
 
       console.log("Sending to API:", payload);

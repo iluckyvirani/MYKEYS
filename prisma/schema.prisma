@@ -861,7 +861,7 @@ model ServiceProvider {
 
   // Professional Info
   bio             String?
-  category        ServiceCategory
+  category        String // ServiceCategoryInfo.id
   subcategories   Json // Array of subcategory objects [{id, name, category}]
   serviceAreas    Json // Array of service area strings
   specializations Json? // Array of specialization strings
@@ -936,7 +936,7 @@ model ServiceBooking {
 
   // Service details
   service     String // service name / description
-  category    ServiceCategory
+  category    String // ServiceCategoryInfo.id or label
   subcategory String?
   serviceArea String?
   bookingType ServiceBookingType @default(SCHEDULED)

@@ -189,7 +189,7 @@ export const serviceService = {
       data: {
         userId: data.userId,
         bio: data.bio,
-        category: mapServiceCategory(data.category) as any,
+        category: data.category,
         subcategories: data.subcategories as any,
         serviceAreas: data.serviceAreas as any,
         specializations: data.specializations as any,
@@ -250,7 +250,7 @@ export const serviceService = {
 
     const updateData: any = {};
     if (data.bio !== undefined) updateData.bio = data.bio;
-    if (data.category) updateData.category = mapServiceCategory(data.category);
+    if (data.category) updateData.category = data.category;
     if (data.subcategories) updateData.subcategories = data.subcategories;
     if (data.serviceAreas) updateData.serviceAreas = data.serviceAreas;
     if (data.specializations !== undefined) updateData.specializations = data.specializations;
@@ -392,7 +392,7 @@ export const serviceService = {
     return prisma.serviceBooking.create({
       data: {
         service: data.service,
-        category: mapServiceCategory(data.category) as any,
+        category: data.category,
         subcategory: data.subcategory,
         serviceArea: data.serviceArea,
         bookingType: (data.bookingType === 'instant' ? 'INSTANT' : 'SCHEDULED') as any,

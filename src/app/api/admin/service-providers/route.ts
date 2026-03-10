@@ -41,9 +41,9 @@ export const GET = withAuth(
         where.documentVerified = false;
       }
 
-      // Filter by category
+      // Filter by category (now stores ServiceCategoryInfo.id or raw string)
       if (category && category !== "ALL") {
-        where.category = category.toUpperCase().replace(/-/g, "_");
+        where.category = category;
       }
 
       // Filter by user status

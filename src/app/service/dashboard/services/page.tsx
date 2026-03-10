@@ -3,9 +3,15 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Eye, Star, DollarSign } from "lucide-react";
+import { Plus, Edit2, Trash2, Star, DollarSign, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { api } from "@/lib/api";
 import AddServiceDialog from "@/components/services/AddServiceDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +33,9 @@ export default function ServiceManagementPage() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingService, setEditingService] = useState<ServiceItem | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<ServiceItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchServices = async () => {
     try {
@@ -53,10 +62,11 @@ export default function ServiceManagementPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this service?")) return;
+    setDeleting(true);
     try {
       await api.delete(`/service/services/${id}`);
       setServices((prev) => prev.filter((s) => s.id !== id));
+      setDeleteConfirm(null);
       toast({
         title: "Success",
         description: "Service deleted successfully",
@@ -69,6 +79,8 @@ export default function ServiceManagementPage() {
         description: err.response?.data?.message || "Failed to delete service",
         variant: "destructive",
       });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -181,23 +193,20 @@ export default function ServiceManagementPage() {
 
               {/* Actions */}
               <div className="flex gap-2">
-                <Link href={`/service/dashboard/services/${service.id}`} className="flex-1">
-                  <Button size="sm" variant="outline" className="w-full">
-                    <Eye className="w-4 h-4 mr-1" />
-                    View
-                  </Button>
-                </Link>
-                <Link href={`/service/dashboard/services/${service.id}/edit`} className="flex-1">
-                  <Button size="sm" variant="outline" className="w-full">
-                    <Edit2 className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
-                </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => { setEditingService(service); setShowAddDialog(true); }}
+                >
+                  <Edit2 className="w-4 h-4 mr-1" />
+                  Edit
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="text-red-600 hover:bg-red-50"
-                  onClick={() => handleDelete(service.id)}
+                  onClick={() => setDeleteConfirm(service)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -211,9 +220,45 @@ export default function ServiceManagementPage() {
       {/* Add Service Dialog */}
       <AddServiceDialog
         open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        onOpenChange={(open) => { setShowAddDialog(open); if (!open) setEditingService(null); }}
         onSuccess={fetchServices}
+        serviceToEdit={editingService}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <DialogTitle className="text-lg font-semibold text-gray-900">Delete Service</DialogTitle>
+            </div>
+          </DialogHeader>
+          <p className="text-gray-600 text-sm mb-1">
+            Are you sure you want to delete <span className="font-medium text-gray-900">{deleteConfirm?.name}</span>?
+          </p>
+          <p className="text-gray-500 text-xs">This action cannot be undone.</p>
+          <DialogFooter className="mt-4 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirm(null)}
+              disabled={deleting}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => deleteConfirm && handleDelete(deleteConfirm.id)}
+              disabled={deleting}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

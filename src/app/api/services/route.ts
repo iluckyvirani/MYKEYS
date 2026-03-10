@@ -9,19 +9,22 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
+    const categoryId = searchParams.get('categoryId');
+    const category = searchParams.get('category'); // legacy kebab-case support
     const serviceArea = searchParams.get('serviceArea');
     const instantOnly = searchParams.get('instantOnly') === 'true';
 
     // Build where clause
     const where: any = {
-      documentVerified: true, // Only show verified providers
+      isActive: true, // Only show active providers (verified check moved to response flag)
     };
 
-    if (category) {
-      // Convert frontend format (kebab-case) to Prisma enum (SNAKE_CASE)
-      // e.g., 'ac-repair' → 'AC_REPAIR', 'painting' → 'PAINTING'
-      where.category = category.replace(/-/g, '_').toUpperCase();
+    if (categoryId) {
+      // Direct match: ServiceProvider.category now stores ServiceCategoryInfo.id
+      where.category = categoryId;
+    } else if (category) {
+      // Legacy: kebab-case slug passed directly
+      where.category = category;
     }
 
     if (serviceArea) {
@@ -69,7 +72,7 @@ export async function GET(request: NextRequest) {
     const results = providers.map((provider) => ({
       id: provider.id,
       name: `${provider.user.firstName} ${provider.user.lastName}`,
-      category: provider.category.toLowerCase().replace('_', '-'),
+      category: provider.category,
       subcategories: provider.subcategories,
       rating: provider.rating,
       reviews: provider.totalReviews,
@@ -77,9 +80,10 @@ export async function GET(request: NextRequest) {
       location: `${provider.user.city || ''}, ${provider.user.state || ''}`.trim().replace(/^,\s*/, ''),
       avatar: provider.user.avatar || '/api/placeholder/100/100',
       bio: provider.bio || '',
-      serviceAreas: provider.serviceAreas as string[],
+      serviceAreas: (provider.serviceAreas as string[]) || [],
       instantBooking: provider.instantBookingEnabled,
       instantPrice: provider.instantBookingPrice,
+      verified: provider.documentVerified,
       services: provider.services.map((s) => ({
         id: s.id,
         name: s.name,

@@ -62,9 +62,9 @@ export default function ReviewsPage() {
   const oneStarCount = reviews.filter((r) => r.rating === 1).length;
 
   const totalReviews = reviews.length;
-  const averageRating = (
-    reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
-  ).toFixed(1);
+  const averageRating = totalReviews === 0
+    ? "0.0"
+    : (reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews).toFixed(1);
 
   const getRating = (rating: number) => {
     return reviews.filter((r) => r.rating === rating);

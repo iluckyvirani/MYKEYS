@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,13 +13,22 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
+interface EditableService {
+    id: string;
+    name: string;
+    description: string;
+    basePrice: number;
+    image?: string;
+}
+
 interface AddServiceDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSuccess?: () => void;
+    serviceToEdit?: EditableService | null;
 }
 
-export default function AddServiceDialog({ open, onOpenChange, onSuccess }: AddServiceDialogProps) {
+export default function AddServiceDialog({ open, onOpenChange, onSuccess, serviceToEdit }: AddServiceDialogProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
@@ -29,17 +38,24 @@ export default function AddServiceDialog({ open, onOpenChange, onSuccess }: AddS
         image: "",
     });
 
+    useEffect(() => {
+        if (open && serviceToEdit) {
+            setFormData({
+                name: serviceToEdit.name,
+                description: serviceToEdit.description || "",
+                basePrice: String(serviceToEdit.basePrice),
+                image: serviceToEdit.image || "",
+            });
+        } else if (!open) {
+            setFormData({ name: "", description: "", basePrice: "", image: "" });
+        }
+    }, [open, serviceToEdit]);
+
     const handleInputChange = (field: string, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
     const handleClose = () => {
-        setFormData({
-            name: "",
-            description: "",
-            basePrice: "",
-            image: "",
-        });
         onOpenChange(false);
     };
 
@@ -60,26 +76,28 @@ export default function AddServiceDialog({ open, onOpenChange, onSuccess }: AddS
                 status: "active",
             };
 
-            const response = await api.post("/service/services", payload);
+            const response = serviceToEdit
+                ? await api.put(`/service/services/${serviceToEdit.id}`, payload)
+                : await api.post("/service/services", payload);
 
             if (response.data?.success) {
                 toast({
                     title: "Success! 🎉",
-                    description: "Service added successfully!",
+                    description: serviceToEdit ? "Service updated successfully!" : "Service added successfully!",
                     variant: "default",
                 });
 
                 handleClose();
                 onSuccess?.();
             } else {
-                throw new Error(response.data?.message || "Failed to add service");
+                throw new Error(response.data?.message || (serviceToEdit ? "Failed to update service" : "Failed to add service"));
             }
         } catch (error: any) {
-            console.error("Add service error:", error);
+            console.error("Service dialog error:", error);
 
             toast({
-                title: "Failed to Add Service",
-                description: error.response?.data?.message || error.message || "Failed to add service. Please try again.",
+                title: serviceToEdit ? "Failed to Update Service" : "Failed to Add Service",
+                description: error.response?.data?.message || error.message || "Something went wrong. Please try again.",
                 variant: "destructive",
             });
         } finally {
@@ -92,10 +110,10 @@ export default function AddServiceDialog({ open, onOpenChange, onSuccess }: AddS
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold text-gray-900">
-                        Add New Service
+                        {serviceToEdit ? "Edit Service" : "Add New Service"}
                     </DialogTitle>
                     <p className="text-gray-600">
-                        Create a new service listing for your customers
+                        {serviceToEdit ? "Update your service details" : "Create a new service listing for your customers"}
                     </p>
                 </DialogHeader>
 
@@ -113,18 +131,17 @@ export default function AddServiceDialog({ open, onOpenChange, onSuccess }: AddS
                         />
                     </div>
 
-                    {/* Description */
-                        <div>
-                            <Label htmlFor="description">Description</Label>
-                            <textarea
-                                id="description"
-                                placeholder="Describe your service, what's included, and any special features..."
-                                value={formData.description}
-                                onChange={(e) => handleInputChange("description", e.target.value)}
-                                className="mt-2 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 resize-none h-24"
-                            />
-                        </div>
-                    }
+                    {/* Description */}
+                    <div>
+                        <Label htmlFor="description">Description</Label>
+                        <textarea
+                            id="description"
+                            placeholder="Describe your service, what's included, and any special features..."
+                            value={formData.description}
+                            onChange={(e) => handleInputChange("description", e.target.value)}
+                            className="mt-2 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 resize-none h-24"
+                        />
+                    </div>
 
                     {/* Base Price */}
                     <div>
@@ -176,10 +193,10 @@ export default function AddServiceDialog({ open, onOpenChange, onSuccess }: AddS
                             {isSubmitting ? (
                                 <>
                                     <span className="inline-block animate-spin mr-2">⏳</span>
-                                    Adding...
+                                    {serviceToEdit ? "Saving..." : "Adding..."}
                                 </>
                             ) : (
-                                "Add Service"
+                                serviceToEdit ? "Save Changes" : "Add Service"
                             )}
                         </Button>
                     </div>

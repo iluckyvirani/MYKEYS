@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, FileUp, AlertCircle, Upload, X, Loader2 } from "lucide-react";
-import { SERVICE_CATEGORIES, ServiceCategory } from "@/types/service";
 import { DocumentType, DOCUMENT_TYPE_LABELS, SERVICE_REQUIRED_DOCUMENTS, SERVICE_OPTIONAL_DOCUMENTS } from "@/types/document";
 import { api } from "@/lib/api";
 import {
@@ -18,6 +17,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  icon?: string;
+}
 
 interface UploadedDocument {
   id: string;
@@ -38,8 +45,9 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
-  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     serviceAreas: [] as string[],
     instantBooking: false,
@@ -72,6 +80,32 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
     }
   }, [open, router, onOpenChange]);
 
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const response = await api.get("/admin/categories?pageSize=100");
+        if (response.data?.success) {
+          // Filter only active categories
+          const activeCategories = response.data.data.items.filter(
+            (cat: Category) => cat.status === "active"
+          );
+          setCategories(activeCategories);
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        setCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    if (open) {
+      fetchCategories();
+    }
+  }, [open]);
+
   const serviceAreas = [
     "Downtown",
     "Suburbs",
@@ -82,17 +116,8 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
     "South End",
   ];
 
-  const handleCategorySelect = (category: ServiceCategory) => {
-    setSelectedCategory(category);
-    setSelectedSubcategories([]);
-  };
-
-  const handleSubcategoryToggle = (subcategoryId: string) => {
-    setSelectedSubcategories((prev) =>
-      prev.includes(subcategoryId)
-        ? prev.filter((id) => id !== subcategoryId)
-        : [...prev, subcategoryId]
-    );
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
   };
 
   const handleAreaToggle = (area: string) => {
@@ -204,7 +229,6 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
     // Reset form when closing
     setStep(1);
     setSelectedCategory(null);
-    setSelectedSubcategories([]);
     setFormData({
       serviceAreas: [] as string[],
       instantBooking: false,
@@ -218,7 +242,7 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   };
 
   const canProceed = () => {
-    if (step === 1) return selectedCategory && selectedSubcategories.length > 0;
+    if (step === 1) return selectedCategory !== null;
     if (step === 2) return formData.serviceAreas.length > 0;
     if (step === 3) return true; // Bio is optional
     if (step === 4) return uploadedDocuments.filter(d => d.status === "uploaded").length > 0;
@@ -228,8 +252,7 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   const handleSubmit = () => {
     const data = {
       ...formData,
-      category: selectedCategory,
-      subcategories: selectedSubcategories,
+      categoryId: selectedCategory,
     };
     onSubmit?.(data);
   };
@@ -308,52 +331,41 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
                 <p className="text-gray-600">Choose the primary category you specialize in</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(SERVICE_CATEGORIES).map(([key, category]) => (
-                  <motion.div
-                    key={key}
-                    onClick={() => handleCategorySelect(key as ServiceCategory)}
-                    className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedCategory === key
-                        ? "border-green-600 bg-green-50"
-                        : "border-gray-200 hover:border-green-400"
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                  >
-                    <div className="text-center">
-                      <h3 className="font-bold text-gray-900 mt-2">{category.label}</h3>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Subcategories */}
-              {selectedCategory && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-8"
-                >
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">
-                    Select your specializations
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {SERVICE_CATEGORIES[selectedCategory].subcategories.map((sub) => (
-                      <label
-                        key={sub.id}
-                        className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedSubcategories.includes(sub.id)}
-                          onChange={() => handleSubcategoryToggle(sub.id)}
-                          className="w-5 h-5 text-blue-600 rounded"
-                        />
-                        <span className="text-gray-700">{sub.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </motion.div>
+              {loadingCategories ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+                  <span className="ml-3 text-gray-600">Loading categories...</span>
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="text-center py-12">
+                  <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">No categories available</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {categories.map((category) => (
+                    <motion.div
+                      key={category.id}
+                      onClick={() => handleCategorySelect(category.id)}
+                      className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedCategory === category.id
+                          ? "border-green-600 bg-green-50"
+                          : "border-gray-200 hover:border-green-400"
+                      }`}
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      <div className="text-center">
+                        {category.icon && (
+                          <div className="text-4xl mb-2">{category.icon}</div>
+                        )}
+                        <h3 className="font-bold text-gray-900 mt-2">{category.name}</h3>
+                        {category.description && (
+                          <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               )}
             </div>
           )}

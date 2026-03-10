@@ -51,6 +51,8 @@ export default function ServiceBookingCard({
   const [modifyLoading, setModifyLoading] = useState(false);
   const [newScheduledDate, setNewScheduledDate] = useState(booking.scheduledDate || "");
   const [newScheduledTime, setNewScheduledTime] = useState(booking.scheduledTime || "");
+  const [newLocation, setNewLocation] = useState((booking as any).location || "");
+  const [newDescription, setNewDescription] = useState((booking as any).description || "");
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -88,7 +90,8 @@ export default function ServiceBookingCard({
   };
 
   const handleModify = async () => {
-    if (!newScheduledDate || !newScheduledTime) {
+    const isScheduled = booking.bookingType === "schedule" || booking.bookingType === "scheduled";
+    if (isScheduled && (!newScheduledDate || !newScheduledTime)) {
       alert("Please select both date and time");
       return;
     }
@@ -96,8 +99,10 @@ export default function ServiceBookingCard({
     setModifyLoading(true);
     try {
       const response = await api.patch(`/user/service-bookings/${booking.id}`, {
-        scheduledDate: newScheduledDate,
-        scheduledTime: newScheduledTime,
+        scheduledDate: newScheduledDate || undefined,
+        scheduledTime: newScheduledTime || undefined,
+        location: newLocation || undefined,
+        description: newDescription || undefined,
       });
       
       if (response.data?.success) {
@@ -385,7 +390,7 @@ export default function ServiceBookingCard({
                 <p className="text-sm text-gray-600">Provider: {booking.providerName}</p>
               </div>
 
-              {booking.bookingType === "schedule" ? (
+              {(booking.bookingType === "schedule" || booking.bookingType === "scheduled") && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -411,13 +416,33 @@ export default function ServiceBookingCard({
                     />
                   </div>
                 </>
-              ) : (
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-700">
-                    This is an instant booking. Please contact the provider directly to reschedule.
-                  </p>
-                </div>
               )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Service Location
+                </label>
+                <input
+                  type="text"
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                  placeholder="Enter service location"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Additional Notes
+                </label>
+                <textarea
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="Any specific requirements or instructions"
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                />
+              </div>
 
               <div className="flex gap-3">
                 <Button
@@ -428,15 +453,13 @@ export default function ServiceBookingCard({
                 >
                   Cancel
                 </Button>
-                {booking.bookingType === "schedule" && (
-                  <Button
-                    className="flex-1 bg-green-600 hover:bg-green-700 cursor-pointer"
-                    onClick={handleModify}
-                    disabled={modifyLoading}
-                  >
-                    {modifyLoading ? "Updating..." : "Update Booking"}
-                  </Button>
-                )}
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 cursor-pointer"
+                  onClick={handleModify}
+                  disabled={modifyLoading}
+                >
+                  {modifyLoading ? "Updating..." : "Update Booking"}
+                </Button>
               </div>
             </div>
           </div>

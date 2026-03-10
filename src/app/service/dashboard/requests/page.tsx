@@ -11,30 +11,19 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ServiceBooking {
   id: string;
-  client?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email?: string;
-    phone?: string;
-  };
-  service?: string;
-  serviceListing?: {
-    id: string;
-    name: string;
-  };
-  category?: string;
-  subcategory?: any;
-  serviceArea?: string;
-  location?: string;
-  scheduledDate?: string;
-  scheduledTime?: string;
-  description?: string;
-  totalAmount?: number;
+  clientName: string;
+  clientPhone: string;
+  clientEmail: string;
+  service: string;
+  date: string;
+  time: string;
+  location: string;
+  description: string;
+  amount: number;
   status: "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
   bookingType?: "instant" | "scheduled";
-  createdAt?: string;
-  updatedAt?: string;
+  paymentStatus: string;
+  createdAt: string;
 }
 
 export default function ServiceRequestsPage() {
@@ -109,24 +98,17 @@ export default function ServiceRequestsPage() {
   };
 
   const BookingCard = ({ booking }: { booking: ServiceBooking }) => {
-    const clientName = booking.client 
-      ? `${booking.client.firstName} ${booking.client.lastName}` 
-      : "Unknown Client";
-    const serviceName = booking.serviceListing?.name || booking.service || "Service Booking";
-    const displayDate = booking.scheduledDate || booking.createdAt || new Date().toISOString();
-    const location = booking.location || booking.serviceArea || "Not specified";
-    
     return (
     <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="font-semibold text-gray-900">{serviceName}</h3>
+          <h3 className="font-semibold text-gray-900">{booking.service}</h3>
           <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
             <User className="w-4 h-4" />
-            {clientName}
+            {booking.clientName}
           </p>
-          {booking.client?.phone && (
-            <p className="text-xs text-gray-500 mt-1">📞 {booking.client.phone}</p>
+          {booking.clientPhone && (
+            <p className="text-xs text-gray-500 mt-1">📞 {booking.clientPhone}</p>
           )}
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
@@ -139,34 +121,30 @@ export default function ServiceRequestsPage() {
       <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
         <span className="flex items-center gap-1">
           <MapPin className="w-4 h-4" />
-          {location}
+          {booking.location || "Not specified"}
         </span>
         <span className="flex items-center gap-1">
           <Calendar className="w-4 h-4" />
-          {new Date(displayDate).toLocaleDateString()}
+          {new Date(booking.date).toLocaleDateString()}
         </span>
-        {booking.scheduledTime && (
+        {booking.time && (
           <span className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            {booking.scheduledTime}
+            {booking.time}
           </span>
         )}
-        {booking.category && (
-          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-            {booking.category}
-          </span>
-        )}
+        <span className={`text-xs px-2 py-1 rounded w-fit ${
+          booking.paymentStatus === 'pending' ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700'
+        }`}>
+          Payment: {booking.paymentStatus}
+        </span>
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t">
-        {booking.totalAmount ? (
-          <p className="font-semibold text-gray-900 flex items-center gap-1">
-            <DollarSign className="w-4 h-4" />
-            ₹{booking.totalAmount}
-          </p>
-        ) : (
-          <p className="text-sm text-gray-500">Amount not specified</p>
-        )}
+        <p className="font-semibold text-gray-900 flex items-center gap-1">
+          <DollarSign className="w-4 h-4" />
+          {booking.amount}
+        </p>
         
         {booking.status === "pending" && (
           <div className="flex gap-2">

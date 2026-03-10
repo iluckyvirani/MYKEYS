@@ -110,12 +110,12 @@ export default function ServiceBookingsPage() {
       <div className="flex items-center justify-between pt-3 border-t">
         <p className="font-semibold text-gray-900">₹{booking.amount}</p>
         <div className="flex gap-2">
-          <Link href={`/service/dashboard/bookings/${booking.id}`}>
+          {/* <Link href={`/service/dashboard/bookings/${booking.id}`}>
             <Button size="sm" variant="outline">
               <Eye className="w-4 h-4 mr-1" />
               View
             </Button>
-          </Link>
+          </Link> */}
           <Button size="sm" variant="outline">
             <Download className="w-4 h-4 mr-1" />
             Invoice

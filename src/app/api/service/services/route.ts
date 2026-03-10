@@ -35,8 +35,8 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body = await request.json();
 
-    if (!body.name || !body.category || !body.basePrice) {
-      return errorResponse('Missing required fields: name, category, basePrice', 400);
+    if (!body.name || !body.basePrice) {
+      return errorResponse('Missing required fields: name, basePrice', 400);
     }
 
     const provider = await prisma.serviceProvider.findUnique({
@@ -48,7 +48,7 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
 
     const listing = await serviceService.createListing(provider.id, {
       name: body.name,
-      category: body.category,
+      category: provider.category,
       description: body.description,
       basePrice: body.basePrice,
       image: body.image,

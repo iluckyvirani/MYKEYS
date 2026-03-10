@@ -297,7 +297,7 @@ export default function ServiceProfilePage() {
           </div>
 
           {/* Specializations */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+          {/* <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Specializations
             </h2>
@@ -311,10 +311,10 @@ export default function ServiceProfilePage() {
                 </span>
               ))}
             </div>
-          </div>
+          </div> */}
 
           {/* Certifications */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+          {/* <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Award className="w-5 h-5 text-orange-600" />
               Certifications
@@ -327,7 +327,7 @@ export default function ServiceProfilePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Stats Card */}
