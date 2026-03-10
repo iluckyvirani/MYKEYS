@@ -93,6 +93,14 @@ export const GET = withAuth(
                 title: true,
                 city: true,
                 ownerId: true,
+                owner: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
+                },
               },
             },
           },
@@ -112,8 +120,18 @@ export const GET = withAuth(
         propertyId: i.propertyId,
         propertyTitle: i.property?.title || "N/A",
         propertyOwner: i.property?.ownerId,
+        ownerName: i.property?.owner
+          ? `${i.property.owner.firstName} ${i.property.owner.lastName}`
+          : "Unknown Owner",
+        ownerEmail: i.property?.owner?.email || "",
         message: i.message,
         status: i.status,
+        inquiryType: i.inquiryType || "general",
+        priority: i.priority || "medium",
+        budget: i.budget,
+        duration: i.duration,
+        ownerResponse: i.response,
+        ownerResponseAt: i.respondedAt,
         createdAt: i.createdAt,
         updatedAt: i.updatedAt,
       }));

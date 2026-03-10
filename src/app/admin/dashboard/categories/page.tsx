@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 interface ServiceCategory {
@@ -50,9 +51,9 @@ export default function CategoriesPage() {
   const [appliedFilters, setAppliedFilters] = useState({
     status: "ALL",
   });
-  const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -167,6 +168,10 @@ export default function CategoriesPage() {
     }
   };
 
+  const handleViewCategory = (category: ServiceCategory) => {
+    router.push(`/admin/dashboard/categories/${category.id}`);
+  };
+
   return (
     <AdminDashboardLayout>
       <div className="space-y-6">
@@ -268,7 +273,7 @@ export default function CategoriesPage() {
               className="rounded-[5px]"
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              Advanced Filters
             </Button>
             <Button
               variant="outline"
@@ -351,108 +356,12 @@ export default function CategoriesPage() {
             <AdminCategoryList
               categories={filteredCategories}
               viewMode={viewMode}
-              onView={setSelectedCategory}
+              onView={handleViewCategory}
               onEdit={handleOpenEditModal}
               onDelete={(id) => setDeleteConfirm(id)}
             />
           )}
         </Card>
-
-        {/* Category Details Modal */}
-        {selectedCategory && (
-          <Card className="border-2 border-green-600 p-6 rounded-[5px]">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedCategory.name}
-                </h2>
-                <p className="text-gray-600 text-sm mt-1">
-                  Category Details & Information
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                onClick={() => setSelectedCategory(null)}
-                className="rounded-[5px]"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Category Information */}
-              <div className="space-y-4">
-                <h3 className="font-bold text-gray-900 text-lg">
-                  Category Information
-                </h3>
-                <div className="space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">Name</p>
-                    <p className="font-semibold mt-1">{selectedCategory.name}</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Description
-                    </p>
-                    <p className="font-semibold mt-1">
-                      {selectedCategory.description}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">Status</p>
-                    <p className="font-semibold mt-1">
-                      {selectedCategory.status === "active" ? (
-                        <span className="text-green-600">Active</span>
-                      ) : (
-                        <span className="text-red-600">Inactive</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Services Information */}
-              <div className="space-y-4">
-                <h3 className="font-bold text-gray-900 text-lg">
-                  Services Information
-                </h3>
-                <div className="space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Total Services
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">
-                      {selectedCategory.services}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Created Date
-                    </p>
-                    <p className="font-semibold mt-1">
-                      {new Date(selectedCategory.createdDate).toLocaleDateString(
-                        "en-IN",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        }
-                      )}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Availability
-                    </p>
-                    <p className="font-semibold mt-1 text-green-600">
-                      Available to users
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
 
         {/* Delete Confirmation Dialog */}
         {deleteConfirm && (

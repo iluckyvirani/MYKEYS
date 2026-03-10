@@ -40,7 +40,6 @@ const adminNavigation = [
   { name: "Bookings", href: "/admin/dashboard/bookings", icon: Calendar },
   { name: "Payments", href: "/admin/dashboard/payments", icon: CreditCard },
   { name: "Packages", href: "/admin/dashboard/packages", icon: Package },
-  { name: "Service Listings", href: "/admin/dashboard/services", icon: Grid3x3 },
   { name: "Service Categories", href: "/admin/dashboard/categories", icon: Grid3x3 },
   { name: "Amenities", href: "/admin/dashboard/amenities", icon: BarChart3 },
   { name: "Ads & Campaigns", href: "/admin/dashboard/ads", icon: Zap },

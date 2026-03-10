@@ -1,6 +1,7 @@
 "use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
+import { AdminInquiryFilterModal } from "@/components/dashboard/admin/inquiries/AdminInquiryFilterModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,15 @@ interface Inquiry {
   type: string;
   budget?: number;
   duration?: string;
+  ownerResponse?: string;
+  ownerResponseAt?: string;
+}
+
+interface InquiryNote {
+  id: string;
+  content: string;
+  createdBy: string;
+  createdAt: string;
 }
 
 const priorityColors = {
@@ -61,11 +71,13 @@ export default function AdminInquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
-  const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [showNotesModal, setShowNotesModal] = useState(false);
-  const [responseMessage, setResponseMessage] = useState("");
-  const [isEditingResponse, setIsEditingResponse] = useState(false);
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<any>({});
+  const [showAppliedFilters, setShowAppliedFilters] = useState(false);
+  const [notes, setNotes] = useState<InquiryNote[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const fetchInquiries = useCallback(async () => {
@@ -74,16 +86,9 @@ export default function AdminInquiriesPage() {
       const params = new URLSearchParams();
       params.append("pageSize", "50");
       if (search) params.append("search", search);
-      if (filter !== "all") {
-        const statusMap: { [key: string]: string } = {
-          new: "PENDING",
-          read: "PENDING",
-          replied: "RESPONDED",
-          closed: "CLOSED",
-          converted: "CONVERTED",
-        };
-        params.append("status", statusMap[filter] || filter.toUpperCase());
-      }
+      if (appliedFilters.status) params.append("status", appliedFilters.status);
+      if (appliedFilters.type) params.append("type", appliedFilters.type);
+      if (appliedFilters.priority) params.append("priority", appliedFilters.priority);
       
       const response = await api.get(`/admin/inquiries?${params.toString()}`);
       if (response.data?.success && response.data?.data?.items) {
@@ -91,7 +96,7 @@ export default function AdminInquiriesPage() {
           // Map API status to component status
           let status: "new" | "read" | "replied" | "closed" | "converted" = "new";
           if (inquiry.status === "PENDING") status = "new";
-          else if (inquiry.status === "RESPONDED") status = "replied";
+          else if (inquiry.status === "REPLIED" || inquiry.status === "RESPONDED") status = "replied";
           else if (inquiry.status === "CLOSED") status = "closed";
           else if (inquiry.status === "CONVERTED") status = "converted";
           
@@ -99,19 +104,21 @@ export default function AdminInquiriesPage() {
             id: inquiry.id,
             inquiryId: `INQ${inquiry.id.slice(-6).toUpperCase()}`,
             propertyTitle: inquiry.propertyTitle || "Unknown Property",
-            propertyOwnerId: inquiry.propertyOwnerId || "",
+            propertyOwnerId: inquiry.propertyOwner || inquiry.propertyOwnerId || "",
             ownerName: inquiry.ownerName || "Unknown Owner",
             ownerEmail: inquiry.ownerEmail || "",
             guestName: inquiry.userName || "Unknown Guest",
             guestEmail: inquiry.userEmail || "",
-            guestPhone: inquiry.userPhone || "",
+            guestPhone: inquiry.phone || inquiry.userPhone || "",
             message: inquiry.message || "",
             createdAt: inquiry.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
             status,
-            priority: "medium" as const,
-            type: inquiry.inquiryType || "general",
+            priority: inquiry.priority?.toLowerCase() || "medium" as const,
+            type: inquiry.inquiryType || inquiry.type || "general",
             budget: inquiry.budget,
             duration: inquiry.duration,
+            ownerResponse: inquiry.ownerResponse,
+            ownerResponseAt: inquiry.ownerResponseAt,
           };
         });
         setInquiries(apiInquiries);
@@ -125,7 +132,7 @@ export default function AdminInquiriesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, filter]);
+  }, [search, appliedFilters]);
 
   useEffect(() => {
     fetchInquiries();
@@ -138,6 +145,45 @@ export default function AdminInquiriesPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  const fetchNotes = async (inquiryId: string) => {
+    try {
+      setLoadingNotes(true);
+      const response = await api.get(`/admin/inquiries/${inquiryId}/notes`);
+      if (response.data?.success && response.data?.data) {
+        setNotes(response.data.data);
+      } else {
+        setNotes([]);
+      }
+    } catch (err) {
+      console.error("Error fetching notes:", err);
+      setNotes([]);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
+
+  const handleApplyFilters = (filters: any) => {
+    setAppliedFilters(filters);
+    setShowAppliedFilters(Object.keys(filters).length > 0);
+  };
+
+  const handleClearFilter = (filterKey: string) => {
+    const newFilters = { ...appliedFilters };
+    delete newFilters[filterKey];
+    setAppliedFilters(newFilters);
+    setShowAppliedFilters(Object.keys(newFilters).length > 0);
+  };
+
+  const handleClearAllFilters = () => {
+    setAppliedFilters({});
+    setShowAppliedFilters(false);
+  };
+
+  const handleOpenNotesModal = (inquiry: Inquiry) => {
+    setShowNotesModal(true);
+    fetchNotes(inquiry.id);
+  };
 
   // Inquiries are already filtered by API
   const filteredInquiries = inquiries;
@@ -296,30 +342,65 @@ export default function AdminInquiriesPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   placeholder="Search by guest, owner, or property..."
-                  className="pl-10"
+                  className="pl-10 rounded-[5px]"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="flex gap-2">
-                {["all", "new", "read", "replied", "closed", "converted"].map((status) => (
-                  <Button
-                    key={status}
-                    variant={filter === status ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setFilter(status as any)}
-                    className="rounded-[5px]"
-                  >
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                    {status === "new" && newCount > 0 && (
-                      <span className="ml-2 bg-white text-blue-600 text-xs px-1.5 py-0.5 rounded-full">
-                        {newCount}
-                      </span>
-                    )}
-                  </Button>
-                ))}
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFilterModalOpen(true)}
+                className="rounded-[5px]"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Advanced Filters
+              </Button>
             </div>
+
+            {/* Applied Filters Display */}
+            {showAppliedFilters && Object.keys(appliedFilters).length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center mt-4">
+                <span className="text-sm text-gray-600">Applied Filters:</span>
+                {appliedFilters.status && (
+                  <Badge variant="secondary" className="flex items-center gap-2">
+                    Status: {appliedFilters.status}
+                    <X
+                      className="w-3 h-3 cursor-pointer"
+                      onClick={() => handleClearFilter("status")}
+                    />
+                  </Badge>
+                )}
+                {appliedFilters.priority && (
+                  <Badge variant="secondary" className="flex items-center gap-2">
+                    Priority: {appliedFilters.priority}
+                    <X
+                      className="w-3 h-3 cursor-pointer"
+                      onClick={() => handleClearFilter("priority")}
+                    />
+                  </Badge>
+                )}
+                {appliedFilters.type && (
+                  <Badge variant="secondary" className="flex items-center gap-2">
+                    Type: {appliedFilters.type}
+                    <X
+                      className="w-3 h-3 cursor-pointer"
+                      onClick={() => handleClearFilter("type")}
+                    />
+                  </Badge>
+                )}
+                {Object.keys(appliedFilters).length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearAllFilters}
+                    className="text-red-600 hover:text-red-700 cursor-pointer"
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3">
@@ -464,44 +545,11 @@ export default function AdminInquiriesPage() {
                     </div>
                   </div>
 
-                  {/* Status and Priority Controls */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-white rounded-lg border">
-                      <label className="text-xs text-gray-600 block mb-2">Status</label>
-                      <select
-                        value={selectedInquiry.status}
-                        onChange={(e) => handleStatusChange(selectedInquiry.id, e.target.value as any)}
-                        disabled={updatingId === selectedInquiry.id}
-                        className="w-full px-2 py-2 border border-gray-300 rounded text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="new">New</option>
-                        <option value="read">Read</option>
-                        <option value="replied">Replied</option>
-                        <option value="closed">Closed</option>
-                        <option value="converted">Converted</option>
-                      </select>
-                    </div>
-
-                    <div className="p-3 bg-white rounded-lg border">
-                      <label className="text-xs text-gray-600 block mb-2">Priority</label>
-                      <select
-                        value={selectedInquiry.priority}
-                        onChange={(e) => handlePriorityChange(selectedInquiry.id, e.target.value as any)}
-                        disabled={updatingId === selectedInquiry.id}
-                        className="w-full px-2 py-2 border border-gray-300 rounded text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                    </div>
-                  </div>
-
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-4 border-t">
                     <Button
                       className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-[5px]"
-                      onClick={() => setShowNotesModal(true)}
+                      onClick={() => handleOpenNotesModal(selectedInquiry)}
                     >
                       <MessageSquare className="w-4 h-4 mr-2" />
                       View Notes
@@ -511,6 +559,22 @@ export default function AdminInquiriesPage() {
                       Contact Owner
                     </Button>
                   </div>
+
+                  {/* Owner Response Section */}
+                  {selectedInquiry.ownerResponse && (
+                    <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                      <h4 className="font-semibold text-gray-900 mb-2 text-sm flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-purple-600" />
+                        Owner Response
+                      </h4>
+                      <p className="text-sm text-gray-700 mb-2">{selectedInquiry.ownerResponse}</p>
+                      {selectedInquiry.ownerResponseAt && (
+                        <p className="text-xs text-gray-500">
+                          Responded on {formatDate(selectedInquiry.ownerResponseAt)}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-12">
@@ -545,37 +609,64 @@ export default function AdminInquiriesPage() {
 
               {/* Notes Content */}
               <div className="flex-1 overflow-y-auto p-4">
-                <div className="text-center py-8">
-                  <MessageSquare className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">No notes yet. Add notes for your team.</p>
-                </div>
+                {loadingNotes ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p className="text-gray-500 text-sm">Loading notes...</p>
+                  </div>
+                ) : notes.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageSquare className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm">No notes available for this inquiry.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notes.map((note) => (
+                      <div key={note.id} className="p-3 bg-gray-50 rounded-lg border">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-900">{note.createdBy}</span>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {new Date(note.createdAt).toLocaleDateString("en-IN", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700">{note.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Modal Footer */}
-              <div className="border-t p-4 space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-2">Add Admin Note</label>
-                  <textarea
-                    placeholder="Type your internal note..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={3}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-[5px]">Save Note</Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 rounded-[5px]"
-                    onClick={() => setShowNotesModal(false)}
-                  >
-                    Close
-                  </Button>
-                </div>
+              <div className="border-t p-4">
+                <Button
+                  variant="outline"
+                  className="w-full rounded-[5px]"
+                  onClick={() => setShowNotesModal(false)}
+                >
+                  Close
+                </Button>
               </div>
             </Card>
           </div>
         )}
       </div>
+
+      {/* Filter Modal */}
+      <AdminInquiryFilterModal
+        isOpen={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        onApply={handleApplyFilters}
+        appliedFilters={appliedFilters}
+      />
     </AdminDashboardLayout>
   );
 }

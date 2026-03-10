@@ -17,6 +17,7 @@ interface Document {
   userType: string;
   submittedDate: string;
   status: "pending" | "approved" | "rejected";
+  documentUrl?: string;
 }
 
 export default function DocumentsPage() {
@@ -86,6 +87,7 @@ export default function DocumentsPage() {
             userType: userTypeMap[doc.userType] || doc.userType || "User",
             submittedDate: doc.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
             status,
+            documentUrl: doc.documentUrl,
           };
         });
         setDocuments(apiDocs);
@@ -128,6 +130,67 @@ export default function DocumentsPage() {
   const handleClearAllFilters = () => {
     setAppliedFilters({});
     setShowAppliedFilters(false);
+  };
+
+  const handleView = async (document: Document) => {
+    if (!document.documentUrl) {
+      alert("Document URL not available");
+      return;
+    }
+
+    // Check if document type is raw/PDF - if so, download directly
+    const isRawDocument = document.documentType.toLowerCase().includes('raw');
+    
+    if (isRawDocument) {
+      try {
+        // Get auth token from localStorage
+        const token = localStorage.getItem("accessToken");
+        
+        // Fetch the file with authentication
+        const response = await fetch(document.documentUrl, {
+          headers: token ? {
+            'Authorization': `Bearer ${token}`
+          } : {}
+        });
+        
+        if (!response.ok) {
+          throw new Error('Download failed');
+        }
+        
+        // Get the content type from response
+        const contentType = response.headers.get('content-type') || 'application/octet-stream';
+        const blob = await response.blob();
+        
+        // Create a new blob with explicit content type to preserve file format
+        const typedBlob = new Blob([blob], { type: contentType });
+        
+        // Extract file extension from URL
+        const urlPath = document.documentUrl.split('?')[0]; // Remove query params
+        const urlParts = urlPath.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const extension = fileName.includes('.') ? fileName.split('.').pop() : 'pdf';
+        
+        // Create blob URL with proper type
+        const blobUrl = window.URL.createObjectURL(typedBlob);
+        
+        // Create download link and trigger with proper extension
+        const a = window.document.createElement("a");
+        a.href = blobUrl;
+        a.download = `${document.documentType}_${document.submittedBy}_${document.submittedDate}.${extension}`;
+        window.document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        window.document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        console.error("Download error:", error);
+        alert("Failed to download document");
+      }
+    } else {
+      // For images and other viewable documents, open in new tab
+      window.open(document.documentUrl, "_blank");
+    }
   };
 
   const handleApprove = async (id: string) => {
@@ -261,7 +324,7 @@ export default function DocumentsPage() {
               className="rounded-[5px]"
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              Advanced Filters
             </Button>
           </div>
 
@@ -314,6 +377,7 @@ export default function DocumentsPage() {
           documents={filteredDocuments}
           loading={loading}
           empty={filteredDocuments.length === 0}
+          onView={handleView}
           onApprove={handleApprove}
           onReject={handleReject}
         />

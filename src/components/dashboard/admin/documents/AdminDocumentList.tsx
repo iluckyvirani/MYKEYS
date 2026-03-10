@@ -124,35 +124,37 @@ export function AdminDocumentList({
                 </Badge>
               </td>
               <td className="px-6 py-4 text-sm">
-                {document.status === "pending" ? (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                      onClick={() => onApprove?.(document.id)}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => onReject?.(document.id)}
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                ) : (
+                <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                     onClick={() => onView?.(document)}
                   >
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4 mr-1" />
+                    View
                   </Button>
-                )}
+                  {document.status === "pending" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => onApprove?.(document.id)}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => onReject?.(document.id)}
+                      >
+                        Reject
+                      </Button>
+                    </>
+                  )}
+                </div>
               </td>
             </tr>
           ))}
