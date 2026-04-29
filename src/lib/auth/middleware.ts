@@ -99,15 +99,15 @@ export async function requireOwnerOrAdmin(
 /**
  * Higher-order function for protected route handlers
  */
-export function withAuth<T extends { params?: Record<string, any> } = any>(
+export function withAuth<TParams extends Record<string, string> = Record<string, string>>(
   handler: (
     request: NextRequest,
     user: JWTPayload,
-    context?: T
+    context?: { params: TParams }
   ) => Promise<NextResponse>,
   options?: { roles?: UserRole[] }
 ) {
-  return async (request: NextRequest, context?: T) => {
+  return async (request: NextRequest, context?: { params: Promise<TParams> }) => {
     try {
       let user: JWTPayload;
 
@@ -117,15 +117,14 @@ export function withAuth<T extends { params?: Record<string, any> } = any>(
         user = await requireAuth(request);
       }
 
-      // Handle Promise-based params for Next.js 15+
-      if (context && typeof context === 'object' && 'params' in context) {
-        const ctxAny = context as any;
-        if (ctxAny.params && typeof ctxAny.params.then === 'function') {
-          ctxAny.params = await ctxAny.params;
-        }
+      // Resolve Promise-based params for Next.js 15+
+      let resolvedContext: { params: TParams } | undefined;
+      if (context) {
+        const params = await context.params;
+        resolvedContext = { params };
       }
 
-      return await handler(request, user, context);
+      return await handler(request, user, resolvedContext);
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === "UNAUTHORIZED") {
