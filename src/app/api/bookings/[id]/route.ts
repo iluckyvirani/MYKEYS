@@ -10,7 +10,7 @@ import { UpdateBookingStatusRequest, ShortBookingDTO, BookingType, PaymentStatus
  * GET /api/bookings/{id}
  * Fetch a specific booking by ID
  */
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const GET = withAuth<{ id: string }>(async (request: NextRequest, user: JWTPayload, context) => {
   try {
     const { id } = await context!.params;
 
@@ -88,7 +88,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(async (request:
  * Only owner can accept/cancel bookings
  * Body: UpdateBookingStatusRequest
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const PATCH = withAuth<{ id: string }>(async (request: NextRequest, user: JWTPayload, context) => {
   try {
     const { id } = await context!.params;
     const body: UpdateBookingStatusRequest = await request.json();
@@ -208,7 +208,7 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(async (reques
  * Cancel a booking (guest action)
  * Only guest who created the booking can delete
  */
-export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const DELETE = withAuth<{ id: string }>(async (request: NextRequest, user: JWTPayload, context) => {
   try {
     const { id } = await context!.params;
 

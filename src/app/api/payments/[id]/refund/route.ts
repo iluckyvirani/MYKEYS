@@ -11,7 +11,7 @@ import { ProcessRefundRequest } from '@/types/payment';
  * Process a refund for a payment
  * Body: ProcessRefundRequest { reason: string, amount?: number }
  */
-export const POST = withAuth<{ params: Promise<{ id: string }> }>(
+export const POST = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;

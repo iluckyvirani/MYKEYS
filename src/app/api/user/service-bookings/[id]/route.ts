@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
  * GET /api/user/service-bookings/[id]
  * Get a single service booking by ID
  */
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(
+export const GET = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;
@@ -98,7 +98,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
  * PATCH /api/user/service-bookings/[id]
  * Update service booking details (reschedule)
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
+export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;
@@ -237,7 +237,7 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
  * DELETE /api/user/service-bookings/[id]
  * Cancel a service booking
  */
-export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
+export const DELETE = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;

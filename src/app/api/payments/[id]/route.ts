@@ -9,7 +9,7 @@ import { ErrorCode } from '@/lib/auth/errors';
  * GET /api/payments/:id
  * Get a specific payment by ID
  */
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(
+export const GET = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;

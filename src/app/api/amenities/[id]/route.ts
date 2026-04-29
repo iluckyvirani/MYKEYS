@@ -53,7 +53,7 @@ export async function GET(
  * PUT /api/amenities/:id
  * Update an amenity (Admin only)
  */
-export const PUT = withAuth<{ params: Promise<{ id: string }> }>(
+export const PUT = withAuth<{ id: string }>(
     async (request: NextRequest, user: JWTPayload, context) => {
         const { id } = await context!.params;
         try {
@@ -110,7 +110,7 @@ export const PUT = withAuth<{ params: Promise<{ id: string }> }>(
  * DELETE /api/amenities/:id
  * Delete an amenity (Admin only)
  */
-export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
+export const DELETE = withAuth<{ id: string }>(
     async (request: NextRequest, _user: JWTPayload, context) => {
         const { id } = await context!.params;
         try {

@@ -4,7 +4,7 @@ import { successResponse, errorResponse } from "@/lib/response";
 import { withAuth } from "@/lib/auth/middleware";
 import { JWTPayload } from "@/lib/auth/jwt";
 
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(
+export const GET = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;
@@ -62,7 +62,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
   { roles: ["ADMIN"] }
 );
 
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
+export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;

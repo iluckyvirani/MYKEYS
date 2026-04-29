@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma';
  * Accept or reject a service request
  * Body: { action: "accept" | "reject" }
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const PATCH = withAuth<{ id: string }>(async (request: NextRequest, user: JWTPayload, context) => {
   try {
     const { id } = await context!.params;
     const body = await request.json();

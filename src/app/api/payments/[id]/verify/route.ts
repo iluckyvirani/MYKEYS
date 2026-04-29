@@ -11,7 +11,7 @@ import { VerifyPaymentRequest } from '@/types/payment';
  * Verify a payment with Razorpay signature
  * Body: VerifyPaymentRequest
  */
-export const POST = withAuth<{ params: Promise<{ id: string }> }>(
+export const POST = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;

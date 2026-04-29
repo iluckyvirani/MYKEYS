@@ -11,7 +11,7 @@ import { InitiateBookingPaymentRequest } from '@/types/payment';
  * GET /api/bookings/:id/payments
  * Get all payments for a specific booking
  */
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(
+export const GET = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;
@@ -60,7 +60,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
  * Initiate a payment for a booking
  * Body: { amount: number, paymentMethod: PaymentMethod, currency?: string }
  */
-export const POST = withAuth<{ params: Promise<{ id: string }> }>(
+export const POST = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;

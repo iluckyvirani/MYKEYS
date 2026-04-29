@@ -10,7 +10,7 @@ import { toUserDTO } from "@/lib/auth/helpers";
  * GET /api/users/[id]
  * Get user by ID (Admin only or own profile)
  */
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(
+export const GET = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {
@@ -78,7 +78,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
  * PATCH /api/users/[id]
  * Update user (Admin only or self)
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
+export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {
@@ -188,7 +188,7 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
  * DELETE /api/users/[id]
  * Delete user (Admin only)
  */
-export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
+export const DELETE = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {

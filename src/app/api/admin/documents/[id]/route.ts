@@ -9,7 +9,7 @@ import { JWTPayload } from "@/lib/auth/jwt";
  * GET /api/admin/documents/:id
  * Get a specific document details for admin
  */
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(
+export const GET = withAuth<{ id: string }>(
   async (request: NextRequest, _user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {
@@ -67,7 +67,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
  * PATCH /api/admin/documents/:id
  * Admin approve or reject a document
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
+export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {

@@ -101,7 +101,7 @@ export async function GET(
  * PATCH /api/properties/[id]
  * Update property (Owner/Admin only)
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
+export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {
@@ -185,7 +185,7 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
  * DELETE /api/properties/[id]
  * Delete property (Owner/Admin only)
  */
-export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
+export const DELETE = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {

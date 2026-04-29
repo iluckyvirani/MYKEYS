@@ -11,7 +11,7 @@ import { InitiatePackagePaymentRequest } from '@/types/payment';
  * GET /api/packages/:id/payments
  * Get all payments for a specific package (owner only)
  */
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(
+export const GET = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;
@@ -72,7 +72,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
  * Initiate a payment for a package (owner purchase)
  * Body: { amount: number, paymentMethod: PaymentMethod, currency?: string }
  */
-export const POST = withAuth<{ params: Promise<{ id: string }> }>(
+export const POST = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     try {
       const { id } = await context!.params;

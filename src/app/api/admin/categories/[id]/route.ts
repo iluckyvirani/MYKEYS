@@ -9,7 +9,7 @@ import { JWTPayload } from "@/lib/auth/jwt";
  * GET /api/admin/categories/:id
  * Get a single category by ID
  */
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(
+export const GET = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {
@@ -38,7 +38,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(
  * PATCH /api/admin/categories/:id
  * Update a service category
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
+export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {
@@ -97,7 +97,7 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
  * DELETE /api/admin/categories/:id
  * Delete a service category
  */
-export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
+export const DELETE = withAuth<{ id: string }>(
   async (request: NextRequest, _user: JWTPayload, context) => {
     const { id } = await context!.params;
     try {

@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma';
  * Reply to a service review (by provider)
  * Body: { response: string }
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const PATCH = withAuth<{ id: string }>(async (request: NextRequest, user: JWTPayload, context) => {
   try {
     const { id } = await context!.params;
     const body = await request.json();

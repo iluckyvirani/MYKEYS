@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
  * GET /api/service/bookings/[id]
  * Get a single booking by ID
  */
-export const GET = withAuth<{ params: Promise<{ id: string }> }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const GET = withAuth<{ id: string }>(async (request: NextRequest, user: JWTPayload, context) => {
   try {
     const { id } = await context!.params;
 
@@ -29,7 +29,7 @@ export const GET = withAuth<{ params: Promise<{ id: string }> }>(async (request:
  * PATCH /api/service/bookings/[id]
  * Update booking status (by provider)
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(async (request: NextRequest, user: JWTPayload, context) => {
+export const PATCH = withAuth<{ id: string }>(async (request: NextRequest, user: JWTPayload, context) => {
   try {
     const { id } = await context!.params;
     const body = await request.json();
