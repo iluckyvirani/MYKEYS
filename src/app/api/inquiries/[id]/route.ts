@@ -10,9 +10,9 @@ import { emailService } from '@/lib/email/emailService';
  * GET /api/inquiries/{id}
  * Fetch a specific inquiry by ID
  */
-export const GET = withAuth(async (req: NextRequest, user: JWTPayload, context?: { params: Promise<{ id: string }> }) => {
+export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPayload, context?: { params: { id: string } }) => {
   try {
-    const { id } = await context?.params!
+    const { id } = context?.params!
 
     if (!id) {
       return NextResponse.json(
@@ -100,9 +100,9 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload, context?:
  * Only owner can update inquiry status
  * Body: UpdateInquiryRequest
  */
-export const PATCH = withAuth(async (req: NextRequest, user: JWTPayload, context?: { params: Promise<{ id: string }> }) => {
+export const PATCH = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPayload, context?: { params: { id: string } }) => {
   try {
-    const { id } = await context?.params!
+    const { id } = context?.params!
     const body: any = await req.json();
 
     if (!id) {

@@ -7,9 +7,9 @@ import { JWTPayload } from '@/lib/auth/jwt';
  * GET /api/inquiries/[id]/notes
  * Fetch notes for an inquiry
  */
-export const GET = withAuth(async (req: NextRequest, user: JWTPayload, context?: { params: Promise<{ id: string }> }) => {
+export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPayload, context?: { params: { id: string } }) => {
   try {
-    const { id: inquiryId } = await context?.params || {};
+    const { id: inquiryId } = context?.params || {};
 
     if (!inquiryId) {
       return NextResponse.json(
@@ -67,10 +67,10 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload, context?:
  * POST /api/inquiries/[id]/notes
  * Create a note for an inquiry
  */
-export const POST = withAuth(async (req: NextRequest, user: JWTPayload, context?: { params: Promise<{ id: string }> }) => {
+export const POST = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPayload, context?: { params: { id: string } }) => {
   try {
     const body = await req.json();
-    const { id: inquiryId } = await context?.params || {};
+    const { id: inquiryId } = context?.params || {};
 
     if (!inquiryId) {
       return NextResponse.json(
