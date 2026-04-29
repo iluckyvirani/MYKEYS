@@ -37,7 +37,7 @@ export default function ServiceRegisterPage() {
         specializations: [],
         certifications: [],
         instantBookingEnabled: data.instantBooking || false,
-        instantBookingPrice: data.instantBooking ? parseInt(data.instantPrice) || 0 : undefined,
+        instantBookingPrice: data.instantBooking ? parseFloat(data.instantPrice) || undefined : undefined,
       };
 
       console.log("Sending to API:", payload);

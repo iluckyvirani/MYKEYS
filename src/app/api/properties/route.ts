@@ -63,7 +63,10 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status;
     if (listingType) where.listingType = listingType;
     if (rentalType) where.rentalType = rentalType;
-    if (propertyType) where.propertyType = propertyType;
+    if (propertyType) {
+      const types = propertyType.split(",").map((t: string) => t.trim()).filter(Boolean);
+      where.propertyType = types.length === 1 ? types[0] : { in: types };
+    }
     if (city) where.city = { contains: city, mode: "insensitive" };
     if (state) where.state = { contains: state, mode: "insensitive" };
     if (zipCode) where.zipCode = { contains: zipCode, mode: "insensitive" };

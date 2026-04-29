@@ -1,5 +1,4 @@
 import { prisma } from '../prisma';
-import { Prisma } from '@prisma/client';
 
 // ==================== Types ====================
 
@@ -313,7 +312,7 @@ export const serviceService = {
       },
     });
 
-    return listings.map(l => ({
+    return listings.map((l: any) => ({
       id: l.id,
       name: l.name,
       category: l.category,
@@ -432,7 +431,7 @@ export const serviceService = {
       sortOrder = 'desc',
     } = filters;
 
-    const where: Prisma.ServiceBookingWhereInput = {};
+    const where: Record<string, any> = {};
     if (providerId) where.providerId = providerId;
     if (clientId) where.clientId = clientId;
     if (status && status !== 'all') {
@@ -470,7 +469,7 @@ export const serviceService = {
     ]);
 
     // Map to frontend shape
-    const items = bookings.map(b => ({
+    const items = bookings.map((b: any) => ({
       id: b.id,
       clientName: `${b.client.firstName} ${b.client.lastName}`,
       clientPhone: b.client.phone || '',
@@ -609,7 +608,7 @@ export const serviceService = {
       sortOrder = 'desc',
     } = filters;
 
-    const where: Prisma.ServiceRequestWhereInput = {};
+    const where: Record<string, any> = {};
     if (providerId) where.providerId = providerId;
     if (clientId) where.clientId = clientId;
     if (status && status !== 'all') {
@@ -638,7 +637,7 @@ export const serviceService = {
       prisma.serviceRequest.count({ where }),
     ]);
 
-    const items = requests.map(r => ({
+    const items = requests.map((r: any) => ({
       id: r.id,
       clientName: `${r.client.firstName} ${r.client.lastName}`,
       serviceType: r.serviceType,
@@ -794,7 +793,7 @@ export const serviceService = {
       sortOrder = 'desc',
     } = filters;
 
-    const where: Prisma.ServiceReviewWhereInput = {};
+    const where: Record<string, any> = {};
     if (providerId) where.providerId = providerId;
     if (userId) where.userId = userId;
     if (rating) where.rating = rating;
@@ -819,7 +818,7 @@ export const serviceService = {
       prisma.serviceReview.count({ where }),
     ]);
 
-    const items = reviews.map(r => ({
+    const items = reviews.map((r: any) => ({
       id: r.id,
       clientName: `${r.user.firstName} ${r.user.lastName}`,
       service: r.booking.service,
@@ -994,10 +993,10 @@ export const serviceService = {
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
 
-      const weekBookings = completedBookings.filter(b =>
+      const weekBookings = completedBookings.filter((b: any) =>
         b.completedAt && b.completedAt >= weekStart && b.completedAt < weekEnd
       );
-      const earnings = weekBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+      const earnings = weekBookings.reduce((sum: number, b: any) => sum + b.totalAmount, 0);
 
       weeklyChart.push({
         week: `Week ${4 - i}`,
@@ -1015,10 +1014,10 @@ export const serviceService = {
       const monthStart = new Date(now.getFullYear(), m, 1);
       const monthEnd = new Date(now.getFullYear(), m + 1, 1);
 
-      const monthBookings = completedBookings.filter(b =>
+      const monthBookings = completedBookings.filter((b: any) =>
         b.completedAt && b.completedAt >= monthStart && b.completedAt < monthEnd
       );
-      const earnings = monthBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+      const earnings = monthBookings.reduce((sum: number, b: any) => sum + b.totalAmount, 0);
 
       monthlyChart.push({
         month: months[m],
@@ -1041,7 +1040,7 @@ export const serviceService = {
       },
     });
 
-    const transactions = recentBookings.map(b => ({
+    const transactions = recentBookings.map((b: any) => ({
       id: b.id,
       date: (b.completedAt || b.createdAt).toISOString().split('T')[0],
       description: `${b.service} - ${b.client.firstName} ${b.client.lastName}`,
@@ -1055,16 +1054,16 @@ export const serviceService = {
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const thisMonthBookings = completedBookings.filter(b =>
+    const thisMonthBookings = completedBookings.filter((b: any) =>
       b.completedAt && b.completedAt >= startOfMonth
     );
-    const thisWeekBookings = completedBookings.filter(b =>
+    const thisWeekBookings = completedBookings.filter((b: any) =>
       b.completedAt && b.completedAt >= startOfWeek
     );
 
-    const thisMonthEarnings = thisMonthBookings.reduce((sum, b) => sum + b.totalAmount, 0);
-    const thisWeekEarnings = thisWeekBookings.reduce((sum, b) => sum + b.totalAmount, 0);
-    const totalEarned = completedBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+    const thisMonthEarnings = thisMonthBookings.reduce((sum: number, b: any) => sum + b.totalAmount, 0);
+    const thisWeekEarnings = thisWeekBookings.reduce((sum: number, b: any) => sum + b.totalAmount, 0);
+    const totalEarned = completedBookings.reduce((sum: number, b: any) => sum + b.totalAmount, 0);
 
     const pendingPayments = await prisma.serviceBooking.aggregate({
       where: {
@@ -1149,24 +1148,24 @@ export const serviceService = {
     bio?: string;
     specializations?: string[];
     certifications?: string[];
+    serviceAreas?: string[];
+    instantBookingEnabled?: boolean;
+    instantBookingPrice?: number | null;
   }) {
     // Update user fields
     const userUpdate: any = {};
     if (data.name) {
-      const parts = data.name.split(' ');
+      const parts = data.name.trim().split(' ');
       userUpdate.firstName = parts[0];
       userUpdate.lastName = parts.slice(1).join(' ') || '';
     }
-    if (data.email) userUpdate.email = data.email;
-    if (data.phone) userUpdate.phone = data.phone;
-    if (data.city) userUpdate.city = data.city;
-    if (data.state) userUpdate.state = data.state;
+    if (data.email !== undefined) userUpdate.email = data.email;
+    if (data.phone !== undefined) userUpdate.phone = data.phone;
+    if (data.city !== undefined) userUpdate.city = data.city;
+    if (data.state !== undefined) userUpdate.state = data.state;
 
     if (Object.keys(userUpdate).length > 0) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: userUpdate,
-      });
+      await prisma.user.update({ where: { id: userId }, data: userUpdate });
     }
 
     // Update provider fields
@@ -1174,12 +1173,12 @@ export const serviceService = {
     if (data.bio !== undefined) providerUpdate.bio = data.bio;
     if (data.specializations !== undefined) providerUpdate.specializations = data.specializations;
     if (data.certifications !== undefined) providerUpdate.certifications = data.certifications;
+    if (data.serviceAreas !== undefined) providerUpdate.serviceAreas = data.serviceAreas;
+    if (data.instantBookingEnabled !== undefined) providerUpdate.instantBookingEnabled = data.instantBookingEnabled;
+    if (data.instantBookingPrice !== undefined) providerUpdate.instantBookingPrice = data.instantBookingPrice;
 
     if (Object.keys(providerUpdate).length > 0) {
-      await prisma.serviceProvider.update({
-        where: { userId },
-        data: providerUpdate,
-      });
+      await prisma.serviceProvider.update({ where: { userId }, data: providerUpdate });
     }
 
     return this.getProfile(userId);

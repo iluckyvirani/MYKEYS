@@ -43,9 +43,9 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
       if (filters.priceRange[0] > 0) {
         params.append("minPrice", filters.priceRange[0].toString());
       }
-      // if (filters.priceRange[1] > 0) {
-      //   params.append("maxPrice", filters.priceRange[1].toString());
-      // }
+      if (filters.priceRange[1] > 0) {
+        params.append("maxPrice", filters.priceRange[1].toString());
+      }
 
       // Add bedrooms filter
       if (filters.selectedBeds !== null) {
@@ -62,9 +62,14 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
         params.append("propertyType", filters.selectedTypes.join(","));
       }
 
-      // Add location search
+      // Smart city vs postcode detection — UK postcodes contain digits
       if (filters.searchLocation) {
-        params.append("zipCode", filters.searchLocation);
+        const loc = filters.searchLocation.trim();
+        if (/\d/.test(loc)) {
+          params.append("zipCode", loc);
+        } else {
+          params.append("city", loc);
+        }
       }
 
       // Add minimum rating filter

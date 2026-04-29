@@ -76,7 +76,7 @@ export default function InquiryTabs({ searchQuery = '', filters }: InquiryTabsPr
 
     return {
       id: inquiry.id,
-      property: inquiry.propertyTitle || `Property ${inquiry.propertyId.slice(0, 8)}`,
+      property: `Property ${inquiry.propertyId.slice(0, 8)}`,
       owner: inquiry.guestName, // Using guest name as contact person
       sent: inquiry.createdAt,
       lastUpdate: inquiry.updatedAt,

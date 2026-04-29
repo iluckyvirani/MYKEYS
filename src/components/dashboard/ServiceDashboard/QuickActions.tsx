@@ -1,52 +1,51 @@
 "use client";
 
 import {
-  Plus,
-  MessageSquare,
+  Wrench,
+  ClipboardList,
   Calendar,
-  Settings,
-  FileText,
-  TrendingUp,
+  UserCog,
+  PoundSterling,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 export default function QuickActions() {
   const actions = [
     {
-      icon: <Plus className="w-5 h-5" />,
-      label: "Add New Service",
-      href: "/service/dashboard/services/new",
+      icon: <Wrench className="w-5 h-5" />,
+      label: "My Services",
+      href: "/service/dashboard/services",
       color: "bg-blue-50 text-blue-600",
     },
     {
-      icon: <MessageSquare className="w-5 h-5" />,
-      label: "Manage Messages",
-      href: "/service/dashboard/messages",
+      icon: <ClipboardList className="w-5 h-5" />,
+      label: "Service Requests",
+      href: "/service/dashboard/requests",
       color: "bg-green-50 text-green-600",
     },
     {
       icon: <Calendar className="w-5 h-5" />,
-      label: "View Calendar",
+      label: "View Bookings",
       href: "/service/dashboard/bookings",
       color: "bg-purple-50 text-purple-600",
     },
     {
-      icon: <Settings className="w-5 h-5" />,
-      label: "Service Settings",
-      href: "/service/dashboard/settings",
+      icon: <UserCog className="w-5 h-5" />,
+      label: "Edit Profile",
+      href: "/service/dashboard/profile",
       color: "bg-orange-50 text-orange-600",
     },
     {
-      icon: <FileText className="w-5 h-5" />,
-      label: "View Invoices",
-      href: "/service/dashboard/invoices",
+      icon: <PoundSterling className="w-5 h-5" />,
+      label: "Earnings",
+      href: "/service/dashboard/earnings",
       color: "bg-indigo-50 text-indigo-600",
     },
     {
-      icon: <TrendingUp className="w-5 h-5" />,
-      label: "View Analytics",
-      href: "/service/dashboard/analytics",
+      icon: <Star className="w-5 h-5" />,
+      label: "My Reviews",
+      href: "/service/dashboard/reviews",
       color: "bg-pink-50 text-pink-600",
     },
   ];

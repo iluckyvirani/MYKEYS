@@ -1,7 +1,7 @@
 // components/dashboard/OwnerDashboard/InquiryInbox.tsx
 "use client";
 
-import { Inbox, User, Filter, Search, MessageSquare, Phone, Mail, Calendar, Clock } from "lucide-react";
+import { Inbox, User, Search, MessageSquare, Phone, Mail, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
@@ -132,9 +132,10 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
       if (selectedInquiry?.id === inquiryId) {
         setSelectedInquiry({ ...selectedInquiry, status: newStatus });
       }
+      toast({ title: "Success", description: "Inquiry status updated." });
     } catch (err) {
       console.error("Error updating inquiry status:", err);
-      alert("Failed to update inquiry status");
+      toast({ title: "Error", description: "Failed to update inquiry status.", variant: "destructive" });
     } finally {
       setUpdatingId(null);
     }
@@ -154,9 +155,10 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
       if (selectedInquiry?.id === inquiryId) {
         setSelectedInquiry({ ...selectedInquiry, priority: newPriority });
       }
+      toast({ title: "Success", description: "Priority updated." });
     } catch (err) {
       console.error("Error updating inquiry priority:", err);
-      alert("Failed to update inquiry priority");
+      toast({ title: "Error", description: "Failed to update inquiry priority.", variant: "destructive" });
     } finally {
       setUpdatingId(null);
     }
@@ -164,7 +166,7 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
 
   const handleSaveResponse = async () => {
     if (!selectedInquiry || !responseMessage.trim()) {
-      alert("Please enter a response message");
+      toast({ title: "Validation", description: "Please enter a response message.", variant: "destructive" });
       return;
     }
 
@@ -204,7 +206,7 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
 
   const handleAddNote = async () => {
     if (!selectedInquiry || !newNote.trim()) {
-      alert("Please enter a note");
+      toast({ title: "Validation", description: "Please enter a note.", variant: "destructive" });
       return;
     }
 
@@ -280,9 +282,10 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
           notes: selectedInquiry.notes?.filter((note) => note.id !== noteId),
         });
       }
+      toast({ title: "Success", description: "Note deleted." });
     } catch (err) {
       console.error("Error deleting note:", err);
-      alert("Failed to delete note");
+      toast({ title: "Error", description: "Failed to delete note.", variant: "destructive" });
     }
   };
 
@@ -300,9 +303,10 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
       );
 
       setSelectedInquiry({ ...selectedInquiry, status: "closed" });
+      toast({ title: "Success", description: "Inquiry marked as closed." });
     } catch (err) {
       console.error("Error marking as closed:", err);
-      alert("Failed to mark as closed");
+      toast({ title: "Error", description: "Failed to mark as closed.", variant: "destructive" });
     } finally {
       setUpdatingId(null);
     }
@@ -322,9 +326,10 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
       );
 
       setSelectedInquiry({ ...selectedInquiry, status: "converted" });
+      toast({ title: "Success", description: "Inquiry marked as converted." });
     } catch (err) {
       console.error("Error marking as converted:", err);
-      alert("Failed to mark as converted");
+      toast({ title: "Error", description: "Failed to mark as converted.", variant: "destructive" });
     } finally {
       setUpdatingId(null);
     }

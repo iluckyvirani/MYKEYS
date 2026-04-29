@@ -90,7 +90,7 @@ export default function ServiceBookingCard({
   };
 
   const handleModify = async () => {
-    const isScheduled = booking.bookingType === "schedule" || booking.bookingType === "scheduled";
+    const isScheduled = booking.bookingType === "schedule";
     if (isScheduled && (!newScheduledDate || !newScheduledTime)) {
       alert("Please select both date and time");
       return;
@@ -390,7 +390,7 @@ export default function ServiceBookingCard({
                 <p className="text-sm text-gray-600">Provider: {booking.providerName}</p>
               </div>
 
-              {(booking.bookingType === "schedule" || booking.bookingType === "scheduled") && (
+              {booking.bookingType === "schedule" && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-900 mb-2">

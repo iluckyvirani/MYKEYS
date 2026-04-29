@@ -19,7 +19,7 @@ interface ServiceCategory {
 interface AdminCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (category: { name: string; description: string; status: "active" | "inactive" }) => void;
+  onSave: (category: { name: string; description: string; status: "active" | "inactive"; icon: string }) => void;
   category?: ServiceCategory | null;
   saving?: boolean;
 }
@@ -34,6 +34,7 @@ export default function AdminCategoryModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<"active" | "inactive">("active");
+  const [icon, setIcon] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -41,10 +42,12 @@ export default function AdminCategoryModal({
       setName(category.name);
       setDescription(category.description);
       setStatus(category.status);
+      setIcon(category.icon || "");
     } else {
       setName("");
       setDescription("");
       setStatus("active");
+      setIcon("");
     }
     setError("");
   }, [category, isOpen]);
@@ -60,15 +63,19 @@ export default function AdminCategoryModal({
       setError("Description is required");
       return;
     }
+    if (!icon.trim()) {
+      setError("Icon emoji is required — pick one from the suggestions below or type any emoji");
+      return;
+    }
 
-    onSave({ name: name.trim(), description: description.trim(), status });
+    onSave({ name: name.trim(), description: description.trim(), status, icon: icon.trim() });
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <Card className="w-full max-w-md rounded-[5px]">
+      <Card className="w-full max-w-md rounded-[5px] max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-900">
@@ -109,6 +116,44 @@ export default function AdminCategoryModal({
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-[5px] focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
               />
+            </div>
+
+            {/* Icon field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Icon (Emoji) *
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Click a suggestion or type any emoji. This icon appears on the category card.
+              </p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {["🔧","💡","🪣","🎨","🪚","🧹","❄️","🔌","🏠","🚿","🛠️","🔩","🪟","🔑","📦","🌿"].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setIcon(emoji)}
+                    className={`text-xl p-1.5 rounded-lg border-2 transition-all hover:scale-110 ${
+                      icon === emoji
+                        ? "border-green-500 bg-green-50"
+                        : "border-gray-200 hover:border-gray-400"
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-10 flex items-center justify-center border border-gray-300 rounded-[5px] bg-gray-50 text-2xl shrink-0">
+                  {icon || <span className="text-xs text-gray-400">?</span>}
+                </div>
+                <Input
+                  value={icon}
+                  onChange={(e) => setIcon(e.target.value)}
+                  placeholder="Paste or type an emoji…"
+                  className="rounded-[5px]"
+                  maxLength={8}
+                />
+              </div>
             </div>
 
             <div>

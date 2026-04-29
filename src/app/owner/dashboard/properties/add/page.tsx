@@ -22,7 +22,9 @@ import {
   Plus,
   Image as ImageIcon,
   AlertCircle,
-  Loader
+  Loader,
+  GripVertical,
+  Star,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -49,6 +51,8 @@ interface AmenityOption {
 export default function AddPropertyPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragSrcIndex = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -225,6 +229,48 @@ export default function AddPropertyPage() {
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
+  };
+
+  // Move image at `from` to position 0 (set as cover)
+  const setCoverImage = (index: number) => {
+    if (index === 0) return;
+    setFormData(prev => {
+      const imgs = [...prev.images];
+      const [picked] = imgs.splice(index, 1);
+      return { ...prev, images: [picked, ...imgs] };
+    });
+  };
+
+  // Drag-and-drop reorder
+  const handleDragStart = (index: number) => {
+    dragSrcIndex.current = index;
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const src = dragSrcIndex.current;
+    if (src === null || src === dropIndex) {
+      setDragOverIndex(null);
+      return;
+    }
+    setFormData(prev => {
+      const imgs = [...prev.images];
+      const [moved] = imgs.splice(src, 1);
+      imgs.splice(dropIndex, 0, moved);
+      return { ...prev, images: imgs };
+    });
+    dragSrcIndex.current = null;
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    dragSrcIndex.current = null;
+    setDragOverIndex(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1069,12 +1115,25 @@ export default function AddPropertyPage() {
       </div>
 
       <div className="pt-6 border-t">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Images</h3>
-        <p className="text-sm text-gray-600 mb-6">Upload high-quality photos of your property (minimum 1)</p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Image Upload Box */}
-          <label className="aspect-video border-2 border-dashed border-gray-300 rounded-[5px] flex flex-col items-center justify-center cursor-pointer hover:border-green-400 transition-colors disabled:cursor-not-allowed disabled:opacity-50">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Property Photos</h3>
+        <p className="text-sm text-gray-500 mb-2">
+          Upload high-quality photos. <strong>Drag to reorder</strong> — the first photo is your <strong>cover image</strong>.
+          You can also click <strong>Set as Cover</strong> on any photo.
+        </p>
+
+        {/* Cover image tip */}
+        {formData.images.length > 0 && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-amber-50 border border-amber-200 rounded-[5px] text-sm text-amber-800">
+            <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
+            <span>The <strong>first photo</strong> is your cover image shown to guests. Drag or click "Set as Cover" to change it.</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {/* Upload tile */}
+          <label
+            className="aspect-video border-2 border-dashed border-gray-300 rounded-[5px] flex flex-col items-center justify-center cursor-pointer hover:border-green-400 transition-colors"
+          >
             <input
               ref={fileInputRef}
               type="file"
@@ -1087,44 +1146,90 @@ export default function AddPropertyPage() {
             {uploadingImages ? (
               <>
                 <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-2" />
-                <p className="text-sm font-medium text-gray-700">Uploading...</p>
+                <p className="text-sm font-medium text-gray-700">Uploading…</p>
               </>
             ) : (
               <>
-                <Upload className="w-12 h-12 text-gray-400 mb-3" />
-                <p className="text-sm font-medium text-gray-700">Upload Photos</p>
-                <p className="text-xs text-gray-500 mt-1">Click or drag & drop</p>
+                <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                <p className="text-sm font-medium text-gray-700">Add Photos</p>
+                <p className="text-xs text-gray-400 mt-1">Click or drag & drop</p>
               </>
             )}
           </label>
 
-          {/* Uploaded Images */}
+          {/* Uploaded images — draggable */}
           {formData.images.map((image, index) => (
-            <div key={index} className="relative aspect-video rounded-[5px] overflow-hidden group bg-gray-100">
+            <div
+              key={image.url}
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`relative aspect-video rounded-[5px] overflow-hidden group bg-gray-100 cursor-grab active:cursor-grabbing transition-all ${
+                dragOverIndex === index && dragSrcIndex.current !== index
+                  ? "ring-2 ring-green-500 scale-95 opacity-70"
+                  : ""
+              }`}
+            >
               <Image
                 src={image.url}
-                alt={`Property ${index + 1}`}
+                alt={`Property photo ${index + 1}`}
                 fill
-                className="object-cover"
+                className="object-cover pointer-events-none"
               />
+
+              {/* Dark overlay on hover */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
+
+              {/* Drag handle */}
+              <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="bg-black/60 rounded p-1">
+                  <GripVertical className="w-4 h-4 text-white" />
+                </div>
+              </div>
+
+              {/* Cover badge */}
+              {index === 0 ? (
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-0.5 bg-amber-400 text-white text-xs font-bold rounded-full shadow">
+                  <Star className="w-3 h-3 fill-white" />
+                  Cover Photo
+                </div>
+              ) : (
+                /* Set as cover button — visible on hover */
+                <button
+                  type="button"
+                  onClick={() => setCoverImage(index)}
+                  className="absolute top-2 left-1/2 -translate-x-1/2 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity px-2 py-0.5 bg-white text-gray-900 text-xs font-semibold rounded-full shadow hover:bg-amber-50 hover:text-amber-700"
+                >
+                  Set as Cover
+                </button>
+              )}
+
+              {/* Index number */}
+              <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs rounded px-1.5 py-0.5 font-medium">
+                {index + 1}
+              </div>
+
+              {/* Remove button */}
               <button
                 type="button"
                 onClick={() => removeImage(index)}
-                className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute bottom-2 right-2 p-1.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60 to-transparent p-3">
-                <p className="text-white text-sm truncate">{image.name}</p>
-              </div>
             </div>
           ))}
         </div>
 
         {formData.images.length > 0 && (
-          <div className="mt-4 text-sm text-gray-600">
-            Uploaded {formData.images.length} image{formData.images.length > 1 ? 's' : ''}. {formData.images.length < 5 ? `Add ${5 - formData.images.length} more for best results.` : 'Ready to publish!'}
-          </div>
+          <p className="mt-3 text-sm text-gray-500">
+            {formData.images.length} photo{formData.images.length !== 1 ? "s" : ""} uploaded.{" "}
+            {formData.images.length < 5
+              ? `Add ${5 - formData.images.length} more for best results.`
+              : "Great selection — ready to publish!"}
+          </p>
         )}
       </div>
     </div>

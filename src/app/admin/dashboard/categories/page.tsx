@@ -22,6 +22,7 @@ import {
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface ServiceCategory {
   id: string;
@@ -30,6 +31,7 @@ interface ServiceCategory {
   services: number;
   status: "active" | "inactive";
   createdDate: string;
+  icon?: string;
 }
 
 interface Stats {
@@ -54,6 +56,7 @@ export default function CategoriesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -72,6 +75,7 @@ export default function CategoriesPage() {
           services: cat.serviceCount || 0,
           status: cat.status as "active" | "inactive",
           createdDate: cat.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
+          icon: cat.icon || undefined,
         }));
         setCategories(apiCategories);
       }
@@ -129,9 +133,15 @@ export default function CategoriesPage() {
       await api.delete(`/admin/categories/${id}`);
       await fetchCategories();
       setDeleteConfirm(null);
-    } catch (err) {
+      toast({ title: "Category deleted", description: "The category has been removed." });
+    } catch (err: any) {
       console.error("Error deleting category:", err);
-      alert("Failed to delete category");
+      const apiMessage = err?.response?.data?.message;
+      toast({
+        title: "Failed to delete category",
+        description: apiMessage || "An unexpected error occurred.",
+        variant: "destructive",
+      });
     } finally {
       setDeleting(false);
     }
@@ -147,7 +157,7 @@ export default function CategoriesPage() {
     setCategoryModalOpen(true);
   };
 
-  const handleSaveCategory = async (data: { name: string; description: string; status: "active" | "inactive" }) => {
+  const handleSaveCategory = async (data: { name: string; description: string; status: "active" | "inactive"; icon: string }) => {
     setSaving(true);
     try {
       if (editingCategory) {
@@ -160,9 +170,20 @@ export default function CategoriesPage() {
       await fetchCategories();
       setCategoryModalOpen(false);
       setEditingCategory(null);
-    } catch (err) {
+      toast({
+        title: editingCategory ? "Category updated" : "Category created",
+        description: editingCategory
+          ? `"${data.name}" has been updated successfully.`
+          : `"${data.name}" has been added and is now ${data.status}.`,
+      });
+    } catch (err: any) {
       console.error("Error saving category:", err);
-      alert("Failed to save category");
+      const apiMessage = err?.response?.data?.message;
+      toast({
+        title: "Failed to save category",
+        description: apiMessage || "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
