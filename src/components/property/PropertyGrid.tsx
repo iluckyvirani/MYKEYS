@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Grid, List } from "lucide-react";
+import { ChevronLeft, ChevronRight, Grid, List, Map } from "lucide-react";
 import PropertyCard, { PropertyCardProps } from "./PropertyCard";
+import PropertyMapView, { MapProperty } from "./PropertyMapView";
 import { api } from "@/lib/api";
 import { BuyFiltersState } from "@/app/buy/page";
 
@@ -21,6 +22,9 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
   const [properties, setProperties] = useState<PropertyCardProps[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [isMapView, setIsMapView] = useState(false);
+  const [mapData, setMapData] = useState<MapProperty[]>([]);
+  const [filteredByMapIds, setFilteredByMapIds] = useState<Set<string> | null>(null);
   const itemsPerPage = 9;
 
   // Fetch properties from API
@@ -127,6 +131,26 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
         }));
 
         setProperties(mappedProperties);
+
+        // Build map data (includes lat/lng for PropertyMapView)
+        const mappedMapData: MapProperty[] = response.data.data.items.map((property: any) => ({
+          id: property.id,
+          title: property.title,
+          price: `£${property.price?.toLocaleString() || "0"}`,
+          latitude: typeof property.latitude === "number" ? property.latitude : null,
+          longitude: typeof property.longitude === "number" ? property.longitude : null,
+          address: `${property.address || ""} ${property.city || ""}`.trim(),
+          beds: property.bedrooms || 0,
+          baths: property.bathrooms || 0,
+          propertyType: property.propertyType || "Property",
+          imageUrl: property.images?.[0]?.url || "",
+          listingType: property.listingType?.toLowerCase() || "buy",
+          priceType: property.priceType?.toLowerCase() || "monthly",
+          slug: property.slug,
+        }));
+        setMapData(mappedMapData);
+        setFilteredByMapIds(null);
+
         setTotalCount(response.data.data.total || mappedProperties.length);
         if (onCountChange) {
           onCountChange(response.data.data.total || mappedProperties.length);
@@ -165,10 +189,15 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
     }
   });
 
+  // Apply map-area filter when user comes back from map view
+  const displayedProperties = filteredByMapIds
+    ? sortedProperties.filter((p) => p.id != null && filteredByMapIds.has(String(p.id)))
+    : sortedProperties;
+
   // Pagination logic
-  const totalPages = Math.ceil(sortedProperties.length / itemsPerPage);
+  const totalPages = Math.ceil(displayedProperties.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentProperties = sortedProperties.slice(startIndex, startIndex + itemsPerPage);
+  const currentProperties = displayedProperties.slice(startIndex, startIndex + itemsPerPage);
 
   const handlePreviousPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -180,11 +209,43 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
 
   return (
     <div>
+      {/* ── Map View (full-page fixed overlay below navbar) ───────────── */}
+      {isMapView && (
+        <div className="fixed inset-0 top-16 z-40">
+          <PropertyMapView
+            properties={mapData}
+            searchLocation={filters.searchLocation}
+            onBackToList={(filteredIds) => {
+              setIsMapView(false);
+              if (filteredIds && filteredIds.length > 0) {
+                setFilteredByMapIds(new Set(filteredIds));
+              }
+            }}
+          />
+        </div>
+      )}
+
+      {/* ── List View ─────────────────────────────────────────────────── */}
+      <div className={isMapView ? "hidden" : ""}>
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 p-4 bg-gray-50 rounded-lg gap-4">
         <div className="text-sm text-gray-600">
-          Showing <span className="font-semibold">{loading ? "..." : `${startIndex + 1}-${Math.min(startIndex + itemsPerPage, sortedProperties.length)}`}</span> of{" "}
-          <span className="font-semibold">{loading ? "..." : totalCount}</span> properties
+          {filteredByMapIds ? (
+            <>
+              <span className="font-semibold">{filteredByMapIds.size}</span> properties in drawn area{" "}
+              <button
+                onClick={() => setFilteredByMapIds(null)}
+                className="ml-2 text-green-600 hover:text-green-800 underline font-medium"
+              >
+                Clear
+              </button>
+            </>
+          ) : (
+            <>
+              Showing <span className="font-semibold">{loading ? "..." : `${startIndex + 1}–${Math.min(startIndex + itemsPerPage, displayedProperties.length)}`}</span> of{" "}
+              <span className="font-semibold">{loading ? "..." : totalCount}</span> properties
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-4 flex-wrap justify-center">
@@ -221,6 +282,15 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
             <option value="price-high-low">Price: High to Low</option>
             <option value="rating">Highest Rated</option>
           </select>
+
+          {/* Map View Toggle */}
+          <button
+            onClick={() => setIsMapView(true)}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors cursor-pointer font-medium"
+          >
+            <Map className="w-4 h-4 text-gray-600" />
+            Map view
+          </button>
         </div>
       </div>
 
@@ -258,7 +328,7 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
       )}
 
       {/* Pagination */}
-      {!loading && totalPages > 1 && (
+      {!loading && totalPages > 1 && !filteredByMapIds && (
         <div className="flex items-center justify-between mt-8 p-4 bg-gray-50 rounded-lg">
           <button
             onClick={handlePreviousPage}
@@ -294,6 +364,7 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }
