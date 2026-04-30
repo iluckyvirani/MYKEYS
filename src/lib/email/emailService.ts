@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Frontend URL — set FRONTEND_URL in .env for production (e.g. https://mykeys-property.vercel.app)
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = 'https://mykeys-property.vercel.app' || 'http://localhost:3000';
 
 export const emailService = {
   /**
