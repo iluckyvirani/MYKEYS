@@ -84,23 +84,30 @@ export default function OwnerPropertiesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch properties from API
+  // Fetch all owner properties once (search is filtered client-side)
   const fetchProperties = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams();
-      params.append("pageSize", "100");
-
-      if (searchQuery) {
-        params.append("search", searchQuery);
-      }
-
-      const response = await api.get(`/properties?${params.toString()}`);
+      const response = await api.get(`/owner/properties`);
 
       if (response.data.success) {
-        const allProperties = response.data.data.items || [];
+        // Owner API returns an array directly (not .items), each item has
+        // computed stats + fullData (raw property fields)
+        const rawItems: any[] = response.data.data || [];
+
+        const allProperties: Property[] = rawItems.map((item) => ({
+          // Spread full DB fields (title, bedrooms, bathrooms, listingType, etc.)
+          ...item.fullData,
+          // Override with computed stats from the owner endpoint
+          revenue: item.revenue,
+          occupancy: item.occupancy,
+          averageRating: item.rating,
+          reviewCount: item.reviews,
+          // status comes back lowercase from owner API — normalise to uppercase
+          status: (item.fullData?.status ?? item.status ?? "").toUpperCase(),
+        }));
         setProperties(allProperties);
 
         // Calculate stats
@@ -135,9 +142,9 @@ export default function OwnerPropertiesPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery]);
+  }, []);
 
-  // Fetch properties on mount and when search changes
+  // Fetch on mount only
   useEffect(() => {
     fetchProperties();
   }, [fetchProperties]);
@@ -220,6 +227,18 @@ export default function OwnerPropertiesPage() {
 
   const primaryImage = (prop: Property) =>
     prop.images.find((img) => img.isPrimary)?.url || prop.images[0]?.url || "";
+
+  // Client-side search filter
+  const filteredProperties = searchQuery.trim()
+    ? properties.filter((p) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          p.title?.toLowerCase().includes(q) ||
+          p.address?.toLowerCase().includes(q) ||
+          p.city?.toLowerCase().includes(q)
+        );
+      })
+    : properties;
 
   return (
     <DashboardLayout defaultRole="owner">
@@ -320,7 +339,7 @@ export default function OwnerPropertiesPage() {
               <div>
                 <CardTitle>Your Properties</CardTitle>
                 <CardDescription>
-                  {properties.length} properties total
+                  {filteredProperties.length} properties{searchQuery ? " found" : " total"}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -377,7 +396,7 @@ export default function OwnerPropertiesPage() {
             )}
 
             {/* Empty State */}
-            {!loading && properties.length === 0 && (
+            {!loading && filteredProperties.length === 0 && (
               <div className="text-center py-12">
                 <Home className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <h3 className="text-lg font-medium text-gray-900 mb-1">
@@ -401,9 +420,9 @@ export default function OwnerPropertiesPage() {
             )}
 
             {/* Grid View */}
-            {!loading && properties.length > 0 && viewMode === "grid" && (
+            {!loading && filteredProperties.length > 0 && viewMode === "grid" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {properties.map((property) => {
+                {filteredProperties.map((property) => {
                   const listingBadge = getListingBadge(
                     property.listingType,
                     property.rentalType
@@ -549,9 +568,9 @@ export default function OwnerPropertiesPage() {
             )}
 
             {/* List View */}
-            {!loading && properties.length > 0 && viewMode === "list" && (
+            {!loading && filteredProperties.length > 0 && viewMode === "list" && (
               <div className="space-y-3">
-                {properties.map((property) => {
+                {filteredProperties.map((property) => {
                   const listingBadge = getListingBadge(
                     property.listingType,
                     property.rentalType
