@@ -21,6 +21,7 @@ import { api } from "@/lib/api";
 interface ServiceBooking {
   id: string;
   serviceId: string;
+  providerId: string;
   serviceName: string;
   providerName: string;
   providerImage: string;
