@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000/api",
 });
 
 let isRefreshing = false;
@@ -42,7 +42,7 @@ api.interceptors.response.use(
 
     // Check if user had a token before (was authenticated)
     const hadToken = !!localStorage.getItem("accessToken");
-    
+
     // Don't try to refresh if there was no token to begin with
     if (!hadToken) {
       return Promise.reject(error);
@@ -73,7 +73,7 @@ api.interceptors.response.use(
 
       // Call refresh endpoint
       const response = await axios.post(
-        "http://localhost:3000/api/auth/refresh",
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000/api'}/auth/refresh`,
         { refreshToken }
       );
 
