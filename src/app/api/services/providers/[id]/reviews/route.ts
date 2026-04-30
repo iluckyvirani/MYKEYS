@@ -7,15 +7,16 @@ import { serviceService } from '@/lib/services/serviceService';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
 
     const result = await serviceService.getReviews({
-      providerId: params.id,
+      providerId: id,
       page,
       limit,
     });
