@@ -9,6 +9,9 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Frontend URL — set FRONTEND_URL in .env for production (e.g. https://mykeys-property.vercel.app)
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
 export const emailService = {
   /**
    * Send welcome email to new user
@@ -24,7 +27,7 @@ export const emailService = {
           <h2>Welcome to MyKeys, ${firstName}!</h2>
           <p>We're excited to have you on board. Start exploring properties and connecting with owners today.</p>
           <p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            <a href="${FRONTEND_URL}/user/dashboard" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               Go to Dashboard
             </a>
           </p>
@@ -59,7 +62,7 @@ export const emailService = {
             <li>Contact us if you have any questions</li>
           </ul>
           <p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            <a href="${FRONTEND_URL}/user/dashboard/inquiries" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               View Inquiries
             </a>
           </p>
@@ -96,7 +99,7 @@ export const emailService = {
           <p><strong>${inquirerName}</strong> sent an inquiry about your property <strong>${propertyTitle}</strong>.</p>
           <p>Please review and respond to their inquiry as soon as possible to increase booking chances.</p>
           <p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/owner/dashboard/inquiries/${inquiryId}" style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            <a href="${FRONTEND_URL}/owner/dashboard/inquiries/${inquiryId}" style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               View Inquiry
             </a>
           </p>
@@ -135,7 +138,7 @@ export const emailService = {
           <p><strong>Message:</strong></p>
           <p>${ownerResponse.replace(/\n/g, '<br>')}</p>
           <p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            <a href="${FRONTEND_URL}/user/dashboard/inquiries" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               View in Dashboard
             </a>
           </p>
@@ -175,7 +178,7 @@ export const emailService = {
           <p><strong>Review:</strong></p>
           <p>${reviewText.replace(/\n/g, '<br>')}</p>
           <p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/properties/${propertyId}#reviews" style="background-color: #FF9800; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            <a href="${FRONTEND_URL}/properties/${propertyId}#reviews" style="background-color: #FF9800; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               View Review
             </a>
           </p>
@@ -228,7 +231,7 @@ export const emailService = {
           </table>
           <p>We will notify you as soon as the owner confirms your booking.</p>
           <p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/user/dashboard/bookings/${bookingId}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            <a href="${FRONTEND_URL}/user/dashboard/bookings/${bookingId}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               View Booking Request
             </a>
           </p>
@@ -280,7 +283,7 @@ export const emailService = {
             </tr>
           </table>
           <p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/owner/dashboard/bookings/${bookingId}" style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            <a href="${FRONTEND_URL}/owner/dashboard/bookings/${bookingId}" style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               View Booking
             </a>
           </p>
@@ -295,3 +298,4 @@ export const emailService = {
     }
   },
 };
+
