@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Building, Mail, Phone, CheckCircle, XCircle, Eye, Edit, Trash2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -129,7 +129,7 @@ export function AdminOwnerList({
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-green-600" />
                     <span className="text-sm font-semibold text-gray-900">
-                      ₹{(owner.revenue / 1000).toFixed(0)}K
+                      £{(owner.revenue / 1000).toFixed(0)}K
                     </span>
                   </div>
                 </td>
@@ -143,7 +143,7 @@ export function AdminOwnerList({
                 </td>
                 <td className="py-4 px-6">
                   <p className="text-sm text-gray-600">
-                    {new Date(owner.joinedDate).toLocaleDateString('en-IN', {
+                    {new Date(owner.joinedDate).toLocaleDateString('en-GB', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',

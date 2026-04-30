@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -205,7 +205,7 @@ export function InquiryList({
             </div>
 
             <div className="text-xs text-gray-500 pt-3 border-t">
-              Received on {new Date(inquiry.createdAt).toLocaleDateString("en-IN", {
+              Received on {new Date(inquiry.createdAt).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",

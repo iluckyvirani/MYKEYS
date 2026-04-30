@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FileText, Calculator, AlertCircle, Download } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -84,7 +84,7 @@ export default function TaxSummary() {
             }`} />
             <div>
               <div className="font-medium text-gray-900">
-                Tax Payment Due: {new Date(taxData.dueDate).toLocaleDateString('en-IN', {
+                Tax Payment Due: {new Date(taxData.dueDate).toLocaleDateString('en-GB', {
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric'
@@ -136,7 +136,7 @@ export default function TaxSummary() {
                 <div>
                   <div className="text-sm font-medium">{doc.name}</div>
                   <div className="text-xs text-gray-500">
-                    Due: {new Date(doc.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    Due: {new Date(doc.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                   </div>
                 </div>
               </div>

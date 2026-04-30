@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { ArrowLeft, Mail, Phone, MapPin, Building, AlertCircle, Users, DollarSign, Calendar, CheckCircle, Clock, AlertCircle as AlertIcon } from "lucide-react";
@@ -127,14 +127,14 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
             <Card className="rounded-xl p-4 border-l-4 border-l-indigo-500">
               <p className="text-sm text-gray-600 mb-2">Check-in</p>
               <p className="text-lg font-bold text-gray-900">
-                {new Date(bookingData.booking.checkIn).toLocaleDateString("en-IN", {
+                {new Date(bookingData.booking.checkIn).toLocaleDateString("en-GB", {
                   year: "numeric",
                   month: "short",
                   day: "numeric",
                 })}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {new Date(bookingData.booking.checkIn).toLocaleTimeString("en-IN", {
+                {new Date(bookingData.booking.checkIn).toLocaleTimeString("en-GB", {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
@@ -144,14 +144,14 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
             <Card className="rounded-xl p-4 border-l-4 border-l-purple-500">
               <p className="text-sm text-gray-600 mb-2">Check-out</p>
               <p className="text-lg font-bold text-gray-900">
-                {new Date(bookingData.booking.checkOut).toLocaleDateString("en-IN", {
+                {new Date(bookingData.booking.checkOut).toLocaleDateString("en-GB", {
                   year: "numeric",
                   month: "short",
                   day: "numeric",
                 })}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {new Date(bookingData.booking.checkOut).toLocaleTimeString("en-IN", {
+                {new Date(bookingData.booking.checkOut).toLocaleTimeString("en-GB", {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
@@ -244,23 +244,23 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
             <Card className="rounded-xl p-6 space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-gray-700">Base Price ({bookingData.booking.nights} nights)</span>
-                <span className="font-semibold text-gray-900">₹{bookingData.booking.basePrice.toLocaleString("en-IN")}</span>
+                <span className="font-semibold text-gray-900">£{bookingData.booking.basePrice.toLocaleString("en-GB")}</span>
               </div>
               {bookingData.booking.cleaningFee > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Cleaning Fee</span>
-                  <span className="font-semibold text-gray-900">₹{bookingData.booking.cleaningFee.toLocaleString("en-IN")}</span>
+                  <span className="font-semibold text-gray-900">£{bookingData.booking.cleaningFee.toLocaleString("en-GB")}</span>
                 </div>
               )}
               {bookingData.booking.serviceFee > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Service Fee</span>
-                  <span className="font-semibold text-gray-900">₹{bookingData.booking.serviceFee.toLocaleString("en-IN")}</span>
+                  <span className="font-semibold text-gray-900">£{bookingData.booking.serviceFee.toLocaleString("en-GB")}</span>
                 </div>
               )}
               <div className="border-t pt-3 flex justify-between items-center">
                 <span className="font-semibold text-gray-900">Total Amount</span>
-                <span className="text-lg font-bold text-indigo-600">₹{bookingData.booking.totalAmount.toLocaleString("en-IN")}</span>
+                <span className="text-lg font-bold text-indigo-600">£{bookingData.booking.totalAmount.toLocaleString("en-GB")}</span>
               </div>
             </Card>
           </div>
@@ -272,11 +272,11 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Paid Amount</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{bookingData.booking.paidAmount.toLocaleString("en-IN")}</p>
+                  <p className="text-2xl font-bold text-gray-900">£{bookingData.booking.paidAmount.toLocaleString("en-GB")}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Balance Amount</p>
-                  <p className="text-2xl font-bold text-orange-600">₹{bookingData.booking.balanceAmount.toLocaleString("en-IN")}</p>
+                  <p className="text-2xl font-bold text-orange-600">£{bookingData.booking.balanceAmount.toLocaleString("en-GB")}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Payment Status</p>
@@ -333,7 +333,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                     ))}
                   </div>
                   <span className="text-sm text-gray-600">
-                    {new Date(bookingData.review.createdAt).toLocaleDateString("en-IN")}
+                    {new Date(bookingData.review.createdAt).toLocaleDateString("en-GB")}
                   </span>
                 </div>
                 <p className="text-gray-700">{bookingData.review.comment}</p>

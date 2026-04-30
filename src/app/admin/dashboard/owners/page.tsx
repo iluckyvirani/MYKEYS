@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { AdminOwnerFilterModal } from "@/components/dashboard/admin/owners/AdminOwnerFilterModal";
@@ -207,7 +207,7 @@ export default function OwnersPage() {
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">₹{(totalRevenue / 100000).toFixed(1)}L</div>
+                <div className="text-2xl font-bold text-gray-900">£{(totalRevenue / 100000).toFixed(1)}L</div>
                 <div className="text-sm text-gray-600">Total Revenue</div>
               </div>
               <div className="p-2 bg-green-100 rounded-lg">
@@ -223,7 +223,7 @@ export default function OwnersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-gray-900">
-                  ₹{owners.length > 0 ? (totalRevenue / owners.length / 1000).toFixed(0) : "0"}K
+                  £{owners.length > 0 ? (totalRevenue / owners.length / 1000).toFixed(0) : "0"}K
                 </div>
                 <div className="text-sm text-gray-600">Avg Revenue</div>
               </div>

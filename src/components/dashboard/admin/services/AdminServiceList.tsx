@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Eye, Edit, Trash2, Star, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -106,7 +106,7 @@ export function AdminServiceList({
                 </Badge>
               </td>
               <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                ₹{service.basePrice}
+                £{service.basePrice}
               </td>
               <td className="px-6 py-4 text-sm text-gray-600">{service.bookings}</td>
               <td className="px-6 py-4 text-sm">

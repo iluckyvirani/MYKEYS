@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { CreditCard, TrendingUp, AlertCircle, Search, Filter, X } from "lucide-react";
@@ -67,7 +67,7 @@ export default function PaymentsPage() {
   }, []);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   const handleApplyFilters = (filters: PaymentFilters) => {
     setAppliedFilters(filters);

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -188,12 +188,12 @@ export function OwnerBookingList({
                   <td className="py-4 px-4">
                     <div className="space-y-1">
                       <div className="font-medium text-sm">
-                        {new Date(booking.checkInDate).toLocaleDateString("en-IN", {
+                        {new Date(booking.checkInDate).toLocaleDateString("en-GB", {
                           day: "numeric",
                           month: "short",
                         })}{" "}
                         -{" "}
-                        {new Date(booking.checkOutDate).toLocaleDateString("en-IN", {
+                        {new Date(booking.checkOutDate).toLocaleDateString("en-GB", {
                           day: "numeric",
                           month: "short",
                         })}
@@ -215,10 +215,10 @@ export function OwnerBookingList({
 
                   <td className="py-4 px-4">
                     <div className="font-bold text-gray-900">
-                      ₹{booking.totalAmount.toLocaleString("en-IN")}
+                      £{booking.totalAmount.toLocaleString("en-GB")}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Paid: ₹{booking.paidAmount.toLocaleString("en-IN")}
+                      Paid: £{booking.paidAmount.toLocaleString("en-GB")}
                     </div>
                   </td>
 

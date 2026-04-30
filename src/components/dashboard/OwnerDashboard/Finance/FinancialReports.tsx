@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FileText, Download, Eye, Share2, Calendar, TrendingUp, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -232,7 +232,7 @@ export default function FinancialReports() {
             {/* Actions */}
             <div className="flex items-center justify-between pt-4 border-t">
               <div className="text-xs text-gray-500">
-                Generated: {new Date(report.generated).toLocaleDateString('en-IN', { 
+                Generated: {new Date(report.generated).toLocaleDateString('en-GB', { 
                   day: 'numeric', 
                   month: 'short' 
                 })}

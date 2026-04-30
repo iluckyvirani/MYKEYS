@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Eye, TrendingUp, Users, DollarSign, Target, TextCursor } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -42,8 +42,8 @@ const stats = [
   },
   {
     title: "Cost per Click",
-    value: "₹42.50",
-    change: "-₹3.20",
+    value: "£42.50",
+    change: "-£3.20",
     trend: "down",
     icon: DollarSign,
     color: "bg-emerald-100 text-emerald-600",

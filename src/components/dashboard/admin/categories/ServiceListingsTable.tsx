@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,7 +74,7 @@ export function ServiceListingsTable({ listings, loading }: ServiceListingsTable
               <td className="py-4 px-4">
                 <div className="flex items-center gap-1 text-gray-900 font-medium">
                   <DollarSign className="w-4 h-4" />
-                  ₹{listing.basePrice.toLocaleString()}
+                  £{listing.basePrice.toLocaleString()}
                 </div>
               </td>
               <td className="py-4 px-4">

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -175,7 +175,7 @@ export default function AdminPackageModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Price (₹) *
+                  Price (£) *
                 </label>
                 <Input
                   type="number"

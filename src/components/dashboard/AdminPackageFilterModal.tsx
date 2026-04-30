@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -114,7 +114,7 @@ export default function AdminPackageFilterModal({
           {/* Price Range Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Price Range (₹)
+              Price Range (£)
             </label>
             <Select
               value={localFilters.priceRange}
@@ -128,7 +128,7 @@ export default function AdminPackageFilterModal({
               <SelectContent>
                 {priceRanges.map((range) => (
                   <SelectItem key={range} value={range}>
-                    {range === "ALL" ? "All Prices" : `₹${range}`}
+                    {range === "ALL" ? "All Prices" : `£${range}`}
                   </SelectItem>
                 ))}
               </SelectContent>

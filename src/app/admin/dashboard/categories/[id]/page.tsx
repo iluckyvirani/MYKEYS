@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { ServiceListingsTable } from "@/components/dashboard/admin/categories/ServiceListingsTable";
@@ -209,7 +209,7 @@ export default function CategoryDetailsPage() {
                             <div className="p-4 bg-gray-50 rounded-[5px]">
                                 <p className="text-sm text-gray-600 font-semibold">Created Date</p>
                                 <p className="font-semibold mt-1 text-gray-900">
-                                    {new Date(category.createdAt).toLocaleDateString("en-IN", {
+                                    {new Date(category.createdAt).toLocaleDateString("en-GB", {
                                         year: "numeric",
                                         month: "long",
                                         day: "numeric",
@@ -219,7 +219,7 @@ export default function CategoryDetailsPage() {
                             <div className="p-4 bg-gray-50 rounded-[5px]">
                                 <p className="text-sm text-gray-600 font-semibold">Last Updated</p>
                                 <p className="font-semibold mt-1 text-gray-900">
-                                    {new Date(category.updatedAt).toLocaleDateString("en-IN", {
+                                    {new Date(category.updatedAt).toLocaleDateString("en-GB", {
                                         year: "numeric",
                                         month: "long",
                                         day: "numeric",

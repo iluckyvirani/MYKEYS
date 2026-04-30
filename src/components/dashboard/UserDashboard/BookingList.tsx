@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Calendar, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ const getStatusColor = (status: string) => {
 };
 
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-IN', {
+  return new Intl.NumberFormat('en-GB', {
     style: 'currency',
     currency: 'INR',
     minimumFractionDigits: 0,
@@ -49,7 +49,7 @@ const formatCurrency = (amount: number) => {
 };
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-IN', {
+  return new Date(dateString).toLocaleDateString('en-GB', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Calendar, Clock, MapPin, User, Eye } from "lucide-react";
 import Link from "next/link";
@@ -110,7 +110,7 @@ export default function RecentBookings() {
             </div>
 
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-gray-900">₹{booking.amount}</p>
+              <p className="font-semibold text-gray-900">£{booking.amount}</p>
               <Link
                 href={`/service/dashboard/bookings/${booking.id}`}
                 className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1"

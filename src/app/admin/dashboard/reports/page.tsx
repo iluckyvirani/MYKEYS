@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { Card } from "@/components/ui/card";
@@ -114,7 +114,7 @@ export default function ReportsPage() {
             <div className="text-white">
               <TrendingUp className="w-6 h-6 mb-2 opacity-80" />
               <p className="text-sm opacity-90">Total Revenue</p>
-              <p className="text-2xl font-bold mt-1">₹24.5Cr</p>
+              <p className="text-2xl font-bold mt-1">£24.5Cr</p>
             </div>
           </Card>
           <Card className="p-6 bg-linear-to-br from-blue-600 to-blue-500">
@@ -228,11 +228,11 @@ export default function ReportsPage() {
 
               {selectedReport.type === "financial" && (
                 <div className="space-y-2 text-sm text-blue-800">
-                  <p>• Total Revenue: ₹24,500,000</p>
-                  <p>• Subscription Revenue: ₹18,200,000</p>
-                  <p>• Booking Payments: ₹6,300,000</p>
-                  <p>• Platform Commission: ₹3,200,000</p>
-                  <p>• Payment Processing Fees: ₹145,000</p>
+                  <p>• Total Revenue: £24,500,000</p>
+                  <p>• Subscription Revenue: £18,200,000</p>
+                  <p>• Booking Payments: £6,300,000</p>
+                  <p>• Platform Commission: £3,200,000</p>
+                  <p>• Payment Processing Fees: £145,000</p>
                 </div>
               )}
 
@@ -251,7 +251,7 @@ export default function ReportsPage() {
                   <p>• Total Properties: 8,643</p>
                   <p>• New Listings: 1,245</p>
                   <p>• Featured Properties: 2,156</p>
-                  <p>• Average Price: ₹45,62,000</p>
+                  <p>• Average Price: £45,62,000</p>
                   <p>• Average Rating: 4.62 / 5.0</p>
                 </div>
               )}

@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+﻿import nodemailer from 'nodemailer';
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -223,7 +223,7 @@ export const emailService = {
             </tr>
             <tr style="background-color: #f5f5f5;">
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Total Amount:</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd;">₹${totalAmount.toFixed(2)}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">£${totalAmount.toFixed(2)}</td>
             </tr>
           </table>
           <p>We will notify you as soon as the owner confirms your booking.</p>

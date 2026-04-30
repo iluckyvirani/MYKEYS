@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { AdminBookingFilterModal } from "@/components/dashboard/admin/bookings/AdminBookingFilterModal";
@@ -195,7 +195,7 @@ export default function BookingsPage() {
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">₹{(totalRevenue / 100000).toFixed(2)}L</div>
+                <div className="text-2xl font-bold text-gray-900">£{(totalRevenue / 100000).toFixed(2)}L</div>
                 <div className="text-sm text-gray-600">Total Revenue</div>
               </div>
               <div className="p-2 bg-green-100 rounded-lg">
@@ -210,7 +210,7 @@ export default function BookingsPage() {
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">₹{(avgBookingValue / 1000).toFixed(0)}K</div>
+                <div className="text-2xl font-bold text-gray-900">£{(avgBookingValue / 1000).toFixed(0)}K</div>
                 <div className="text-sm text-gray-600">Avg Booking Value</div>
               </div>
               <div className="p-2 bg-orange-100 rounded-lg">

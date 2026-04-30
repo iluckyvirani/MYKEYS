@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { 
   Plus, 
@@ -304,7 +304,7 @@ export default function CreateAdCampaign() {
                     <DollarSign className="w-4 h-4 text-gray-400" />
                     <span className="text-sm">Budget</span>
                   </div>
-                  <div className="text-2xl font-bold">₹{formData.budget.toLocaleString()}</div>
+                  <div className="text-2xl font-bold">£{formData.budget.toLocaleString()}</div>
                   <input
                     type="range"
                     min="5000"
@@ -351,7 +351,7 @@ export default function CreateAdCampaign() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Budget:</span>
-                  <span className="font-medium">₹{formData.budget.toLocaleString()}</span>
+                  <span className="font-medium">£{formData.budget.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Duration:</span>
@@ -377,7 +377,7 @@ export default function CreateAdCampaign() {
                 </div>
                 <div>
                   <div className="text-gray-600">Cost per Click</div>
-                  <div className="font-bold">₹14.77</div>
+                  <div className="font-bold">£14.77</div>
                 </div>
                 <div>
                   <div className="text-gray-600">Potential Bookings</div>

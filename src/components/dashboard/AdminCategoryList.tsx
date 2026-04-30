@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -125,7 +125,7 @@ export default function AdminCategoryList({
                   <div>
                     <p className="text-xs text-gray-600 font-medium">Created</p>
                     <p className="text-sm font-bold text-gray-900">
-                      {new Date(category.createdDate).toLocaleDateString("en-IN", {
+                      {new Date(category.createdDate).toLocaleDateString("en-GB", {
                         year: "numeric",
                         month: "short",
                       })}
@@ -233,7 +233,7 @@ export default function AdminCategoryList({
               <div className="text-center">
                 <p className="text-xs text-gray-600 font-medium">Created</p>
                 <p className="text-sm font-bold text-gray-900">
-                  {new Date(category.createdDate).toLocaleDateString("en-IN", {
+                  {new Date(category.createdDate).toLocaleDateString("en-GB", {
                     year: "numeric",
                     month: "short",
                   })}

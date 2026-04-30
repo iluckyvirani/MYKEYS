@@ -1,4 +1,4 @@
-// components/dashboard/UserDashboard/FavoriteGrid.tsx
+﻿// components/dashboard/UserDashboard/FavoriteGrid.tsx
 "use client";
 
 import { Heart, MapPin, Star, Eye, Trash2, Home, Building2, TrendingUp, Calendar, Hotel, AlertCircle, Filter } from "lucide-react";
@@ -134,7 +134,7 @@ export default function FavoriteGrid({ onStatsChange, searchQuery = '', filter =
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
+    return new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
@@ -360,7 +360,7 @@ export default function FavoriteGrid({ onStatsChange, searchQuery = '', filter =
               {/* Saved Date */}
               <div className="absolute top-46 left-4 bg-white px-3 py-1 rounded-full text-xs text-gray-500 shadow-sm border border-gray-200">
                 <Heart className="w-3 h-3 inline mr-1 text-pink-400" />
-                Saved {new Date(item.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                Saved {new Date(item.createdAt).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}
               </div>
             </div>
           );

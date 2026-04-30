@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import AdminPackageFilterModal from "@/components/dashboard/AdminPackageFilterModal";
@@ -192,9 +192,9 @@ export default function PackagesPage() {
 
   const formatCurrency = (amount: number) => {
     if (amount >= 100000) {
-      return `₹${(amount / 100000).toFixed(1)}L`;
+      return `£${(amount / 100000).toFixed(1)}L`;
     }
-    return `₹${amount.toLocaleString()}`;
+    return `£${amount.toLocaleString()}`;
   };
 
   return (
@@ -353,7 +353,7 @@ export default function PackagesPage() {
               )}
               {appliedFilters.priceRange !== "ALL" && (
                 <Badge variant="secondary" className="flex items-center gap-2">
-                  Price: ₹{appliedFilters.priceRange}
+                  Price: £{appliedFilters.priceRange}
                   <X
                     className="w-3 h-3 cursor-pointer"
                     onClick={() => removeFilter("priceRange")}
@@ -445,7 +445,7 @@ export default function PackagesPage() {
                   <div className="p-4 bg-gray-50 rounded-[5px]">
                     <p className="text-sm text-gray-600 font-semibold">Price</p>
                     <p className="font-semibold mt-1">
-                      ₹{selectedPackage.price}/{selectedPackage.duration}
+                      £{selectedPackage.price}/{selectedPackage.duration}
                     </p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-[5px]">

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
@@ -109,16 +109,16 @@ export default function OwnerPaymentList({ searchQuery = "", filters }: OwnerPay
   };
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-IN", {
+    new Intl.NumberFormat("en-GB", {
       style: "currency",
-      currency: "INR",
+      currency: "GBP",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-IN", {
+    return new Intl.DateTimeFormat("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",

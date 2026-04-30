@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -145,7 +145,7 @@ export default function AddServiceDialog({ open, onOpenChange, onSuccess, servic
 
                     {/* Base Price */}
                     <div>
-                        <Label htmlFor="basePrice">Base Price (₹) *</Label>
+                        <Label htmlFor="basePrice">Base Price (£) *</Label>
                         <Input
                             id="basePrice"
                             type="number"

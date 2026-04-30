@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { TrendingUp, Users, DollarSign, Target, Star, Clock, Home, TrendingDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -91,7 +91,7 @@ export default function AnalyticsStats() {
                 {typeof stat.value === 'number' && stat.title.includes('Revenue') 
                   ? formatCurrency(stat.value)
                   : typeof stat.value === 'number' && stat.title.includes('Rate')
-                  ? `₹${stat.value.toLocaleString()}`
+                  ? `£${stat.value.toLocaleString()}`
                   : stat.value}
                 {stat.title.includes('Rate') && !stat.title.includes('Daily') && '%'}
               </p>

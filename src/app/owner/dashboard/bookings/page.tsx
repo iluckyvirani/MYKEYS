@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { OwnerFilterModal } from "@/components/dashboard/owner/bookings/OwnerFilterModal";
@@ -209,7 +209,7 @@ export default function OwnerBookingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-gray-900">
-                  ₹{bookings.reduce((sum, b) => sum + (b.paidAmount || 0), 0).toLocaleString('en-IN')}
+                  £{bookings.reduce((sum, b) => sum + (b.paidAmount || 0), 0).toLocaleString('en-GB')}
                 </div>
                 <div className="text-sm text-gray-600">Total Revenue</div>
               </div>
@@ -245,7 +245,7 @@ export default function OwnerBookingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-gray-900">
-                  ₹{bookings.length > 0 ? Math.round(bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0) / bookings.length).toLocaleString('en-IN') : 0}
+                  £{bookings.length > 0 ? Math.round(bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0) / bookings.length).toLocaleString('en-GB') : 0}
                 </div>
                 <div className="text-sm text-gray-600">Avg Booking Value</div>
               </div>

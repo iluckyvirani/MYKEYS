@@ -1,4 +1,4 @@
-// app/service/dashboard/earnings/page.tsx
+﻿// app/service/dashboard/earnings/page.tsx
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -68,22 +68,22 @@ export default function EarningsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
           <p className="text-sm text-gray-600">This Month</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹{stats.thisMonth.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">£{stats.thisMonth.toLocaleString()}</p>
           <p className="text-xs text-green-600 mt-2">{stats.thisMonthBookings || 0} bookings</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
           <p className="text-sm text-gray-600">This Week</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹{stats.thisWeek.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">£{stats.thisWeek.toLocaleString()}</p>
           <p className="text-xs text-green-600 mt-2">From {stats.thisWeekBookings} bookings</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
           <p className="text-sm text-gray-600">Total Earned</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹{stats.totalEarned.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">£{stats.totalEarned.toLocaleString()}</p>
           <p className="text-xs text-gray-500 mt-2">Since joining</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
           <p className="text-sm text-gray-600">Pending</p>
-          <p className="text-3xl font-bold text-orange-600 mt-2">₹{stats.pending.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-orange-600 mt-2">£{stats.pending.toLocaleString()}</p>
           <p className="text-xs text-gray-500 mt-2">Awaiting completion</p>
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function EarningsPage() {
                   border: "1px solid #e5e7eb",
                   borderRadius: "8px",
                 }}
-                formatter={(value) => value !== undefined ? `₹${(value as number).toLocaleString()}` : '-'}
+                formatter={(value) => value !== undefined ? `£${(value as number).toLocaleString()}` : '-'}
               />
               <Bar dataKey="earnings" fill="#10b981" radius={[8, 8, 0, 0]} />
             </BarChart>
@@ -129,7 +129,7 @@ export default function EarningsPage() {
                   border: "1px solid #e5e7eb",
                   borderRadius: "8px",
                 }}
-                formatter={(value) => value !== undefined ? `₹${(value as number).toLocaleString()}` : '-'}
+                formatter={(value) => value !== undefined ? `£${(value as number).toLocaleString()}` : '-'}
               />
               <Line
                 type="monotone"
@@ -184,7 +184,7 @@ export default function EarningsPage() {
                   </td>
                   <td className="py-3 px-4 text-gray-600">{txn.description}</td>
                   <td className="py-3 px-4 text-right font-semibold text-gray-900">
-                    ₹{txn.amount}
+                    £{txn.amount}
                   </td>
                   <td className="py-3 px-4">
                     <span

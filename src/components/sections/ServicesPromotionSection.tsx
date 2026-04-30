@@ -64,7 +64,7 @@ export default function ServicesPromotionSection() {
 
     try {
       const payload = {
-        category: data.category,
+        category: data.categoryId,  // ServiceCategoryInfo.id (UUID)
         subcategories: data.subcategories || [],
         serviceAreas: data.serviceAreas || [],
         bio: data.bio || "",

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -182,7 +182,7 @@ export default function InquiryDetailsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
+    return new Date(dateString).toLocaleDateString("en-GB", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -354,7 +354,7 @@ export default function InquiryDetailsPage() {
               <div className="p-4 bg-gray-50 rounded-lg border">
                 <div className="text-sm text-gray-600 mb-1">Budget</div>
                 <div className="font-semibold text-gray-900">
-                  ₹{inquiry.budget.toLocaleString()}
+                  £{inquiry.budget.toLocaleString()}
                   {inquiry.type === "long_term" ? " / month" : inquiry.type === "short_term" ? " / night" : ""}
                 </div>
               </div>

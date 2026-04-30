@@ -20,8 +20,8 @@ export default function QuickActions() {
     },
     {
       icon: <ClipboardList className="w-5 h-5" />,
-      label: "Service Requests",
-      href: "/service/dashboard/requests",
+      label: "Bookings",
+      href: "/service/dashboard/bookings",
       color: "bg-green-50 text-green-600",
     },
     {

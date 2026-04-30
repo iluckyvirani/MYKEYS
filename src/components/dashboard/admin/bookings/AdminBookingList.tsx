@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Eye, Edit, CheckCircle, Clock, XCircle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -120,7 +120,7 @@ export function AdminBookingList({
                 {calculateNights(booking.checkInDate, booking.checkOutDate)} nights
               </td>
               <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                ₹{booking.totalAmount.toLocaleString()}
+                £{booking.totalAmount.toLocaleString()}
               </td>
               <td className="px-6 py-4 text-sm">
                 <Badge className={getStatusColor(booking.status)}>

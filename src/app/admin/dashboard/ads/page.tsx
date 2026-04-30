@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { AdminAdFilterModal } from "@/components/dashboard/admin/ads/AdminAdFilterModal";
@@ -115,10 +115,10 @@ export default function AdsPage() {
     let matchesBudget = true;
     if (appliedFilters.budgetRange) {
       const ranges: { [key: string]: [number, number] } = {
-        "₹0-5K": [0, 5000],
-        "₹5K-10K": [5000, 10000],
-        "₹10K-20K": [10000, 20000],
-        "₹20K+": [20000, Infinity],
+        "£0-5K": [0, 5000],
+        "£5K-10K": [5000, 10000],
+        "£10K-20K": [10000, 20000],
+        "£20K+": [20000, Infinity],
       };
       const [min, max] = ranges[appliedFilters.budgetRange] || [0, Infinity];
       matchesBudget = campaign.budget >= min && campaign.budget <= max;
@@ -206,7 +206,7 @@ export default function AdsPage() {
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">₹{(totalBudget / 100000).toFixed(2)}L</div>
+                <div className="text-2xl font-bold text-gray-900">£{(totalBudget / 100000).toFixed(2)}L</div>
                 <div className="text-sm text-gray-600">Total Budget</div>
               </div>
               <div className="p-2 bg-green-100 rounded-lg">
@@ -221,7 +221,7 @@ export default function AdsPage() {
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">₹{(totalSpent / 100000).toFixed(2)}L</div>
+                <div className="text-2xl font-bold text-gray-900">£{(totalSpent / 100000).toFixed(2)}L</div>
                 <div className="text-sm text-gray-600">Total Spent</div>
               </div>
               <div className="p-2 bg-orange-100 rounded-lg">
@@ -378,15 +378,15 @@ export default function AdsPage() {
                 <div className="space-y-3 text-sm">
                   <div>
                     <p className="text-gray-600">Total Budget</p>
-                    <p className="font-semibold text-lg">₹{selectedCampaign.budget.toLocaleString()}</p>
+                    <p className="font-semibold text-lg">£{selectedCampaign.budget.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Spent</p>
-                    <p className="font-semibold text-green-600">₹{selectedCampaign.spent.toLocaleString()}</p>
+                    <p className="font-semibold text-green-600">£{selectedCampaign.spent.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Remaining</p>
-                    <p className="font-semibold">₹{(selectedCampaign.budget - selectedCampaign.spent).toLocaleString()}</p>
+                    <p className="font-semibold">£{(selectedCampaign.budget - selectedCampaign.spent).toLocaleString()}</p>
                   </div>
                   <div className="w-full bg-gray-300 rounded-full h-3 mt-2">
                     <div

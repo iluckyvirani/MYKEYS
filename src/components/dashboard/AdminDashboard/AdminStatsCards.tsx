@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Users, Building, Calendar, MessageSquare, CreditCard, Shield, Package, FileCheck } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -122,7 +122,7 @@ export default function AdminStatsCards() {
     },
     {
       title: "Total Revenue",
-      value: `₹${(stats.totalRevenue / 100000).toFixed(1)}L`,
+      value: `£${(stats.totalRevenue / 100000).toFixed(1)}L`,
       icon: CreditCard,
       color: "bg-amber-50",
       iconColor: "text-amber-600",

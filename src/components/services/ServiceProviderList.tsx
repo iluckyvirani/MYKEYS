@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -209,7 +209,7 @@ export default function ServiceProviderList({
                   {provider.instantBookingEnabled && (
                     <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                       <p className="text-sm font-medium text-yellow-800">
-                        Instant Booking: ₹{provider.instantBookingPrice}
+                        Instant Booking: £{provider.instantBookingPrice}
                       </p>
                     </div>
                   )}

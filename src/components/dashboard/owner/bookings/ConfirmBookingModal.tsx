@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import {
@@ -71,7 +71,7 @@ export function ConfirmBookingModal({
               <div>
                 <label className="text-xs font-medium text-gray-500">CHECK-IN</label>
                 <p className="text-sm font-semibold text-gray-900 mt-1">
-                  {new Date(checkInDate).toLocaleDateString('en-IN', {
+                  {new Date(checkInDate).toLocaleDateString('en-GB', {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',
@@ -82,7 +82,7 @@ export function ConfirmBookingModal({
               <div>
                 <label className="text-xs font-medium text-gray-500">CHECK-OUT</label>
                 <p className="text-sm font-semibold text-gray-900 mt-1">
-                  {new Date(checkOutDate).toLocaleDateString('en-IN', {
+                  {new Date(checkOutDate).toLocaleDateString('en-GB', {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',
@@ -94,7 +94,7 @@ export function ConfirmBookingModal({
             <div>
               <label className="text-xs font-medium text-gray-500">TOTAL AMOUNT</label>
               <p className="text-lg font-bold text-green-600 mt-1">
-                ₹{totalAmount.toLocaleString('en-IN')}
+                £{totalAmount.toLocaleString('en-GB')}
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from "clsx"
+﻿import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 
 export function formatCurrency(amount: number, currency: string = "INR") {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
@@ -21,7 +21,7 @@ export function formatDate(date: string | Date) {
     if (isNaN(dateObj.getTime())) {
       return "Invalid date";
     }
-    return new Intl.DateTimeFormat("en-IN", {
+    return new Intl.DateTimeFormat("en-GB", {
       day: "numeric",
       month: "short",
       year: "numeric",

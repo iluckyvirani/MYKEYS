@@ -43,11 +43,16 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
         params.append("rentalType", rentalType);
       }
 
-      // Add price range filter
+      // Add price range filter — only send if user actually set a value
+      // (never send the default max from the page's initial state)
       if (filters.priceRange[0] > 0) {
         params.append("minPrice", filters.priceRange[0].toString());
       }
-      if (filters.priceRange[1] > 0) {
+      // Only send maxPrice if it's clearly a user-chosen value:
+      // buy default max is 2000000, long-rent default is 5000, short-rent is 2000
+      // Treat any of those defaults as "no filter"
+      const defaultMaxPrices = [2000000, 5000, 2000];
+      if (filters.priceRange[1] > 0 && !defaultMaxPrices.includes(filters.priceRange[1])) {
         params.append("maxPrice", filters.priceRange[1].toString());
       }
 
@@ -82,24 +87,26 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
       }
 
       // Add rental-specific filters for SHORT_TERM rentals
+      // Only send if user changed from defaults (minStay=1, maxStay=30)
       if (rentalType === "SHORT_TERM") {
         if (filters.guestCapacity !== null && filters.guestCapacity !== undefined) {
           params.append("guests", filters.guestCapacity.toString());
         }
-        if (filters.minStayNights && filters.minStayNights > 0) {
+        if (filters.minStayNights && filters.minStayNights > 1) {
           params.append("minStay", filters.minStayNights.toString());
         }
-        if (filters.maxStayNights && filters.maxStayNights > 0) {
+        if (filters.maxStayNights && filters.maxStayNights > 0 && filters.maxStayNights !== 30) {
           params.append("maxStay", filters.maxStayNights.toString());
         }
       }
 
       // Add rental-specific filters for LONG_TERM rentals
+      // Only send if user changed from the schema defaults (minTerm=1, maxTerm=24)
       if (rentalType === "LONG_TERM") {
-        if (filters.minTermMonths && filters.minTermMonths > 0) {
+        if (filters.minTermMonths && filters.minTermMonths > 1) {
           params.append("minTerm", filters.minTermMonths.toString());
         }
-        if (filters.maxTermMonths && filters.maxTermMonths > 0) {
+        if (filters.maxTermMonths && filters.maxTermMonths > 0 && filters.maxTermMonths !== 24) {
           params.append("maxTerm", filters.maxTermMonths.toString());
         }
       }

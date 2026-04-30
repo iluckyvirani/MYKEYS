@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { AdminInquiryFilterModal } from "@/components/dashboard/admin/inquiries/AdminInquiryFilterModal";
@@ -540,7 +540,7 @@ export default function AdminInquiriesPage() {
                     <div className="p-3 bg-white rounded-lg border">
                       <div className="text-xs text-gray-600 mb-1">Budget</div>
                       <div className="font-medium text-sm">
-                        {selectedInquiry.budget ? `₹${selectedInquiry.budget.toLocaleString()}` : "N/A"}
+                        {selectedInquiry.budget ? `£${selectedInquiry.budget.toLocaleString()}` : "N/A"}
                       </div>
                     </div>
                   </div>
@@ -629,7 +629,7 @@ export default function AdminInquiriesPage() {
                             <span className="text-sm font-medium text-gray-900">{note.createdBy}</span>
                           </div>
                           <span className="text-xs text-gray-500">
-                            {new Date(note.createdAt).toLocaleDateString("en-IN", {
+                            {new Date(note.createdAt).toLocaleDateString("en-GB", {
                               year: "numeric",
                               month: "short",
                               day: "numeric",

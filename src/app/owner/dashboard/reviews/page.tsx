@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -267,7 +267,7 @@ export default function OwnerReviewsPage() {
                       {review.user.firstName} {review.user.lastName}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {new Date(review.createdAt).toLocaleDateString("en-IN", {
+                      {new Date(review.createdAt).toLocaleDateString("en-GB", {
                         day: "numeric",
                         month: "short",
                         year: "numeric",
@@ -344,7 +344,7 @@ export default function OwnerReviewsPage() {
             rating: selectedReview.rating,
             title: selectedReview.title,
             comment: selectedReview.comment,
-            date: new Date(selectedReview.createdAt).toLocaleDateString("en-IN"),
+            date: new Date(selectedReview.createdAt).toLocaleDateString("en-GB"),
             existingResponse: selectedReview.response || undefined,
           }}
           loading={responseLoading}

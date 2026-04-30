@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Users, CheckCircle, XCircle, Eye, Edit, Trash2, Shield, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -187,7 +187,7 @@ export function AdminUserList({
                 </td>
                 <td className="py-4 px-6">
                   <p className="text-sm text-gray-600">
-                    {new Date(user.createdAt).toLocaleDateString('en-IN', {
+                    {new Date(user.createdAt).toLocaleDateString('en-GB', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',

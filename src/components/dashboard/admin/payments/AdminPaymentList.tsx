@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Eye, Edit, CheckCircle, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -108,7 +108,7 @@ export function AdminPaymentList({
                 </Badge>
               </td>
               <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                ₹{payment.amount.toLocaleString()}
+                £{payment.amount.toLocaleString()}
               </td>
               <td className="px-6 py-4 text-sm text-gray-600">{payment.method}</td>
               <td className="px-6 py-4 text-sm text-gray-600">{payment.date}</td>

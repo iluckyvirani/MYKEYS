@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { ArrowLeft, Mail, Phone, MapPin, Building, Star, Home, AlertCircle } from "lucide-react";
@@ -253,7 +253,7 @@ export default function OwnerDetailPage({ params }: OwnerDetailPageProps) {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Member Since:</span>
                   <span className="font-medium">
-                    {new Date(ownerData.user.createdAt).toLocaleDateString("en-IN", {
+                    {new Date(ownerData.user.createdAt).toLocaleDateString("en-GB", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
@@ -264,7 +264,7 @@ export default function OwnerDetailPage({ params }: OwnerDetailPageProps) {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Last Login:</span>
                     <span className="font-medium">
-                      {new Date(ownerData.user.lastLoginAt).toLocaleDateString("en-IN", {
+                      {new Date(ownerData.user.lastLoginAt).toLocaleDateString("en-GB", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
@@ -298,7 +298,7 @@ export default function OwnerDetailPage({ params }: OwnerDetailPageProps) {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-green-600">₹{property.price.toLocaleString("en-IN")}</p>
+                          <p className="text-lg font-bold text-green-600">£{property.price.toLocaleString("en-GB")}</p>
                           <p className={`text-xs font-medium ${property.status === "ACTIVE" ? "text-green-600" : "text-yellow-600"}`}>
                             {property.status}
                           </p>
@@ -345,7 +345,7 @@ export default function OwnerDetailPage({ params }: OwnerDetailPageProps) {
                     <Card key={payment.id} className="rounded-[8px] p-4 border-l-4 border-l-orange-500">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-medium text-gray-900">₹{payment.amount?.toLocaleString("en-IN")}</p>
+                          <p className="font-medium text-gray-900">£{payment.amount?.toLocaleString("en-GB")}</p>
                           <p className="text-sm text-gray-600">{payment.booking?.property?.title}</p>
                         </div>
                         <p className={`text-xs font-medium ${payment.status === "COMPLETED" ? "text-green-600" : "text-yellow-600"}`}>

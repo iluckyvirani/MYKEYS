@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { CreditCard, TrendingUp, Clock, AlertCircle, Search, Filter, X, DollarSign } from "lucide-react";
@@ -77,9 +77,9 @@ export default function OwnerPaymentsPage() {
   }, []);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-IN", { 
+    new Intl.NumberFormat("en-GB", { 
       style: "currency", 
-      currency: "INR", 
+      currency: "GBP", 
       minimumFractionDigits: 0, 
       maximumFractionDigits: 0 
     }).format(amount);

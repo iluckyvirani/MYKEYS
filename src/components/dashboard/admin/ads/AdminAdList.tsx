@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Eye, Edit, Trash2, CheckCircle, Pause, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -137,7 +137,7 @@ export function AdminAdList({
               <td className="px-6 py-4 text-sm">
                 <div className="space-y-1">
                   <div className="text-gray-900 font-medium">
-                    ₹{campaign.spent.toLocaleString()} / ₹{campaign.budget.toLocaleString()}
+                    £{campaign.spent.toLocaleString()} / £{campaign.budget.toLocaleString()}
                   </div>
                   <div className="w-24 bg-gray-200 rounded-full h-2">
                     <div

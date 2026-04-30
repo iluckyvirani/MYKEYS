@@ -20,8 +20,24 @@ export async function GET(request: NextRequest) {
     };
 
     if (categoryId) {
-      // Direct match: ServiceProvider.category now stores ServiceCategoryInfo.id
-      where.category = categoryId;
+      // Look up the category by its ID to also get the name (for legacy name-based records)
+      const catInfo = await prisma.serviceCategoryInfo.findUnique({
+        where: { id: categoryId },
+        select: { id: true, name: true },
+      });
+
+      if (catInfo) {
+        // Match providers whose category field is EITHER the UUID (new registrations)
+        // OR the category name (old registrations before the ID fix)
+        where.OR = [
+          { category: catInfo.id },
+          { category: catInfo.name },
+          { category: catInfo.name.toLowerCase() },
+        ];
+      } else {
+        // Unknown ID — try direct match anyway
+        where.category = categoryId;
+      }
     } else if (category) {
       // Legacy: kebab-case slug passed directly
       where.category = category;

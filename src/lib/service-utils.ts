@@ -1,4 +1,4 @@
-import { SERVICE_CATEGORIES, ServiceCategory, INSTANT_BOOKING_PRICES } from "@/types/service";
+﻿import { SERVICE_CATEGORIES, ServiceCategory, INSTANT_BOOKING_PRICES } from "@/types/service";
 
 /**
  * Get the display label for a service category
@@ -69,7 +69,7 @@ export const validateServiceBooking = (
  * Format currency amount
  */
 export const formatAmount = (amount: number): string => {
-  return `₹${amount.toLocaleString("en-IN")}`;
+  return `£${amount.toLocaleString("en-GB")}`;
 };
 
 /**

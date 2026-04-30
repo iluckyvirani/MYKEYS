@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -88,7 +88,7 @@ export function InquiryReplyModal({
             </div>
 
             <div className="text-xs text-gray-500">
-              Sent on {new Date(inquiry.createdAt).toLocaleDateString("en-IN", {
+              Sent on {new Date(inquiry.createdAt).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",

@@ -25,6 +25,7 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { DOCUMENT_TYPE_LABELS, DocumentType } from "@/types/document";
+import { SERVICE_CATEGORIES } from "@/types/service";
 
 // Types
 interface ProfileData {
@@ -172,6 +173,7 @@ export default function ServiceProfilePage() {
       const res = await api.put("/service/profile", {
         name: form.name, email: form.email, phone: form.phone,
         city: form.city, state: form.state, bio: form.bio,
+        category: form.category,
         specializations: form.specializations, certifications: form.certifications,
         serviceAreas: form.serviceAreas,
         instantBookingEnabled: form.instantBookingEnabled,
@@ -323,7 +325,24 @@ export default function ServiceProfilePage() {
           <div className="bg-white rounded-[5px] border p-6 space-y-6">
             <AlertError /><AlertSuccess />
             <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Specializations</h4>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Service Category</h4>
+              <div>
+                <Label htmlFor="category">Primary Category</Label>
+                <select
+                  id="category"
+                  value={form.category}
+                  onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                  disabled={saving}
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-[5px] focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-sm disabled:opacity-60 bg-white"
+                >
+                  <option value="">Select a category</option>
+                  {Object.entries(SERVICE_CATEGORIES).map(([key, cat]) => (
+                    <option key={key} value={key}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
               <TagInput label="Your specializations" tags={form.specializations}
                 onChange={(tags) => setForm((p) => ({ ...p, specializations: tags }))}
                 placeholder="e.g., Boiler repair, Leak fixing…" disabled={saving} />

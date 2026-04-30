@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { BarChart3, Calendar, DollarSign, Star } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -53,8 +53,8 @@ export default function StatsCards() {
             {
               icon: <DollarSign className="w-6 h-6 text-green-600" />,
               label: "Total Earnings",
-              value: `₹${data.totalEarnings.toLocaleString()}`,
-              trend: `₹${data.thisMonthEarnings.toLocaleString()} this month`,
+              value: `£${data.totalEarnings.toLocaleString()}`,
+              trend: `£${data.thisMonthEarnings.toLocaleString()} this month`,
               trendPositive: true,
             },
             {

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useEffect, useState } from "react";
@@ -71,10 +71,10 @@ export default function EarningsChart() {
               border: "1px solid #e5e7eb",
               borderRadius: "8px",
             }}
-            formatter={(value) => value !== undefined ? `₹${(value as number).toLocaleString()}` : '-'}
+            formatter={(value) => value !== undefined ? `£${(value as number).toLocaleString()}` : '-'}
           />
           <Legend />
-          <Bar dataKey="earnings" fill="#10b981" name="Earnings (₹)" radius={[8, 8, 0, 0]} />
+          <Bar dataKey="earnings" fill="#10b981" name="Earnings (£)" radius={[8, 8, 0, 0]} />
           <Bar dataKey="bookings" fill="#3b82f6" name="Bookings" radius={[8, 8, 0, 0]} yAxisId="right" />
         </BarChart>
       </ResponsiveContainer>
@@ -83,7 +83,7 @@ export default function EarningsChart() {
       <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t">
         <div>
           <p className="text-sm text-gray-600">This Month</p>
-          <p className="text-2xl font-bold text-gray-900">₹{stats.thisMonth.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-gray-900">£{stats.thisMonth.toLocaleString()}</p>
         </div>
         <div>
           <p className="text-sm text-gray-600">Total Bookings</p>
@@ -91,7 +91,7 @@ export default function EarningsChart() {
         </div>
         <div>
           <p className="text-sm text-gray-600">Avg Earning/Booking</p>
-          <p className="text-2xl font-bold text-gray-900">₹{avgPerBooking.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-gray-900">£{avgPerBooking.toLocaleString()}</p>
         </div>
       </div>
     </div>

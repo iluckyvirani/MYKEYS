@@ -1,4 +1,4 @@
-// components/dashboard/UserDashboard/PaymentMethods.tsx
+﻿// components/dashboard/UserDashboard/PaymentMethods.tsx
 "use client";
 
 import { CreditCard, Banknote, Smartphone, Plus, Trash2, Edit } from "lucide-react";
@@ -116,7 +116,7 @@ export default function PaymentMethods() {
                       }
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Added {new Date(method.added).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                      Added {new Date(method.added).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                     </div>
                   </div>
                 </div>

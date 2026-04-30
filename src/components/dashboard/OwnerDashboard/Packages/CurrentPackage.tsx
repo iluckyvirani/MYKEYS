@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Crown, CheckCircle, Clock, Home, TrendingUp, HardDrive, Users, AlertCircle, Calendar, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,15 +29,15 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
 
   const { package: pkg } = currentPackage;
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-IN", {
+    new Intl.NumberFormat("en-GB", {
       style: "currency",
-      currency: "INR",
+      currency: "GBP",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
 
   const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat("en-IN", {
+    return new Intl.DateTimeFormat("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",

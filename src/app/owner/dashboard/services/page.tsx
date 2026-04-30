@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -547,7 +547,7 @@ export default function OwnerServicesPage() {
                                 )}
                               </div>
                               <div className="text-right ml-4">
-                                <p className="font-semibold text-gray-900">₹{service.basePrice}</p>
+                                <p className="font-semibold text-gray-900">£{service.basePrice}</p>
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -571,7 +571,7 @@ export default function OwnerServicesPage() {
                             <CheckCircle className="w-4 h-4 text-green-600" />
                             <span className="text-sm font-medium text-gray-900">Instant Booking Available</span>
                           </div>
-                          <span className="text-lg font-bold text-gray-900">₹{provider.instantPrice}</span>
+                          <span className="text-lg font-bold text-gray-900">£{provider.instantPrice}</span>
                         </div>
                       </div>
                     )}
@@ -597,7 +597,7 @@ export default function OwnerServicesPage() {
                           className="bg-green-600 hover:bg-green-700"
                           onClick={() => handleBookService(provider, null, "instant")}
                         >
-                          Book Instantly - ₹{provider.instantPrice}
+                          Book Instantly - £{provider.instantPrice}
                         </Button>
                       ) : null}
                       
@@ -643,7 +643,7 @@ export default function OwnerServicesPage() {
               {selectedListing && (
                 <div className="mt-2">
                   <p className="text-sm font-medium text-gray-900">Service: {selectedListing.name}</p>
-                  <p className="text-sm text-gray-600">Base Price: ₹{selectedListing.basePrice}</p>
+                  <p className="text-sm text-gray-600">Base Price: £{selectedListing.basePrice}</p>
                 </div>
               )}
               <p className="text-sm font-medium text-gray-900 mt-2">
@@ -670,7 +670,7 @@ export default function OwnerServicesPage() {
                         <div className="text-sm text-gray-600">Get service immediately</div>
                       </div>
                       <div className="text-lg font-bold text-gray-900">
-                        ₹{selectedProvider.instantPrice}
+                        £{selectedProvider.instantPrice}
                       </div>
                     </div>
                   </button>
@@ -690,7 +690,7 @@ export default function OwnerServicesPage() {
                     </div>
                     {selectedListing && (
                       <div className="text-lg font-bold text-gray-900">
-                        ₹{selectedListing.basePrice}
+                        £{selectedListing.basePrice}
                       </div>
                     )}
                   </div>
@@ -767,16 +767,16 @@ export default function OwnerServicesPage() {
                   <>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Base Price</span>
-                      <span className="font-medium">₹{basePrice}</span>
+                      <span className="font-medium">£{basePrice}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Service Tax (10%)</span>
-                      <span className="font-medium">₹{Math.round(serviceTax)}</span>
+                      <span className="font-medium">£{Math.round(serviceTax)}</span>
                     </div>
                     <div className="border-t pt-2 flex justify-between">
                       <span className="font-semibold text-gray-900">Total Amount</span>
                       <span className="text-lg font-bold text-gray-900">
-                        ₹{Math.round(total)}
+                        £{Math.round(total)}
                       </span>
                     </div>
                     {total === 0 && (

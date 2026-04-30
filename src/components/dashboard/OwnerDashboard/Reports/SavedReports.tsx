@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FileText, Download, Eye, Calendar, MoreVertical, TrendingUp, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -164,7 +164,7 @@ export default function SavedReports() {
                     <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
                       <span>
                         <Calendar className="w-3 h-3 inline mr-1" />
-                        {new Date(report.date).toLocaleDateString('en-IN', {
+                        {new Date(report.date).toLocaleDateString('en-GB', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric'

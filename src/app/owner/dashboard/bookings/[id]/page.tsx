@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -255,7 +255,7 @@ const paymentConfig = getPaymentStatusConfig(booking.paymentStatus);
               <div>
                 <p className="text-xs font-medium text-gray-500 mb-1">CHECK-IN</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {new Date(booking.checkInDate).toLocaleDateString("en-IN", {
+                  {new Date(booking.checkInDate).toLocaleDateString("en-GB", {
                     weekday: "short",
                     day: "numeric",
                     month: "short",
@@ -266,7 +266,7 @@ const paymentConfig = getPaymentStatusConfig(booking.paymentStatus);
               <div>
                 <p className="text-xs font-medium text-gray-500 mb-1">CHECK-OUT</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {new Date(booking.checkOutDate).toLocaleDateString("en-IN", {
+                  {new Date(booking.checkOutDate).toLocaleDateString("en-GB", {
                     weekday: "short",
                     day: "numeric",
                     month: "short",
@@ -311,26 +311,26 @@ const paymentConfig = getPaymentStatusConfig(booking.paymentStatus);
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Base Price</span>
                 <span className="font-medium text-gray-900">
-                  ₹{booking.subtotal.toLocaleString("en-IN")}
+                  £{booking.subtotal.toLocaleString("en-GB")}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Cleaning Fee</span>
                 <span className="font-medium text-gray-900">
-                  ₹{booking.cleaningFee.toLocaleString("en-IN")}
+                  £{booking.cleaningFee.toLocaleString("en-GB")}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Service Fee</span>
                 <span className="font-medium text-gray-900">
-                  ₹{booking.serviceFee.toLocaleString("en-IN")}
+                  £{booking.serviceFee.toLocaleString("en-GB")}
                 </span>
               </div>
 
               <div className="border-t pt-3 flex justify-between">
                 <span className="font-semibold text-gray-900">Total Amount</span>
                 <span className="text-lg font-bold text-green-600">
-                  ₹{booking.totalAmount.toLocaleString("en-IN")}
+                  £{booking.totalAmount.toLocaleString("en-GB")}
                 </span>
               </div>
             </div>
@@ -344,7 +344,7 @@ const paymentConfig = getPaymentStatusConfig(booking.paymentStatus);
               <div>
                 <p className="text-xs font-medium text-gray-500 mb-1">AMOUNT PAID</p>
                 <p className="text-xl font-bold text-gray-900">
-                  ₹{booking.paidAmount.toLocaleString("en-IN")}
+                  £{booking.paidAmount.toLocaleString("en-GB")}
                 </p>
               </div>
 
@@ -352,7 +352,7 @@ const paymentConfig = getPaymentStatusConfig(booking.paymentStatus);
                 <div className="bg-orange-50 border border-orange-200 rounded-[5px] p-3">
                   <p className="text-xs font-medium text-orange-700 mb-1">BALANCE DUE</p>
                   <p className="text-lg font-bold text-orange-800">
-                    ₹{booking.balanceAmount.toLocaleString("en-IN")}
+                    £{booking.balanceAmount.toLocaleString("en-GB")}
                   </p>
                 </div>
               )}
@@ -392,7 +392,7 @@ const paymentConfig = getPaymentStatusConfig(booking.paymentStatus);
               <div>
                 <p className="text-xs font-medium text-gray-500">CREATED</p>
                 <p className="text-gray-900">
-                  {new Date(booking.createdAt).toLocaleDateString("en-IN", {
+                  {new Date(booking.createdAt).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
@@ -404,7 +404,7 @@ const paymentConfig = getPaymentStatusConfig(booking.paymentStatus);
               <div>
                 <p className="text-xs font-medium text-gray-500">LAST UPDATED</p>
                 <p className="text-gray-900">
-                  {new Date(booking.updatedAt).toLocaleDateString("en-IN", {
+                  {new Date(booking.updatedAt).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",

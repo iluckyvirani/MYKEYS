@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Crown, CheckCircle, Clock, AlertCircle, Calendar, ArrowUpRight, Users, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ const currentPlan = {
   },
   benefits: [
     "72% occupancy rate",
-    "₹2,45,000 monthly revenue",
+    "£2,45,000 monthly revenue",
     "42% repeat guests",
   ],
 };
@@ -119,11 +119,11 @@ export default function CurrentPlan() {
           {/* Price */}
           <div className="mb-4">
             <div className="text-3xl font-bold text-gray-900">
-              ₹{currentPlan.price.toLocaleString()}
+              £{currentPlan.price.toLocaleString()}
               <span className="text-lg text-gray-600">/{currentPlan.billing}</span>
             </div>
             <div className="text-sm text-gray-600">
-              Next billing: {new Date(currentPlan.nextBilling).toLocaleDateString('en-IN', {
+              Next billing: {new Date(currentPlan.nextBilling).toLocaleDateString('en-GB', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
@@ -187,7 +187,7 @@ export default function CurrentPlan() {
               </div>
             </div>
             <div className="text-sm text-gray-600 mb-3">
-              Valid until {new Date(currentPlan.endDate).toLocaleDateString('en-IN', {
+              Valid until {new Date(currentPlan.endDate).toLocaleDateString('en-GB', {
                 day: 'numeric',
                 month: 'short',
                 year: 'numeric'

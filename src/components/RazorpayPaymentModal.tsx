@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Razorpay Payment Modal Component
  * Handles payment gateway integration after booking
  */
@@ -45,7 +45,7 @@ export function RazorpayPaymentModal({
       const response = await api.post(`/bookings/${bookingId}/payments`, {
         amount,
         paymentMethod: "UPI", // Default to UPI, can be made dynamic
-        currency: "INR",
+        currency: "GBP",
       });
 
       if (!response.data?.success) {
@@ -85,7 +85,7 @@ export function RazorpayPaymentModal({
     const options = {
       key: razorpayKey,
       amount: razorpayOrder.amount, // Amount in paise (smallest unit)
-      currency: "INR",
+      currency: "GBP",
       order_id: razorpayOrder.orderId,
       name: "MYKEYS",
       description: `Booking for ${propertyTitle}`,
@@ -189,7 +189,7 @@ export function RazorpayPaymentModal({
             <div className="space-y-2 mb-6 p-4 bg-gray-50 rounded-lg text-left">
               <div className="flex justify-between">
                 <span className="text-gray-600">Amount Paid:</span>
-                <span className="font-medium">₹{amount.toLocaleString()}</span>
+                <span className="font-medium">£{amount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Booking ID:</span>
@@ -230,7 +230,7 @@ export function RazorpayPaymentModal({
               <div className="flex justify-between pt-4 border-t">
                 <span className="text-gray-700 font-medium">Amount to Pay:</span>
                 <span className="text-2xl font-bold text-green-600">
-                  ₹{amount.toLocaleString()}
+                  £{amount.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -273,7 +273,7 @@ export function RazorpayPaymentModal({
                     Verifying Payment...
                   </>
                 ) : (
-                  `Pay ₹${amount.toLocaleString()}`
+                  `Pay £${amount.toLocaleString()}`
                 )}
               </Button>
 

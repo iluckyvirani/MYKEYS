@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Calendar, Filter, TrendingUp, Download } from "lucide-react";
@@ -99,7 +99,7 @@ export default function AnalyticsCharts() {
                   ></div>
                 </div>
                 <div className="text-sm font-medium whitespace-nowrap">
-                  ₹{(month.revenue / 1000).toFixed(0)}k
+                  £{(month.revenue / 1000).toFixed(0)}k
                 </div>
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function AnalyticsCharts() {
                 <div>
                   <div className="font-medium text-gray-900">{property.property}</div>
                   <div className="text-sm text-gray-500">
-                    {property.revenue > 0 ? `₹${property.revenue.toLocaleString()}` : 'No revenue'}
+                    {property.revenue > 0 ? `£${property.revenue.toLocaleString()}` : 'No revenue'}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

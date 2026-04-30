@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Card } from "@/components/ui/card";
 import { BarChart3, TrendingUp } from "lucide-react";
@@ -99,7 +99,7 @@ export default function AdminCharts() {
           <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t">
             <div>
               <p className="text-xs text-gray-600">Total Revenue</p>
-              <p className="text-lg font-bold text-gray-900">₹{(stats.payments.totalRevenue / 100000).toFixed(2)}L</p>
+              <p className="text-lg font-bold text-gray-900">£{(stats.payments.totalRevenue / 100000).toFixed(2)}L</p>
             </div>
             <div>
               <p className="text-xs text-gray-600">Paid</p>

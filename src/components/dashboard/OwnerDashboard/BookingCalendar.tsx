@@ -1,4 +1,4 @@
-// components/dashboard/OwnerDashboard/BookingCalendar.tsx
+﻿// components/dashboard/OwnerDashboard/BookingCalendar.tsx
 "use client";
 
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Home, Users, Clock, CheckCircle, XCircle, DollarSign } from "lucide-react";
@@ -292,7 +292,7 @@ export default function BookingCalendar() {
                           <DollarSign className="w-4 h-4" />
                           Amount
                         </div>
-                        <div className="font-medium">₹{booking.amount.toLocaleString()}</div>
+                        <div className="font-medium">£{booking.amount.toLocaleString()}</div>
                       </div>
                     </div>
 
@@ -359,7 +359,7 @@ export default function BookingCalendar() {
               </div>
               <div className="bg-white p-3 rounded-lg border">
                 <div className="text-2xl font-bold text-gray-900">
-                  ₹{selectedDateBookings.reduce((sum, b) => sum + b.amount, 0).toLocaleString()}
+                  £{selectedDateBookings.reduce((sum, b) => sum + b.amount, 0).toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-600">Total Revenue</div>
               </div>

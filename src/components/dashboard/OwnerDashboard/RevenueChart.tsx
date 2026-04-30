@@ -1,4 +1,4 @@
-// components/dashboard/OwnerDashboard/RevenueChart.tsx
+﻿// components/dashboard/OwnerDashboard/RevenueChart.tsx
 "use client";
 
 import {
@@ -143,10 +143,10 @@ export default function RevenueChart() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: "#6b7280", fontSize: 12 }}
-                  tickFormatter={(value) => `₹${value / 1000}k`}
+                  tickFormatter={(value) => `£${value / 1000}k`}
                 />
                 <Tooltip
-                  formatter={(value) => [`₹${Number(value).toLocaleString()}`, "Revenue"]}
+                  formatter={(value) => [`£${Number(value).toLocaleString()}`, "Revenue"]}
                   labelFormatter={(label) => `Month: ${label}`}
                   contentStyle={{
                     backgroundColor: "white",
@@ -186,7 +186,7 @@ export default function RevenueChart() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value) => [`₹${Number(value).toLocaleString()}`, "Revenue"]}
+                  formatter={(value) => [`£${Number(value).toLocaleString()}`, "Revenue"]}
                 />
                 <Legend />
               </PieChart>

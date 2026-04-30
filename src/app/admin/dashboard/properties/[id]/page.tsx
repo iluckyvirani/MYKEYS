@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { ArrowLeft, Mail, Phone, MapPin, Building, Star, Home, AlertCircle, Users, DollarSign, Eye, Calendar, CheckCircle } from "lucide-react";
@@ -142,7 +142,7 @@ export default function PropertyDetailPage({ params }: PropertyDetailPageProps) 
                         <span className="ml-2 font-bold text-gray-900">{propertyData.avgRating}</span>
                       </div>
                     )}
-                    <p className="text-lg font-bold text-orange-600">₹{propertyData.property.price.toLocaleString("en-IN")}</p>
+                    <p className="text-lg font-bold text-orange-600">£{propertyData.property.price.toLocaleString("en-GB")}</p>
                     <p className="text-xs text-gray-600">{propertyData.property.priceType}</p>
                   </div>
                 </div>
@@ -231,7 +231,7 @@ export default function PropertyDetailPage({ params }: PropertyDetailPageProps) 
                     <p className="text-xs text-gray-600 mt-1">Reviews</p>
                   </Card>
                   <Card className="rounded-[8px] p-4 text-center bg-purple-50 border-purple-200">
-                    <p className="text-2xl font-bold text-purple-600">₹{(propertyData.property.revenue / 1000).toFixed(0)}K</p>
+                    <p className="text-2xl font-bold text-purple-600">£{(propertyData.property.revenue / 1000).toFixed(0)}K</p>
                     <p className="text-xs text-gray-600 mt-1">Revenue</p>
                   </Card>
                 </div>

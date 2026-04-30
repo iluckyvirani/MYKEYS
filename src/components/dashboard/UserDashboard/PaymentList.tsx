@@ -1,4 +1,4 @@
-// components/dashboard/UserDashboard/PaymentList.tsx
+﻿// components/dashboard/UserDashboard/PaymentList.tsx
 "use client";
 
 import { CreditCard, Calendar, CheckCircle, XCircle, RefreshCw } from "lucide-react";
@@ -26,16 +26,16 @@ interface PaymentListProps {
 }
 
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-GB", {
     style: "currency",
-    currency: "INR",
+    currency: "GBP",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 };
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-IN", {
+  return new Date(dateString).toLocaleDateString("en-GB", {
     year: "numeric",
     month: "short",
     day: "numeric",

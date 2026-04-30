@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Crown, Check, Home, Zap, Loader2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,9 @@ export default function AvailablePackages({ packages, currentTier, onSubscribe }
   const [subscribing, setSubscribing] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-IN", {
+    new Intl.NumberFormat("en-GB", {
       style: "currency",
-      currency: "INR",
+      currency: "GBP",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);

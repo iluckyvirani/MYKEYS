@@ -463,6 +463,9 @@ export const serviceService = {
               },
             },
           },
+          review: {
+            select: { id: true, rating: true, comment: true, response: true },
+          },
         },
       }),
       prisma.serviceBooking.count({ where }),
@@ -483,6 +486,9 @@ export const serviceService = {
       description: b.description || '',
       paymentStatus: mapPaymentStatusToFrontend(b.paymentStatus),
       createdAt: b.createdAt,
+      reviewRating: b.review?.rating ?? null,
+      reviewComment: b.review?.comment ?? null,
+      reviewResponse: b.review?.response ?? null,
     }));
 
     return { items, total, page, limit };
@@ -1133,6 +1139,8 @@ export const serviceService = {
       category: provider.category,
       serviceAreas: (provider.serviceAreas as string[]) || [],
       documentVerified: provider.documentVerified,
+      instantBookingEnabled: provider.instantBookingEnabled,
+      instantBookingPrice: provider.instantBookingPrice,
     };
   },
 
@@ -1146,6 +1154,7 @@ export const serviceService = {
     city?: string;
     state?: string;
     bio?: string;
+    category?: string;
     specializations?: string[];
     certifications?: string[];
     serviceAreas?: string[];
@@ -1171,6 +1180,7 @@ export const serviceService = {
     // Update provider fields
     const providerUpdate: any = {};
     if (data.bio !== undefined) providerUpdate.bio = data.bio;
+    if (data.category !== undefined) providerUpdate.category = data.category;
     if (data.specializations !== undefined) providerUpdate.specializations = data.specializations;
     if (data.certifications !== undefined) providerUpdate.certifications = data.certifications;
     if (data.serviceAreas !== undefined) providerUpdate.serviceAreas = data.serviceAreas;

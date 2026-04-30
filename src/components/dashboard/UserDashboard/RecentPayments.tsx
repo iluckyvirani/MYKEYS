@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { CreditCard, Calendar, CheckCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,9 @@ interface RecentPayment {
 }
 
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-GB", {
     style: "currency",
-    currency: "INR",
+    currency: "GBP",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
@@ -33,14 +33,14 @@ const formatDate = (dateString: string) => {
   yesterday.setDate(yesterday.getDate() - 1);
 
   if (date.toDateString() === today.toDateString()) {
-    return date.toLocaleTimeString("en-IN", {
+    return date.toLocaleTimeString("en-GB", {
       hour: "2-digit",
       minute: "2-digit",
     });
   } else if (date.toDateString() === yesterday.toDateString()) {
     return "Yesterday";
   } else {
-    return date.toLocaleDateString("en-IN", {
+    return date.toLocaleDateString("en-GB", {
       month: "short",
       day: "numeric",
     });

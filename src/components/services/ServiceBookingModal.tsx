@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -163,7 +163,7 @@ export default function ServiceBookingModal({
                                 Service professional arrives immediately
                               </p>
                               <Badge className="bg-yellow-100 text-yellow-800">
-                                ₹{provider.instantBookingPrice}
+                                £{provider.instantBookingPrice}
                               </Badge>
                             </div>
                           </div>
@@ -365,7 +365,7 @@ export default function ServiceBookingModal({
                         <div className="border-t border-green-200 pt-3 flex justify-between text-lg">
                           <span className="font-bold">Total Amount</span>
                           <span className="font-bold text-green-600">
-                            ₹
+                            £
                             {bookingType === "instant"
                               ? provider.instantBookingPrice
                               : 500}

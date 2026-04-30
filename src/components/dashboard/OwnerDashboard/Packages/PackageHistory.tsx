@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Calendar, CreditCard, CheckCircle, XCircle, Clock, Package, Loader2, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -52,15 +52,15 @@ export default function PackageHistory() {
   }, []);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-IN", {
+    new Intl.NumberFormat("en-GB", {
       style: "currency",
-      currency: "INR",
+      currency: "GBP",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
 
   const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat("en-IN", {
+    return new Intl.DateTimeFormat("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",

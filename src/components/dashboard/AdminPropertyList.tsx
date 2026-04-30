@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,9 +48,9 @@ const getStatusColor = (status: string) => {
 
 const formatCurrency = (amount: number) => {
   if (amount >= 100000) {
-    return `₹${(amount / 100000).toFixed(1)} L`;
+    return `£${(amount / 100000).toFixed(1)} L`;
   }
-  return `₹${amount.toLocaleString()}`;
+  return `£${amount.toLocaleString()}`;
 };
 
 const getPrimaryImage = (images?: Array<{ url: string; isPrimary: boolean }>) => {

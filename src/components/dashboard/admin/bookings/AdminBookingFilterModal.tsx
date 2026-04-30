@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -107,10 +107,10 @@ export function AdminBookingFilterModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Values</SelectItem>
-                <SelectItem value="₹0-50K">₹0-50K</SelectItem>
-                <SelectItem value="₹50K-100K">₹50K-100K</SelectItem>
-                <SelectItem value="₹100K-200K">₹100K-200K</SelectItem>
-                <SelectItem value="₹200K+">₹200K+</SelectItem>
+                <SelectItem value="£0-50K">£0-50K</SelectItem>
+                <SelectItem value="£50K-100K">£50K-100K</SelectItem>
+                <SelectItem value="£100K-200K">£100K-200K</SelectItem>
+                <SelectItem value="£200K+">£200K+</SelectItem>
               </SelectContent>
             </Select>
           </div>

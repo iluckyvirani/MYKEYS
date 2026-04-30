@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Card } from "@/components/ui/card";
 import { CreditCard, CheckCircle, Clock, XCircle } from "lucide-react";
@@ -136,7 +136,7 @@ export default function AdminRecentPayments() {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">₹{payment.amount.toLocaleString()}</p>
+                <p className="text-sm font-semibold text-gray-900">£{payment.amount.toLocaleString()}</p>
                 <p className="text-xs text-gray-500">{new Date(payment.date).toLocaleDateString()}</p>
               </div>
               <div className="flex items-center gap-2">

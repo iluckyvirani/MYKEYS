@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Calendar, MapPin, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -112,7 +112,7 @@ export default function RecentBookings() {
                 <p className="font-semibold text-gray-900">{formatCurrency(booking.totalAmount)}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   {booking.balanceAmount > 0
-                    ? `₹${booking.balanceAmount.toLocaleString('en-IN')} due`
+                    ? `£${booking.balanceAmount.toLocaleString('en-GB')} due`
                     : 'Paid'}
                 </p>
               </div>

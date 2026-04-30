@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Calendar, MessageSquare, Heart, CreditCard } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -71,7 +71,7 @@ export default function StatsCards() {
     },
     {
       title: "Total Spent",
-      value: displayStats.totalSpent > 0 ? `₹${displayStats.totalSpent.toLocaleString('en-IN')}` : "₹0",
+      value: displayStats.totalSpent > 0 ? `£${displayStats.totalSpent.toLocaleString('en-GB')}` : "£0",
       change: "Amount paid on bookings",
       icon: "credit-card",
       color: "bg-purple-500",

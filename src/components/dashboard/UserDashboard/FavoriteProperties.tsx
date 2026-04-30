@@ -1,4 +1,4 @@
-// components/dashboard/UserDashboard/FavoriteProperties.tsx
+﻿// components/dashboard/UserDashboard/FavoriteProperties.tsx
 "use client";
 
 import { Heart, MapPin, Star, Home } from "lucide-react";
@@ -204,7 +204,7 @@ export default function FavoriteProperties() {
                   </div>
 
                   <div className="flex items-baseline gap-2 mb-3">
-                    <span className="font-bold text-lg text-gray-900">₹{property.price?.toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-lg text-gray-900">£{property.price?.toLocaleString('en-GB')}</span>
                     {property.priceType && (
                       <span className="text-sm text-gray-600">
                         {property.priceType === 'NIGHTLY' && '/ night'}

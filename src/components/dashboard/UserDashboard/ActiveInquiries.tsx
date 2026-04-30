@@ -1,4 +1,4 @@
-// components/dashboard/UserDashboard/ActiveInquiries.tsx
+﻿// components/dashboard/UserDashboard/ActiveInquiries.tsx
 "use client";
 
 import { MessageSquare, Clock, CheckCircle, XCircle, User, Home, Building2, TrendingUp, Phone, Mail, Calendar } from "lucide-react";
@@ -91,7 +91,7 @@ export default function ActiveInquiries() {
       property: `Property ID: ${inquiry.propertyId.slice(0, 8)}`,
       type: isLongRent ? "long_rent" : "buy",
       duration: isLongRent ? `${longRentInquiry.desiredDurationMonths} months` : null,
-      price: isLongRent ? `₹${(longRentInquiry.desiredDurationMonths * 35000).toLocaleString('en-IN')}` : `₹${buyInquiry.propertyPrice.toLocaleString('en-IN')}`,
+      price: isLongRent ? `£${(longRentInquiry.desiredDurationMonths * 35000).toLocaleString('en-GB')}` : `£${buyInquiry.propertyPrice.toLocaleString('en-GB')}`,
     };
   };
 

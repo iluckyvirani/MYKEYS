@@ -1,4 +1,4 @@
-// components/dashboard/OwnerDashboard/InquiryInbox.tsx
+﻿// components/dashboard/OwnerDashboard/InquiryInbox.tsx
 "use client";
 
 import { Inbox, User, Search, MessageSquare, Phone, Mail, Calendar, Clock } from "lucide-react";
@@ -476,7 +476,7 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
                   </div>
                   {inquiry.budget && (
                     <div className="text-xs font-medium text-gray-900">
-                      ₹{inquiry.budget.toLocaleString()}
+                      £{inquiry.budget.toLocaleString()}
                       <span className="text-gray-500 ml-1">
                         {inquiry.type === "purchase" ? "" : "/" + (inquiry.type === "long_term" ? "month" : "night")}
                       </span>
@@ -569,7 +569,7 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
                     </div>
                     <div className="p-4 bg-white rounded-lg border">
                       <div className="text-sm text-gray-500">Budget</div>
-                      <div className="font-medium">{selectedInquiry.budget ? `₹${selectedInquiry.budget.toLocaleString()}` : "N/A"}</div>
+                      <div className="font-medium">{selectedInquiry.budget ? `£${selectedInquiry.budget.toLocaleString()}` : "N/A"}</div>
                     </div>
                   </div>
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Payment Error Definitions
  * Standardized error handling for payment operations
  */
@@ -77,7 +77,7 @@ export const createPaymentError = {
   insufficientBalance: (available: number, required: number) =>
     new PaymentError(
       PaymentErrorCode.INSUFFICIENT_BALANCE,
-      `Insufficient balance. Available: ₹${available}, Required: ₹${required}`,
+      `Insufficient balance. Available: £${available}, Required: £${required}`,
       400,
       { available, required }
     ),

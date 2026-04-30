@@ -4,11 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Star, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/lib/api";
 
 interface ServiceBooking {
   id: string;
   serviceName: string;
   providerName: string;
+  providerId: string;
 }
 
 interface ServiceRatingModalProps {
@@ -35,12 +37,17 @@ export default function ServiceRatingModal({
 
     try {
       setSubmitting(true);
-      // API call to submit rating
-      // await api.post(`/service-bookings/${booking.id}/rating`, { rating, review });
+      await api.post("/service/reviews", {
+        bookingId: booking.id,
+        providerId: booking.providerId,
+        rating,
+        comment: review.trim() || undefined,
+      });
       onSubmit();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to submit rating:", error);
-      alert("Failed to submit rating. Please try again.");
+      const msg = error?.response?.data?.message || "Failed to submit rating. Please try again.";
+      alert(msg);
     } finally {
       setSubmitting(false);
     }

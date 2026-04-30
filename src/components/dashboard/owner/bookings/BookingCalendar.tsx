@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ export function BookingCalendar({ bookings, onSelectDate }: BookingCalendarProps
     );
   }
 
-  const monthName = currentDate.toLocaleDateString("en-IN", {
+  const monthName = currentDate.toLocaleDateString("en-GB", {
     month: "long",
     year: "numeric",
   });

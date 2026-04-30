@@ -1,4 +1,4 @@
-// components/dashboard/OwnerDashboard/PropertyList.tsx
+﻿// components/dashboard/OwnerDashboard/PropertyList.tsx
 "use client";
 
 import { Building, MapPin, Eye, Edit, MoreVertical, Star, Calendar, DollarSign, Users, Loader2 } from "lucide-react";
@@ -350,7 +350,7 @@ export default function PropertyList() {
                       </span>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Last: {property.lastBooking ? new Date(property.lastBooking).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Never'}
+                      Last: {property.lastBooking ? new Date(property.lastBooking).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Never'}
                     </div>
                   </td>
                   

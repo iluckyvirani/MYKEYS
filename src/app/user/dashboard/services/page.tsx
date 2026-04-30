@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { ServiceFilterModal } from "@/components/dashboard/UserDashboard/FilterModal";
@@ -23,6 +23,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import ServiceReviewsModal from "@/components/services/ServiceReviewsModal";
 import { useToast } from "@/hooks/use-toast";
 
 interface ServiceCategoryAPI {
@@ -80,6 +81,7 @@ export default function UserServicesPage() {
   const [scheduleTime, setScheduleTime] = useState("");
   const [bookingLocation, setBookingLocation] = useState("");
   const [bookingDescription, setBookingDescription] = useState("");
+  const [reviewsModal, setReviewsModal] = useState<{ providerId: string; providerName: string } | null>(null);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -368,7 +370,7 @@ export default function UserServicesPage() {
           {selectedProviderView.instantBooking && selectedProviderView.instantPrice && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-[5px] flex items-center gap-2 text-sm text-amber-800">
               <Zap className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Instant service available — add <strong>₹{selectedProviderView.instantPrice}</strong> when booking any service for immediate response.</span>
+              <span>Instant service available — add <strong>£{selectedProviderView.instantPrice}</strong> when booking any service for immediate response.</span>
             </div>
           )}
 
@@ -397,7 +399,7 @@ export default function UserServicesPage() {
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <h4 className="font-semibold text-gray-900">{listing.name}</h4>
-                      <p className="text-lg font-bold text-green-600 ml-2">₹{listing.basePrice}</p>
+                      <p className="text-lg font-bold text-green-600 ml-2">£{listing.basePrice}</p>
                     </div>
                     {listing.description && (
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">{listing.description}</p>
@@ -521,6 +523,15 @@ export default function UserServicesPage() {
                         <ArrowRight className="w-4 h-4" />
                         View Services
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-yellow-600 border-yellow-200 hover:bg-yellow-50"
+                        onClick={() => setReviewsModal({ providerId: provider.id, providerName: provider.name })}
+                      >
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        Reviews ({provider.reviews})
+                      </Button>
                       <Button variant="ghost" size="sm" title="Contact Provider">
                         <MessageCircle className="w-4 h-4" />
                       </Button>
@@ -539,6 +550,14 @@ export default function UserServicesPage() {
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
         onApply={(filters) => setAppliedFilters(filters)}
+      />
+
+      {/* Provider Reviews Modal */}
+      <ServiceReviewsModal
+        open={!!reviewsModal}
+        onClose={() => setReviewsModal(null)}
+        title={reviewsModal ? `Reviews — ${reviewsModal.providerName}` : "Reviews"}
+        fetchUrl={reviewsModal ? `/services/providers/${reviewsModal.providerId}/reviews` : undefined}
       />
 
       {/* Booking Modal */}
@@ -616,7 +635,7 @@ export default function UserServicesPage() {
                       </div>
                     )}
                   </div>
-                  <span className="text-lg font-bold text-green-600 whitespace-nowrap">₹{selectedListing.basePrice}</span>
+                  <span className="text-lg font-bold text-green-600 whitespace-nowrap">£{selectedListing.basePrice}</span>
                 </div>
               </div>
             )}
@@ -644,7 +663,7 @@ export default function UserServicesPage() {
                     <p className="font-medium text-gray-900 text-sm">Add Instant Service</p>
                     <p className="text-xs text-gray-500">Get immediate response — provider will attend to you right away</p>
                   </div>
-                  <span className="font-semibold text-amber-600 text-sm whitespace-nowrap">+₹{selectedProvider.instantPrice}</span>
+                  <span className="font-semibold text-amber-600 text-sm whitespace-nowrap">+£{selectedProvider.instantPrice}</span>
                 </div>
               </div>
             )}
@@ -729,22 +748,22 @@ export default function UserServicesPage() {
                     {basePrice > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Service fee ({selectedListing?.name || 'Base'})</span>
-                        <span className="font-medium">₹{basePrice}</span>
+                        <span className="font-medium">£{basePrice}</span>
                       </div>
                     )}
                     {instantFee > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-amber-700 flex items-center gap-1"><Zap className="w-3 h-3" />Instant service fee</span>
-                        <span className="font-medium text-amber-700">₹{instantFee}</span>
+                        <span className="font-medium text-amber-700">£{instantFee}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Tax (10%)</span>
-                      <span className="font-medium">₹{serviceTax.toFixed(0)}</span>
+                      <span className="font-medium">£{serviceTax.toFixed(0)}</span>
                     </div>
                     <div className="border-t pt-2 flex justify-between items-center">
                       <span className="font-semibold text-gray-900">Total Amount</span>
-                      <span className="font-bold text-green-600 text-xl">₹{total.toFixed(0)}</span>
+                      <span className="font-bold text-green-600 text-xl">£{total.toFixed(0)}</span>
                     </div>
                   </div>
                 );

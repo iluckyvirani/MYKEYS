@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -211,9 +211,9 @@ export default function PropertyDetailsPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(2)} Cr`;
-    if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)} L`;
-    return `₹${amount.toLocaleString()}`;
+    if (amount >= 10000000) return `£${(amount / 10000000).toFixed(2)} Cr`;
+    if (amount >= 100000) return `£${(amount / 100000).toFixed(1)} L`;
+    return `£${amount.toLocaleString()}`;
   };
 
   const getStatusBadge = () => {

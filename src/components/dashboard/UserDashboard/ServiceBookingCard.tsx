@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Image from "next/image";
@@ -180,7 +180,7 @@ export default function ServiceBookingCard({
 
             {/* Pricing */}
             <div className="text-lg font-semibold text-gray-900 mb-4">
-              ₹{booking.totalAmount}
+              £{booking.totalAmount}
             </div>
 
             {/* Rating for completed bookings */}

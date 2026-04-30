@@ -1,4 +1,4 @@
-// components/dashboard/UserDashboard/Notifications.tsx
+﻿// components/dashboard/UserDashboard/Notifications.tsx
 "use client";
 
 import { Bell, CheckCircle, AlertCircle, Info, X } from "lucide-react";
@@ -73,7 +73,7 @@ const getTimeAgo = (createdAt: string) => {
   if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
   
-  return notificationDate.toLocaleDateString("en-IN", {
+  return notificationDate.toLocaleDateString("en-GB", {
     month: "short",
     day: "numeric",
   });

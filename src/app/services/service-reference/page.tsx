@@ -1,4 +1,4 @@
-// app/services/service-reference/page.tsx - Service Reference Page for Service Professionals
+﻿// app/services/service-reference/page.tsx - Service Reference Page for Service Professionals
 "use client";
 
 import Link from "next/link";
@@ -28,7 +28,7 @@ const serviceCategories = [
     description: "Installation, repair, and maintenance of plumbing systems",
     services: ["Pipe Installation", "Leak Repairs", "Fixture Installation", "Drain Cleaning"],
     demand: "High",
-    avgEarning: "₹1,500-2,500",
+    avgEarning: "£1,500-2,500",
   },
   {
     icon: <Zap className="w-8 h-8" />,
@@ -36,7 +36,7 @@ const serviceCategories = [
     description: "Electrical wiring, repairs, and safety installations",
     services: ["Wiring Installation", "Circuit Repairs", "Switch Installation", "Safety Inspection"],
     demand: "Very High",
-    avgEarning: "₹1,200-2,000",
+    avgEarning: "£1,200-2,000",
   },
   {
     icon: <Droplets className="w-8 h-8" />,
@@ -44,7 +44,7 @@ const serviceCategories = [
     description: "Air conditioning installation, repair, and maintenance",
     services: ["AC Installation", "Servicing & Repair", "Duct Cleaning", "Performance Check"],
     demand: "High",
-    avgEarning: "₹2,000-4,000",
+    avgEarning: "£2,000-4,000",
   },
   {
     icon: <Paintbrush className="w-8 h-8" />,
@@ -52,7 +52,7 @@ const serviceCategories = [
     description: "Interior and exterior painting with quality finishes",
     services: ["Interior Painting", "Exterior Painting", "Wall Texturing", "Wood Finishing"],
     demand: "Medium",
-    avgEarning: "₹3,000-5,000",
+    avgEarning: "£3,000-5,000",
   },
   {
     icon: <Home className="w-8 h-8" />,
@@ -60,7 +60,7 @@ const serviceCategories = [
     description: "General home and office maintenance and repairs",
     services: ["Drywall Repair", "Door/Window Fix", "General Repairs", "Safety Check"],
     demand: "High",
-    avgEarning: "₹800-1,500",
+    avgEarning: "£800-1,500",
   },
   {
     icon: <Wind className="w-8 h-8" />,
@@ -68,7 +68,7 @@ const serviceCategories = [
     description: "Professional cleaning for homes and offices",
     services: ["Deep Cleaning", "Regular Cleaning", "Carpet Cleaning", "Office Cleaning"],
     demand: "Medium",
-    avgEarning: "₹500-1,200",
+    avgEarning: "£500-1,200",
   },
 ];
 

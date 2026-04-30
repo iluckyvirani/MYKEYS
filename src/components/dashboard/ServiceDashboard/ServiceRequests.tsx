@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Clock, MapPin, User, CheckCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
@@ -25,7 +25,7 @@ export default function ServiceRequests() {
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const res = await api.get("/service/requests?status=pending&limit=3&sortOrder=desc");
+        const res = await api.get("/service/bookings?status=pending&limit=3&sortBy=createdAt&sortOrder=desc");
         const data = res.data?.data?.items;
         if (data) {
           setRequests(data);
@@ -66,7 +66,7 @@ export default function ServiceRequests() {
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-gray-900">New Requests</h2>
         <Link
-          href="/service/dashboard/requests"
+          href="/service/dashboard/bookings"
           className="text-sm text-green-600 hover:text-green-700 font-medium"
         >
           View All →
@@ -117,7 +117,7 @@ export default function ServiceRequests() {
             </div>
 
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-gray-900">Budget: ₹{request.budget}</p>
+              <p className="font-semibold text-gray-900">Budget: £{request.budget}</p>
               <div className="flex gap-2">
                 <Button
                   size="sm"

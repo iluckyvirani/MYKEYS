@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Payment Validation Utilities
  * Provides validation helpers for payment operations
  */
@@ -61,7 +61,7 @@ export function paiseToAmount(paise: number): number {
  * Format amount for display
  */
 export function formatAmount(amount: number, currency: string = 'INR'): string {
-  return new Intl.NumberFormat('en-IN', {
+  return new Intl.NumberFormat('en-GB', {
     style: 'currency',
     currency,
   }).format(amount);

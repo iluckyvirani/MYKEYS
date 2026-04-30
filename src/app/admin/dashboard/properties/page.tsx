@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import AdminPropertyFilterModal from "@/components/dashboard/AdminPropertyFilterModal";
@@ -195,12 +195,12 @@ export default function AdminPropertiesPage() {
 
   const formatCurrency = (amount: number) => {
     if (amount >= 10000000) {
-      return `₹${(amount / 10000000).toFixed(2)} Cr`;
+      return `£${(amount / 10000000).toFixed(2)} Cr`;
     }
     if (amount >= 100000) {
-      return `₹${(amount / 100000).toFixed(1)} L`;
+      return `£${(amount / 100000).toFixed(1)} L`;
     }
-    return `₹${amount.toLocaleString()}`;
+    return `£${amount.toLocaleString()}`;
   };
 
   return (

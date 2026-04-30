@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Target, TrendingUp, TrendingDown, Clock, Users, DollarSign, Home, Star } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -112,7 +112,7 @@ export default function KeyMetrics() {
                 <div>
                   <div className="text-2xl font-bold text-gray-900">
                     {typeof metric.value === 'number' && metric.title.includes('Cost') 
-                      ? `₹${metric.value.toLocaleString()}`
+                      ? `£${metric.value.toLocaleString()}`
                       : typeof metric.value === 'number'
                       ? metric.value.toLocaleString()
                       : metric.value}

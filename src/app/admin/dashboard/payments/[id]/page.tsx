@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -167,7 +167,7 @@ export default function PaymentDetailsPage({ params }: { params: Promise<{ id: s
           <div className="bg-white rounded-[5px] border p-4">
             <div className="text-sm text-gray-600 mb-2">Amount</div>
             <div className="text-2xl font-bold text-gray-900">
-              ₹{payment.amount.toLocaleString()}
+              £{payment.amount.toLocaleString()}
             </div>
             <div className="text-xs text-gray-500 mt-2">{payment.currency}</div>
           </div>
@@ -231,7 +231,7 @@ export default function PaymentDetailsPage({ params }: { params: Promise<{ id: s
                   <div>
                     <div className="text-sm text-gray-600">Amount</div>
                     <div className="font-medium text-gray-900">
-                      ₹{payment.amount.toLocaleString()}
+                      £{payment.amount.toLocaleString()}
                     </div>
                   </div>
                   <div>
@@ -436,7 +436,7 @@ export default function PaymentDetailsPage({ params }: { params: Promise<{ id: s
                         <div>
                           <div className="text-sm text-gray-600">Package Price</div>
                           <div className="font-medium text-gray-900">
-                            ₹{payment.package.package.price.toLocaleString()}
+                            £{payment.package.package.price.toLocaleString()}
                           </div>
                         </div>
                       </div>

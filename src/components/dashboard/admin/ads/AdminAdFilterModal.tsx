@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -100,7 +100,7 @@ export function AdminAdFilterModal({
               Budget Range
             </label>
             <div className="space-y-2">
-              {["₹0-5K", "₹5K-10K", "₹10K-20K", "₹20K+"].map((range) => (
+              {["£0-5K", "£5K-10K", "£10K-20K", "£20K+"].map((range) => (
                 <label key={range} className="flex items-center cursor-pointer">
                   <input
                     type="radio"

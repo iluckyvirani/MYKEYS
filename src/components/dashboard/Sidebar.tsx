@@ -19,6 +19,7 @@ import {
   LogOut,
   Key,
   Wrench,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -58,10 +59,10 @@ const ownerNavigation = [
 const serviceNavigation = [
   { name: "Dashboard", href: "/service/dashboard", icon: Home },
   { name: "Bookings", href: "/service/dashboard/bookings", icon: Calendar },
-  { name: "Requests", href: "/service/dashboard/requests", icon: MessageSquare },
   { name: "Services", href: "/service/dashboard/services", icon: Wrench },
   { name: "Earnings", href: "/service/dashboard/earnings", icon: DollarSign },
   { name: "Reviews", href: "/service/dashboard/reviews", icon: Star },
+  { name: "Notifications", href: "/service/dashboard/notifications", icon: Bell },
   { name: "Profile", href: "/service/dashboard/profile", icon: Settings },
 ];
 
