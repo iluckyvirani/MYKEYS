@@ -9,6 +9,7 @@ import ServiceBookingCard from "./ServiceBookingCard";
 interface ServiceBooking {
   id: string;
   serviceId: string;
+  providerId: string;
   serviceName: string;
   providerName: string;
   providerImage: string;
