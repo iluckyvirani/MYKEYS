@@ -19,7 +19,7 @@ import { emailService } from '@/lib/email/emailService';
 /**
  * GET /api/inquiries
  * Fetch inquiries with filters
- * Query params: propertyId, userId, ownerId, status, page, pageSize, search
+ * Query params: propertyId, ownerId, status, page, pageSize, search, forOwner
  */
 export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
   try {
@@ -32,21 +32,23 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
     const where: any = {};
     
     const propertyId = searchParams.get('propertyId');
-    const userId = searchParams.get('userId');
     const ownerId = searchParams.get('ownerId');
     const status = searchParams.get('status');
     const search = searchParams.get('search');
+    const forOwner = searchParams.get('forOwner') === 'true';
 
-    // If ownerId is provided, filter by properties owned by that user
-    if (ownerId || searchParams.get('forOwner') === 'true') {
+    // Owner inbox mode: show inquiries for properties owned by the authenticated owner.
+    if (ownerId || forOwner) {
       where.property = {
-        ownerId: ownerId || user.userId,
+        ownerId: user.userId,
       };
     } else if (propertyId) {
+      // User mode: always scope to logged-in user and optional property filter.
       where.propertyId = propertyId;
-    } else if (userId) {
-      // Default: filter by guest/user inquiries
-      where.userId = userId;
+      where.userId = user.userId;
+    } else {
+      // User mode default: only fetch the logged-in user's inquiries.
+      where.userId = user.userId;
     }
     
     const fromDate = searchParams.get('fromDate');
@@ -131,16 +133,19 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
           inquiryType: InquiryType.LONG_RENT,
           type: 'long_term',
           desiredDurationMonths: inquiry.duration ? parseInt(inquiry.duration) : 12,
+          pricePerMonth: inquiry.property?.price || 0,
+          propertyPrice: inquiry.property?.price || 0,
           budget: inquiry.budget || 0,
-          ownerId: ownerId,
+          ownerId: forOwner || ownerId ? user.userId : undefined,
         } as any;
       } else {
         return {
           ...baseInquiry,
           inquiryType: InquiryType.BUY,
           type: 'purchase',
-          propertyPrice: inquiry.budget || 0,
-          ownerId: ownerId,
+          propertyPrice: inquiry.property?.price || 0,
+          budget: inquiry.budget || 0,
+          ownerId: forOwner || ownerId ? user.userId : undefined,
         } as BuyInquiry;
       }
     });

@@ -51,6 +51,40 @@ export default function ServicesPage() {
     }
   };
 
+  const handleUserClick = () => {
+    const token = localStorage.getItem("accessToken");
+    router.push(token ? "/user/dashboard/services" : "/login?redirect=/user/dashboard/services");
+  };
+
+  const handleOwnerClick = () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      router.push("/login?redirect=/owner/dashboard");
+      return;
+    }
+    try {
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      // Navbar reads roles directly from userData.roles (UserDTO shape)
+      const roles: string[] = Array.isArray(userData?.roles) ? userData.roles : [];
+      const isOwner = roles.some((r: string) => r === "OWNER");
+      if (isOwner) {
+        router.push("/owner/dashboard");
+      } else {
+        toast({
+          title: "Owner Account Required",
+          description: "You need to become a property owner first. Go to your dashboard to upgrade your account.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Owner Account Required",
+        description: "You need to become a property owner first. Go to your dashboard to upgrade your account.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleServiceSubmit = async (data: any) => {
     setIsSubmitting(true);
     
@@ -157,21 +191,17 @@ export default function ServicesPage() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto"
             >
-              <Link href="/login?role=user&redirect=/user/dashboard/services">
-                <Button className="w-full h-auto py-4 flex flex-col items-center gap-2 bg-green-600 hover:bg-green-700 cursor-pointer">
+                            <Button onClick={handleUserClick} className="w-full h-auto py-4 flex flex-col items-center gap-2 bg-green-600 hover:bg-green-700 cursor-pointer">
                   <Users className="w-6 h-6" />
                   <span className="text-lg font-semibold">Book Services</span>
                   <span className="text-sm text-green-100">Find service providers</span>
                 </Button>
-              </Link>
 
-              <Link href="/login?role=owner&redirect=/owner/dashboard/services">
-                <Button className="w-full h-auto py-4 flex flex-col items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer">
+              <Button onClick={handleOwnerClick} className="w-full h-auto py-4 flex flex-col items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer">
                   <Home className="w-6 h-6" />
                   <span className="text-lg font-semibold">Book for Properties</span>
-                  <span className="text-sm text-blue-100">Maintenance & repairs</span>
+                  <span className="text-sm text-blue-100">Maintenance &amp; repairs</span>
                 </Button>
-              </Link>
 
               <Button 
                 onClick={handleProviderClick}

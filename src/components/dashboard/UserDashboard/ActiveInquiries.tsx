@@ -1,9 +1,9 @@
 ﻿// components/dashboard/UserDashboard/ActiveInquiries.tsx
 "use client";
 
-import { MessageSquare, Clock, CheckCircle, XCircle, User, Home, Building2, TrendingUp, Phone, Mail, Calendar } from "lucide-react";
+import { MessageSquare, Clock, CheckCircle, XCircle, Home, Building2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDate, getStatusColor } from "@/lib/utils";
+import { formatCurrency, getStatusColor } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -86,12 +86,17 @@ export default function ActiveInquiries() {
     const isLongRent = inquiry.inquiryType === "LONG_RENT";
     const longRentInquiry = inquiry as LongRentInquiry;
     const buyInquiry = inquiry as BuyInquiry;
+    const inquiryData = inquiry as any;
+    const propertyTitle = inquiryData.propertyTitle || `Property ${inquiry.propertyId.slice(0, 8)}`;
+    const propertyPrice = Number(
+      inquiryData.pricePerMonth ?? inquiryData.propertyPrice ?? buyInquiry.propertyPrice ?? 0
+    );
 
     return {
-      property: `Property ID: ${inquiry.propertyId.slice(0, 8)}`,
+      property: propertyTitle,
       type: isLongRent ? "long_rent" : "buy",
       duration: isLongRent ? `${longRentInquiry.desiredDurationMonths} months` : null,
-      price: isLongRent ? `£${(longRentInquiry.desiredDurationMonths * 35000).toLocaleString('en-GB')}` : `£${buyInquiry.propertyPrice.toLocaleString('en-GB')}`,
+      price: propertyPrice
     };
   };
 
@@ -197,13 +202,18 @@ const getStatusText = (status: string) => {
                           </div>
                         )}
                         <div className="font-medium text-gray-900">
-                          {display.price}
+                          Rent- £{display.price}/month
                         </div>
                       </div>
 
                       <div className="mt-2 text-xs text-gray-500">
                         {inquiry.message && (
                           <p className="line-clamp-1 italic">{inquiry.message}</p>
+                        )}
+                        {inquiry.status === InquiryStatus.REPLIED && (inquiry as any).response && (
+                          <p className="mt-1 text-green-700 line-clamp-2">
+                            Reply: {(inquiry as any).response}
+                          </p>
                         )}
                       </div>
                     </div>

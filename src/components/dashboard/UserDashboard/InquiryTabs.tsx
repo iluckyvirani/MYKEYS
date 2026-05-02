@@ -9,6 +9,7 @@ import { Inquiry, InquiryStatus, LongRentInquiry, BuyInquiry, InquiryListRespons
 
 interface TransformedInquiry {
   id: string;
+  propertyId: string;
   property: string;
   owner: string;
   sent: string;
@@ -73,17 +74,22 @@ export default function InquiryTabs({ searchQuery = '', filters }: InquiryTabsPr
     const isLongRent = inquiry.inquiryType === "LONG_RENT";
     const longRentInquiry = inquiry as LongRentInquiry;
     const buyInquiry = inquiry as BuyInquiry;
+    const inquiryData = inquiry as any;
+    const propertyPrice = Number(
+      inquiryData.pricePerMonth ?? inquiryData.propertyPrice ?? buyInquiry.propertyPrice ?? 0
+    );
 
     return {
       id: inquiry.id,
-      property: `Property ${inquiry.propertyId.slice(0, 8)}`,
+      propertyId: inquiry.propertyId,
+      property: inquiryData.propertyTitle || `Property ${inquiry.propertyId.slice(0, 8)}`,
       owner: inquiry.guestName, // Using guest name as contact person
       sent: inquiry.createdAt,
       lastUpdate: inquiry.updatedAt,
       status: getStatusLabel(inquiry.status),
       type: inquiry.inquiryType === "LONG_RENT" ? "long_term" : "buy",
       duration: isLongRent ? `${longRentInquiry.desiredDurationMonths} months` : null,
-      budget: isLongRent ? longRentInquiry.desiredDurationMonths * 35000 : buyInquiry.propertyPrice,
+      budget: propertyPrice,
       message: inquiry.message,
       unread: 0,
       response: (inquiry as any).response || null,

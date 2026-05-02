@@ -61,6 +61,7 @@ export default function PropertyCard({
   useEffect(() => {
     const fetchFavoriteStatus = async () => {
       if (!id) return;
+      if (typeof window !== "undefined" && !localStorage.getItem("accessToken")) return;
 
       try {
         const response = await api.get(`/favorites/check/${id}`);
@@ -78,6 +79,11 @@ export default function PropertyCard({
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (typeof window !== "undefined" && !localStorage.getItem("accessToken")) {
+      router.push("/login");
+      return;
+    }
 
     setIsLoadingFavorite(true);
     try {

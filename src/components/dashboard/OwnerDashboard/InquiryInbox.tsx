@@ -24,7 +24,7 @@ interface Inquiry {
   priority: string;
   type: string;
   duration?: string;
-  budget?: number;
+  // budget?: number;
   notes?: Note[];
   response?: string;
 }
@@ -98,7 +98,7 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
           priority: inq.priority || "medium",
           type: inq.type,
           duration: inq.type === "long_term" ? `${inq.desiredDurationMonths || 12} months` : inq.desiredDurationMonths,
-          budget: inq.budget || inq.pricePerMonth,
+          // budget: inq.budget || inq.pricePerMonth,
           response: inq.response || null,
         }));
         setInquiries(inquiriesList);
@@ -474,14 +474,14 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
                       {formatDate(inquiry.createdAt)}
                     </span>
                   </div>
-                  {inquiry.budget && (
+                  {/* {inquiry.budget && (
                     <div className="text-xs font-medium text-gray-900">
                       £{inquiry.budget.toLocaleString()}
                       <span className="text-gray-500 ml-1">
                         {inquiry.type === "purchase" ? "" : "/" + (inquiry.type === "long_term" ? "month" : "night")}
                       </span>
                     </div>
-                  )}
+                  )} */}
                 </div>
               </div>
             ))
@@ -558,7 +558,7 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 bg-white rounded-lg border">
                       <div className="text-sm text-gray-500">Type</div>
                       <div className="font-medium">{selectedInquiry.type.replace("_", " ")}</div>
@@ -567,10 +567,10 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
                       <div className="text-sm text-gray-500">Duration</div>
                       <div className="font-medium">{selectedInquiry.duration || "N/A"}</div>
                     </div>
-                    <div className="p-4 bg-white rounded-lg border">
+                    {/* <div className="p-4 bg-white rounded-lg border">
                       <div className="text-sm text-gray-500">Budget</div>
                       <div className="font-medium">{selectedInquiry.budget ? `£${selectedInquiry.budget.toLocaleString()}` : "N/A"}</div>
-                    </div>
+                    </div> */}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

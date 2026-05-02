@@ -9,6 +9,7 @@ import Link from "next/link";
 
 interface Inquiry {
   id: string;
+  propertyId?: string;
   property: string;
   owner: string;
   sent: string;
@@ -35,9 +36,17 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
   const [selectedInquiry, setSelectedInquiry] = useState<string | null>(inquiries[0]?.id || null);
 
   const getStatusConfig = (status: string) => {
-    switch (status) {
+    const normalized = (status || "").toLowerCase();
+
+    switch (normalized) {
+      case "new":
+      case "read":
       case "pending":
         return { color: "bg-yellow-100 text-yellow-800", icon: Clock, label: "Pending" };
+      case "replied":
+        return { color: "bg-blue-100 text-blue-800", icon: MessageSquare, label: "Replied" };
+      case "converted":
+        return { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Converted" };
       case "reviewed":
         return { color: "bg-blue-100 text-blue-800", icon: CheckCircle, label: "Reviewed" };
       case "interested":
@@ -47,7 +56,7 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
       case "closed":
         return { color: "bg-gray-100 text-gray-800", icon: Archive, label: "Closed" };
       default:
-        return { color: "bg-gray-100 text-gray-800", icon: Clock, label: "Pending" };
+        return { color: "bg-gray-100 text-gray-800", icon: Clock, label: "Unknown" };
     }
   };
 
@@ -134,10 +143,12 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
 
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium text-gray-900">
-                    {formatCurrency(inquiry.budget)}
-                    <span className="text-gray-500 text-xs ml-1">
-                      /{inquiry.type === "short_term" ? "night" : "month"}
-                    </span>
+                    {inquiry.budget > 0 ? formatCurrency(inquiry.budget) : "Price not available"}
+                    {inquiry.budget > 0 && (
+                      <span className="text-gray-500 text-xs ml-1">
+                        {inquiry.type === "buy" ? "total" : "/month"}
+                      </span>
+                    )}
                   </div>
                   {inquiry.duration && (
                     <div className="text-sm text-gray-600">{inquiry.duration}</div>
@@ -192,7 +203,7 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                       </span>
                     </div>
                   </div>
-                  <Link href={`/property/${inquiry.property}`} className="ml-4">
+                  <Link href={inquiry.propertyId ? `/property/${inquiry.propertyId}` : "#"} className="ml-4">
                     <Button variant="outline">
                       View Property
                       <ArrowRight className="w-4 h-4 ml-2" />
@@ -211,8 +222,8 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                     <div className="font-medium">{inquiry.duration || "Flexible"}</div>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="text-sm text-gray-600 mb-1">Budget</div>
-                    <div className="font-medium">{formatCurrency(inquiry.budget)}</div>
+                    <div className="text-sm text-gray-600 mb-1">Property Rent</div>
+                    <div className="font-medium">£{inquiry.budget}</div>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <div className="text-sm text-gray-600 mb-1">Last Updated</div>

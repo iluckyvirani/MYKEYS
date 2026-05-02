@@ -50,6 +50,8 @@ import { formatDateToReadable } from "@/utils/utils";
 import { MeResponse } from "@/types/auth";
 import dynamic from "next/dynamic";
 
+import img from '../../../assets/user.png'
+
 // Dynamically import leaflet components with ssr: false to avoid window is not defined error
 const MapContainer = dynamic(() => import("react-leaflet").then(mod => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import("react-leaflet").then(mod => mod.TileLayer), { ssr: false });
@@ -281,12 +283,12 @@ export default function PropertyDetailsPage() {
                         reviewsCount: apiData.reviewCount || emptyPropertyData.reviewsCount,
                         reviews: apiData.reviews || emptyPropertyData.reviews,
                         owner: apiData.owner ? {
-                            name: apiData.owner.name || "Property Owner",
+                            name: `${apiData.owner.firstName} ${apiData.owner.lastName}` || "Property Owner",
                             joined: "Active",
                             verified: true,
                             responseRate: "95%",
                             responseTime: "within 2 hours",
-                            avatar: apiData.owner.profileImage || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070",
+                            avatar: apiData.owner.avatar || img,
                         } : emptyPropertyData.owner,
                         latitude: apiData.latitude || emptyPropertyData.latitude,
                         longitude: apiData.longitude || emptyPropertyData.longitude,
@@ -367,18 +369,6 @@ export default function PropertyDetailsPage() {
             let inquiryType = "purchase";
             if (property.listingType === "rent") {
                 inquiryType = property.rentalType === "long" ? "long_term" : "short_term";
-            }
-
-            // Validate budget for long-term rental
-            if (inquiryType === "long_term" && !inquiryForm.budget) {
-                alert("Please enter your budget for long-term rental");
-                return;
-            }
-
-            // Validate budget for buy
-            if (inquiryType === "purchase" && !inquiryForm.budget) {
-                alert("Please enter your expected budget");
-                return;
             }
 
             let inquiryData: any = {
@@ -500,6 +490,10 @@ export default function PropertyDetailsPage() {
     };
 
     const handleToggleFavorite = async () => {
+        if (!isLoggedIn) {
+            router.push("/login");
+            return;
+        }
         try {
             const response = await api.post("/favorites/toggle", {
                 propertyId: property.id
@@ -1409,12 +1403,12 @@ export default function PropertyDetailsPage() {
                                     )}
 
                                     {/* Owner/Contact Info - Only for Short Stay */}
-                                    {property.rentalType === "short" && property.listingType === "rent" && (
+                                    {/* {property.rentalType === "short" && property.listingType === "rent" && ( */}
                                         <div className="mt-6 pt-6 border-t">
                                             <h4 className="font-bold mb-4">Contact</h4>
                                             <div className="flex items-center gap-3 mb-4">
                                                 <img
-                                                    src={property.owner.avatar}
+                                                    src={property.owner.avatar || img}
                                                     alt={property.owner.name}
                                                     className="w-12 h-12 rounded-full"
                                                 />
@@ -1440,7 +1434,7 @@ export default function PropertyDetailsPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                    )}
+                                    {/* )} */}
                                 </div>
                             </div>
                         </div>
@@ -1517,31 +1511,6 @@ export default function PropertyDetailsPage() {
                                             </div>
                                         </div>
                                     )}
-
-                                    {/* Budget Field */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Budget {
-                                                property.listingType === "buy" 
-                                                    ? "(Expected purchase price)" 
-                                                    : property.rentalType === "long" 
-                                                        ? "(Monthly budget)" 
-                                                        : "(Per night budget)"
-                                            } (Required)
-                                        </label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-2.5 text-gray-600">£</span>
-                                            <input
-                                                type="number"
-                                                value={inquiryForm.budget}
-                                                onChange={(e) => setInquiryForm({ ...inquiryForm, budget: e.target.value })}
-                                                className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-[5px]"
-                                                placeholder="Enter amount"
-                                                min="0"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
 
                                     {/* Duration Field - Only for Long-term Rental */}
                                     {property.listingType === "rent" && property.rentalType === "long" && (
