@@ -533,14 +533,20 @@ export default function AdminInquiriesPage() {
                       <div className="text-xs text-gray-600 mb-1">Type</div>
                       <div className="font-medium text-sm capitalize">{selectedInquiry.type.replace("_", " ")}</div>
                     </div>
+                    {selectedInquiry.type !== "purchase" && (
+                      <div className="p-3 bg-white rounded-lg border">
+                        <div className="text-xs text-gray-600 mb-1">Duration</div>
+                        <div className="font-medium text-sm">{selectedInquiry.duration || "N/A"}</div>
+                      </div>
+                    )}
                     <div className="p-3 bg-white rounded-lg border">
-                      <div className="text-xs text-gray-600 mb-1">Duration</div>
-                      <div className="font-medium text-sm">{selectedInquiry.duration || "N/A"}</div>
-                    </div>
-                    <div className="p-3 bg-white rounded-lg border">
-                      <div className="text-xs text-gray-600 mb-1">Budget</div>
+                      <div className="text-xs text-gray-600 mb-1">
+                        {selectedInquiry.type === "purchase" ? "Property Price" : "Monthly Rent"}
+                      </div>
                       <div className="font-medium text-sm">
-                        {selectedInquiry.budget ? `£${selectedInquiry.budget.toLocaleString()}` : "N/A"}
+                        {selectedInquiry.budget
+                          ? `£${selectedInquiry.budget.toLocaleString()}${selectedInquiry.type === "long_term" ? " /month" : " total"}`
+                          : "N/A"}
                       </div>
                     </div>
                   </div>

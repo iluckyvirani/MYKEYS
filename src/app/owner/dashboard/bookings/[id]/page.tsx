@@ -369,18 +369,18 @@ const paymentConfig = getPaymentStatusConfig(booking.paymentStatus);
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions</h2>
 
             <div className="space-y-2">
-              <Button className="w-full justify-start" variant="outline">
+              {/* <Button className="w-full justify-start" variant="outline">
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Message Guest
-              </Button>
+              </Button> */}
               <Button className="w-full justify-start" variant="outline">
                 <FileText className="w-4 h-4 mr-2" />
                 Generate Invoice
               </Button>
-              <Button className="w-full justify-start" variant="outline">
+              {/* <Button className="w-full justify-start" variant="outline">
                 <Calendar className="w-4 h-4 mr-2" />
                 Block Dates After
-              </Button>
+              </Button> */}
             </div>
           </div>
 

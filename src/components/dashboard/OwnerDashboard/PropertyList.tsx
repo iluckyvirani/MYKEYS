@@ -14,76 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 
-const mockProperties = [
-  {
-    id: "PROP001",
-    name: "Seaside Luxury Villa",
-    location: "Goa, India",
-    type: "Villa",
-    status: "active", // active, inactive, maintenance, pending
-    price: 45000,
-    priceType: "per_night",
-    occupancy: 85,
-    rating: 4.8,
-    reviews: 124,
-    bookings: 12,
-    revenue: 540000,
-    image: "/api/placeholder/400/300",
-    amenities: ["Pool", "Beach View", "4 Beds", "WiFi"],
-    lastBooking: "2024-01-05",
-  },
-  {
-    id: "PROP002",
-    name: "Urban Studio Apartment",
-    location: "Bangalore, India",
-    type: "Apartment",
-    status: "active",
-    price: 25000,
-    priceType: "per_month",
-    occupancy: 92,
-    rating: 4.5,
-    reviews: 89,
-    bookings: 8,
-    revenue: 200000,
-    image: "/api/placeholder/400/300",
-    amenities: ["Fully Furnished", "Gym", "Security"],
-    lastBooking: "2024-01-10",
-  },
-  {
-    id: "PROP003",
-    name: "Mountain View Cottage",
-    location: "Shimla, Himachal",
-    type: "Cottage",
-    status: "maintenance",
-    price: 18000,
-    priceType: "per_night",
-    occupancy: 45,
-    rating: 4.9,
-    reviews: 67,
-    bookings: 5,
-    revenue: 90000,
-    image: "/api/placeholder/400/300",
-    amenities: ["Fireplace", "Mountain View", "Kitchen"],
-    lastBooking: "2023-12-28",
-  },
-  {
-    id: "PROP004",
-    name: "Luxury Penthouse",
-    location: "Mumbai, India",
-    type: "Penthouse",
-    status: "inactive",
-    price: 120000,
-    priceType: "per_month",
-    occupancy: 0,
-    rating: 4.7,
-    reviews: 45,
-    bookings: 0,
-    revenue: 0,
-    image: "/api/placeholder/400/300",
-    amenities: ["Pool", "Gym", "City View"],
-    lastBooking: null,
-  },
-];
+
 
 const getStatusConfig = (status: string) => {
   switch (status) {

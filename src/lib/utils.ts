@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 
-export function formatCurrency(amount: number, currency: string = "INR") {
+export function formatCurrency(amount: number, currency: string = "GBP") {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency,

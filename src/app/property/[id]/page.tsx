@@ -150,6 +150,7 @@ export default function PropertyDetailsPage() {
     const [showAllAmenities, setShowAllAmenities] = useState(false);
     const [showInquiryModal, setShowInquiryModal] = useState(false);
     const [inquirySuccess, setInquirySuccess] = useState<string | null>(null);
+    const [inquiryLoading, setInquiryLoading] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [inquiryForm, setInquiryForm] = useState({
         name: "",
@@ -365,6 +366,7 @@ export default function PropertyDetailsPage() {
         setInquirySuccess(null);
 
         try {
+            setInquiryLoading(true);
             // Determine inquiry type based on property listing type
             let inquiryType = "purchase";
             if (property.listingType === "rent") {
@@ -404,6 +406,8 @@ export default function PropertyDetailsPage() {
         } catch (error: any) {
             console.error("Error sending inquiry:", error);
             alert(error.response?.data?.message || "Failed to send inquiry. Please try again.");
+        } finally {
+            setInquiryLoading(false);
         }
     };
 
@@ -1549,9 +1553,18 @@ export default function PropertyDetailsPage() {
                                         />
                                     </div>
 
-                                    <Button type="submit" className="w-full py-3 rounded-[5px] cursor-pointer">
-                                        <Mail className="w-5 h-5 mr-2" />
-                                        Send Inquiry
+                                    <Button type="submit" disabled={inquiryLoading} className="w-full py-3 rounded-[5px] cursor-pointer disabled:opacity-50">
+                                        {inquiryLoading ? (
+                                            <span className="flex items-center gap-2">
+                                                <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                                Sending...
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <Mail className="w-5 h-5" />
+                                                Send Inquiry
+                                            </span>
+                                        )}
                                     </Button>
 
                                     <p className="text-xs text-gray-500 text-center">

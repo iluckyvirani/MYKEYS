@@ -47,6 +47,7 @@ const ownerNavigation = [
   { name: "Dashboard", href: "/owner/dashboard", icon: Home },
   { name: "Properties", href: "/owner/dashboard/properties", icon: Building },
   { name: "Bookings", href: "/owner/dashboard/bookings", icon: Calendar },
+  { name: "Service Bookings", href: "/owner/dashboard/service-bookings", icon: Wrench },
   { name: "Inquiries", href: "/owner/dashboard/inquiries", icon: MessageSquare },
   { name: "Services", href: "/owner/dashboard/services", icon: Megaphone },
   { name: "Payments", href: "/owner/dashboard/finance", icon: DollarSign },
@@ -54,6 +55,7 @@ const ownerNavigation = [
   { name: "Packages", href: "/owner/dashboard/packages", icon: Star },
   { name: "Reports", href: "/owner/dashboard/reports", icon: FileBarChart },
   { name: "Analytics", href: "/owner/dashboard/analytics", icon: BarChart3 },
+  { name: "Profile", href: "/owner/dashboard/profile", icon: Settings },
 ];
 
 const serviceNavigation = [

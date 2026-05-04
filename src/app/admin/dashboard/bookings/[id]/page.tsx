@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Mail, Phone, MapPin, Building, AlertCircle, Users, DollarSign, Calendar, CheckCircle, Clock, AlertCircle as AlertIcon } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building, AlertCircle, Users, Calendar, CheckCircle, Clock, AlertCircle as AlertIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { Card } from "@/components/ui/card";

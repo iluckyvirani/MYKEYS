@@ -239,7 +239,7 @@ export function OwnerBookingList({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-green-600 hover:text-green-700 border-green-600"
+                          className="text-green-600 hover:text-green-700 border-green-600 cursor-pointer"
                           onClick={() => onConfirm?.(booking.id)}
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
@@ -252,7 +252,7 @@ export function OwnerBookingList({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-red-600 hover:text-red-700 border-red-600"
+                          className="text-red-600 hover:text-red-700 border-red-600 cursor-pointer"
                           onClick={() => onCancel?.(booking.id)}
                         >
                           <XCircle className="w-4 h-4 mr-1" />

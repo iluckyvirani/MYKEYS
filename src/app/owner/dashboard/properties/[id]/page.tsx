@@ -10,10 +10,7 @@ import {
   Bath, 
   Maximize2,
   Calendar,
-  DollarSign,
-  Eye,
   Edit,
-  Share2,
   Download,
   TrendingUp,
   Hotel,
@@ -261,6 +258,17 @@ export default function PropertyDetailsPage() {
   const ListingIcon = listingBadge.icon;
   const statusBadge = getStatusBadge();
   const StatusIcon = statusBadge.icon;
+  const mapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+  const hasCoordinates =
+    typeof property.latitude === "number" &&
+    typeof property.longitude === "number" &&
+    property.latitude >= -90 &&
+    property.latitude <= 90 &&
+    property.longitude >= -180 &&
+    property.longitude <= 180;
+  const mapEmbedUrl = hasCoordinates && mapApiKey
+    ? `https://www.google.com/maps/embed/v1/place?key=${mapApiKey}&q=${property.latitude},${property.longitude}&zoom=15`
+    : "";
 
   return (
     <DashboardLayout defaultRole="owner">
@@ -285,6 +293,7 @@ export default function PropertyDetailsPage() {
               <div className="flex items-center gap-1 text-gray-600">
                 <MapPin className="w-4 h-4" />
                 {property.address}, {property.city}, {property.state}
+                {property.zipCode ? ` ${property.zipCode}` : ""}
               </div>
               <div className={`px-3 py-1 rounded-full text-xs font-medium border ${listingBadge.color}`}>
                 <ListingIcon className="w-3 h-3 inline mr-1" />
@@ -361,6 +370,41 @@ export default function PropertyDetailsPage() {
           <div className="bg-white rounded-[5px] border p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Description</h3>
             <p className="text-gray-700">{property.description}</p>
+          </div>
+
+          {/* Location */}
+          <div className="bg-white rounded-[5px] border p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Location</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-500">City</p>
+                <p className="font-semibold text-gray-900">{property.city || "-"}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-500">State</p>
+                <p className="font-semibold text-gray-900">{property.state || "-"}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Zip Code</p>
+                <p className="font-semibold text-gray-900">{property.zipCode || "-"}</p>
+              </div>
+            </div>
+
+            <div className="h-56 rounded-[5px] border overflow-hidden bg-gray-50">
+              {mapEmbedUrl ? (
+                <iframe
+                  title="Property location map"
+                  src={mapEmbedUrl}
+                  className="w-full h-full"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-gray-500 px-4 text-center">
+                  Map preview unavailable. Add valid latitude and longitude for this property.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Property Details */}
@@ -663,6 +707,18 @@ export default function PropertyDetailsPage() {
               <div className="flex justify-between">
                 <span className="text-gray-600">Listed on</span>
                 <span className="font-medium">{new Date(property.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-600">City</span>
+                <span className="font-medium text-right">{property.city || "-"}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-600">State</span>
+                <span className="font-medium text-right">{property.state || "-"}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-600">Zip Code</span>
+                <span className="font-medium text-right">{property.zipCode || "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Last updated</span>

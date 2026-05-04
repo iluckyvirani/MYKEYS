@@ -1,7 +1,7 @@
 ﻿// components/dashboard/OwnerDashboard/BookingCalendar.tsx
 "use client";
 
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Home, Users, Clock, CheckCircle, XCircle, DollarSign } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Home, Users, Clock, CheckCircle, XCircle, DollarSign, PoundSterling } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -289,7 +289,7 @@ export default function BookingCalendar() {
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1 text-gray-600">
-                          <DollarSign className="w-4 h-4" />
+                          <PoundSterling  className="w-4 h-4" />
                           Amount
                         </div>
                         <div className="font-medium">£{booking.amount.toLocaleString()}</div>

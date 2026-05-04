@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Filter, Download, X, Calendar, TrendingUp, Users, DollarSign } from "lucide-react";
+import { Search, Plus, Filter, Download, X, Calendar, TrendingUp, Users, PoundSterling } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface Booking {
@@ -199,7 +199,7 @@ export default function BookingsPage() {
                 <div className="text-sm text-gray-600">Total Revenue</div>
               </div>
               <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-green-600" />
+                <PoundSterling className="w-5 h-5 text-green-600" />
               </div>
             </div>
             <div className="mt-2 text-sm text-gray-500">

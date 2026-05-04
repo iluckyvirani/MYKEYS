@@ -24,6 +24,7 @@ interface Inquiry {
   priority: string;
   type: string;
   duration?: string;
+  propertyPrice?: number;
   // budget?: number;
   notes?: Note[];
   response?: string;
@@ -98,6 +99,7 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
           priority: inq.priority || "medium",
           type: inq.type,
           duration: inq.type === "long_term" ? `${inq.desiredDurationMonths || 12} months` : inq.desiredDurationMonths,
+          propertyPrice: inq.propertyPrice || inq.pricePerMonth || 0,
           // budget: inq.budget || inq.pricePerMonth,
           response: inq.response || null,
         }));
@@ -558,19 +560,25 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-4 bg-white rounded-lg border">
                       <div className="text-sm text-gray-500">Type</div>
                       <div className="font-medium">{selectedInquiry.type.replace("_", " ")}</div>
                     </div>
+                    {selectedInquiry.type !== "purchase" && (
+                      <div className="p-4 bg-white rounded-lg border">
+                        <div className="text-sm text-gray-500">Duration</div>
+                        <div className="font-medium">{selectedInquiry.duration || "N/A"}</div>
+                      </div>
+                    )}
                     <div className="p-4 bg-white rounded-lg border">
-                      <div className="text-sm text-gray-500">Duration</div>
-                      <div className="font-medium">{selectedInquiry.duration || "N/A"}</div>
+                      <div className="text-sm text-gray-500">Property Price</div>
+                      <div className="font-medium">
+                        {selectedInquiry.propertyPrice
+                          ? `£${selectedInquiry.propertyPrice.toLocaleString()}${selectedInquiry.type === "long_term" ? " /month" : " total"}`
+                          : "N/A"}
+                      </div>
                     </div>
-                    {/* <div className="p-4 bg-white rounded-lg border">
-                      <div className="text-sm text-gray-500">Budget</div>
-                      <div className="font-medium">{selectedInquiry.budget ? `£${selectedInquiry.budget.toLocaleString()}` : "N/A"}</div>
-                    </div> */}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -10,15 +10,7 @@ import { Calendar, Users, MapPin, CreditCard, AlertCircle, Check, X, Clock, Chev
 import CancelBookingModal from "@/components/dashboard/UserDashboard/CancelBookingModal";
 import ReviewModal from "@/components/dashboard/UserDashboard/ReviewModal";
 import Link from "next/link";
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+import { formatCurrency } from "@/lib/utils";
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('en-GB', {

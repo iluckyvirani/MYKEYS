@@ -1,5 +1,602 @@
 Below is a **proper, clean, professional project document** that you can **read, share, and use directly for development planning**.
 I’ve written it like a **real product requirement / concept document**, in simple language.
+══════════════════════════════════════════════════════════════════════════════
+                        MYKEYS — SERVICE SYSTEM DOCUMENTATION
+                  Provider Registration → Booking → Payment (Full Flow)
+══════════════════════════════════════════════════════════════════════════════
+
+Last Updated : 4 May 2026
+Tech Stack   : Next.js 15 (App Router) · TypeScript · Prisma ORM · PostgreSQL
+               Tailwind CSS · Razorpay · Cloudinary · OpenStreetMap Nominatim
+Currency     : GBP (£) globally
+Auth         : JWT (access + refresh tokens stored in localStorage)
+
+TABLE OF CONTENTS
+─────────────────
+  1.  ROLES IN THE SYSTEM
+  2.  USER REGISTRATION & LOGIN
+  3.  SERVICE PROVIDER REGISTRATION (BECOME A PROVIDER)
+  4.  SERVICE PROVIDER DASHBOARD
+  5.  ADMIN: SERVICE CATEGORY MANAGEMENT
+  6.  USER / OWNER: BROWSING SERVICE PROVIDERS
+  7.  BOOKING A SERVICE (USER / OWNER FLOW)
+  8.  ADDRESS COLLECTION (URBAN COMPANY / ZEPTO STYLE)
+  9.  PROVIDER RECEIVES A BOOKING
+  10. BOOKING STATUS LIFECYCLE
+  11. PAYMENT FLOW (RAZORPAY)
+  12. REVIEWS AFTER COMPLETION
+  13. DATABASE MODELS (KEY FIELDS)
+  14. ALL SERVICE API ENDPOINTS
+  15. FRONTEND FILE MAP
+  16. ENV VARIABLES NEEDED
+  17. QUICK SUMMARY (ONE PARAGRAPH)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ROLES IN THE SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A single User account can hold MULTIPLE roles simultaneously.
+
+  Role      String Value   Who Has It
+  ────────  ─────────────  ──────────────────────────────────────────────────
+  USER      "USER"         Regular tenant / buyer / renter
+  OWNER     "OWNER"        Property owner / landlord
+  SERVICE   "SERVICE"      Service professional (plumber, cleaner, etc.)
+  ADMIN     "ADMIN"        Platform administrator
+
+Roles are stored in the UserRoleAssignment table (userId + role, unique pair).
+The JWT token carries ONE active role (the role the user is currently using).
+Users switch role context by logging into a different dashboard view,
+which re-issues a new token for that role.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. USER REGISTRATION & LOGIN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REGISTER
+  Page    : /signup
+  API     : POST /api/auth/register
+  Body    : { firstName, lastName, email, password, role }
+            role = "USER" | "OWNER"  (SERVICE is added later via become-service)
+  Returns : { user, accessToken, refreshToken }
+  Saves   : accessToken + refreshToken in localStorage
+
+LOGIN
+  Page    : /login
+  API     : POST /api/auth/login
+  Body    : { email, password }
+  Returns : { user, accessToken, refreshToken, roles[] }
+  Note    : If user has multiple roles they pick which dashboard to enter.
+            The token is issued for the chosen role.
+
+FORGOT PASSWORD
+  Page    : /forgot-password
+  API     : POST /api/auth/forgot-password  →  sends reset email
+            POST /api/auth/reset-password   →  sets new password with token
+
+PROFILE UPDATE
+  API     : PATCH /api/auth/profile
+  Body    : { firstName, lastName, phone, city, state, address, ... }
+  Avatar  : POST /api/upload { image: base64, folder: "mykeys/avatars" }
+            Returns Cloudinary URL → then PATCH /api/auth/profile { avatar: url }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. SERVICE PROVIDER REGISTRATION (BECOME A PROVIDER)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Any logged-in USER or OWNER can become a service provider.
+
+REGISTRATION PAGE
+  URL   : /services/register
+  File  : src/app/services/register/page.tsx
+  Form  : src/components/services/ServiceRegistrationForm.tsx
+
+WHAT THE FORM COLLECTS
+  - Bio / About yourself
+  - Service Category (dropdown from GET /api/services/categories)
+  - Service Areas (e.g. "London", "Manchester")
+  - Instant Booking: Yes / No
+  - Instant Booking Price (£)  — if instant is enabled
+
+HOW IT SUBMITS
+  POST /api/users/become-service
+  File : src/app/api/users/become-service/route.ts
+
+  Request Headers : Authorization: Bearer <accessToken>
+  Body:
+  {
+    "bio": "Expert plumber with 10 years experience",
+    "category": "<ServiceCategoryInfo.id>",   ← UUID of the category
+    "subcategories": [],
+    "serviceAreas": ["London", "Croydon"],
+    "specializations": [],
+    "certifications": [],
+    "instantBookingEnabled": true,
+    "instantBookingPrice": 25
+  }
+
+WHAT HAPPENS ON THE BACKEND
+  1. Verifies the JWT token.
+  2. Checks the user does NOT already have the SERVICE role.
+  3. Creates a UserRoleAssignment record: { userId, role: "SERVICE" }
+  4. Creates a ServiceProvider record linked to the user.
+  5. Issues NEW tokens that include the SERVICE role.
+  6. Returns { user, accessToken, refreshToken }
+
+WHAT HAPPENS ON THE FRONTEND
+  1. Replaces localStorage accessToken + refreshToken with the new ones.
+  2. Redirects to /service/dashboard.
+
+AFTER REGISTRATION — PROVIDER COMPLETES PROFILE
+  They can update: bio, service areas, specializations, instant booking price.
+  They upload verification documents (SERVICE_CERTIFICATE, SERVICE_LICENSE, etc.)
+  Documents are reviewed by admin → admin sets documentVerified = true.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. SERVICE PROVIDER DASHBOARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Base URL : /service/dashboard
+Layout   : DashboardLayout defaultRole="service"
+
+SIDEBAR NAVIGATION
+  - Dashboard     /service/dashboard
+  - Bookings      /service/dashboard/bookings       (incoming customer bookings)
+  - Services      /service/dashboard/services       (manage your listings)
+  - Reviews       /service/dashboard/reviews
+  - Earnings      /service/dashboard/earnings
+  - Profile       /service/dashboard/profile
+
+MANAGE SERVICE LISTINGS
+  Each listing is a "service card" that users can see and book.
+
+  Each listing has:
+  - Name          e.g. "Standard Boiler Service"
+  - Category      inherited from provider profile
+  - Description
+  - Base Price (£)
+  - Image (optional, uploaded to Cloudinary)
+  - Status        active | inactive
+
+  CREATE   POST   /api/service/listings  { name, category, description, basePrice, image?, status }
+  UPDATE   PATCH  /api/service/listings/:id
+  DELETE   DELETE /api/service/listings/:id
+  LIST     GET    /api/service/listings
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. ADMIN: SERVICE CATEGORY MANAGEMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Admins create and manage top-level service categories
+(e.g. Plumbing, Cleaning, Electrical, Painting, Carpentry, AC Repair).
+
+  Admin panel  : /admin/dashboard/services
+  Create       : POST /api/admin/services/categories { name, description, icon, status, sortOrder }
+  List (admin) : GET  /api/admin/services/categories
+  Public list  : GET  /api/services/categories   → only active categories, returns { id, name, description, icon }
+
+This public endpoint populates:
+  - The category dropdown in provider registration
+  - The category grid in user/owner service browse
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. USER / OWNER: BROWSING SERVICE PROVIDERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User dashboard   : /user/dashboard/services
+Owner dashboard  : /owner/dashboard/services
+
+STEP 1 — PICK A CATEGORY
+  Fetches GET /api/services/categories
+  Shows category cards (icon, name, description).
+
+STEP 2 — PICK A PROVIDER
+  Fetches GET /api/services?categoryId=<id>
+  Provider cards show:
+  - Photo, name, star rating, review count
+  - Location (city + state)
+  - Bio, service area tags
+  - "Instant Booking Available" badge if enabled
+  - Completed jobs count
+  - [View Services] button → go to Step 3
+  - [Reviews] button → ServiceReviewsModal popup
+  - [Get Directions] → google.com/maps/search for provider's location
+
+STEP 3 — PICK A SERVICE LISTING
+  Shows expanded provider banner:
+  - Full photo, rating, location, bio, service area tags
+  - Instant Booking badge
+  - [Get Directions] button (opens Google Maps in new tab)
+
+  Then shows listing cards:
+  - Service image, name, description, rating, price (£)
+  - [Book this Service] → opens Booking Modal
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. BOOKING A SERVICE (BOOKING MODAL FLOW)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The booking modal collects the following in order:
+
+  1. Provider summary (photo, rating, service areas) — read-only
+  2. Selected service card (name, price) — read-only
+  3. Instant Service toggle (if provider offers it, adds instant fee)
+  4. Schedule (hidden when instant is selected):
+       - Preferred Date (date picker, today or future)
+       - Preferred Time Slot (clickable pills):
+           8:00 AM  10:00 AM  12:00 PM  2:00 PM  4:00 PM  6:00 PM  8:00 PM
+  5. Service Address (see Section 8)
+  6. Additional Notes (optional textarea)
+  7. Price Breakdown:
+       Base service fee       £XX
+       Instant add-on fee     £XX  (if selected)
+       Tax (10%)              £XX
+       ─────────────────────────
+       Total                  £XX
+  8. [Cancel]  [Confirm Booking]
+
+VALIDATION
+  - If NOT instant: date AND time slot are both required
+  - houseNo, street, city, postcode — all required (landmark optional)
+
+BOOKING API CALL
+  POST /api/services/book
+  Headers: Authorization: Bearer <accessToken>
+  Body:
+  {
+    "providerId"       : "<ServiceProvider.id>",
+    "serviceListingId" : "<ServiceListing.id>",
+    "service"          : "Standard Boiler Service",
+    "category"         : "<ServiceCategoryInfo.id>",
+    "bookingType"      : "scheduled" | "instant",
+    "description"      : "User notes",
+    "scheduledDate"    : "2026-05-10",
+    "scheduledTime"    : "10:00 AM",
+    "location"         : "12A, Baker Street, near Tesco, London SW1A 1AA (Home)",
+    "totalAmount"      : 110
+  }
+
+PRICE FORMULA
+  subtotal    = basePrice + instantFee
+  tax         = subtotal × 0.10
+  total       = Math.round(subtotal + tax)   (min 1 if free service)
+
+SUCCESS
+  Toast "Booking confirmed!" → redirect to /user/dashboard/service-bookings
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. ADDRESS COLLECTION (URBAN COMPANY / ZEPTO STYLE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+USE CURRENT LOCATION BUTTON
+  1. Calls browser navigator.geolocation.getCurrentPosition()
+  2. Gets lat/lon from device GPS
+  3. Calls OpenStreetMap Nominatim (FREE, no API key):
+       GET https://nominatim.openstreetmap.org/reverse?format=json&lat=X&lon=Y
+  4. Auto-fills: street, city, postcode from response
+  5. User must still fill house/flat number (GPS does not provide this)
+  6. If denied → shows toast asking user to fill manually
+
+ADDRESS TAG PILLS
+  [Home]  [Office]  [Other]
+  Green when selected. Tag is appended to the location string.
+
+FORM FIELDS
+  Flat / House No., Floor, Building name   [REQUIRED]
+  Street / Area / Colony                   [REQUIRED]
+  Nearby landmark                          [optional]
+  City                      Postcode       [REQUIRED both]
+
+LIVE PREVIEW
+  As user types, a preview line assembles the full address in real-time:
+  "12A, Baker Street, near Tesco, London SW1A 1AA (Home)"
+
+STORED VALUE
+  This assembled string → ServiceBooking.location (TEXT field in DB).
+  No schema change needed.
+
+GET DIRECTIONS (Provider Card)
+  Link: https://www.google.com/maps/search/?api=1&query=<provider.location>
+  Opens Google Maps in new tab. No API key needed for search links.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. PROVIDER RECEIVES A BOOKING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When booking is created (status = PENDING):
+  1. Notification created for provider.
+  2. Provider sees it in /service/dashboard/bookings.
+  3. Provider actions:
+       CONFIRM  → PATCH /api/service/bookings/:id { status: "CONFIRMED" }
+       REJECT   → PATCH /api/service/bookings/:id { status: "CANCELLED" }  (notifies user)
+  4. When work starts:
+       Mark IN_PROGRESS
+  5. When work done:
+       Mark COMPLETED → provider.completedBookings++ → notify user to review
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. BOOKING STATUS LIFECYCLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ServiceBookingStatus:
+  PENDING      Booking created, waiting for provider
+  CONFIRMED    Provider accepted
+  IN_PROGRESS  Work started
+  COMPLETED    Work done — trigger payment
+  CANCELLED    Provider rejected OR user cancelled
+
+ServicePaymentStatus:
+  PENDING      Not yet paid
+  COMPLETED    Payment received
+  FAILED       Payment attempt failed
+  REFUNDED     Refund issued (for cancellations)
+
+Timeline:
+  [User creates booking]  → status=PENDING,  paymentStatus=PENDING
+  [Provider confirms]     → status=CONFIRMED
+  [Work starts]           → status=IN_PROGRESS
+  [Work done]             → status=COMPLETED → trigger Razorpay payment
+  [Payment done]          → paymentStatus=COMPLETED
+  [If cancelled]          → status=CANCELLED → optional refund
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. PAYMENT FLOW (RAZORPAY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Gateway: Razorpay  |  Currency: GBP  |  Model: Pay-after-service (or upfront)
+
+STEP 1 — CREATE ORDER (server-side)
+  API  : POST /api/payments
+  Body : { bookingId, amount, currency: "GBP" }
+  Returns: { razorpayOrderId, amount, currency, key }
+
+STEP 2 — OPEN CHECKOUT (browser)
+  Component: src/components/RazorpayPaymentModal.tsx
+  Razorpay modal opens → user enters card / UPI / net banking.
+  On success, Razorpay returns:
+    { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+
+STEP 3 — VERIFY PAYMENT (server-side HMAC check)
+  API  : POST /api/payments/:id/verify
+  Body : { razorpayOrderId, razorpayPaymentId, razorpaySignature }
+  Backend:
+    - Computes HMAC-SHA256(orderId + "|" + paymentId, RAZORPAY_KEY_SECRET)
+    - Compares with razorpaySignature
+    - If match → Payment.status = COMPLETED → Booking.paymentStatus updated
+    - If mismatch → 400 PAYMENT_VERIFICATION_FAILED
+
+STEP 4 — POST-PAYMENT
+  - Notification to user: "Payment confirmed"
+  - Notification to provider: "Payment received for booking #XYZ"
+  - provider.totalEarnings updated
+  - ServiceBooking.paymentStatus = COMPLETED, paidAmount = totalAmount
+
+ServiceBooking payment fields:
+  paymentStatus   ServicePaymentStatus  @default(PENDING)
+  totalAmount     Float                 stored at booking creation
+  paidAmount      Float                 @default(0)  updated on payment
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. REVIEWS AFTER COMPLETION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After booking = COMPLETED, user can submit a review.
+
+  POST /api/services/providers/:providerId/reviews
+  Body : { bookingId, rating (1–5), comment }
+
+Effects:
+  - ServiceReview record created
+  - provider.rating recalculated (weighted average)
+  - provider.totalReviews incremented
+  - Review visible in:
+      /service/dashboard/reviews  (provider sees all their reviews)
+      ServiceReviewsModal         (public, shown when user clicks "Reviews" on card)
+
+Fetch reviews:
+  GET /api/services/providers/:providerId/reviews
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+13. DATABASE MODELS (KEY FIELDS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ServiceCategoryInfo
+  id           UUID (cuid)
+  name         unique text  e.g. "Plumbing"
+  icon         emoji/string e.g. "🔧"
+  status       "active" | "inactive"
+  sortOrder    integer
+
+ServiceProvider
+  id                    UUID
+  userId                → User (unique 1:1)
+  bio                   text
+  category              ServiceCategoryInfo.id (stored as text)
+  serviceAreas          JSON array  ["London", "Croydon"]
+  instantBookingEnabled boolean     default false
+  instantBookingPrice   float?      e.g. 25.00
+  documentVerified      boolean     default false (admin sets this)
+  rating                float       0–5  (denormalized)
+  totalReviews          int
+  completedBookings     int
+  totalEarnings         float
+  isActive              boolean     default true
+
+ServiceListing
+  id           UUID
+  name         text  e.g. "Standard Boiler Service"
+  category     ServiceCategoryInfo.id
+  description  text?
+  basePrice    float  e.g. 80.00
+  image        URL?
+  status       "active" | "inactive"
+  rating       float (denormalized)
+  reviews      int
+  providerId   → ServiceProvider
+
+ServiceBooking
+  id               UUID
+  service          service name text
+  category         ServiceCategoryInfo.id
+  bookingType      INSTANT | SCHEDULED
+  description      user notes
+  scheduledDate    date?
+  scheduledTime    "10:00 AM"?
+  location         assembled address string
+  status           PENDING|CONFIRMED|IN_PROGRESS|COMPLETED|CANCELLED
+  paymentStatus    PENDING|COMPLETED|FAILED|REFUNDED
+  totalAmount      float
+  paidAmount       float default 0
+  clientId         → User
+  providerId       → ServiceProvider
+  serviceListingId → ServiceListing?
+  createdAt        datetime
+
+ServiceReview
+  id          UUID
+  rating      int (1–5)
+  comment     text?
+  bookingId   → ServiceBooking
+  clientId    → User
+  providerId  → ServiceProvider
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+14. ALL SERVICE API ENDPOINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PUBLIC (no auth)
+  GET  /api/services/categories                  List active categories
+  GET  /api/services?categoryId=<id>             List providers by category
+  GET  /api/services/providers/:id/reviews       Provider public reviews
+
+AUTH REQUIRED (any role)
+  POST /api/users/become-service                 Add SERVICE role to account
+  POST /api/services/book                        Create service booking
+
+USER BOOKINGS
+  GET  /api/user/service-bookings                My bookings as a client
+  GET  /api/user/service-bookings/:id            Booking detail
+
+OWNER BOOKINGS (owner booked services for their properties)
+  GET  /api/owner/service-bookings               Bookings made as client
+
+SERVICE PROVIDER (role = SERVICE)
+  GET    /api/service/listings                   My listings
+  POST   /api/service/listings                   Create listing
+  PATCH  /api/service/listings/:id               Update listing
+  DELETE /api/service/listings/:id               Delete listing
+  GET    /api/service/bookings                   Incoming bookings
+  PATCH  /api/service/bookings/:id               Update booking status
+  GET    /api/service/earnings                   Earnings summary
+  GET    /api/service/profile                    My provider profile
+  PATCH  /api/service/profile                    Update provider profile
+
+ADMIN
+  GET    /api/admin/services/categories          All categories
+  POST   /api/admin/services/categories          Create category
+  PATCH  /api/admin/services/categories/:id      Update category
+  DELETE /api/admin/services/categories/:id      Delete category
+  GET    /api/admin/services/bookings            All bookings (platform-wide)
+  GET    /api/admin/services/providers           All providers
+
+PAYMENTS
+  POST /api/payments                             Create Razorpay order
+  POST /api/payments/:id/verify                  Verify Razorpay signature
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+15. FRONTEND FILE MAP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SERVICE REGISTRATION
+  src/app/services/register/page.tsx                      Registration page
+  src/components/services/ServiceRegistrationForm.tsx     Multi-step form
+
+USER BOOKING FLOW
+  src/app/user/dashboard/services/page.tsx                Category→Provider→Listing→Book modal
+  src/app/user/dashboard/service-bookings/page.tsx        My bookings list
+
+OWNER BOOKING FLOW
+  src/app/owner/dashboard/services/page.tsx               Same flow for owners
+  src/app/owner/dashboard/service-bookings/page.tsx       Owner's booked services
+
+REUSABLE COMPONENTS
+  src/components/services/ServiceReviewsModal.tsx         Reviews popup
+  src/components/dashboard/UserDashboard/
+    ServiceBookingTabs.tsx                                Active/Past/Cancelled tabs
+    ServicebookingFilterModal.tsx                         Filter by status/date
+  src/components/RazorpayPaymentModal.tsx                 Razorpay checkout UI
+
+SERVICE PROVIDER DASHBOARD
+  src/app/service/dashboard/                              All provider pages
+  src/app/service/dashboard/services/page.tsx             Manage listings
+
+SHARED INFRASTRUCTURE
+  src/lib/api.ts                                          Axios instance + JWT interceptor
+  src/lib/services/serviceService.ts                      All DB operations (Prisma)
+  src/lib/auth/jwt.ts                                     Token issue + verify
+  src/lib/razorpay.ts                                     Razorpay client setup
+  src/lib/cloudinary.ts                                   Cloudinary upload helper
+  src/components/dashboard/DashboardLayout.tsx            Shell (sidebar + header)
+  src/components/dashboard/Sidebar.tsx                    Nav arrays per role
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+16. ENV VARIABLES NEEDED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+.env (server only — never expose to browser)
+  DATABASE_URL=postgresql://user:pass@host:5432/mykeys
+  JWT_SECRET=<long random string>
+  JWT_REFRESH_SECRET=<different long random string>
+  RAZORPAY_KEY_ID=rzp_live_XXXXXX
+  RAZORPAY_KEY_SECRET=XXXXXX
+  CLOUDINARY_CLOUD_NAME=XXXXXX
+  CLOUDINARY_API_KEY=XXXXXX
+  CLOUDINARY_API_SECRET=XXXXXX
+  SMTP_HOST=smtp.example.com
+  SMTP_PORT=587
+  SMTP_USER=noreply@mykeys.com
+  SMTP_PASS=XXXXXX
+  EMAIL_FROM=MYKEYS <noreply@mykeys.com>
+
+.env.local (browser-accessible, NEXT_PUBLIC_ prefix)
+  NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_XXXXXX
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=XXXXXX   (used for PropertyMapView, optional)
+  NEXT_PUBLIC_APP_URL=https://mykeys.com
+
+  NOTE: OpenStreetMap Nominatim (reverse geocoding for "Use Current Location")
+  is completely FREE and requires NO API key.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+17. QUICK SUMMARY — FULL FLOW IN ONE PARAGRAPH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A user signs up at /signup (role: USER). To offer services, they visit
+/services/register, fill in their bio, category, service areas, and optional
+instant-booking price. POST /api/users/become-service adds the SERVICE role
+and creates a ServiceProvider record — the new JWT token now includes the
+SERVICE role. The provider goes to /service/dashboard/services and creates
+ServiceListing cards (name, price, description, image). Meanwhile, a regular
+user visits /user/dashboard/services, picks a category from the admin-managed
+list, picks a provider (sees rating, location, Get Directions link), picks a
+listing, and clicks "Book this Service". The booking modal collects a time
+slot (clickable pills: 8 AM–8 PM), and a full structured address (house
+number, street, optional landmark, city, postcode) — all optionally
+auto-filled by clicking "Use Current Location" which uses the browser GPS and
+OpenStreetMap reverse geocoding. POST /api/services/book saves a
+ServiceBooking with status=PENDING. The provider sees it in their dashboard,
+confirms it (CONFIRMED), marks it in-progress (IN_PROGRESS), and marks it
+done (COMPLETED). After completion, payment is collected via Razorpay: a
+server-side order is created, the user completes checkout in the Razorpay
+modal, and the HMAC signature is verified server-side before marking
+paymentStatus=COMPLETED and updating the provider's earnings. The user then
+leaves a 1–5 star review, which updates the provider's denormalized rating
+for future bookings. Admins oversee all bookings, categories, and document
+verification from the admin panel.
+
+══════════════════════════════════════════════════════════════════════════════
+                              END OF SERVICE DOC
+══════════════════════════════════════════════════════════════════════════════
+
 
 ---
 

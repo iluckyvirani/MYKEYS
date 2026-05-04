@@ -15,7 +15,8 @@ import {
   DollarSign,
   Plus,
   TrendingUp,
-  X
+  X,
+  PoundSterling
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -214,7 +215,7 @@ export default function OwnerBookingsPage() {
                 <div className="text-sm text-gray-600">Total Revenue</div>
               </div>
               <div className="p-2 bg-blue-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-blue-600" />
+                <PoundSterling  className="w-5 h-5 text-blue-600" />
               </div>
             </div>
             <div className="mt-2 text-sm text-gray-500">

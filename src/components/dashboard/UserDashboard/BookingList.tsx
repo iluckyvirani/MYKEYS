@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { ShortBookingDTO, BookingStatus } from "@/types/bookings";
 import CancelBookingModal from "./CancelBookingModal";
 import ReviewModal from "./ReviewModal";
+import { formatCurrency } from "@/lib/utils";
 
 interface BookingListProps {
   bookings: ShortBookingDTO[];
@@ -37,15 +38,6 @@ const getStatusColor = (status: string) => {
     default:
       return 'bg-gray-100 text-gray-800';
   }
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 };
 
 const formatDate = (dateString: string) => {

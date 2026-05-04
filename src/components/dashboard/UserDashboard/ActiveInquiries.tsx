@@ -202,7 +202,9 @@ const getStatusText = (status: string) => {
                           </div>
                         )}
                         <div className="font-medium text-gray-900">
-                          Rent- £{display.price}/month
+                          {display.type === "buy"
+                            ? `Price- £${display.price.toLocaleString()} total`
+                            : `Rent- £${display.price.toLocaleString()}/month`}
                         </div>
                       </div>
 

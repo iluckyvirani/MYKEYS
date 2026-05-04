@@ -8,6 +8,7 @@ import {
   Inbox,
   Star,
   Percent,
+  PoundSterling,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -141,10 +142,10 @@ export default function OwnerStatsCards() {
       title: "Monthly Revenue",
       value: stats.revenue.current,
       change: stats.revenue.changeText,
-      icon: DollarSign,
+      icon: PoundSterling,
       color: "bg-emerald-500",
       trend: getTrend(stats.revenue.change),
-      details: `${formatCurrency(stats.revenue.collected)} collected`,
+      details: `${formatCurrency(stats.revenue.collected)} collected • Short stays only`,
     },
     {
       title: "Pending Inquiries",
@@ -207,7 +208,7 @@ export default function OwnerStatsCards() {
             <div className="mt-5">
               <p className="text-sm text-gray-500 font-medium">{stat.title}</p>
               <p className="text-2xl font-bold text-gray-900 mt-2">
-                {stat.title.includes("Revenue") ? formatCurrency(Number(stat.value)) : stat.value}
+                {stat.title.includes("Revenue") ? formatCurrency(Number(stat.value), "GBP") : stat.value}
               </p>
               <p className="text-sm text-gray-500 mt-2">{stat.details}</p>
             </div>

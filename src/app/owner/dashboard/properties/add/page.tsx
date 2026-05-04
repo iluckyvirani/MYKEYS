@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { 
   Building, 
   MapPin, 
-  DollarSign, 
   Bed, 
   Bath, 
   Maximize2,
@@ -25,6 +24,7 @@ import {
   Loader,
   GripVertical,
   Star,
+  PoundSterling,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -58,6 +58,7 @@ export default function AddPropertyPage() {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [loadingAmenities, setLoadingAmenities] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [listingType, setListingType] = useState<"rent" | "buy">("rent");
   const [rentalType, setRentalType] = useState<"short" | "long">("short");
   const [amenities, setAmenities] = useState<AmenityOption[]>([]);
@@ -70,7 +71,7 @@ export default function AddPropertyPage() {
     address: "",
     city: "",
     state: "",
-    country: "India",
+    country: "United Kingdom",
     zipCode: "",
     latitude: "",
     longitude: "",
@@ -129,7 +130,7 @@ export default function AddPropertyPage() {
         }
       } catch (err) {
         console.error("Error fetching amenities:", err);
-        setError("Failed to load amenities");
+        // Don't pollute the global form error banner with amenities load failures
       } finally {
         setLoadingAmenities(false);
       }
@@ -305,9 +306,10 @@ export default function AddPropertyPage() {
 
       // Validate images
       if (formData.images.length < 1) {
-        setError("Please upload at least one property image");
+        setImageError("Please upload at least one photo before publishing.");
         return;
       }
+      setImageError(null);
 
       // Prepare images array with URLs already uploaded to Cloudinary
       const uploadedImages = formData.images.map((img, index) => ({
@@ -521,7 +523,7 @@ export default function AddPropertyPage() {
               name="city"
               value={formData.city}
               onChange={handleInputChange}
-              placeholder="e.g., Mumbai"
+              placeholder="e.g., London"
               required
             />
           </div>
@@ -533,7 +535,7 @@ export default function AddPropertyPage() {
               name="state"
               value={formData.state}
               onChange={handleInputChange}
-              placeholder="e.g., Maharashtra"
+              placeholder="e.g., Greater London"
               required
             />
           </div>
@@ -545,7 +547,7 @@ export default function AddPropertyPage() {
               name="zipCode"
               value={formData.zipCode}
               onChange={handleInputChange}
-              placeholder="e.g., 400001"
+              placeholder="e.g., E14"
             />
           </div>
 
@@ -675,7 +677,7 @@ export default function AddPropertyPage() {
             <div>
               <Label htmlFor="propertyPrice">Property Price *</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <PoundSterling  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   id="propertyPrice"
                   name="propertyPrice"
@@ -693,7 +695,7 @@ export default function AddPropertyPage() {
             <div>
               <Label htmlFor="propertyTax">Annual Property Tax</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <PoundSterling  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   id="propertyTax"
                   name="propertyTax"
@@ -710,7 +712,7 @@ export default function AddPropertyPage() {
             <div>
               <Label htmlFor="hoaFee">HOA / Service Charge (Monthly)</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <PoundSterling  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   id="hoaFee"
                   name="hoaFee"
@@ -755,7 +757,7 @@ export default function AddPropertyPage() {
                 <div>
                   <Label htmlFor="groundRent">Ground Rent (Annual)</Label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <PoundSterling  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <Input
                       id="groundRent"
                       name="groundRent"
@@ -806,7 +808,7 @@ export default function AddPropertyPage() {
                 {rentalType === "short" ? "Price per Night *" : "Monthly Rent *"}
               </Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <PoundSterling  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   id="price"
                   name="price"
@@ -1121,6 +1123,13 @@ export default function AddPropertyPage() {
           You can also click <strong>Set as Cover</strong> on any photo.
         </p>
 
+        {imageError && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-[5px] text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {imageError}
+          </div>
+        )}
+
         {/* Cover image tip */}
         {formData.images.length > 0 && (
           <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-amber-50 border border-amber-200 rounded-[5px] text-sm text-amber-800">
@@ -1250,7 +1259,7 @@ export default function AddPropertyPage() {
             </p>
           </div>
           <Link href="/owner/dashboard/properties">
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" className="cursor-pointer">Cancel</Button>
           </Link>
         </div>
 
@@ -1310,7 +1319,8 @@ export default function AddPropertyPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setStep(step - 1)}
+                onClick={() => { setStep(step - 1); setError(null); setImageError(null); }}
+                className="cursor-pointer"
               >
                 Previous Step
               </Button>
@@ -1321,8 +1331,8 @@ export default function AddPropertyPage() {
             {step < 3 ? (
               <Button
                 type="button"
-                onClick={() => setStep(step + 1)}
-                className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                onClick={() => { setStep(step + 1); setError(null); setImageError(null); }}
+                className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 cursor-pointer"
               >
                 Next Step
                 <Plus className="w-4 h-4 ml-2" />
@@ -1331,7 +1341,7 @@ export default function AddPropertyPage() {
               <Button
                 type="submit"
                 disabled={loading || uploadingImages}
-                className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? (
                   <>
