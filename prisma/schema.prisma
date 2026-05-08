@@ -93,12 +93,6 @@ enum InquiryStatus {
   CONVERTED
 }
 
-enum PackageTier {
-  BASIC
-  STANDARD
-  PREMIUM
-}
-
 enum SubscriptionStatus {
   ACTIVE
   EXPIRED
@@ -480,13 +474,18 @@ model Booking {
 model Payment {
   id                String        @id @default(cuid())
   amount            Float
-  currency          String        @default("INR")
+  currency          String        @default("GBP")
   paymentMethod     PaymentMethod
   status            PaymentStatus @default(PENDING)
   transactionId     String?       @unique
   razorpayOrderId   String?
   razorpayPaymentId String?
   razorpaySignature String?
+
+  // Commission fields (for short rent bookings)
+  commissionPercent Float? // Rate applied at time of payment (e.g. 10 = 10%)
+  commissionAmount  Float? // Actual GBP amount taken by platform
+  ownerEarnings     Float? // Amount owner receives (amount - commissionAmount)
 
   // Relations
   bookingId String?       @unique
@@ -632,33 +631,32 @@ model Notification {
 }
 
 model Package {
-  id          String      @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  tier        PackageTier
   description String?
 
   // Pricing
   price    Float
-  duration String // monthly, yearly
   isActive Boolean @default(true)
 
+  // Duration (dynamic — admin sets freely)
+  durationValue Int    @default(1)     // e.g. 10, 1, 6
+  durationUnit  String @default("months") // "days" | "months" | "years"
+
   // Core Features
-  propertyLimit Int @default(1) // Number of properties can add
-  featuredLimit Int @default(0) // Number of featured properties
-  storageLimit  Int @default(5) // Storage in GB
+  propertyLimit Int @default(1) // Number of live listings allowed (0 = unlimited)
+  featuredLimit Int @default(0) // Number of featured properties allowed
 
-  // Lead Features
-  dailyLeadsLimit Int @default(2) // Leads per day
-  totalLeadsLimit Int @default(10) // Total leads allowed
+  // Contact / Visibility Feature Flags (all off by default — admin opts in)
+  showOwnerName        Boolean @default(false) // Show owner full name on listing
+  showOwnerPhone       Boolean @default(false) // Show owner phone on listing
+  directInquiryToOwner Boolean @default(false) // Inquiries go direct to owner
+  adminCCOnInquiry     Boolean @default(false) // Admin also receives inquiry copy
+  fullAdminSupport     Boolean @default(false) // Dedicated admin handling
+  docExpiryAlert       Boolean @default(false) // Notifications when docs near expiry
 
-  // Badge & Support
-  hasVerifiedBadge Boolean @default(false)
-  supportType      String  @default("email")
-  supportLevel     String  @default("standard") // standard, priority, vip
-
-  // Additional Features
-  features         Json // Array of feature objects
-  featuresIncluded String[] @default([]) // List of feature names like "API_ACCESS", "CUSTOM_DOMAIN"
+  // Short Description for package card
+  shortDescription String?
 
   // Timestamps
   createdAt     DateTime       @default(now())
@@ -666,7 +664,6 @@ model Package {
   ownerPackages OwnerPackage[]
 
   // Indexes
-  @@index([tier])
   @@index([isActive])
 }
 
@@ -711,6 +708,13 @@ model OwnerPackage {
   @@index([packageId])
   @@index([status])
   @@index([endDate])
+}
+
+// Global admin-configurable settings (single row, id = "singleton")
+model AdminSettings {
+  id                         String   @id @default("singleton")
+  shortRentCommissionPercent Float    @default(0) // e.g. 10 = 10%; range 0–100
+  updatedAt                  DateTime @updatedAt
 }
 
 model AdCampaign {

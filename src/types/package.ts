@@ -1,31 +1,33 @@
+// Phase 1: Fully dynamic packages — no fixed tiers
+export type DurationUnit = 'days' | 'months' | 'years';
+
 export type PackageInput = {
   name: string;
-  tier: PackageTier;
   description?: string;
+  shortDescription?: string;
   price: number;
-  duration: 'monthly' | 'yearly';
+  durationValue: number;  // e.g. 10, 1, 6
+  durationUnit: DurationUnit; // "days" | "months" | "years"
   isActive?: boolean;
-  
-  // Core Features
-  propertyLimit?: number;
+
+  // Core features
+  propertyLimit?: number; // 0 = unlimited
   featuredLimit?: number;
-  storageLimit?: number;
-  
-  // Lead Features
-  dailyLeadsLimit?: number;
-  totalLeadsLimit?: number;
-  
-  // Badge & Support
-  hasVerifiedBadge?: boolean;
-  supportType?: string;
-  supportLevel?: 'standard' | 'priority' | 'vip';
-  
-  // Additional Features
-  features?: Record<string, any>[]; 
-  featuresIncluded?: string[]; // API_ACCESS, CUSTOM_DOMAIN, etc
+
+  // Contact / visibility flags
+  showOwnerName?: boolean;
+  showOwnerPhone?: boolean;
+  directInquiryToOwner?: boolean;
+  adminCCOnInquiry?: boolean;
+  fullAdminSupport?: boolean;
+  docExpiryAlert?: boolean;
 };
 
-export type PackageTier = 'BASIC' | 'STANDARD' | 'PREMIUM';
+export type PackageRecord = PackageInput & {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type OwnerPackageWithUsage = {
   id: string;
@@ -35,101 +37,32 @@ export type OwnerPackageWithUsage = {
   startDate: string;
   endDate: string;
   nextBilling?: string;
-  
+  daysRemaining: number;
+
   // Usage
   propertiesUsed: number;
-  propertiesLimit: number;
-  
+  propertiesLimit: number; // 0 = unlimited
   featuredUsed: number;
   featuredLimit: number;
-  
-  storageUsed: number;
-  storageLimit: number;
-  
-  leadsUsedToday: number;
-  leadsUsedTotal: number;
-  dailyLeadsLimit: number;
-  totalLeadsLimit: number;
-  
-  verifiedBadgeActive: boolean;
-  hasVerifiedBadge: boolean;
-  
+
   // Package Details
   packageName: string;
-  supportLevel: string;
   price: number;
-  duration: string;
+  durationValue: number;
+  durationUnit: DurationUnit;
+  shortDescription?: string;
+
+  // Feature flags
+  showOwnerName: boolean;
+  showOwnerPhone: boolean;
+  directInquiryToOwner: boolean;
+  adminCCOnInquiry: boolean;
+  fullAdminSupport: boolean;
+  docExpiryAlert: boolean;
 };
 
-export type PackageFeature = 
-  | 'API_ACCESS'
-  | 'CUSTOM_DOMAIN'
-  | 'ADVANCED_ANALYTICS'
-  | 'BULK_UPLOAD'
-  | 'PRIORITY_SUPPORT'
-  | 'VERIFIED_BADGE'
-  | 'FEATURED_LISTINGS'
-  | 'LEAD_CAPTURE';
-
-// Default package configurations
-export const PACKAGE_CONFIGS = {
-  BASIC: {
-    name: 'Basic',
-    tier: 'BASIC' as const,
-    description: 'Perfect for getting started',
-    price: 0,
-    duration: 'monthly' as const,
-    propertyLimit: 1,
-    featuredLimit: 0,
-    storageLimit: 5,
-    dailyLeadsLimit: 2,
-    totalLeadsLimit: 10,
-    hasVerifiedBadge: false,
-    supportLevel: 'standard' as const,
-    featuresIncluded: [],
-  },
-  STANDARD: {
-    name: 'Standard',
-    tier: 'STANDARD' as const,
-    description: 'For growing your business',
-    price: 99,
-    duration: 'monthly' as const,
-    propertyLimit: 5,
-    featuredLimit: 2,
-    storageLimit: 50,
-    dailyLeadsLimit: 10,
-    totalLeadsLimit: 100,
-    hasVerifiedBadge: true,
-    supportLevel: 'priority' as const,
-    featuresIncluded: [
-      'ADVANCED_ANALYTICS',
-      'BULK_UPLOAD',
-      'PRIORITY_SUPPORT',
-      'VERIFIED_BADGE',
-    ],
-  },
-  PREMIUM: {
-    name: 'Premium',
-    tier: 'PREMIUM' as const,
-    description: 'For professionals',
-    price: 299,
-    duration: 'monthly' as const,
-    propertyLimit: 20,
-    featuredLimit: 10,
-    storageLimit: 500,
-    dailyLeadsLimit: 50,
-    totalLeadsLimit: 500,
-    hasVerifiedBadge: true,
-    supportLevel: 'vip' as const,
-    featuresIncluded: [
-      'API_ACCESS',
-      'CUSTOM_DOMAIN',
-      'ADVANCED_ANALYTICS',
-      'BULK_UPLOAD',
-      'PRIORITY_SUPPORT',
-      'VERIFIED_BADGE',
-      'FEATURED_LISTINGS',
-      'LEAD_CAPTURE',
-    ],
-  },
+export type AdminSettings = {
+  id: string;
+  shortRentCommissionPercent: number;
+  updatedAt: string;
 };

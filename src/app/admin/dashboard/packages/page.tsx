@@ -1,579 +1,242 @@
 ﻿"use client";
 
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
-import AdminPackageFilterModal from "@/components/dashboard/AdminPackageFilterModal";
-import AdminPackageModal from "@/components/dashboard/AdminPackageModal";
-import AdminPackageList from "@/components/dashboard/AdminPackageList";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Plus,
-  Search,
-  Filter,
-  Grid,
-  List as ListIcon,
-  Package,
-  Users,
-  TrendingUp,
-  DollarSign,
-  X,
-} from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { Plus, Search, Pencil, Trash2, Package, Users, CheckCircle, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 
-interface PackageData {
+interface PackageRow {
   id: string;
   name: string;
-  tier: string;
   price: number;
-  duration: string;
+  durationValue: number;
+  durationUnit: string;
   propertyLimit: number;
   featuredLimit: number;
-  storageLimit: number;
-  dailyLeadsLimit: number;
   isActive: boolean;
-  subscribers: number;
-  supportLevel: string;
+  shortDescription?: string;
+  showOwnerName: boolean;
+  showOwnerPhone: boolean;
+  directInquiryToOwner: boolean;
+  adminCCOnInquiry: boolean;
+  fullAdminSupport: boolean;
+  docExpiryAlert: boolean;
 }
 
-interface Stats {
-  totalPackages: number;
-  activePackages: number;
-  totalSubscribers: number;
-  totalRevenue: number;
+function formatDuration(v: number, u: string) {
+  return `${v} ${v === 1 ? u.replace(/s$/, '') : u}`;
 }
 
-export default function PackagesPage() {
-  const [packages, setPackages] = useState<PackageData[]>([]);
+export default function AdminPackagesPage() {
+  const router = useRouter();
+  const [packages, setPackages] = useState<PackageRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
-  const [packageModalOpen, setPackageModalOpen] = useState(false);
-  const [editingPackage, setEditingPackage] = useState<PackageData | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [appliedFilters, setAppliedFilters] = useState({
-    status: "ALL",
-    tier: "ALL",
-    priceRange: "ALL",
-  });
-  const [selectedPackage, setSelectedPackage] = useState<PackageData | null>(null);
+  const [search, setSearch] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const fetchPackages = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get("/packages");
-      if (response.data?.success && response.data?.data) {
-        const apiPackages = response.data.data.map((pkg: any) => ({
-          id: pkg.id,
-          name: pkg.name,
-          tier: pkg.tier || "BASIC",
-          price: pkg.price || 0,
-          duration: pkg.duration || "monthly",
-          propertyLimit: pkg.propertyLimit || 3,
-          featuredLimit: pkg.featuredLimit || 1,
-          storageLimit: pkg.storageLimit || 10,
-          dailyLeadsLimit: pkg.dailyLeadsLimit || 5,
-          isActive: pkg.isActive ?? true,
-          subscribers: pkg._count?.subscribers || 0,
-          supportLevel: pkg.supportLevel || "standard",
-        }));
-        setPackages(apiPackages);
-      }
-    } catch (err) {
-      console.error("Error fetching packages:", err);
+      const res = await api.get("/api/admin/packages");
+      setPackages(res.data?.data ?? []);
+    } catch {
       setPackages([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchPackages();
-  }, [fetchPackages]);
-
-  const handleOpenAddModal = () => {
-    setEditingPackage(null);
-    setPackageModalOpen(true);
-  };
-
-  const handleOpenEditModal = (pkg: PackageData) => {
-    setEditingPackage(pkg);
-    setPackageModalOpen(true);
-  };
-
-  const handleSavePackage = async (packageData: any) => {
-    setSaving(true);
-    try {
-      if (editingPackage) {
-        await api.patch(`/packages/${editingPackage.id}`, packageData);
-      } else {
-        await api.post("/packages", packageData);
-      }
-      await fetchPackages();
-      setPackageModalOpen(false);
-    } catch (error) {
-      console.error("Error saving package:", error);
-      alert("Failed to save package");
-    } finally {
-      setSaving(false);
-    }
-  };
+  useEffect(() => { fetchPackages(); }, [fetchPackages]);
 
   const handleDelete = async (id: string) => {
     setDeleting(true);
+    setDeleteError("");
     try {
-      await api.delete(`/packages/${id}`);
-      await fetchPackages();
+      await api.delete(`/api/admin/packages/${id}`);
       setDeleteConfirm(null);
-    } catch (error) {
-      console.error("Error deleting package:", error);
-      alert("Failed to delete package");
+      await fetchPackages();
+    } catch (err: any) {
+      setDeleteError(err?.response?.data?.message ?? err.message ?? "Failed to delete package");
     } finally {
       setDeleting(false);
     }
   };
 
-  // Calculate stats
-  const stats: Stats = {
-    totalPackages: packages.length,
-    activePackages: packages.filter((p) => p.isActive).length,
-    totalSubscribers: packages.reduce((sum, p) => sum + p.subscribers, 0),
-    totalRevenue: packages.reduce((sum, p) => sum + p.price * p.subscribers, 0),
-  };
+  const filtered = packages.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
 
-  // Filter packages
-  const filteredPackages = packages.filter((pkg) => {
-    const matchesSearch = pkg.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      appliedFilters.status === "ALL" ||
-      (appliedFilters.status === "ACTIVE" && pkg.isActive) ||
-      (appliedFilters.status === "INACTIVE" && !pkg.isActive);
-
-    const matchesTier =
-      appliedFilters.tier === "ALL" || pkg.tier === appliedFilters.tier;
-
-    let matchesPrice = true;
-    if (appliedFilters.priceRange !== "ALL") {
-      const [min, max] = appliedFilters.priceRange
-        .split("-")
-        .map((v) => (v === "+" ? Infinity : parseFloat(v)));
-      matchesPrice = pkg.price >= min && pkg.price <= max;
-    }
-
-    return matchesSearch && matchesStatus && matchesTier && matchesPrice;
-  });
-
-  const handleApplyFilters = (filters: {
-    status: string;
-    tier: string;
-    priceRange: string;
-  }) => {
-    setAppliedFilters(filters);
-  };
-
-  const handleResetFilters = () => {
-    setAppliedFilters({ status: "ALL", tier: "ALL", priceRange: "ALL" });
-  };
-
-  const removeFilter = (filterType: string) => {
-    setAppliedFilters((prev) => ({
-      ...prev,
-      [filterType]: "ALL",
-    }));
-  };
-
-  const formatCurrency = (amount: number) => {
-    if (amount >= 100000) {
-      return `£${(amount / 100000).toFixed(1)}L`;
-    }
-    return `£${amount.toLocaleString()}`;
-  };
+  const activeCount = packages.filter((p) => p.isActive).length;
 
   return (
     <AdminDashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              Package Management
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Package className="w-6 h-6 text-green-600" /> Package Management
             </h1>
-            <p className="text-gray-600 mt-1">
-              Create and manage subscription packages for property owners
+            <p className="text-gray-500 text-sm mt-1">
+              Manage subscription packages for Long Rent &amp; Buy property owners
             </p>
           </div>
-          <Button 
-            className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
-            onClick={handleOpenAddModal}
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => router.push("/admin/dashboard/packages/new")}
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Package
+            <Plus className="w-4 h-4 mr-2" /> Create Package
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-6 rounded-[5px]">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Total Packages
-                </p>
-                <h3 className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.totalPackages}
-                </h3>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Package className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-[5px]">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Active Packages
-                </p>
-                <h3 className="text-3xl font-bold text-green-600 mt-2">
-                  {stats.activePackages}
-                </h3>
-              </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-[5px]">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Total Subscribers
-                </p>
-                <h3 className="text-3xl font-bold text-purple-600 mt-2">
-                  {stats.totalSubscribers}
-                </h3>
-              </div>
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-[5px]">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Total Revenue
-                </p>
-                <h3 className="text-2xl font-bold text-orange-600 mt-2">
-                  {formatCurrency(stats.totalRevenue)}
-                </h3>
-              </div>
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <DollarSign className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </Card>
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: "Total Packages", value: packages.length, icon: Package, color: "blue" },
+            { label: "Active Packages", value: activeCount, icon: CheckCircle, color: "green" },
+            { label: "Inactive", value: packages.length - activeCount, icon: XCircle, color: "gray" },
+            { label: "Subscribers", value: "—", icon: Users, color: "purple" },
+          ].map(({ label, value, icon: Icon, color }) => (
+            <Card key={label} className="p-4">
+              <p className="text-xs text-gray-500 font-medium">{label}</p>
+              <p className={`text-2xl font-bold mt-1 text-${color}-600`}>{value}</p>
+            </Card>
+          ))}
         </div>
 
-        {/* Search & Filter Bar */}
-        <Card className="p-6 rounded-[5px]">
-          <div className="flex gap-4 mb-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search packages by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 rounded-[5px]"
-              />
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => setFilterModalOpen(true)}
-              className="rounded-[5px]"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Advanced Filters
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setViewMode("grid")}
-              className={`rounded-[5px] ${
-                viewMode === "grid" ? "bg-gray-100" : ""
-              }`}
-            >
-              <Grid className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className={`rounded-[5px] ${
-                viewMode === "list" ? "bg-gray-100" : ""
-              }`}
-            >
-              <ListIcon className="w-4 h-4" />
-            </Button>
+        {/* Search & Table */}
+        <Card className="p-4 space-y-4">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              className="pl-9"
+              placeholder="Search packages…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          {/* Applied Filters Display */}
-          {(appliedFilters.status !== "ALL" ||
-            appliedFilters.tier !== "ALL" ||
-            appliedFilters.priceRange !== "ALL") && (
-            <div className="flex flex-wrap gap-2 items-center">
-              {appliedFilters.status !== "ALL" && (
-                <Badge variant="secondary" className="flex items-center gap-2">
-                  Status: {appliedFilters.status}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
-                    onClick={() => removeFilter("status")}
-                  />
-                </Badge>
-              )}
-              {appliedFilters.tier !== "ALL" && (
-                <Badge variant="secondary" className="flex items-center gap-2">
-                  Tier: {appliedFilters.tier}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
-                    onClick={() => removeFilter("tier")}
-                  />
-                </Badge>
-              )}
-              {appliedFilters.priceRange !== "ALL" && (
-                <Badge variant="secondary" className="flex items-center gap-2">
-                  Price: £{appliedFilters.priceRange}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
-                    onClick={() => removeFilter("priceRange")}
-                  />
-                </Badge>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleResetFilters}
-                className="text-red-600 hover:text-red-700 cursor-pointer"
-              >
-                Clear all
-              </Button>
-            </div>
-          )}
-        </Card>
-
-        {/* Packages Section */}
-        <Card className="p-6 rounded-[5px]">
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-              <p className="text-gray-600 mt-3">Loading packages...</p>
-            </div>
-          ) : filteredPackages.length === 0 && packages.length > 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-900 mb-1">
-                No packages found
-              </h3>
-              <p className="text-gray-600">
-                Try adjusting your search or filters
-              </p>
-            </div>
-          ) : filteredPackages.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-900 mb-1">
-                No packages yet
-              </h3>
-              <p className="text-gray-600">
-                Create your first package to get started
-              </p>
+            <p className="py-8 text-center text-gray-500">Loading…</p>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center">
+              <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No packages found.</p>
+              <Button
+                variant="outline"
+                className="mt-3"
+                onClick={() => router.push("/admin/dashboard/packages/new")}
+              >
+                Create your first package
+              </Button>
             </div>
           ) : (
-            <AdminPackageList
-              packages={filteredPackages}
-              viewMode={viewMode}
-              onView={setSelectedPackage}
-              onEdit={handleOpenEditModal}
-              onDelete={(id) => setDeleteConfirm(id)}
-            />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-gray-500">
+                    <th className="pb-3 pr-4 font-medium">Name</th>
+                    <th className="pb-3 pr-4 font-medium">Price</th>
+                    <th className="pb-3 pr-4 font-medium">Duration</th>
+                    <th className="pb-3 pr-4 font-medium">Listings</th>
+                    <th className="pb-3 pr-4 font-medium">Features</th>
+                    <th className="pb-3 pr-4 font-medium">Status</th>
+                    <th className="pb-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filtered.map((pkg) => {
+                    const featureCount = [
+                      pkg.showOwnerName, pkg.showOwnerPhone, pkg.directInquiryToOwner,
+                      pkg.adminCCOnInquiry, pkg.fullAdminSupport, pkg.docExpiryAlert,
+                    ].filter(Boolean).length;
+                    return (
+                      <tr key={pkg.id} className="hover:bg-gray-50">
+                        <td className="py-3 pr-4">
+                          <p className="font-medium text-gray-900">{pkg.name}</p>
+                          {pkg.shortDescription && (
+                            <p className="text-xs text-gray-500 truncate max-w-[180px]">{pkg.shortDescription}</p>
+                          )}
+                        </td>
+                        <td className="py-3 pr-4 font-semibold text-gray-900">
+                          £{pkg.price.toFixed(2)}
+                        </td>
+                        <td className="py-3 pr-4 text-gray-600">
+                          {formatDuration(pkg.durationValue, pkg.durationUnit)}
+                        </td>
+                        <td className="py-3 pr-4 text-gray-600">
+                          {pkg.propertyLimit === 0 ? "Unlimited" : pkg.propertyLimit}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span className="text-gray-600">{featureCount} / 6 on</span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <Badge className={pkg.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
+                            {pkg.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </td>
+                        <td className="py-3">
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => router.push(`/admin/dashboard/packages/${pkg.id}/edit`)}
+                            >
+                              <Pencil className="w-3 h-3 mr-1" /> Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => { setDeleteConfirm(pkg.id); setDeleteError(""); }}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
 
-        {/* Package Details Modal */}
-        {selectedPackage && (
-          <Card className="border-2 border-green-600 p-6 rounded-[5px]">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedPackage.name}
-                </h2>
-                <p className="text-gray-600 text-sm mt-1">
-                  Package Details & Information
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                onClick={() => setSelectedPackage(null)}
-                className="rounded-[5px]"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Package Information */}
-              <div className="space-y-4">
-                <h3 className="font-bold text-gray-900 text-lg">
-                  Package Information
-                </h3>
-                <div className="space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">Tier</p>
-                    <p className="font-semibold mt-1">{selectedPackage.tier}</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">Price</p>
-                    <p className="font-semibold mt-1">
-                      £{selectedPackage.price}/{selectedPackage.duration}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">Status</p>
-                    <p className="font-semibold mt-1">
-                      {selectedPackage.isActive ? (
-                        <span className="text-green-600">Active</span>
-                      ) : (
-                        <span className="text-red-600">Inactive</span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Subscribers
-                    </p>
-                    <p className="font-semibold mt-1">
-                      {selectedPackage.subscribers}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Limits & Features */}
-              <div className="space-y-4">
-                <h3 className="font-bold text-gray-900 text-lg">
-                  Limits & Features
-                </h3>
-                <div className="space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Properties
-                    </p>
-                    <p className="font-semibold mt-1">
-                      {selectedPackage.propertyLimit}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Featured
-                    </p>
-                    <p className="font-semibold mt-1">
-                      {selectedPackage.featuredLimit}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Storage
-                    </p>
-                    <p className="font-semibold mt-1">
-                      {selectedPackage.storageLimit}GB
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Daily Leads
-                    </p>
-                    <p className="font-semibold mt-1">
-                      {selectedPackage.dailyLeadsLimit}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-[5px]">
-                    <p className="text-sm text-gray-600 font-semibold">
-                      Support Level
-                    </p>
-                    <p className="font-semibold mt-1 capitalize">
-                      {selectedPackage.supportLevel}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Delete Confirmation Dialog */}
+        {/* Delete confirmation */}
         {deleteConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <Card className="w-full max-w-sm rounded-[5px]">
-              <div className="p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-2">
-                  Delete Package
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Are you sure you want to delete this package? This action cannot be
-                  undone.
-                </p>
-                <div className="flex gap-3 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => setDeleteConfirm(null)}
-                    disabled={deleting}
-                    className="rounded-[5px]"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDelete(deleteConfirm)}
-                    disabled={deleting}
-                    className="rounded-[5px]"
-                  >
-                    {deleting ? "Deleting..." : "Delete"}
-                  </Button>
-                </div>
+            <Card className="w-full max-w-sm p-6 space-y-4">
+              <h2 className="text-lg font-bold text-gray-900">Delete Package</h2>
+              <p className="text-gray-600 text-sm">
+                Are you sure you want to delete this package? This cannot be undone.
+              </p>
+              {deleteError && (
+                <p className="text-sm text-red-600 bg-red-50 rounded p-2">{deleteError}</p>
+              )}
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={deleting}>
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => handleDelete(deleteConfirm)}
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting…" : "Delete"}
+                </Button>
               </div>
             </Card>
           </div>
         )}
       </div>
-
-      {/* Filter Modal */}
-      <AdminPackageFilterModal
-        isOpen={filterModalOpen}
-        onClose={() => setFilterModalOpen(false)}
-        filters={appliedFilters}
-        onApplyFilters={handleApplyFilters}
-        onResetFilters={handleResetFilters}
-      />
-
-      {/* Package Add/Edit Modal */}
-      <AdminPackageModal
-        isOpen={packageModalOpen}
-        onClose={() => setPackageModalOpen(false)}
-        onSave={handleSavePackage}
-        package={editingPackage}
-        saving={saving}
-      />
     </AdminDashboardLayout>
   );
 }

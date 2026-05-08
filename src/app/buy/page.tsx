@@ -5,10 +5,10 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import BuyHero from "@/components/Buy/BuyHero";
+import BuyHero from "@/components/buy/BuyHero";
 import BuyFilters from "@/components/search/BuyFilters";
 import PropertyGrid from "@/components/property/PropertyGrid";
-import HowItWorks from "@/components/Buy/HowItWorks";
+import HowItWorks from "@/components/buy/HowItWorks";
 
 export interface BuyFiltersState {
   priceRange: [number, number];

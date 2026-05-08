@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PropertyGrid from "@/components/property/PropertyGrid";
-import LongRentHero from "@/components/Rent/LongRentHero";
-import HowLongRentWorks from "@/components/Rent/HowLongRentWorks";
+import LongRentHero from "@/components/rent/LongRentHero";
+import HowLongRentWorks from "@/components/rent/HowLongRentWorks";
 import LongRentFilters from "@/components/search/LongRentFilters";
 
 export interface LongRentFiltersState {

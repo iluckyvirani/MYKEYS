@@ -17,9 +17,11 @@ import {
   Loader,
   AlertCircle,
   MapPin,
+  Package,
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { OwnerPackageWithUsage } from "@/types/package";
 
 interface OwnerProperty {
   id: string;
@@ -173,6 +175,7 @@ export default function OwnerPropertiesPage() {
   const [loading, setLoading] = useState(true);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ownerPkg, setOwnerPkg] = useState<OwnerPackageWithUsage | null>(null);
 
   const fetchProperties = useCallback(async () => {
     try {
@@ -193,6 +196,7 @@ export default function OwnerPropertiesPage() {
 
   useEffect(() => {
     fetchProperties();
+    api.get("/api/owner/packages").then((res) => setOwnerPkg(res.data?.data ?? null)).catch(() => {});
   }, [fetchProperties]);
 
   const filteredProperties = useMemo(() => {
@@ -238,8 +242,38 @@ export default function OwnerPropertiesPage() {
   const totalBookings = properties.reduce((sum, p) => sum + p.bookings, 0);
   const avgRating = properties.length > 0 ? (properties.reduce((sum, p) => sum + p.rating, 0) / properties.length).toFixed(1) : "0.0";
 
+  // A property is "gated" if it needs a package to be published (LONG_RENT or BUY)
+  const isGated = (p: OwnerProperty) => p.listingType === "buy" || p.rentalType === "long";
+  const hasPackage = ownerPkg !== null;
+  const packageFull = hasPackage && ownerPkg!.propertiesLimit > 0 && ownerPkg!.propertiesUsed >= ownerPkg!.propertiesLimit;
+
   return (
     <DashboardLayout defaultRole="owner">
+      {/* Package banner for owners with gated listings but no package */}
+      {!hasPackage && properties.some(isGated) && (
+        <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-[5px] p-4 text-amber-900">
+          <Package className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
+          <div className="flex-1">
+            <p className="font-semibold">Package required for Long Rent &amp; Buy listings</p>
+            <p className="text-sm mt-0.5">You have Long Rent or Buy listings that need an active package to be published.</p>
+          </div>
+          <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
+            <Link href="/owner/packages"><Package className="w-4 h-4 mr-1" /> Buy a Package</Link>
+          </Button>
+        </div>
+      )}
+      {hasPackage && packageFull && properties.some((p) => isGated(p) && p.status !== "active") && (
+        <div className="mb-5 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-[5px] p-4 text-blue-900">
+          <Package className="w-5 h-5 shrink-0 mt-0.5 text-blue-600" />
+          <div className="flex-1">
+            <p className="font-semibold">Listing limit reached</p>
+            <p className="text-sm mt-0.5">Your current package is full ({ownerPkg!.propertiesUsed}/{ownerPkg!.propertiesLimit} listings used). Upgrade to publish more properties.</p>
+          </div>
+          <Button asChild size="sm" variant="outline" className="shrink-0">
+            <Link href="/owner/packages">Upgrade</Link>
+          </Button>
+        </div>
+      )}
       {/* Header */}
       <div className="mb-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -509,15 +543,25 @@ export default function OwnerPropertiesPage() {
                         Edit
                       </Button>
                     </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 rounded-[5px] cursor-pointer"
-                      disabled={updatingStatusId === property.id}
-                      onClick={() => togglePropertyStatus(property.id)}
-                    >
-                      {property.status === "active" ? "Deactivate" : "Activate"}
-                    </Button>
+                    {isGated(property) && !hasPackage ? (
+                      <Button asChild size="sm" className="flex-1 rounded-[5px] bg-amber-500 hover:bg-amber-600 text-white text-xs">
+                        <Link href="/owner/packages"><Package className="w-3 h-3 mr-1" />Get Package</Link>
+                      </Button>
+                    ) : isGated(property) && packageFull && property.status !== "active" ? (
+                      <Button asChild size="sm" variant="outline" className="flex-1 rounded-[5px] text-xs">
+                        <Link href="/owner/packages">Upgrade</Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 rounded-[5px] cursor-pointer"
+                        disabled={updatingStatusId === property.id}
+                        onClick={() => togglePropertyStatus(property.id)}
+                      >
+                        {property.status === "active" ? "Deactivate" : "Activate"}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -598,12 +642,25 @@ export default function OwnerPropertiesPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={updatingStatusId === property.id}
-                          className="h-8 px-2"
-                          onClick={() => togglePropertyStatus(property.id)}
-                        >
-                          {property.status === "active" ? "Deactivate" : "Activate"}
-                        </Button>
+                          {isGated(property) && !hasPackage ? (
+                            <Button asChild size="sm" className="h-8 px-2 bg-amber-500 hover:bg-amber-600 text-white text-xs">
+                              <Link href="/owner/packages"><Package className="w-3 h-3 mr-1" />Get Package</Link>
+                            </Button>
+                          ) : isGated(property) && packageFull && property.status !== "active" ? (
+                            <Button asChild size="sm" variant="outline" className="h-8 px-2 text-xs">
+                              <Link href="/owner/packages">Upgrade</Link>
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={updatingStatusId === property.id}
+                              className="h-8 px-2"
+                              onClick={() => togglePropertyStatus(property.id)}
+                            >
+                              {property.status === "active" ? "Deactivate" : "Activate"}
+                            </Button>
+                          )}
                       </div>
                     </td>
                   </tr>

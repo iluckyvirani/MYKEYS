@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from "@/lib/response";
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { packageService } from "@/lib/packages/packageService";
 
 /**
  * GET /api/properties/[id]
@@ -103,7 +104,7 @@ export async function GET(
  */
 export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { id } = await context!.params;
+    const id = context!.params.id;
     try {
       // Check if property exists and user owns it
       const existingProperty = await prisma.property.findUnique({
@@ -127,6 +128,47 @@ export const PATCH = withAuth<{ id: string }>(
       }
 
       const body = await request.json();
+
+      // ─── Publishing gate ────────────────────────────────────────────────
+      // LONG_RENT and BUY properties require an active package to go ACTIVE.
+      // SHORT_TERM (rentalType = SHORT_TERM) can publish freely.
+      if (body.status === 'ACTIVE' && user.role !== 'ADMIN') {
+        const effectiveListingType = body.listingType ?? existingProperty.listingType;
+        const effectiveRentalType  = body.rentalType  ?? existingProperty.rentalType;
+
+        const needsPackage =
+          effectiveListingType === 'BUY' ||
+          (effectiveListingType === 'RENT' && effectiveRentalType !== 'SHORT_TERM');
+
+        if (needsPackage) {
+          const { allowed, reason } = await packageService.canPublish(existingProperty.ownerId);
+          if (!allowed) {
+            return errorResponse(reason!, 403, ErrorCode.FORBIDDEN);
+          }
+          // If the property is being published for the first time, increment usage
+          if (existingProperty.status !== 'ACTIVE') {
+            await packageService.incrementPropertyUsage(existingProperty.ownerId);
+          }
+        }
+      }
+
+      // If an ACTIVE property is being deactivated, decrement package usage
+      if (
+        body.status &&
+        body.status !== 'ACTIVE' &&
+        existingProperty.status === 'ACTIVE' &&
+        user.role !== 'ADMIN'
+      ) {
+        const effectiveListingType = existingProperty.listingType;
+        const effectiveRentalType  = existingProperty.rentalType;
+        const hadPackageGate =
+          effectiveListingType === 'BUY' ||
+          (effectiveListingType === 'RENT' && effectiveRentalType !== 'SHORT_TERM');
+        if (hadPackageGate) {
+          await packageService.decrementPropertyUsage(existingProperty.ownerId);
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
 
       // Update property
       const property = await prisma.property.update({
@@ -187,7 +229,7 @@ export const PATCH = withAuth<{ id: string }>(
  */
 export const DELETE = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { id } = await context!.params;
+    const id = context!.params.id;
     try {
       // Check if property exists and user owns it
       const existingProperty = await prisma.property.findUnique({

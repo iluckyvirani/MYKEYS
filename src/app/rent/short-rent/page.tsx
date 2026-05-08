@@ -4,9 +4,9 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import ShortRentHero from "@/components/Rent/ShortRentHero";
+import ShortRentHero from "@/components/rent/ShortRentHero";
 import PropertyGrid from "@/components/property/PropertyGrid";
-import HowShortRentWorks from "@/components/Rent/HowShortRentWorks";
+import HowShortRentWorks from "@/components/rent/HowShortRentWorks";
 import ShortRentFilters from "@/components/search/ShortRentFilters";
 
 export interface ShortRentFiltersState {

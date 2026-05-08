@@ -1,0 +1,1048 @@
+══════════════════════════════════════════════════════════════════════════════
+                    MYKEYS — FEATURE PHASES PLANNING DOCUMENT
+              Packages · Property Docs · Bidding · Chat Inquiries
+══════════════════════════════════════════════════════════════════════════════
+
+Last Updated : 8 May 2026
+Tech Stack   : Next.js 15 (App Router) · TypeScript · Prisma ORM · PostgreSQL
+               Tailwind CSS · Razorpay · Cloudinary
+Currency     : GBP (£)
+Auth         : JWT (access + refresh tokens)
+
+CODEBASE CONVENTIONS
+────────────────────
+  Folder naming: all src/components/* subfolders must be lowercase
+    (buy/, rent/, hero/, search/, layout/, etc.)
+    Component file names remain PascalCase (BuyHero.tsx, LongRentHero.tsx)
+
+  service/ vs services/ (INTENTIONAL distinction — do not change):
+    app/services/        → public consumer pages (browse, register)
+    app/service/         → service provider dashboard
+    api/services/        → public API (book, categories, providers)
+    api/service/         → provider API (earnings, profile, requests)
+    components/services/ → shared service UI components
+
+  types/ naming:
+    One canonical file per domain. Use bookings.ts (plural) not booking.ts.
+    If unsure, use plural for collection types (bookings, payments, packages).
+
+  components/admin/ will be created at the start of Phase 1 when first
+    admin-specific component is added.
+
+TABLE OF CONTENTS
+─────────────────
+  PHASE 1 — Owner Packages (Mandatory to Publish Properties)
+  PHASE 2 — Property Documents (Admin-Defined Required Documents)
+  PHASE 3 — Bidding / Boost for Short Rent Properties
+  PHASE 4 — Chat-Based Inquiries with Reminders
+  DEPENDENCY MAP
+  DATABASE CHANGES SUMMARY
+  API ENDPOINTS SUMMARY
+
+══════════════════════════════════════════════════════════════════════════════
+  WHY THIS ORDER?  — DEPENDENCY LOGIC
+══════════════════════════════════════════════════════════════════════════════
+
+  Phase 1 FIRST  → Packages gate LONG_RENT and BUY publishing.
+                   Also introduces AdminSettings model (used by Phase 3 commission
+                   and bid config). SHORT_TERM publishes freely; commission % set here.
+
+  Phase 2 SECOND → Document requirements apply to LONG_RENT and BUY properties.
+                   Comes after Phase 1 since docs are relevant to gated listings.
+                   SHORT_TERM doc types can optionally be configured too.
+
+  Phase 3 THIRD  → Bidding is SHORT_TERM only. No package dependency.
+                   Reuses AdminSettings from Phase 1 for bid config.
+                   Can be built in parallel with Phase 2 by a second developer.
+
+  Phase 4 LAST   → Chat inquiries sit on top of the full property & package system.
+                   Reminders reference existing users, properties, and packages.
+                   Can be built while Phase 3 is being tested (parallel dev possible).
+
+══════════════════════════════════════════════════════════════════════════════
+  PHASE 1 — OWNER PACKAGES
+  "Packages required only for LONG RENT and BUY listings"
+══════════════════════════════════════════════════════════════════════════════
+
+─────────────────────────────────────────
+  1.1  OVERVIEW
+─────────────────────────────────────────
+
+  Today the Package and OwnerPackage models exist in the schema but are NOT
+  enforced when an owner tries to publish a property. Phase 1 makes package
+  purchase mandatory for LONG RENT and BUY properties only.
+
+  SHORT RENT (SHORT_TERM) properties are completely free to publish —
+  no package is required. Short rent has its own separate monetisation
+  via the admin commission system (see section 1.10) and bidding (Phase 3).
+
+  Summary by listing type:
+  ┌─────────────────────────┬───────────────────────────────────────────────┐
+  │ Listing Type            │ Package needed to go live?                   │
+  ├─────────────────────────┼───────────────────────────────────────────────┤
+  │ LONG_RENT               │ YES — must have active package                │
+  │ BUY                     │ YES — must have active package                │
+  │ SHORT_TERM (short rent) │ NO  — free to publish; admin takes commission  │
+  └─────────────────────────┴───────────────────────────────────────────────┘
+
+  Packages are FULLY DYNAMIC — there are no fixed tiers (no BASIC/STANDARD/
+  PREMIUM). The Admin creates any number of packages with any name and any
+  combination of features. Examples of what admin might create:
+
+  ┌─────────────────────┬──────────────────────────────────────────────────┐
+  │ Package Name        │ Admin decides all fields freely                  │
+  │ (Admin chooses)     │                                                  │
+  ├─────────────────────┼──────────────────────────────────────────────────┤
+  │ e.g. "Starter"      │ Admin sets: price, duration, property limit,     │
+  │ e.g. "Pro"          │ feature flags, featured slots — completely free  │
+  │ e.g. "10-Day Trial" │ choice. No predefined defaults enforced.         │
+  │ e.g. "Annual Plus"  │                                                  │
+  └─────────────────────┴──────────────────────────────────────────────────┘
+
+─────────────────────────────────────────
+  1.2  PACKAGE FEATURES (FULLY CONFIGURABLE)
+─────────────────────────────────────────
+
+  Every package has the following fields. Admin sets EACH ONE freely when
+  creating or editing a package — there are no presets or locked defaults.
+
+  Field                            │ Type    │ What it controls
+  ─────────────────────────────────┼─────────┼──────────────────────────────────
+  Package Name                     │ Text    │ Display name shown to owners
+  Price                            │ Number  │ Cost in GBP
+  Duration Value                   │ Number  │ e.g. 10, 1, 6
+  Duration Unit                    │ Select  │ days / months / years
+  Property Limit                   │ Number  │ Max live listings (0 = unlimited)
+  Featured Slots                   │ Number  │ How many can be featured
+  Show Owner Name on listing       │ Yes/No  │ Owner full name visible publicly
+  Show Owner Phone on listing      │ Yes/No  │ Owner phone visible publicly
+  Inquiries go directly to owner   │ Yes/No  │ Inquiry emails/chat to owner
+  Admin CC'd on all inquiries      │ Yes/No  │ Admin also receives every inquiry
+  Full admin support               │ Yes/No  │ Dedicated admin handling
+  Property document expiry alert   │ Yes/No  │ Notifications when docs near expiry
+  Short Description                │ Text    │ Shown on the package card
+  Is Active                        │ Yes/No  │ Visible to owners for purchase
+
+─────────────────────────────────────────
+  1.3  ADMIN — PACKAGE MANAGEMENT
+─────────────────────────────────────────
+
+  Where: Admin Dashboard → "Packages" section (already partially exists)
+
+  NOTE: These packages apply to LONG_RENT and BUY properties ONLY.
+        SHORT_TERM properties are NOT affected by packages.
+
+  Actions Admin can do:
+  • Create a new package  → set name, price, duration (number + unit),
+                            all feature flags, property limit, featured slots
+  • Edit existing package → change any field; existing subscriptions are
+                            NOT affected until their renewal date
+  • Deactivate package    → new owners cannot buy it; existing owners unaffected
+  • Delete package        → only if no active OwnerPackage subscriptions exist
+
+  Required Fields when creating a package (all decided by Admin freely):
+  ─────────────────────────────────────────────────────────────────────
+  - Package Name           (text, required — Admin chooses any name)
+  - Price                  (number, GBP)
+  - Duration Value         (number, e.g. 10 / 1 / 6)
+  - Duration Unit          (days / months / years)
+    Examples: 10 days  → expires 10 days after purchase
+              1 month  → expires 1 month after purchase
+              1 year   → expires 1 year after purchase
+  - Property Limit         (number; enter 0 for unlimited)
+  - Featured Slots         (number)
+  - Show Owner Name        (toggle)
+  - Show Owner Phone       (toggle)
+  - Direct Inquiry to Owner(toggle)
+  - Admin CC on Inquiry    (toggle)
+  - Full Admin Support     (toggle)
+  - Doc Expiry Alert       (toggle)
+  - Short Description      (optional text)
+  - Is Active              (toggle — controls visibility to owners)
+
+─────────────────────────────────────────
+  1.4  OWNER — BUYING A PACKAGE
+─────────────────────────────────────────
+
+  Flow:
+  1. Owner registers / logs in as OWNER role
+  2. Owner can add and save ALL property types at any time — no package needed
+     to create or edit. Properties are saved as DRAFT.
+  3. SHORT_TERM properties: owner can publish (set ACTIVE) immediately,
+     no package required. Admin commission is applied on each booking.
+  4. LONG_RENT / BUY properties: owner must buy a package to go ACTIVE.
+  5. Owner goes to Owner Dashboard → "My Package" tab
+  6. Sees current package status (if any) or "No active package"
+  7. Clicks "Browse Packages" — sees all active packages with their
+     duration clearly shown (e.g., "10 Days", "1 Month", "1 Year")
+  8. Selects a package → Razorpay checkout opens
+  9. Payment success → OwnerPackage record created with:
+       status    = ACTIVE
+       startDate = today (purchase date)
+       endDate   = calculated from package duration:
+                     days   → startDate + durationValue days
+                     months → startDate + durationValue months
+                     years  → startDate + durationValue years
+       Example: Admin set duration = 10 days
+                Owner buys on 8 May → endDate = 18 May
+  10. Owner's DRAFT LONG_RENT / BUY properties can now be published
+      up to the package property limit
+
+  What happens if package expires:
+  • All owner's ACTIVE LONG_RENT / BUY properties become INACTIVE (cron job)
+  • SHORT_TERM properties are NOT affected — they stay ACTIVE
+  • Properties are NOT deleted — owner keeps them as INACTIVE drafts
+  • Owner sees a banner: "Your package expired — renew to re-activate listings"
+  • Owner can renew (same package) or upgrade → properties go ACTIVE again
+
+  What happens before owner buys a package:
+  • Owner CAN add, edit, save ALL property types freely (status = DRAFT)
+  • SHORT_TERM: owner can publish immediately — no package required
+  • LONG_RENT / BUY: NOT shown publicly until owner buys a package
+  • Owner Dashboard shows banner for LONG_RENT/BUY drafts: "Buy a package to
+    make your Long Rent / Buy listings live"
+  • A "Buy Package" button shown next to DRAFT LONG_RENT / BUY properties only
+
+─────────────────────────────────────────
+  1.5  PROPERTY PUBLISHING GATE
+─────────────────────────────────────────
+
+  Key principles:
+  • Owner can CREATE and SAVE all property types at any time (no package needed)
+  • SHORT_TERM: owner can set status → ACTIVE freely, no package check
+  • LONG_RENT / BUY: owner can only set status → ACTIVE if they have a
+    valid package with remaining property slots
+
+  Backend enforcement (on PATCH status → ACTIVE):
+  • If property.listingType = LONG_RENT or BUY:
+      1. Check owner has active OwnerPackage (status=ACTIVE, endDate > now)
+      2. Check propertiesUsed < package.propertyLimit
+      3. If either fails → return 403 with clear reason
+  • If property.listingType = RENT and rentalType = SHORT_TERM:
+      → No package check. Allow publish immediately.
+
+  Creating / editing a property (no package check — always allowed):
+  • POST /api/properties → allowed for any owner, status defaults to DRAFT
+  • PATCH /api/properties/[id] (edit fields) → always allowed
+  • PATCH /api/properties/[id] (status → ACTIVE) → package check only for
+    LONG_RENT and BUY
+
+  Public property listing / search queries:
+  • Only return properties where status = ACTIVE
+  • DRAFT / INACTIVE properties are never shown publicly
+
+  Frontend enforcement:
+  • Property form: save as draft works always
+  • SHORT_TERM: "Publish" button always enabled
+  • LONG_RENT / BUY: "Publish" button disabled with tooltip if no active package
+  • Property list in owner dashboard shows:
+      - DRAFT badge + "Buy Package to Publish" for LONG_RENT/BUY without package
+      - "3 of 5 properties used" usage counter (LONG_RENT/BUY) when package active
+  • Package banner shown only for owners with LONG_RENT / BUY drafts
+
+─────────────────────────────────────────
+  1.6  PROPERTY DETAIL PAGE — OWNER CONTACT VISIBILITY
+─────────────────────────────────────────
+
+  On the public property detail page (/property/[id]):
+
+  The contact section is driven entirely by the feature flags of whatever
+  package the owner currently has active — not by any fixed tier name.
+
+  Flag on owner's package             │ What user sees
+  ────────────────────────────────────┼──────────────────────────────────────
+  showOwnerName = false               │ Owner name hidden
+  showOwnerName = true                │ Owner full name shown
+  showOwnerPhone = false              │ Phone hidden
+  showOwnerPhone = true               │ Owner phone number shown
+  directInquiryToOwner = false        │ Inquiry goes to Admin only
+  directInquiryToOwner = true         │ Inquiry goes directly to owner
+  adminCCOnInquiry = true             │ Admin also receives a copy
+
+  These flags combine — e.g. an owner with showOwnerName=true,
+  showOwnerPhone=false, directInquiryToOwner=true gets: name visible,
+  no phone, inquiry direct to owner.
+
+─────────────────────────────────────────
+  1.7  DATABASE CHANGES — PHASE 1
+─────────────────────────────────────────
+
+  Existing Package model — changes:
+  ──────────────────────────────────────────────────
+  // 1. Remove:  tier      PackageTier  (no longer needed — no fixed tiers)
+  // 2. Replace: duration  String       (was "monthly"/"yearly")
+  // With:
+  durationValue          Int      @default(1)       // e.g. 10
+  durationUnit           String   @default("months") // "days" | "months" | "years"
+
+  // 3. Add feature flag fields (all default false — admin opts each in):
+  showOwnerName          Boolean  @default(false)
+  showOwnerPhone         Boolean  @default(false)
+  directInquiryToOwner   Boolean  @default(false)
+  adminCCOnInquiry       Boolean  @default(false)
+  fullAdminSupport       Boolean  @default(false)
+  docExpiryAlert         Boolean  @default(false)
+  bidFeatureEnabled      Boolean  @default(false)
+  // NOTE: bidFeatureEnabled removed — bidding is open to all owners
+  //       with SHORT_TERM properties, no package required
+
+  // 4. Keep unchanged: name, price, propertyLimit, featuredLimit,
+  //    storageLimit, features Json, isActive, description
+  // NOTE: The PackageTier enum in schema.prisma can also be removed
+  //       once the tier column is dropped.
+
+  endDate calculation helper (used when creating OwnerPackage):
+    if durationUnit = "days"   → add durationValue days to startDate
+    if durationUnit = "months" → add durationValue months to startDate
+    if durationUnit = "years"  → add durationValue years to startDate
+
+  No new models needed for Phase 1.
+  New migration: 20260508_add_package_feature_flags
+
+─────────────────────────────────────────
+  1.8  NEW / UPDATED API ENDPOINTS — PHASE 1
+─────────────────────────────────────────
+
+  POST   /api/admin/packages              Create package (admin only)
+  GET    /api/admin/packages              List all packages (admin only)
+  PATCH  /api/admin/packages/[id]         Edit package (admin only)
+  DELETE /api/admin/packages/[id]         Delete package (admin only)
+  GET    /api/packages                    Public list of active packages
+  GET    /api/packages/[id]               Public single package detail
+  POST   /api/owner/packages/subscribe    Owner buys a package (Razorpay)
+  GET    /api/owner/packages/current      Owner's active package info
+  POST   /api/owner/packages/renew        Renew/upgrade package
+
+  Updated:
+  POST   /api/properties                  Saves as DRAFT always
+  PATCH  /api/properties/[id]             Status → ACTIVE: checks package only
+                                          for LONG_RENT / BUY; SHORT_TERM free
+  GET    /api/properties/[id]             Returns owner contact based on package
+
+  Admin Settings (commission):
+  GET    /api/admin/settings              Get all admin settings
+  PATCH  /api/admin/settings              Update settings (incl. short rent
+                                          commission %)
+
+─────────────────────────────────────────
+  1.9  FRONTEND PAGES / COMPONENTS — PHASE 1
+─────────────────────────────────────────
+
+  Admin:
+    /admin/packages                       List all packages
+    /admin/packages/new                   Create package form
+    /admin/packages/[id]/edit             Edit package form
+
+  Owner Dashboard:
+    /owner/dashboard → "My Package" tab   Shows current package, expiry,
+                                          usage stats, renew/upgrade button
+    /owner/packages                       Browse & buy packages
+
+  Public:
+    /property/[id]                        Updated: owner contact section
+                                          conditionally shows name/phone
+
+─────────────────────────────────────────
+  1.10  SHORT RENT COMMISSION (ADMIN SETTING)
+─────────────────────────────────────────
+
+  Since short rent properties are free to publish, the platform monetises
+  short rent through a fixed commission percentage on every booking payment.
+
+  Admin sets this in: Admin Dashboard → Settings → "Short Rent Commission"
+
+  How it works:
+  • Admin enters a commission percentage (e.g., 10%)
+  • This value is stored in a global AdminSettings record
+  • When a short rent booking payment is completed via Razorpay:
+      - Platform keeps:  totalAmount × commissionPercent / 100
+      - Owner receives:  totalAmount − platformCommission
+  • Both amounts are recorded on the Payment record for transparency
+  • Admin can change the % at any time; the new rate applies to future
+    bookings only — already-paid bookings are not recalculated
+
+  Admin Settings fields for commission:
+  ─────────────────────────────────────────
+  shortRentCommissionPercent   Float   (e.g. 10 = 10%; range 0–100)
+
+  Database — NEW model: AdminSettings
+  ─────────────────────────────────────────
+  model AdminSettings {
+    id                          String  @id @default("singleton")
+    shortRentCommissionPercent  Float   @default(0)
+    // future global settings can be added here
+    updatedAt                   DateTime @updatedAt
+  }
+  (Single row, id always = "singleton". Use upsert to update.)
+
+  Payment model — add commission fields:
+  ─────────────────────────────────────────
+  commissionPercent   Float?   // rate applied at time of payment
+  commissionAmount    Float?   // actual GBP amount taken by platform
+  ownerEarnings       Float?   // amount owner receives (amount - commission)
+
+  Admin Settings UI:
+    /admin/settings                       Settings page with "Short Rent
+                                          Commission" input field (number, %)
+                                          Save button. Shows current value.
+
+══════════════════════════════════════════════════════════════════════════════
+  PHASE 2 — PROPERTY DOCUMENTS
+  "Admin defines required document types; owners upload per property"
+══════════════════════════════════════════════════════════════════════════════
+
+  DEPENDS ON: Phase 1 for LONG_RENT / BUY documents.
+              SHORT_TERM document types (if any) apply independently.
+
+─────────────────────────────────────────
+  2.1  OVERVIEW
+─────────────────────────────────────────
+
+  Currently, documents are for USER/OWNER identity verification only.
+  Phase 2 adds a separate document layer per PROPERTY.
+
+  Admin creates document type definitions (e.g., "Electricity Bill",
+  "Gas Safety Certificate"). Each definition includes:
+  • Whether the document is REQUIRED or optional
+  • Whether an Issue Date must be provided
+  • Whether an Expiry Date must be provided
+
+  When an owner adds or edits a property, they must upload all required
+  document types before the property can be published.
+
+─────────────────────────────────────────
+  2.2  ADMIN — DOCUMENT TYPE MANAGEMENT
+─────────────────────────────────────────
+
+  Where: Admin Dashboard → "Property Document Types"
+
+  Actions:
+  • Create document type
+  • Edit document type
+  • Mark active / inactive (inactive types are no longer required on new listings)
+  • Delete (only if no property has uploaded this type)
+
+  Required fields when creating a document type:
+  ────────────────────────────────────────────────
+  - Document Name          (e.g., "Electricity Bill", "Gas Safety Certificate")
+  - Description            (optional helper text shown to owner)
+  - Is Required?           (Yes / No — if Yes, owner cannot publish without it)
+  - Require Issue Date?    (Yes / No)
+  - Require Expiry Date?   (Yes / No)
+  - Applies To             (ALL / LONG_RENT / BUY / SHORT_RENT — can be multi-select)
+
+  Examples:
+  ─────────────────────────────────────────────────────────────────────────
+  Name                    │ Required │ Issue Date │ Expiry Date │ Applies To
+  ────────────────────────┼──────────┼────────────┼─────────────┼──────────
+  Electricity Bill        │ Yes      │ Yes        │ Yes         │ ALL
+  Gas Safety Certificate  │ Yes      │ Yes        │ Yes         │ LONG_RENT
+  EPC Certificate         │ Yes      │ Yes        │ Yes         │ BUY, LONG_RENT
+  Floor Plan              │ No       │ No         │ No          │ ALL
+  Title Deed              │ Yes      │ Yes        │ No          │ BUY
+  ─────────────────────────────────────────────────────────────────────────
+
+─────────────────────────────────────────
+  2.3  OWNER — UPLOADING PROPERTY DOCUMENTS
+─────────────────────────────────────────
+
+  Where: Owner adds/edits a property → "Documents" tab/step
+
+  Flow:
+  1. Owner opens the property form
+  2. "Documents" section shows all ACTIVE required document types
+     filtered to the property's listing type (LONG_RENT / BUY / SHORT_RENT)
+  3. For each document type:
+     • Upload button (Cloudinary upload)
+     • Issue Date field (shown only if Require Issue Date = Yes)
+     • Expiry Date field (shown only if Require Expiry Date = Yes)
+  4. Owner cannot submit "Publish" until all required documents are uploaded
+     and all required dates are filled in
+  5. Admin can see uploaded documents on the property detail in admin panel
+  6. Admin can verify or reject a document (similar to identity document flow)
+
+─────────────────────────────────────────
+  2.4  EXPIRY ALERTS
+─────────────────────────────────────────
+
+  A cron job (or Vercel cron) runs daily:
+
+  1. Finds all PropertyDocument records where:
+     - expiryDate is within the next 30 days
+     - property status = ACTIVE
+     - owner's package has docExpiryAlert = true
+
+  2. Creates a Notification for the owner:
+     "Your [Document Name] for [Property Title] expires on [date]. 
+      Please upload a new document to keep your listing active."
+
+  3. If expiryDate has passed:
+     - Property status is set to INACTIVE
+     - Owner gets a notification: "Your listing has been paused due to an
+       expired [Document Name]. Upload a new document to re-activate."
+     - Admin also gets notified
+
+─────────────────────────────────────────
+  2.5  DATABASE CHANGES — PHASE 2
+─────────────────────────────────────────
+
+  NEW model: PropertyDocumentType
+  ─────────────────────────────────
+  model PropertyDocumentType {
+    id              String   @id @default(cuid())
+    name            String   @unique
+    description     String?
+    isRequired      Boolean  @default(true)
+    requireIssueDate  Boolean  @default(false)
+    requireExpiryDate Boolean  @default(false)
+    appliesTo       String[] @default([])  // ["ALL"] or ["LONG_RENT","BUY"] etc.
+    isActive        Boolean  @default(true)
+    sortOrder       Int      @default(0)
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+
+    propertyDocuments PropertyDocument[]
+  }
+
+  NEW model: PropertyDocument
+  ────────────────────────────
+  model PropertyDocument {
+    id             String   @id @default(cuid())
+    documentUrl    String
+    fileName       String
+    fileSize       Int
+    mimeType       String?
+    issuedDate     DateTime?
+    expiryDate     DateTime?
+    status         String   @default("PENDING")  // PENDING, VERIFIED, REJECTED, EXPIRED
+    verifiedNotes  String?
+    verifiedBy     String?
+    verifiedAt     DateTime?
+
+    propertyId         String
+    property           Property             @relation(...)
+    documentTypeId     String
+    documentType       PropertyDocumentType @relation(...)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([propertyId])
+    @@index([documentTypeId])
+    @@index([expiryDate])
+    @@index([status])
+  }
+
+  Update Property model: add relation
+    propertyDocuments  PropertyDocument[]
+
+  New migration: 20260508_add_property_document_types
+
+─────────────────────────────────────────
+  2.6  NEW API ENDPOINTS — PHASE 2
+─────────────────────────────────────────
+
+  Admin — Document Type Management:
+  GET    /api/admin/property-document-types          List all
+  POST   /api/admin/property-document-types          Create
+  PATCH  /api/admin/property-document-types/[id]     Edit
+  DELETE /api/admin/property-document-types/[id]     Delete
+
+  Owner — Property Documents:
+  GET    /api/properties/[id]/documents              Get docs for a property
+  POST   /api/properties/[id]/documents              Upload a document
+  PATCH  /api/properties/[id]/documents/[docId]      Update (re-upload / update dates)
+  DELETE /api/properties/[id]/documents/[docId]      Remove a document
+
+  Admin — Verify Property Documents:
+  PATCH  /api/admin/property-documents/[docId]/verify   Verify / reject a doc
+
+  Public:
+  GET    /api/properties/[id]/documents/required        Returns list of required
+                                                         document types for the
+                                                         listing type (for frontend
+                                                         form validation)
+
+─────────────────────────────────────────
+  2.7  FRONTEND PAGES / COMPONENTS — PHASE 2
+─────────────────────────────────────────
+
+  Admin:
+    /admin/property-document-types              List + manage document types
+    /admin/property-document-types/new          Create form
+    /admin/properties/[id]                      Shows uploaded documents tab
+                                                with verify/reject action
+
+  Owner Dashboard:
+    /owner/dashboard/properties/[id]/edit       Documents step/tab added to
+                                                property form
+    Property form → Documents section:          Upload widget per document type,
+                                                issue/expiry date pickers,
+                                                upload status badge
+
+  Notifications:
+    Existing notification UI shows expiry alerts with link to upload
+
+══════════════════════════════════════════════════════════════════════════════
+  PHASE 3 — BIDDING / BOOST FOR SHORT RENT PROPERTIES
+  "Owners bid to appear at the top of search results for a zip code"
+══════════════════════════════════════════════════════════════════════════════
+
+  DEPENDS ON: Phase 1 (Admin Settings / commission infrastructure)
+  NO PACKAGE REQUIRED — any owner with an active SHORT_TERM listing can bid.
+
+─────────────────────────────────────────
+  3.1  OVERVIEW
+─────────────────────────────────────────
+
+  This works like a paid boost / ad placement, similar to Google Ads or
+  Zoopla featured listings:
+
+  • Only SHORT_TERM (short rent) properties can use bidding
+  • ANY owner with an active SHORT_TERM property can place a bid —
+    no package purchase required
+  • An owner places a bid for a specific zip code
+  • The highest active bid for that zip code appears FIRST in search results
+    for that zip code
+  • Bids have a time limit (owner sets start date + end date, up to 30 days)
+  • Payment is taken upfront via Razorpay for the full bid duration
+  • If a higher bid comes in, the lower bidder is NOT automatically displaced —
+    they retain their slot for the paid duration. The higher bidder goes above.
+  • Admin can see all active bids and override if needed
+
+─────────────────────────────────────────
+  3.2  HOW BID RANKING WORKS
+─────────────────────────────────────────
+
+  When a user searches short rent properties for a zip code:
+
+  1. Query all ACTIVE bids for that zip code where now() is between
+     bid.startDate and bid.endDate
+  2. Sort those properties by bid.amount DESC (highest bid first)
+  3. Place those properties at the top of the results (marked with a
+     small "Featured" or "Boosted" badge)
+  4. Below the boosted listings, show the regular results sorted by
+     the normal algorithm (createdAt, rating, etc.)
+
+  Multiple bids for same zip code — all show boosted, sorted by amount.
+  Maximum 3 boosted listings per zip code page at one time (Admin configurable).
+
+─────────────────────────────────────────
+  3.3  OWNER — PLACING A BID
+─────────────────────────────────────────
+
+  Where: Owner Dashboard → Properties → [Property] → "Boost / Bid"
+
+  Flow:
+  1. Owner selects a SHORT_RENT property
+  2. Clicks "Boost This Property"
+  3. Form shows:
+     • Zip Code to target        (pre-filled from property's zipCode, editable)
+     • Bid Amount (£/day)        (e.g., £5.00/day)
+     • Start Date                (today or future date)
+     • End Date                  (max 30 days from start)
+     • Total Cost preview        = bid amount × number of days
+     • Current highest bid for that zip code (if any) shown for reference
+  4. Owner confirms → Razorpay payment for total cost
+  5. Payment success → PropertyBid record created with status = ACTIVE
+  6. Property now appears boosted in that zip code search
+
+  Validation rules:
+  • Minimum bid: £1.00/day (Admin configurable in AdminSettings)
+  • Minimum duration: 1 day
+  • Maximum duration: 30 days (Admin configurable)
+  • Property must be ACTIVE and SHORT_TERM
+  • No package required — any owner can bid on their SHORT_TERM property
+  • Cannot have two overlapping active bids for the same property + zip code
+
+─────────────────────────────────────────
+  3.4  BID EXPIRY
+─────────────────────────────────────────
+
+  • When endDate passes, bid status automatically becomes EXPIRED
+    (handled by cron job or checked at query time)
+  • No refunds for expired bids (already paid for the days)
+  • Owner gets a notification 2 days before bid expires:
+    "Your boost for [Property] in [Zip Code] expires on [date]. 
+     Renew to keep your top placement."
+
+─────────────────────────────────────────
+  3.5  ADMIN — BID MANAGEMENT
+─────────────────────────────────────────
+
+  Where: Admin Dashboard → "Bids / Boosts"
+
+  Admin can:
+  • View all active, expired, and cancelled bids
+  • See bid amount, zip code, property, owner, dates, revenue
+  • Cancel a bid (with refund trigger via Razorpay)
+  • Configure in Admin Settings:
+      - Minimum bid amount per day (£)
+      - Maximum bid duration (days)
+      - Max boosted slots visible per zip code page
+
+─────────────────────────────────────────
+  3.6  DATABASE CHANGES — PHASE 3
+─────────────────────────────────────────
+
+  NEW model: PropertyBid
+  ───────────────────────
+  model PropertyBid {
+    id          String   @id @default(cuid())
+    zipCode     String                         // target zip code
+    amount      Float                          // £ per day
+    totalCost   Float                          // amount × days
+    startDate   DateTime
+    endDate     DateTime
+    status      String   @default("ACTIVE")   // ACTIVE, EXPIRED, CANCELLED
+
+    // Payment
+    paymentId   String?
+    razorpayOrderId   String?
+    razorpayPaymentId String?
+
+    // Relations
+    propertyId  String
+    property    Property @relation(...)
+    ownerId     String
+    owner       User     @relation(...)
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@index([zipCode])
+    @@index([status])
+    @@index([endDate])
+    @@index([propertyId])
+    @@index([ownerId])
+  }
+
+  Update Property model: add relation
+    bids  PropertyBid[]
+
+  New migration: 20260508_add_property_bids
+
+─────────────────────────────────────────
+  3.7  NEW API ENDPOINTS — PHASE 3
+─────────────────────────────────────────
+
+  Owner:
+  GET    /api/owner/bids                         Owner's bid history
+  POST   /api/owner/bids                         Place a new bid (+ Razorpay order)
+  POST   /api/owner/bids/[id]/payment/verify     Verify Razorpay payment
+  DELETE /api/owner/bids/[id]                    Cancel a bid (within 1 hour grace)
+
+  Admin:
+  GET    /api/admin/bids                         All bids (filterable)
+  PATCH  /api/admin/bids/[id]/cancel             Cancel + trigger refund
+  GET    /api/admin/settings                     Get all admin settings (incl. bids)
+  PATCH  /api/admin/settings                     Update settings (min bid, max slots,
+                                                 commission %, etc.)
+
+  Public (used by search):
+  GET    /api/properties?zipCode=SW1A&...        Updated to include boosted sort
+
+─────────────────────────────────────────
+  3.8  FRONTEND PAGES / COMPONENTS — PHASE 3
+─────────────────────────────────────────
+
+  Owner Dashboard:
+    /owner/dashboard/properties/[id]/boost       Bid placement form
+    /owner/dashboard/bids                        Owner's bid history, active bids
+
+  Admin:
+    /admin/bids                                  All bids list + stats
+    /admin/bids/settings                         Configure bid rules
+
+  Public:
+    Short rent search results page               Boosted properties appear first
+                                                 with "Boosted" badge
+    Property card                                Small "Boosted" label if active bid
+
+══════════════════════════════════════════════════════════════════════════════
+  PHASE 4 — CHAT-BASED INQUIRIES WITH REMINDERS
+  "Inquiries become persistent chat threads — like SpareRoom"
+══════════════════════════════════════════════════════════════════════════════
+
+  DEPENDS ON: Phase 1 (package determines who receives inquiry messages)
+  CAN START in parallel with Phase 3 if separate developer available.
+
+─────────────────────────────────────────
+  4.1  OVERVIEW
+─────────────────────────────────────────
+
+  Currently, inquiries are a single message with a status. Phase 4 converts
+  them into persistent threaded conversations:
+
+  • A user sends an inquiry about a property → creates the thread
+  • Owner (and Admin if Premium package) can reply in the same thread
+  • All previous messages are visible in chronological order
+  • New messages in the same inquiry do NOT create a new inquiry — they
+    append to the existing thread
+  • Owner and Admin can set a meeting reminder inside the thread
+    (e.g., "Property viewing tomorrow at 2pm")
+
+─────────────────────────────────────────
+  4.2  CHAT THREAD FLOW
+─────────────────────────────────────────
+
+  User side:
+  1. User views a property
+  2. Clicks "Send Inquiry" → fills in message form (first time)
+  3. Inquiry thread is created
+  4. User goes to /dashboard/inquiries → sees all their inquiry threads
+  5. Clicks a thread → sees chat window with all messages
+  6. Can send new messages in the thread
+
+  Owner side:
+  1. Owner goes to /owner/dashboard/inquiries
+  2. Sees list of inquiry threads sorted by last message date
+  3. Unread threads are highlighted
+  4. Clicks a thread → chat window → can reply, set reminder, change status
+
+  Admin side:
+  1. Admin goes to /admin/inquiries
+  2. Sees ALL inquiry threads across all properties
+  3. Can read and reply to any thread
+  4. For PREMIUM package owners: Admin is CC'd and can join the thread
+
+─────────────────────────────────────────
+  4.3  CHAT MESSAGES
+─────────────────────────────────────────
+
+  Message types in a thread:
+  ─────────────────────────────────────────────────────────────────────
+  Type              │ Description
+  ──────────────────┼──────────────────────────────────────────────────
+  TEXT              │ Normal chat message
+  STATUS_CHANGE     │ System message: "Owner marked inquiry as REPLIED"
+  REMINDER_SET      │ System message: "Viewing scheduled for 10 May 2pm"
+  ─────────────────────────────────────────────────────────────────────
+
+  Each message records:
+  • Who sent it (userId or "system")
+  • The sender's role (USER / OWNER / ADMIN)
+  • Message content
+  • Timestamp
+  • Read status (who has read it)
+
+─────────────────────────────────────────
+  4.4  REMINDERS
+─────────────────────────────────────────
+
+  Owner or Admin can set a reminder inside any inquiry thread:
+
+  Fields:
+  • Title           (e.g., "Property Viewing", "Follow-up Call")
+  • Date & Time     (date picker + time picker)
+  • Note            (optional extra context)
+  • Remind Who      (Owner / Admin / Both)
+
+  What happens:
+  • A system message is added to the thread:
+    "📅 Reminder set: [Title] on [Date] at [Time] by [Name]"
+  • An InquiryReminder record is saved
+  • A scheduled notification is created (or cron picks it up):
+    - 24 hours before: "Tomorrow: [Title] — Property [Address]"
+    - 1 hour before: "In 1 hour: [Title] — Property [Address]"
+  • Notification links directly to the inquiry thread
+
+─────────────────────────────────────────
+  4.5  DATABASE CHANGES — PHASE 4
+─────────────────────────────────────────
+
+  Existing Inquiry model — keep as the "thread header". Add fields:
+  ──────────────────────────────────────────────────────────────────
+  lastMessageAt   DateTime?    // for sorting threads by activity
+  lastMessageBy   String?      // userId of last sender
+  unreadByOwner   Int   @default(0)
+  unreadByUser    Int   @default(0)
+  unreadByAdmin   Int   @default(0)
+
+  NEW model: InquiryMessage
+  ──────────────────────────
+  model InquiryMessage {
+    id          String   @id @default(cuid())
+    content     String
+    messageType String   @default("TEXT")    // TEXT, STATUS_CHANGE, REMINDER_SET
+    senderRole  String                       // USER, OWNER, ADMIN, SYSTEM
+
+    // Relations
+    inquiryId   String
+    inquiry     Inquiry  @relation(...)
+    senderId    String?                      // null for SYSTEM messages
+    sender      User?    @relation(...)
+
+    // Read receipts
+    readBy      String[] @default([])        // array of userIds who have read
+
+    createdAt   DateTime @default(now())
+
+    @@index([inquiryId])
+    @@index([createdAt])
+    @@index([senderId])
+  }
+
+  NEW model: InquiryReminder
+  ───────────────────────────
+  model InquiryReminder {
+    id          String   @id @default(cuid())
+    title       String
+    scheduledAt DateTime
+    note        String?
+    remindOwner Boolean  @default(true)
+    remindAdmin Boolean  @default(false)
+    isCompleted Boolean  @default(false)
+    notifiedAt  DateTime?                    // when notification was sent
+
+    // Relations
+    inquiryId   String
+    inquiry     Inquiry  @relation(...)
+    createdById String
+    createdBy   User     @relation(...)
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@index([inquiryId])
+    @@index([scheduledAt])
+  }
+
+  Drop (or repurpose): InquiryNote model
+  ─────────────────────────────────────
+  InquiryNote currently holds internal admin notes.
+  Migrate to: InquiryMessage with messageType = "INTERNAL_NOTE" and
+  senderRole = "ADMIN" so it appears in admin view only, not visible to user.
+
+  New migration: 20260508_add_inquiry_chat
+
+─────────────────────────────────────────
+  4.6  NEW API ENDPOINTS — PHASE 4
+─────────────────────────────────────────
+
+  Shared (owner + user + admin, gated by role):
+  GET    /api/inquiries                           Thread list for logged-in user
+  GET    /api/inquiries/[id]                      Thread header + last 50 messages
+  GET    /api/inquiries/[id]/messages             Paginated message history
+  POST   /api/inquiries/[id]/messages             Send a message in thread
+  PATCH  /api/inquiries/[id]/messages/read        Mark messages as read
+  POST   /api/inquiries/[id]/reminders            Set a reminder
+  GET    /api/inquiries/[id]/reminders            Get reminders for a thread
+  PATCH  /api/inquiries/[id]/reminders/[rid]      Mark reminder complete
+
+  Admin:
+  GET    /api/admin/inquiries                     All threads (all properties)
+  PATCH  /api/admin/inquiries/[id]                Change status, assign to admin
+
+  (First inquiry message creation still uses:)
+  POST   /api/inquiries                           Creates thread + first message
+
+─────────────────────────────────────────
+  4.7  REAL-TIME vs POLLING
+─────────────────────────────────────────
+
+  Option A (Recommended for Phase 4): Polling
+  • Frontend polls GET /api/inquiries/[id]/messages every 10 seconds
+    when the chat window is open
+  • Simple, no extra infrastructure, works on Vercel serverless
+  • Add lastChecked timestamp so only new messages are returned
+
+  Option B (Phase 4+ upgrade): Server-Sent Events or WebSockets
+  • Requires Vercel Edge or a separate WebSocket server
+  • Better UX (instant messages) but more complex
+  • Recommended as a Phase 5 upgrade if polling feels slow
+
+─────────────────────────────────────────
+  4.8  FRONTEND PAGES / COMPONENTS — PHASE 4
+─────────────────────────────────────────
+
+  User Dashboard:
+    /dashboard/inquiries                 List of inquiry threads
+    /dashboard/inquiries/[id]            Chat window for a thread
+
+  Owner Dashboard:
+    /owner/dashboard/inquiries           List of inquiry threads
+    /owner/dashboard/inquiries/[id]      Chat window + reminder button
+                                         + status change dropdown
+
+  Admin:
+    /admin/inquiries                     All threads, filterable by property/status
+    /admin/inquiries/[id]                Chat window + reminder + assign + notes
+
+  Components to build:
+    InquiryThreadList                    Shows avatar, last message, unread count
+    InquiryChatWindow                    Message bubbles, input box, scroll to bottom
+    ReminderModal                        Date/time picker + title + note
+    SystemMessageBubble                  Styled differently from regular messages
+
+══════════════════════════════════════════════════════════════════════════════
+  DEPENDENCY MAP (VISUAL SUMMARY)
+══════════════════════════════════════════════════════════════════════════════
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  PHASE 1: Packages                                                  │
+  │  ─ Package model feature flags                                      │
+  │  ─ Owner purchase flow (Razorpay)                                   │
+  │  ─ Property publish gate                                            │
+  │  ─ Owner contact visibility on listing                              │
+  └──────────────────┬──────────────────────────────────────────────────┘
+                     │
+           ┌─────────┴──────────┐
+           │                    │
+           ▼                    ▼
+  ┌─────────────────┐  ┌─────────────────────────────────────────────┐
+  │ PHASE 2:        │  │ PHASE 3: Bidding                            │
+  │ Property Docs   │  │ ─ PropertyBid model                         │
+  │ ─ DocType model │  │ ─ Bid placement + Razorpay                  │
+  │ ─ PropDoc model │  │ ─ Boosted sort in search                    │
+  │ ─ Expiry alerts │  │ ─ Expiry cron + notifications               │
+  └────────┬────────┘  └─────────────────────────────────────────────┘
+           │
+           │  (Phase 4 can start in parallel with Phase 3)
+           ▼
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  PHASE 4: Chat Inquiries                                            │
+  │  ─ InquiryMessage model                                             │
+  │  ─ InquiryReminder model                                            │
+  │  ─ Chat UI (thread list + chat window)                              │
+  │  ─ Reminder notifications                                           │
+  └─────────────────────────────────────────────────────────────────────┘
+
+══════════════════════════════════════════════════════════════════════════════
+  DATABASE MIGRATIONS SUMMARY
+══════════════════════════════════════════════════════════════════════════════
+
+  Phase 1:  20260508_add_package_feature_flags
+            ALTER Package — add 7 boolean feature flag columns
+
+  Phase 2:  20260508_add_property_document_types
+            CREATE PropertyDocumentType
+            CREATE PropertyDocument
+            ALTER Property — add propertyDocuments relation
+
+  Phase 3:  20260508_add_property_bids
+            CREATE PropertyBid
+            ALTER Property — add bids relation
+
+  Phase 4:  20260508_add_inquiry_chat
+            CREATE InquiryMessage
+            CREATE InquiryReminder
+            ALTER Inquiry — add lastMessageAt, lastMessageBy,
+                            unreadByOwner, unreadByUser, unreadByAdmin
+            MIGRATE InquiryNote data → InquiryMessage (messageType=INTERNAL_NOTE)
+
+══════════════════════════════════════════════════════════════════════════════
+  ESTIMATED EFFORT (ROUGH GUIDE)
+══════════════════════════════════════════════════════════════════════════════
+
+  Phase 1 — Packages          ~5–7 days  (DB + Admin CRUD + Purchase flow + Gate)
+  Phase 2 — Property Docs     ~3–5 days  (DB + Admin CRUD + Owner upload + Alerts)
+  Phase 3 — Bidding           ~4–6 days  (DB + Bid form + Razorpay + Search sort)
+  Phase 4 — Chat Inquiries    ~6–9 days  (DB + Chat UI + Polling + Reminders)
+
+  Total (sequential):  ~18–27 days
+  Total (Phase 3 & 4 parallel after Phase 2): ~14–20 days
+
+══════════════════════════════════════════════════════════════════════════════
+  END OF DOCUMENT
+══════════════════════════════════════════════════════════════════════════════
