@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { Check, X, Zap, Badge, Database, TrendingUp, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { PACKAGE_CONFIGS } from "@/types/package";
-
 interface Package {
   id: string;
   tier: string;

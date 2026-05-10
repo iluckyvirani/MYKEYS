@@ -314,6 +314,14 @@ export default function PropertyDetailsPage() {
                 Edit Property
               </Button>
             </Link>
+            {property.listingType === "RENT" && property.rentalType === "SHORT_TERM" && (
+              <Link href={`/owner/dashboard/properties/${property.id}/boost`}>
+                <Button className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-white">
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Boost
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>

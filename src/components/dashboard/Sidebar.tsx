@@ -20,6 +20,7 @@ import {
   Key,
   Wrench,
   Bell,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -53,6 +54,7 @@ const ownerNavigation = [
   { name: "Payments", href: "/owner/dashboard/finance", icon: DollarSign },
   // { name: "Ads", href: "/owner/dashboard/ads", icon: Megaphone },
   { name: "Packages", href: "/owner/dashboard/packages", icon: Star },
+  { name: "Boosts", href: "/owner/dashboard/bids", icon: Zap },
   { name: "Reports", href: "/owner/dashboard/reports", icon: FileBarChart },
   { name: "Analytics", href: "/owner/dashboard/analytics", icon: BarChart3 },
   { name: "Profile", href: "/owner/dashboard/profile", icon: Settings },

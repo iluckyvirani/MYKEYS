@@ -132,6 +132,27 @@ export const packageService = {
     return { allowed: true };
   },
 
+  async getOwnerPackageUsage(ownerId: string): Promise<OwnerPackageWithUsage | null> {
+    return this.getOwnerActivePackage(ownerId);
+  },
+
+  async getUpgradeOptions(ownerId: string) {
+    const activeSub = await prisma.ownerPackage.findFirst({
+      where: { ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+      include: { package: { select: { price: true } } },
+    });
+    const currentPrice = activeSub?.package?.price ?? -1;
+    return prisma.package.findMany({
+      where: { isActive: true, price: { gt: currentPrice } },
+      orderBy: { price: 'asc' },
+    });
+  },
+
+  async canUpgradePackage(ownerId: string): Promise<boolean> {
+    const options = await this.getUpgradeOptions(ownerId);
+    return options.length > 0;
+  },
+
   async expirePackages() {
     const now = new Date();
 

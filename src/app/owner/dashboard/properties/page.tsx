@@ -639,10 +639,7 @@ export default function OwnerPropertiesPage() {
                             <Edit className="w-4 h-4" />
                           </Button>
                         </Link>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          {isGated(property) && !hasPackage ? (
+                        {isGated(property) && !hasPackage ? (
                             <Button asChild size="sm" className="h-8 px-2 bg-amber-500 hover:bg-amber-600 text-white text-xs">
                               <Link href="/owner/packages"><Package className="w-3 h-3 mr-1" />Get Package</Link>
                             </Button>

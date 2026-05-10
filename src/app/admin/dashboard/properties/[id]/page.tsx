@@ -1,15 +1,220 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Mail, Phone, MapPin, Building, Star, Home, AlertCircle, Users, DollarSign, Eye, Calendar, CheckCircle } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building, Star, Home, AlertCircle, Users, DollarSign, Eye, Calendar, CheckCircle, FileText, XCircle, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 
 interface PropertyDetailPageProps {
   params: Promise<{ id: string }>;
 }
+
+// ── Admin Property Documents sub-component ──────────────────────────────────
+
+const DOC_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  PENDING:  { label: "Under Review", color: "bg-yellow-100 text-yellow-800" },
+  VERIFIED: { label: "Verified",     color: "bg-green-100 text-green-800"  },
+  REJECTED: { label: "Rejected",     color: "bg-red-100 text-red-800"      },
+  EXPIRED:  { label: "Expired",      color: "bg-gray-100 text-gray-500"    },
+};
+
+function AdminPropertyDocuments({ propertyId }: { propertyId: string }) {
+  const [docs, setDocs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [verifying, setVerifying] = useState<string | null>(null);
+  const [verifyModal, setVerifyModal] = useState<{
+    docId: string;
+    action: "VERIFIED" | "REJECTED";
+    notes: string;
+  } | null>(null);
+
+  async function fetchDocs() {
+    setLoading(true);
+    try {
+      const res = await api.get(`/properties/${propertyId}/documents`);
+      setDocs(res.data?.data ?? []);
+    } catch {
+      setDocs([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (propertyId) fetchDocs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propertyId]);
+
+  async function handleVerify() {
+    if (!verifyModal) return;
+    setVerifying(verifyModal.docId);
+    try {
+      await api.patch(
+        `/admin/property-documents/${verifyModal.docId}/verify`,
+        { status: verifyModal.action, verifiedNotes: verifyModal.notes }
+      );
+      setVerifyModal(null);
+      await fetchDocs();
+    } catch {
+      /* silently fail */
+    } finally {
+      setVerifying(null);
+    }
+  }
+
+  if (loading) return <p className="text-gray-500 p-4">Loading documents...</p>;
+
+  return (
+    <div className="bg-white rounded-[8px] border p-6 space-y-4">
+      <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+        <FileText className="w-5 h-5 text-blue-600" /> Property Documents
+      </h3>
+
+      {docs.length === 0 ? (
+        <p className="text-gray-500 py-4">No documents uploaded yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {docs.map((doc) => {
+            const statusCfg = DOC_STATUS_CONFIG[doc.status] ?? DOC_STATUS_CONFIG.PENDING;
+            return (
+              <Card key={doc.id} className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-900">
+                        {doc.documentType?.name}
+                      </span>
+                      <Badge className={`${statusCfg.color} border-0 text-xs`}>
+                        {statusCfg.label}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {doc.fileName}
+                      {doc.issuedDate &&
+                        ` · Issued: ${new Date(doc.issuedDate).toLocaleDateString("en-GB")}`}
+                      {doc.expiryDate &&
+                        ` · Expires: ${new Date(doc.expiryDate).toLocaleDateString("en-GB")}`}
+                    </p>
+                    {doc.verifiedNotes && (
+                      <p className="text-xs text-red-600 mt-1">
+                        Note: {doc.verifiedNotes}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href={doc.documentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> View
+                    </a>
+                    {doc.status !== "VERIFIED" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-300 hover:bg-green-50 text-xs"
+                        onClick={() =>
+                          setVerifyModal({
+                            docId: doc.id,
+                            action: "VERIFIED",
+                            notes: "",
+                          })
+                        }
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 mr-1" /> Verify
+                      </Button>
+                    )}
+                    {doc.status !== "REJECTED" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-300 hover:bg-red-50 text-xs"
+                        onClick={() =>
+                          setVerifyModal({
+                            docId: doc.id,
+                            action: "REJECTED",
+                            notes: "",
+                          })
+                        }
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1" /> Reject
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Verify / Reject modal */}
+      {verifyModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-sm w-full p-6 space-y-4">
+            <h3 className="font-semibold text-gray-900 text-lg">
+              {verifyModal.action === "VERIFIED"
+                ? "Verify Document"
+                : "Reject Document"}
+            </h3>
+            <div className="space-y-1.5">
+              <label className="text-sm text-gray-600">
+                {verifyModal.action === "REJECTED"
+                  ? "Reason for rejection (shown to owner)"
+                  : "Notes (optional)"}
+              </label>
+              <textarea
+                className="w-full border rounded px-3 py-2 text-sm text-gray-800 h-24 resize-none"
+                value={verifyModal.notes}
+                onChange={(e) =>
+                  setVerifyModal((m) => m && { ...m, notes: e.target.value })
+                }
+                placeholder={
+                  verifyModal.action === "REJECTED"
+                    ? "e.g. Document is blurry or expired"
+                    : ""
+                }
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setVerifyModal(null)}
+                disabled={!!verifying}
+              >
+                Cancel
+              </Button>
+              <Button
+                className={
+                  verifyModal.action === "VERIFIED"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }
+                disabled={!!verifying}
+                onClick={handleVerify}
+              >
+                {verifying
+                  ? "Saving..."
+                  : verifyModal.action === "VERIFIED"
+                  ? "Confirm Verify"
+                  : "Confirm Reject"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main page ────────────────────────────────────────────────────────────────
 
 export default function PropertyDetailPage({ params }: PropertyDetailPageProps) {
   const router = useRouter();
@@ -79,7 +284,7 @@ export default function PropertyDetailPage({ params }: PropertyDetailPageProps) 
         <div className="space-y-6">
           {/* Tabs */}
           <div className="bg-white rounded-[8px] border p-4 flex gap-2 border-b overflow-x-auto">
-            {["overview", "owner", "bookings", "reviews", "inquiries"].map((tab) => (
+            {["overview", "owner", "bookings", "reviews", "inquiries", "documents"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -350,6 +555,11 @@ export default function PropertyDetailPage({ params }: PropertyDetailPageProps) 
                 <p className="text-center text-gray-500 py-8">No inquiries found</p>
               )}
             </div>
+          )}
+
+          {/* Documents Tab */}
+          {activeTab === "documents" && (
+            <AdminPropertyDocuments propertyId={propertyId} />
           )}
         </div>
       ) : null}

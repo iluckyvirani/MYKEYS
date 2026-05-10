@@ -89,7 +89,7 @@ export default function AdminPackagesPage() {
             </p>
           </div>
           <Button
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
             onClick={() => router.push("/admin/dashboard/packages/new")}
           >
             <Plus className="w-4 h-4 mr-2" /> Create Package

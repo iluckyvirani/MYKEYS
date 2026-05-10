@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import PropertyDocumentsTab from "@/components/owner/PropertyDocumentsTab";
 import { 
   Building, 
   MapPin, 
@@ -1043,9 +1044,10 @@ export default function EditPropertyPage() {
 
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {step === 1 ? "Edit Property - Basic Info" : 
-             step === 2 ? "Edit Property - Details & Pricing" : 
-             "Edit Property - Features & Images"}
+            {step === 1 ? "Edit Property - Basic Info" :
+             step === 2 ? "Edit Property - Details & Pricing" :
+             step === 3 ? "Edit Property - Features & Images" :
+             "Edit Property - Documents"}
           </h1>
           <p className="text-gray-600 mt-2">
             Update your property information
@@ -1055,7 +1057,7 @@ export default function EditPropertyPage() {
         {/* Progress Steps */}
         <div className="mt-8">
           <div className="flex items-center justify-between">
-            {[1, 2, 3].map((stepNumber) => (
+            {[1, 2, 3, 4].map((stepNumber) => (
               <div key={stepNumber} className="flex items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
                   step === stepNumber
@@ -1073,10 +1075,11 @@ export default function EditPropertyPage() {
                     {stepNumber === 1 && "Basic Info"}
                     {stepNumber === 2 && "Details & Pricing"}
                     {stepNumber === 3 && "Features & Images"}
+                    {stepNumber === 4 && "Documents"}
                   </div>
                 </div>
-                {stepNumber < 3 && (
-                  <div className={`w-24 h-0.5 mx-4 ${
+                {stepNumber < 4 && (
+                  <div className={`w-16 h-0.5 mx-3 ${
                     step > stepNumber ? "bg-green-600" : "bg-gray-300"
                   }`}></div>
                 )}
@@ -1101,6 +1104,15 @@ export default function EditPropertyPage() {
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
+          {step === 4 && id && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Property Documents</h3>
+                <p className="text-sm text-gray-500">Upload required documents for this property before publishing.</p>
+              </div>
+              <PropertyDocumentsTab propertyId={id} />
+            </div>
+          )}
 
           {/* Navigation Buttons */}
           <div className="flex justify-between pt-8 mt-8 border-t">
@@ -1116,13 +1128,13 @@ export default function EditPropertyPage() {
               <div></div>
             )}
 
-            {step < 3 ? (
+            {step < 4 ? (
               <Button
                 type="button"
-                onClick={() => setStep(step + 1)}
+                onClick={() => step === 3 ? setStep(4) : setStep(step + 1)}
                 className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
-                Next Step
+                {step === 3 ? "Next: Documents" : "Next Step"}
                 <Plus className="w-4 h-4 ml-2" />
               </Button>
             ) : (

@@ -388,7 +388,6 @@ export const paymentService = {
                 id: true,
                 name: true,
                 price: true,
-                tier: true,
               },
             },
           },
@@ -433,7 +432,6 @@ export const paymentService = {
             id: payment.package.id,
             name: payment.package.package.name,
             price: payment.package.package.price,
-            tier: payment.package.package.tier,
           }
         : undefined,
     };

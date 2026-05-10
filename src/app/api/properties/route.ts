@@ -4,6 +4,7 @@ import { successResponse, errorResponse, paginatedResponse } from "@/lib/respons
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { getBoostedPropertyIds, getAdminSettings } from "@/lib/bids/bidService";
 
 /**
  * GET /api/properties
@@ -151,8 +152,33 @@ export async function GET(request: NextRequest) {
         ...property,
         averageRating: Math.round(avgRating * 10) / 10,
         reviewCount: property.reviews.length,
+        isBoosted: false, // overridden below for short rent zip searches
       };
     });
+
+    // ── Boosted sort for SHORT_TERM + zipCode searches ───────────────────────
+    // Move boosted properties to the top when user is browsing a specific zip code
+    if (zipCode && rentalType === "SHORT_TERM") {
+      const settings = await getAdminSettings();
+      const boostedIds = await getBoostedPropertyIds(
+        zipCode,
+        settings.maxBoostedSlotsPerZip
+      );
+      if (boostedIds.length > 0) {
+        const boostedSet = new Set(boostedIds);
+        // Mark boosted flag
+        propertiesWithRating.forEach((p: any) => {
+          if (boostedSet.has(p.id)) p.isBoosted = true;
+        });
+        // Sort: boosted first (preserve bid order), then the rest
+        const boostedOrder = new Map(boostedIds.map((id, idx) => [id, idx]));
+        propertiesWithRating.sort((a: any, b: any) => {
+          const aIdx = boostedOrder.has(a.id) ? boostedOrder.get(a.id)! : Infinity;
+          const bIdx = boostedOrder.has(b.id) ? boostedOrder.get(b.id)! : Infinity;
+          return aIdx - bIdx;
+        });
+      }
+    }
 
     return paginatedResponse(
       propertiesWithRating,

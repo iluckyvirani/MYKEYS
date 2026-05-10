@@ -133,7 +133,6 @@ export interface PaymentDetailDTO extends PaymentDTO {
     id: string;
     name: string;
     price: number;
-    tier: string;
   };
   user?: {
     id: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Star, BedDouble, Bath, Maximize, MapPin, ChevronRight, Home, Moon, Calendar } from "lucide-react";
+import { Heart, Star, BedDouble, Bath, Maximize, MapPin, ChevronRight, Home, Moon, Calendar, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -30,6 +30,7 @@ export interface PropertyCardProps {
   priceType?: "nightly" | "monthly" | "total";
   minStay?: number;
   minTerm?: number;
+  isBoosted?: boolean;
 }
 
 export default function PropertyCard({
@@ -53,6 +54,7 @@ export default function PropertyCard({
   isNew,
   minStay,
   minTerm,
+  isBoosted,
 }: PropertyCardProps) {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
@@ -187,6 +189,12 @@ export default function PropertyCard({
             {isNew && (
               <span className="bg-linear-to-r from-green-500 to-emerald-600 text-white text-xs font-medium px-3 py-1.5 rounded-full">
                 New
+              </span>
+            )}
+            {isBoosted && (
+              <span className="bg-amber-500 text-white text-xs font-medium px-3 py-1.5 rounded-full inline-flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                Boosted
               </span>
             )}
           </div>

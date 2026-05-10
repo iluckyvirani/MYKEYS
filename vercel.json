@@ -5,6 +5,14 @@
     {
       "path": "/api/cron/expire-packages",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/expire-documents",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/expire-bids",
+      "schedule": "0 2 * * *"
     }
   ]
 }

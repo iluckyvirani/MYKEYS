@@ -252,6 +252,9 @@ model User {
   favorites       Favorite[]
   documents       Document[]     @relation("UserDocuments")
 
+  // Phase 3 — Bids
+  bids            PropertyBid[]
+
   // Service Relations
   serviceProvider ServiceProvider?
   serviceBookings ServiceBooking[] @relation("ServiceClient")
@@ -350,6 +353,8 @@ model Property {
   inquiries   Inquiry[]
   adCampaigns AdCampaign[]
   favorites   Favorite[]
+  propertyDocuments PropertyDocument[]
+  bids         PropertyBid[]
 
   // Analytics
   views     Int   @default(0)
@@ -713,8 +718,44 @@ model OwnerPackage {
 // Global admin-configurable settings (single row, id = "singleton")
 model AdminSettings {
   id                         String   @id @default("singleton")
-  shortRentCommissionPercent Float    @default(0) // e.g. 10 = 10%; range 0–100
+  shortRentCommissionPercent Float    @default(0)  // e.g. 10 = 10%; range 0–100
+  // Bid / Boost configuration (Phase 3)
+  minBidAmountPerDay         Float    @default(1)  // min £/day an owner can bid
+  maxBidDurationDays         Int      @default(30) // max days a bid can run
+  maxBoostedSlotsPerZip      Int      @default(3)  // max boosted listings per zip code page
   updatedAt                  DateTime @updatedAt
+}
+
+model PropertyBid {
+  id        String @id @default(cuid())
+  zipCode   String // target zip code
+  amount    Float  // £ per day
+  totalCost Float  // amount × days
+
+  startDate DateTime
+  endDate   DateTime
+  status    String   @default("ACTIVE") // ACTIVE, EXPIRED, CANCELLED
+
+  // Payment
+  paymentId          String?
+  razorpayOrderId    String?
+  razorpayPaymentId  String?
+  razorpaySignature  String?
+
+  // Relations
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  ownerId    String
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([zipCode])
+  @@index([status])
+  @@index([endDate])
+  @@index([propertyId])
+  @@index([ownerId])
 }
 
 model AdCampaign {
@@ -1111,4 +1152,56 @@ model TeamMemberPermission {
   @@unique([teamMemberId, permissionId])
   @@index([teamMemberId])
   @@index([permissionId])
+}
+
+// ─────────────────────────────────────────
+// PHASE 2 — PROPERTY DOCUMENTS
+// ─────────────────────────────────────────
+
+model PropertyDocumentType {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String?
+  isRequired        Boolean  @default(true)
+  requireIssueDate  Boolean  @default(false)
+  requireExpiryDate Boolean  @default(false)
+  /// Comma-separated or JSON array: "ALL" | "BUY" | "RENT_LONG" | "RENT_SHORT"
+  appliesTo         String[] @default([])
+  isActive          Boolean  @default(true)
+  sortOrder         Int      @default(0)
+
+  propertyDocuments PropertyDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model PropertyDocument {
+  id            String    @id @default(cuid())
+  documentUrl   String
+  fileName      String
+  fileSize      Int
+  mimeType      String?
+  issuedDate    DateTime?
+  expiryDate    DateTime?
+  /// PENDING | VERIFIED | REJECTED | EXPIRED
+  status        String    @default("PENDING")
+  verifiedNotes String?
+  verifiedBy    String?
+  verifiedAt    DateTime?
+
+  propertyId     String
+  property       Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  documentTypeId String
+  documentType   PropertyDocumentType @relation(fields: [documentTypeId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([documentTypeId])
+  @@index([expiryDate])
+  @@index([status])
 }

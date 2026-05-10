@@ -135,6 +135,7 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
           isNew: property.isNew || false,
           minStay: property.minStay || 1,
           minTerm: property.minTerm || 1,
+          isBoosted: property.isBoosted || false,
         }));
 
         setProperties(mappedProperties);

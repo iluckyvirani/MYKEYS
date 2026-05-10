@@ -43,6 +43,7 @@ const adminNavigation = [
   { name: "Service Categories", href: "/admin/dashboard/categories", icon: Grid3x3 },
   { name: "Amenities", href: "/admin/dashboard/amenities", icon: BarChart3 },
   { name: "Ads & Campaigns", href: "/admin/dashboard/ads", icon: Zap },
+  { name: "Boosts / Bids", href: "/admin/dashboard/bids", icon: Zap },
   { name: "Documents", href: "/admin/dashboard/documents", icon: FileCheck },
   { name: "Inquiries", href: "/admin/dashboard/inquiries", icon: MessageSquare },
   { name: "Reports", href: "/admin/dashboard/reports", icon: BarChart2 },
