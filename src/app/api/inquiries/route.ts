@@ -19,7 +19,8 @@ import { emailService } from '@/lib/email/emailService';
 /**
  * GET /api/inquiries
  * Fetch inquiries with filters
- * Query params: propertyId, ownerId, status, page, pageSize, search, forOwner
+ * Query params: propertyId, ownerId, status, page, pageSize, search, forOwner,
+ *               tab (all|inbox|sent|unread|not-replied|deleted), label, sortBy, sortOrder
  */
 export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
   try {
@@ -36,34 +37,48 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
     const status = searchParams.get('status');
     const search = searchParams.get('search');
     const forOwner = searchParams.get('forOwner') === 'true';
+    const tab = searchParams.get('tab') || 'all';
+    const labelFilter = searchParams.get('label');
+    const sortBy = searchParams.get('sortBy') || 'lastMessageAt';
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
 
-    // Owner inbox mode: show inquiries for properties owned by the authenticated owner.
     if (ownerId || forOwner) {
-      where.property = {
-        ownerId: user.userId,
-      };
-    } else if (propertyId) {
-      // User mode: always scope to logged-in user and optional property filter.
-      where.propertyId = propertyId;
-      where.userId = user.userId;
+      // Owner inbox mode
+      where.property = { ownerId: user.userId };
+      // Tab filtering for owner
+      if (tab === 'deleted') {
+        where.isDeletedByOwner = true;
+      } else {
+        where.isDeletedByOwner = false;
+        if (tab === 'unread') where.unreadByOwner = { gt: 0 };
+        if (labelFilter && labelFilter !== 'all') where.ownerLabel = labelFilter;
+      }
     } else {
-      // User mode default: only fetch the logged-in user's inquiries.
+      // User inbox mode
       where.userId = user.userId;
+      if (propertyId) where.propertyId = propertyId;
+      // Tab filtering for user
+      if (tab === 'deleted') {
+        where.isDeletedByUser = true;
+      } else {
+        where.isDeletedByUser = false;
+        if (tab === 'unread') where.unreadByUser = { gt: 0 };
+        if (tab === 'not-replied') where.unreadByUser = { gt: 0 }; // last msg not from user
+        if (labelFilter && labelFilter !== 'all') where.userLabel = labelFilter;
+      }
     }
     
     const fromDate = searchParams.get('fromDate');
     const toDate = searchParams.get('toDate');
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
-    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
 
     if (status) where.status = status;
     
-    // Search by guest name or email
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search, mode: 'insensitive' } },
+        { property: { title: { contains: search, mode: 'insensitive' } } },
       ];
     }
 
@@ -77,10 +92,11 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
       }
     }
 
-    const validSortFields: Record<string, object> = {
+    const orderByMap: Record<string, any> = {
+      lastMessageAt: { lastMessageAt: sortOrder },
       createdAt: { createdAt: sortOrder },
     };
-    const orderBy = validSortFields[sortBy] || { createdAt: 'desc' };
+    const orderBy = orderByMap[sortBy] || { lastMessageAt: sortOrder };
 
     const [inquiries, total] = await Promise.all([
       prisma.inquiry.findMany({
@@ -94,6 +110,14 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
               id: true,
               title: true,
               price: true,
+              owner: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatar: true,
+                },
+              },
             },
           },
           user: {
@@ -102,15 +126,23 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
               firstName: true,
               lastName: true,
               email: true,
+              avatar: true,
             },
+          },
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { content: true, createdAt: true, senderRole: true },
           },
         },
       }),
       prisma.inquiry.count({ where }),
     ]);
 
-    const mappedInquiries = inquiries.map((inquiry): any => {
-      const baseInquiry = {
+    const mappedInquiries = inquiries.map((inquiry: any): any => {
+      const lastMsg = inquiry.messages?.[0];
+      const ownerUser = inquiry.property?.owner;
+      return {
         id: inquiry.id,
         propertyId: inquiry.propertyId,
         propertyTitle: inquiry.property?.title || 'Unknown Property',
@@ -118,51 +150,43 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
         guestName: inquiry.name || (inquiry.user ? `${inquiry.user.firstName} ${inquiry.user.lastName}` : ''),
         guestEmail: inquiry.email,
         guestPhone: inquiry.phone || '',
+        guestAvatar: inquiry.user?.avatar || null,
+        ownerName: ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : '',
+        ownerAvatar: ownerUser?.avatar || null,
+        ownerId: ownerUser?.id || '',
         message: inquiry.message,
+        lastMessage: lastMsg?.content || inquiry.message || '',
+        lastMessageAt: inquiry.lastMessageAt?.toISOString() || inquiry.updatedAt?.toISOString() || inquiry.createdAt.toISOString(),
+        lastMessageRole: lastMsg?.senderRole || 'USER',
         response: inquiry.response,
         status: inquiry.status,
         priority: inquiry.priority,
+        type: inquiry.type || 'general',
+        inquiryType: inquiry.type === 'long_term' ? 'LONG_RENT' : 'BUY',
+        budget: inquiry.budget,
+        userLabel: inquiry.userLabel || null,
+        ownerLabel: inquiry.ownerLabel || null,
+        unreadByUser: inquiry.unreadByUser || 0,
+        unreadByOwner: inquiry.unreadByOwner || 0,
+        unreadByAdmin: inquiry.unreadByAdmin || 0,
+        isDeletedByUser: inquiry.isDeletedByUser || false,
+        isDeletedByOwner: inquiry.isDeletedByOwner || false,
         createdAt: inquiry.createdAt.toISOString(),
         updatedAt: inquiry.updatedAt.toISOString(),
       };
-
-      // Map to appropriate inquiry type
-      if (inquiry.type === 'long_term') {
-        return {
-          ...baseInquiry,
-          inquiryType: InquiryType.LONG_RENT,
-          type: 'long_term',
-          desiredDurationMonths: inquiry.duration ? parseInt(inquiry.duration) : 12,
-          pricePerMonth: inquiry.property?.price || 0,
-          propertyPrice: inquiry.property?.price || 0,
-          budget: inquiry.budget || 0,
-          ownerId: forOwner || ownerId ? user.userId : undefined,
-        } as any;
-      } else {
-        return {
-          ...baseInquiry,
-          inquiryType: InquiryType.BUY,
-          type: 'purchase',
-          propertyPrice: inquiry.property?.price || 0,
-          budget: inquiry.budget || 0,
-          ownerId: forOwner || ownerId ? user.userId : undefined,
-        } as BuyInquiry;
-      }
     });
 
-    const response: InquiryListResponse = {
+    return NextResponse.json({
       success: true,
       message: 'Inquiries retrieved successfully',
       data: {
-        items: mappedInquiries as any,
+        items: mappedInquiries,
         total,
         page,
         pageSize,
         totalPages: Math.ceil(total / pageSize),
       },
-    };
-
-    return NextResponse.json(response);
+    });
   } catch (error) {
     console.error('Error fetching inquiries:', error);
     return NextResponse.json(
@@ -171,6 +195,7 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
     );
   }
 });
+
 
 /**
  * POST /api/inquiries

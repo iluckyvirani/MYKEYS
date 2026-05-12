@@ -772,92 +772,371 @@ TABLE OF CONTENTS
 ─────────────────────────────────────────
 
   Currently, inquiries are a single message with a status. Phase 4 converts
-  them into persistent threaded conversations:
+  them into persistent threaded conversations modelled on SpareRoom's messaging
+  UX (see attached screenshots).
 
-  • A user sends an inquiry about a property → creates the thread
-  • Owner (and Admin if Premium package) can reply in the same thread
-  • All previous messages are visible in chronological order
-  • New messages in the same inquiry do NOT create a new inquiry — they
-    append to the existing thread
-  • Owner and Admin can set a meeting reminder inside the thread
-    (e.g., "Property viewing tomorrow at 2pm")
+  KEY BEHAVIOUR CHANGE (CRITICAL — fix immediately in current code):
+  ──────────────────────────────────────────────────────────────────
+  Currently the "Message" button / inquiry form on the property detail page
+  allows unauthenticated users to send a message. THIS MUST CHANGE.
 
-─────────────────────────────────────────
-  4.2  CHAT THREAD FLOW
-─────────────────────────────────────────
+  New rule: A user MUST be logged in to send an inquiry.
+    • If NOT logged in and user clicks "Message" on a property:
+        → Show a prompt inside the message panel:
+          "You need an account to send a message."
+          [Log in]  [Sign up]
+          Both buttons redirect to /login or /signup with a returnUrl back to
+          the property page so the user lands back after authenticating.
+    • If logged in → show the message compose form as described in 4.2.
 
-  User side:
-  1. User views a property
-  2. Clicks "Send Inquiry" → fills in message form (first time)
-  3. Inquiry thread is created
-  4. User goes to /dashboard/inquiries → sees all their inquiry threads
-  5. Clicks a thread → sees chat window with all messages
-  6. Can send new messages in the thread
-
-  Owner side:
-  1. Owner goes to /owner/dashboard/inquiries
-  2. Sees list of inquiry threads sorted by last message date
-  3. Unread threads are highlighted
-  4. Clicks a thread → chat window → can reply, set reminder, change status
-
-  Admin side:
-  1. Admin goes to /admin/inquiries
-  2. Sees ALL inquiry threads across all properties
-  3. Can read and reply to any thread
-  4. For PREMIUM package owners: Admin is CC'd and can join the thread
+  After the login/signup gate is in place, the full chat system works:
+  • User sends first message → Inquiry thread created
+  • Owner replies → message appended to same thread
+  • Both parties can send unlimited messages back and forth
+  • All history is visible in chronological order in the chat window
+  • Owner and Admin can set viewing/reminder events on the thread
 
 ─────────────────────────────────────────
-  4.3  CHAT MESSAGES
+  4.2  PROPERTY PAGE — MESSAGE BUTTON & COMPOSE FORM
 ─────────────────────────────────────────
 
-  Message types in a thread:
+  On the public property detail page (/property/[id]):
+
+  The page has two tabs: [Ad details] | [Message]
+  (Ref: screenshots — same tab layout as SpareRoom)
+
+  Tab behaviour:
+  ──────────────
+  "Ad details" tab → shows property info (current behaviour, unchanged)
+  "Message" tab    → shows compose form or login prompt depending on auth state
+
+  NOT logged in — "Message" tab shows:
+  ┌──────────────────────────────────────────────────┐
+  │  Message Lettings                                │
+  │                                                  │
+  │  You need an account to message this listing.    │
+  │                                                  │
+  │  [  Log in  ]   [  Sign up  ]                    │
+  └──────────────────────────────────────────────────┘
+  After login/signup, user is redirected back to /property/[id]#message
+
+  Logged in — "Message" tab shows compose form:
+  ┌──────────────────────────────────────────────────┐
+  │  Message Lettings                                │
+  │  [owner avatar / logo]                           │
+  │  RE: [Property Title]                            │
+  │                                                  │
+  │  Enter your message                              │
+  │  ┌────────────────────────────────────────────┐  │
+  │  │                                            │  │
+  │  │  Hi Lettings…  (placeholder)               │  │
+  │  │                                            │  │
+  │  └────────────────────────────────────────────┘  │
+  │                                                  │
+  │  From: [User full name]  (Not you? Log in as     │
+  │                           other user)            │
+  │                   [📧 Send message]               │
+  └──────────────────────────────────────────────────┘
+
+  After clicking "Send message":
+    • If this is the FIRST message to this property → create Inquiry thread
+    • If a thread already exists between this user and this property →
+      append message to existing thread (no duplicate threads)
+    • Show success banner:
+      ✅ "Thank you - your message has been sent. Please be patient
+          waiting for a response."
+    • User can now go to /dashboard/inquiries to continue the conversation
+
+  If the owner package has directInquiryToOwner = true:
+    → Inquiry notification goes directly to owner
+  If adminCCOnInquiry = true:
+    → Admin also receives notification
+
+─────────────────────────────────────────
+  4.3  USER DASHBOARD — MESSAGES PAGE
+─────────────────────────────────────────
+
+  Route: /dashboard/inquiries  (also /user/dashboard/inquiries)
+  Ref: Screenshots — "My messages" page
+
+  Page layout:
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  My messages                                                     │
+  │                                                                  │
+  │  [Inbox (n)] [Sent] [Unread] [Not Replied To] [Deleted]         │
+  ├──────────────────────────────────────────────────────────────────┤
+  │  Filter by label:  [Show all ▼]        [🏷 Manage labels]       │
+  │  Filter by keyword/name: [____________]                          │
+  │                           [ Apply filters ]                      │
+  ├──────────────────────────────────────────────────────────────────┤
+  │  Displaying N conversation(s)                                    │
+  │  Sort by: Newest first | Oldest first | By name                  │
+  │                                                                  │
+  │  ┌──────────────────────────────────────────────────────────┐   │
+  │  │ [avatar] Owner/Agent Name (N)              Today/date    │   │
+  │  │          PROPERTY TITLE IN CAPS                          │   │
+  │  │          last message preview...                         │   │
+  │  └──────────────────────────────────────────────────────────┘   │
+  │                                                                  │
+  │  [☐ Select all]  [🗑 Delete]  [↩ Bulk reply]  [🏷 Add label]   │
+  └──────────────────────────────────────────────────────────────────┘
+
+  Tabs behaviour:
+  ───────────────
+  Inbox          → All threads where user received at least one message
+  Sent           → Threads started by this user
+  Unread         → Threads with messages not yet read by this user
+  Not Replied To → Threads where last message is from owner/admin (user hasn't
+                   replied yet)
+  Deleted        → Soft-deleted threads (can be restored)
+
+  Filter by label: (see labels list in 4.4 — pre-defined set, user assigns)
+  Filter by keyword/name: searches property title and owner name
+
+  Conversation list item shows:
+  • Owner/agent avatar (or placeholder house icon)
+  • Owner/agent name + unread count in (brackets)
+  • Property title (UPPERCASE, matches SpareRoom style)
+  • Last message text preview (truncated)
+  • Date / "Today" timestamp
+  • Reply icon if user has replied (↩)
+
+  Clicking a conversation → opens the Chat Window (see 4.5)
+
+─────────────────────────────────────────
+  4.4  LABELS
+─────────────────────────────────────────
+
+  Pre-defined labels (exactly as per screenshot — no custom labels in Phase 4):
+  ────────────────────────────────────────
+    Viewing arranged
+    Viewing completed
+    Suitable
+    Maybe
+    Rejected
+    Waiting for paperwork
+    No Label  (default — removes any label)
+
+  A user can assign ONE label to any inquiry thread.
+  Label is stored on the Inquiry record as a String field.
+  Labels are only visible to the person who set them (user or owner each
+  see their own labels; they are NOT shared between parties).
+
+  Manage labels page: /dashboard/inquiries/labels
+    → Shows all pre-defined labels; user can see how many threads have each label.
+    → No add/delete labels in Phase 4 (labels are fixed set).
+
+─────────────────────────────────────────
+  4.5  CHAT WINDOW (THREAD VIEW)
+─────────────────────────────────────────
+
+  Route: /dashboard/inquiries/[id]   (user)
+         /owner/dashboard/inquiries/[id]  (owner)
+         /admin/inquiries/[id]  (admin)
+
+  Layout:
+  ┌────────────────────────────────────────────────────────────┐
+  │  ← Go back to messages list                               │
+  │  [Property Title]                                          │
+  │  [Ad details] [Message]  tabs  —  Ad ref no. XXXXXXXX     │
+  ├────────────────────────────────────────────────────────────┤
+  │  CHAT MESSAGES AREA (scrollable)                           │
+  │                                                            │
+  │  [owner avatar] Owner name — [timestamp]                   │
+  │  ┌──────────────────────────────────────────────────────┐  │
+  │  │  Hi, thanks for your interest in…                   │  │
+  │  └──────────────────────────────────────────────────────┘  │
+  │                                                            │
+  │                    [timestamp]        [user avatar]        │
+  │  ┌──────────────────────────────────────────────────────┐  │
+  │  │  Hi, I'm interested in viewing the property…        │  │
+  │  └──────────────────────────────────────────────────────┘  │
+  │                                                            │
+  │  [System message — e.g., 📅 Reminder: Viewing 10 May 2pm] │
+  ├────────────────────────────────────────────────────────────┤
+  │  ACTIONS BAR (below chat):                                 │
+  │  [Add note]   [Add label]   [View owner details]           │
+  │  [View ad → links to /property/[id]]                       │
+  ├────────────────────────────────────────────────────────────┤
+  │  REPLY BOX                                                 │
+  │  ┌────────────────────────────────────────────────────┐    │
+  │  │  Write a reply…                                    │    │
+  │  └────────────────────────────────────────────────────┘    │
+  │  [Send reply]                                              │
+  └────────────────────────────────────────────────────────────┘
+
+  Message bubbles:
+  • Owner messages → aligned left, light background
+  • User messages  → aligned right, tinted background
+  • System messages (STATUS_CHANGE, REMINDER_SET) → centred, italic, gray
+
+  Polling: frontend polls GET /api/inquiries/[id]/messages every 10 seconds
+           when the chat window is open (see 4.10 for real-time note).
+
+  "Add note" button:
+    → Opens a modal (ref: screenshot — "Add notes" modal):
+      ┌──────────────────────────────────────────┐
+      │  Add notes                        ✕ Close │
+      │  All notes are saved automatically.       │
+      │  Only you can see them.                   │
+      │  ┌──────────────────────────────────────┐ │
+      │  │                                      │ │
+      │  │  (resizable textarea)                │ │
+      │  │                                      │ │
+      │  └──────────────────────────────────────┘ │
+      └──────────────────────────────────────────┘
+      Notes are private — stored as InquiryNote (one per user per thread,
+      auto-saved on blur or typing pause). NOT sent to owner.
+
+  "Add label" button:
+    → Opens a dropdown (same label list as 4.4)
+    → Applies label to this thread for this user only
+
+  "View owner details" button:
+    → Opens a slide-over / modal (ref: screenshot — owner profile panel):
+      Shows: owner avatar, name, role (Agent / Owner), "Upgraded" badge if
+      package has directInquiryToOwner=true or fullAdminSupport=true,
+      Member since [year], Last active [time ago],
+      "Ads from [Owner]" — list of their other active properties with link
+
+  "View ad" link:
+    → Redirects to /property/[id] (the property detail page)
+
+─────────────────────────────────────────
+  4.6  OWNER DASHBOARD — MESSAGES
+─────────────────────────────────────────
+
+  Route: /owner/dashboard/inquiries
+
+  Same tab/filter layout as user messages page (4.3), but:
+  • Inbox shows messages received FROM users about owner's properties
+  • Owner can reply, creating messages in the same thread
+  • Owner can set labels and notes for their own reference
+  • Owner sees "View property" link (to their property edit page)
+  • Owner has an additional action: Set Reminder (see 4.8)
+  • Owner can mark a conversation status: Open / Replied / Closed
+    (shown as status badge on thread list)
+
+  Thread list for owner shows:
+  • User's name + unread count
+  • Property title they enquired about
+  • Last message preview + timestamp
+  • Status badge (Open / Replied / Closed)
+
+─────────────────────────────────────────
+  4.7  ADMIN DASHBOARD — MESSAGES
+─────────────────────────────────────────
+
+  Route: /admin/inquiries
+
+  Admin sees ALL inquiry threads across ALL properties.
+  Filter by: property, owner, user, status, date range.
+
+  Admin can:
+  • Read any thread
+  • Reply in any thread (appears as "Admin" message bubble)
+  • Set reminders (see 4.8)
+  • Change inquiry status
+  • For owners with adminCCOnInquiry=true: Admin is copied automatically
+    on each new message notification
+
+─────────────────────────────────────────
+  4.8  CHAT MESSAGE TYPES
+─────────────────────────────────────────
+
+  messageType values stored on InquiryMessage:
   ─────────────────────────────────────────────────────────────────────
-  Type              │ Description
-  ──────────────────┼──────────────────────────────────────────────────
-  TEXT              │ Normal chat message
-  STATUS_CHANGE     │ System message: "Owner marked inquiry as REPLIED"
-  REMINDER_SET      │ System message: "Viewing scheduled for 10 May 2pm"
+  TEXT              │ Normal chat message (user ↔ owner ↔ admin)
+  STATUS_CHANGE     │ System: "Owner marked inquiry as Replied"
+  REMINDER_SET      │ System: "📅 Viewing arranged for 10 May at 2pm"
   ─────────────────────────────────────────────────────────────────────
 
   Each message records:
-  • Who sent it (userId or "system")
-  • The sender's role (USER / OWNER / ADMIN)
-  • Message content
-  • Timestamp
-  • Read status (who has read it)
+  • senderId (userId or null for system messages)
+  • senderRole: USER / OWNER / ADMIN / SYSTEM
+  • content (text)
+  • messageType
+  • readBy (array of userIds who have read it)
+  • createdAt timestamp
 
 ─────────────────────────────────────────
-  4.4  REMINDERS
+  4.9  REMINDERS (OWNER & ADMIN ONLY)
 ─────────────────────────────────────────
 
-  Owner or Admin can set a reminder inside any inquiry thread:
+  Owner or Admin can set a reminder inside any inquiry thread.
+  Users cannot set reminders — only owner and admin.
 
-  Fields:
+  "Set Reminder" button visible in chat window for owner/admin only.
+
+  Reminder form fields:
   • Title           (e.g., "Property Viewing", "Follow-up Call")
-  • Date & Time     (date picker + time picker)
-  • Note            (optional extra context)
-  • Remind Who      (Owner / Admin / Both)
+  • Date            (date picker)
+  • Time            (time picker)
+  • Note            (optional — extra context, private)
+  • Remind          (Owner / Admin / Both)
 
-  What happens:
-  • A system message is added to the thread:
-    "📅 Reminder set: [Title] on [Date] at [Time] by [Name]"
-  • An InquiryReminder record is saved
-  • A scheduled notification is created (or cron picks it up):
-    - 24 hours before: "Tomorrow: [Title] — Property [Address]"
-    - 1 hour before: "In 1 hour: [Title] — Property [Address]"
-  • Notification links directly to the inquiry thread
+  What happens when reminder is saved:
+  1. A system InquiryMessage is added to the thread (visible to all):
+     "📅 Reminder set: [Title] on [Date] at [Time]"
+     (This appears in SpareRoom style as a "Viewing arranged" system bubble)
+  2. An InquiryReminder record is saved
+  3. Notification sent to the specified party:
+     - 24 hours before scheduledAt: "Tomorrow: [Title] — [Property Title]"
+     - 1 hour before scheduledAt: "In 1 hour: [Title] — [Property Title]"
+  4. Notification links directly to /owner/dashboard/inquiries/[id]
+
+  Label auto-update: when a reminder with title containing "Viewing" is set,
+  optionally auto-apply label "Viewing arranged" to the thread.
 
 ─────────────────────────────────────────
-  4.5  DATABASE CHANGES — PHASE 4
+  4.10  PRIVATE NOTES (ALL ROLES)
 ─────────────────────────────────────────
 
-  Existing Inquiry model — keep as the "thread header". Add fields:
+  Every party (user, owner, admin) can add a private note to a thread.
+  Notes are:
+  • Stored in InquiryNote model (one note per user per thread, upserted)
+  • Visible ONLY to the person who wrote them
+  • Auto-saved on textarea blur or with a debounced save (500ms)
+  • Accessible via the "Add note" button in the chat window (modal, as per screenshot)
+  • Do NOT appear in the message thread itself
+  • Do NOT get sent to the other party
+
+  InquiryNote model (already exists — keep unchanged, just wire to chat UI):
+  • inquiryId, userId, content, updatedAt
+
+─────────────────────────────────────────
+  4.11  REAL-TIME vs POLLING
+─────────────────────────────────────────
+
+  Phase 4: Simple polling (10-second interval when chat window is open)
+  • GET /api/inquiries/[id]/messages?after=[lastMessageId]
+  • Returns only messages newer than lastMessageId → merge into local state
+  • Works on Vercel serverless, no extra infrastructure
+
+  Phase 4+: Upgrade to Server-Sent Events or WebSockets
+  • Requires Vercel Edge or a standalone WebSocket server
+  • Recommended as future upgrade if polling feels slow
+
+─────────────────────────────────────────
+  4.12  DATABASE CHANGES — PHASE 4
+─────────────────────────────────────────
+
+  Existing Inquiry model — add fields:
   ──────────────────────────────────────────────────────────────────
-  lastMessageAt   DateTime?    // for sorting threads by activity
+  lastMessageAt   DateTime?    // for sorting threads by most recent activity
   lastMessageBy   String?      // userId of last sender
   unreadByOwner   Int   @default(0)
   unreadByUser    Int   @default(0)
   unreadByAdmin   Int   @default(0)
+  label           String?      // user-assigned label (per-party, see 4.4)
+                               // NOTE: label is private per viewer — store
+                               // as InquiryLabel join model if multi-party
+                               // labels needed, otherwise one field per role
+  userLabel       String?      // label set by the user
+  ownerLabel      String?      // label set by the owner
+  status          String  @default("OPEN")  // OPEN, REPLIED, CLOSED
+  isDeletedByUser Boolean @default(false)   // soft delete for user's view
+  isDeletedByOwner Boolean @default(false)  // soft delete for owner's view
 
   NEW model: InquiryMessage
   ──────────────────────────
@@ -867,13 +1146,11 @@ TABLE OF CONTENTS
     messageType String   @default("TEXT")    // TEXT, STATUS_CHANGE, REMINDER_SET
     senderRole  String                       // USER, OWNER, ADMIN, SYSTEM
 
-    // Relations
     inquiryId   String
-    inquiry     Inquiry  @relation(...)
-    senderId    String?                      // null for SYSTEM messages
-    sender      User?    @relation(...)
+    inquiry     Inquiry  @relation(fields: [inquiryId], references: [id])
+    senderId    String?  // null for SYSTEM messages
+    sender      User?    @relation(fields: [senderId], references: [id])
 
-    // Read receipts
     readBy      String[] @default([])        // array of userIds who have read
 
     createdAt   DateTime @default(now())
@@ -893,13 +1170,12 @@ TABLE OF CONTENTS
     remindOwner Boolean  @default(true)
     remindAdmin Boolean  @default(false)
     isCompleted Boolean  @default(false)
-    notifiedAt  DateTime?                    // when notification was sent
+    notifiedAt  DateTime?
 
-    // Relations
     inquiryId   String
-    inquiry     Inquiry  @relation(...)
+    inquiry     Inquiry  @relation(fields: [inquiryId], references: [id])
     createdById String
-    createdBy   User     @relation(...)
+    createdBy   User     @relation(fields: [createdById], references: [id])
 
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
@@ -908,72 +1184,89 @@ TABLE OF CONTENTS
     @@index([scheduledAt])
   }
 
-  Drop (or repurpose): InquiryNote model
-  ─────────────────────────────────────
-  InquiryNote currently holds internal admin notes.
-  Migrate to: InquiryMessage with messageType = "INTERNAL_NOTE" and
-  senderRole = "ADMIN" so it appears in admin view only, not visible to user.
+  Existing InquiryNote model — KEEP UNCHANGED, just connect to chat UI.
 
-  New migration: 20260508_add_inquiry_chat
+  New migration: 20260510_add_inquiry_chat
 
 ─────────────────────────────────────────
-  4.6  NEW API ENDPOINTS — PHASE 4
+  4.13  NEW / UPDATED API ENDPOINTS — PHASE 4
 ─────────────────────────────────────────
 
-  Shared (owner + user + admin, gated by role):
-  GET    /api/inquiries                           Thread list for logged-in user
-  GET    /api/inquiries/[id]                      Thread header + last 50 messages
-  GET    /api/inquiries/[id]/messages             Paginated message history
-  POST   /api/inquiries/[id]/messages             Send a message in thread
-  PATCH  /api/inquiries/[id]/messages/read        Mark messages as read
-  POST   /api/inquiries/[id]/reminders            Set a reminder
-  GET    /api/inquiries/[id]/reminders            Get reminders for a thread
-  PATCH  /api/inquiries/[id]/reminders/[rid]      Mark reminder complete
-
-  Admin:
-  GET    /api/admin/inquiries                     All threads (all properties)
-  PATCH  /api/admin/inquiries/[id]                Change status, assign to admin
-
-  (First inquiry message creation still uses:)
+  Public property page (auth gate — CHANGE EXISTING):
   POST   /api/inquiries                           Creates thread + first message
+                                                  NOW REQUIRES auth (401 if not
+                                                  logged in — frontend shows
+                                                  login/signup prompt instead)
+
+  User / Owner / Admin (gated by role):
+  GET    /api/inquiries                           Thread list for logged-in user
+                                                  Query params: tab (inbox/sent/
+                                                  unread/not-replied/deleted),
+                                                  label, keyword, sort
+  GET    /api/inquiries/[id]                      Thread header + last 50 messages
+  GET    /api/inquiries/[id]/messages             Paginated messages
+                                                  Query: after=[msgId] for polling
+  POST   /api/inquiries/[id]/messages             Send a reply in the thread
+  PATCH  /api/inquiries/[id]/read                 Mark all messages as read
+  PATCH  /api/inquiries/[id]/label                Set label on thread (per-user)
+  PATCH  /api/inquiries/[id]/status               Change status (owner/admin only)
+  DELETE /api/inquiries/[id]                      Soft-delete thread for this user
+
+  Notes (existing — wire to chat UI):
+  GET    /api/inquiries/[id]/note                 Get private note for this user
+  PUT    /api/inquiries/[id]/note                 Upsert private note (auto-save)
+
+  Reminders (owner + admin only):
+  POST   /api/inquiries/[id]/reminders            Create reminder
+  GET    /api/inquiries/[id]/reminders            List reminders for this thread
+  PATCH  /api/inquiries/[id]/reminders/[rid]      Mark reminder complete / edit
+
+  Admin only:
+  GET    /api/admin/inquiries                     All threads (all properties),
+                                                  filterable by property/owner/
+                                                  user/status/date
+  PATCH  /api/admin/inquiries/[id]                Force-change status or assign
 
 ─────────────────────────────────────────
-  4.7  REAL-TIME vs POLLING
+  4.14  FRONTEND PAGES & COMPONENTS — PHASE 4
 ─────────────────────────────────────────
 
-  Option A (Recommended for Phase 4): Polling
-  • Frontend polls GET /api/inquiries/[id]/messages every 10 seconds
-    when the chat window is open
-  • Simple, no extra infrastructure, works on Vercel serverless
-  • Add lastChecked timestamp so only new messages are returned
+  Property Detail Page (change existing):
+    /property/[id]                        "Message" tab
+    Component: InquiryComposeForm         Shows login/signup gate OR compose form
+                                          Displays: property ref, owner logo,
+                                          "RE: [title]", From: [user name],
+                                          Send button, success banner after send
 
-  Option B (Phase 4+ upgrade): Server-Sent Events or WebSockets
-  • Requires Vercel Edge or a separate WebSocket server
-  • Better UX (instant messages) but more complex
-  • Recommended as a Phase 5 upgrade if polling feels slow
+  User Dashboard (new pages):
+    /dashboard/inquiries                  "My messages" page
+    Component: MessageTabBar              Tabs: Inbox / Sent / Unread /
+                                          Not Replied To / Deleted
+    Component: MessageFilters             Label filter dropdown, keyword search,
+                                          Apply filters, sort buttons
+    Component: ConversationListItem       Avatar, owner name, property title CAPS,
+                                          last message preview, date, unread badge
+    /dashboard/inquiries/[id]            Chat window
+    Component: ChatWindow                 Message bubbles (left/right), system msgs
+    Component: ChatReplyBox               Textarea + Send reply button
+    Component: AddNoteModal               Private note modal (auto-save)
+    Component: LabelDropdown             Pre-defined labels picker
+    Component: OwnerProfilePanel          Slide-over: avatar, name, role, member
+                                          since, last active, other ads list
+    Actions in chat: Add note | Add label | View owner details | View ad (→ /property/[id])
 
-─────────────────────────────────────────
-  4.8  FRONTEND PAGES / COMPONENTS — PHASE 4
-─────────────────────────────────────────
+  Owner Dashboard (update existing + new):
+    /owner/dashboard/inquiries            Inbox page (same layout as user)
+    Component: OwnerConversationItem      Shows user name, property title, status
+                                          badge (Open/Replied/Closed), label
+    /owner/dashboard/inquiries/[id]       Chat window (same as user but with extra
+                                          actions: Set Reminder, Change Status)
+    Component: ReminderModal              Title, date, time, note, remind-who picker
 
-  User Dashboard:
-    /dashboard/inquiries                 List of inquiry threads
-    /dashboard/inquiries/[id]            Chat window for a thread
-
-  Owner Dashboard:
-    /owner/dashboard/inquiries           List of inquiry threads
-    /owner/dashboard/inquiries/[id]      Chat window + reminder button
-                                         + status change dropdown
-
-  Admin:
-    /admin/inquiries                     All threads, filterable by property/status
-    /admin/inquiries/[id]                Chat window + reminder + assign + notes
-
-  Components to build:
-    InquiryThreadList                    Shows avatar, last message, unread count
-    InquiryChatWindow                    Message bubbles, input box, scroll to bottom
-    ReminderModal                        Date/time picker + title + note
-    SystemMessageBubble                  Styled differently from regular messages
+  Admin Dashboard (update existing):
+    /admin/inquiries                      All threads with advanced filters
+    /admin/inquiries/[id]                 Full chat window + admin reply + reminder +
+                                          status change + owner/user profile links
 
 ══════════════════════════════════════════════════════════════════════════════
   DEPENDENCY MAP (VISUAL SUMMARY)
@@ -1024,12 +1317,14 @@ TABLE OF CONTENTS
             CREATE PropertyBid
             ALTER Property — add bids relation
 
-  Phase 4:  20260508_add_inquiry_chat
+  Phase 4:  20260510_add_inquiry_chat
             CREATE InquiryMessage
             CREATE InquiryReminder
             ALTER Inquiry — add lastMessageAt, lastMessageBy,
-                            unreadByOwner, unreadByUser, unreadByAdmin
-            MIGRATE InquiryNote data → InquiryMessage (messageType=INTERNAL_NOTE)
+                            unreadByOwner, unreadByUser, unreadByAdmin,
+                            userLabel, ownerLabel, status,
+                            isDeletedByUser, isDeletedByOwner
+            KEEP InquiryNote model unchanged (wired to chat UI, not migrated)
 
 ══════════════════════════════════════════════════════════════════════════════
   ESTIMATED EFFORT (ROUGH GUIDE)
@@ -1038,7 +1333,10 @@ TABLE OF CONTENTS
   Phase 1 — Packages          ~5–7 days  (DB + Admin CRUD + Purchase flow + Gate)
   Phase 2 — Property Docs     ~3–5 days  (DB + Admin CRUD + Owner upload + Alerts)
   Phase 3 — Bidding           ~4–6 days  (DB + Bid form + Razorpay + Search sort)
-  Phase 4 — Chat Inquiries    ~6–9 days  (DB + Chat UI + Polling + Reminders)
+  Phase 4 — Chat Inquiries    ~7–10 days (DB + auth gate fix + thread list +
+                                           chat window + labels + notes UI +
+                                           owner profile panel + reminders +
+                                           polling + admin view)
 
   Total (sequential):  ~18–27 days
   Total (Phase 3 & 4 parallel after Phase 2): ~14–20 days

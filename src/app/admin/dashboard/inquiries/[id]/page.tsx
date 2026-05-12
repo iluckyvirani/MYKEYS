@@ -3,7 +3,7 @@
 import { use, useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import {
   ArrowLeft, Send, Home, Tag, X, CheckCircle,
   Bell, ChevronDown, StickyNote
@@ -13,26 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-
-const LABELS = [
-  "No Label",
-  "Viewing arranged",
-  "Viewing completed",
-  "Suitable",
-  "Maybe",
-  "Rejected",
-  "Waiting for paperwork",
-];
-
-const LABEL_COLORS: Record<string, string> = {
-  "Viewing arranged":      "bg-blue-100 text-blue-700 border-blue-200",
-  "Viewing completed":     "bg-green-100 text-green-700 border-green-200",
-  "Suitable":              "bg-emerald-100 text-emerald-700 border-emerald-200",
-  "Maybe":                 "bg-yellow-100 text-yellow-700 border-yellow-200",
-  "Rejected":              "bg-red-100 text-red-700 border-red-200",
-  "Waiting for paperwork": "bg-purple-100 text-purple-700 border-purple-200",
-  "No Label":              "bg-gray-100 text-gray-600 border-gray-200",
-};
 
 const STATUSES = ["NEW", "READ", "REPLIED", "CONVERTED", "CLOSED"];
 
@@ -78,16 +58,16 @@ interface InquiryDetail {
   propertyTitle: string;
   status: string;
   type: string;
-  ownerLabel: string | null;
-  unreadByOwner: number;
   createdAt: string;
   guestName: string;
   guestEmail: string;
   guestPhone?: string;
   message: string;
+  ownerName?: string;
+  ownerEmail?: string;
 }
 
-export default function OwnerChatPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AdminInquiryChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: inquiryId } = use(params);
   const router = useRouter();
   const { toast } = useToast();
@@ -95,21 +75,20 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [note, setNote] = useState("");
   const [loadingInquiry, setLoadingInquiry] = useState(true);
   const [sending, setSending] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
   const [text, setText] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string>("");
-  const [showLabelMenu, setShowLabelMenu] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showReminderForm, setShowReminderForm] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
+  const [showNotePanel, setShowNotePanel] = useState(false);
   const [reminderTitle, setReminderTitle] = useState("");
   const [reminderDate, setReminderDate] = useState("");
   const [reminderNote, setReminderNote] = useState("");
   const [savingReminder, setSavingReminder] = useState(false);
-  const [showNoteModal, setShowNoteModal] = useState(false);
-  const [note, setNote] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMsgIdRef = useRef<string>("");
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -140,13 +119,13 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
           propertyTitle: d.propertyTitle,
           status: d.status,
           type: d.type,
-          ownerLabel: d.ownerLabel || null,
-          unreadByOwner: d.unreadByOwner || 0,
           createdAt: d.createdAt,
           guestName: d.guestName,
           guestEmail: d.guestEmail,
           guestPhone: d.guestPhone,
           message: d.message,
+          ownerName: d.ownerName,
+          ownerEmail: d.ownerEmail,
         });
       }
 
@@ -155,12 +134,20 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
         setMessages(msgs);
         if (msgs.length > 0) lastMsgIdRef.current = msgs[msgs.length - 1].id;
       }
-
-      await api.patch(`/inquiries/${inquiryId}/read`);
     } catch (err) {
       console.error("Error loading inquiry:", err);
     } finally {
       setLoadingInquiry(false);
+    }
+  }, [inquiryId]);
+
+  // Load private note
+  const loadNote = useCallback(async () => {
+    try {
+      const res = await api.get(`/inquiries/${inquiryId}/notes`);
+      if (res.data?.success && res.data.data?.content) setNote(res.data.data.content);
+    } catch {
+      // silent
     }
   }, [inquiryId]);
 
@@ -182,7 +169,6 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
         const newMsgs = res.data.data as Message[];
         setMessages((prev) => [...prev, ...newMsgs]);
         lastMsgIdRef.current = newMsgs[newMsgs.length - 1].id;
-        await api.patch(`/inquiries/${inquiryId}/read`);
       }
     } catch {
       // silent
@@ -231,14 +217,16 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
     }
   };
 
-  const loadNote = useCallback(async () => {
+  const handleStatusChange = async (status: string) => {
     try {
-      const res = await api.get(`/inquiries/${inquiryId}/notes`);
-      if (res.data?.success && res.data.data?.content) setNote(res.data.data.content);
+      await api.patch(`/inquiries/${inquiryId}`, { status });
+      setInquiry((prev) => prev ? { ...prev, status } : prev);
+      setShowStatusMenu(false);
+      toast({ title: "Status updated" });
     } catch {
-      // silent
+      toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
     }
-  }, [inquiryId]);
+  };
 
   const handleNoteChange = (val: string) => {
     setNote(val);
@@ -255,29 +243,6 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
     }, 800);
   };
 
-  const handleLabelChange = async (label: string) => {
-    try {
-      const payload = label === "No Label" ? { label: null } : { label };
-      await api.patch(`/inquiries/${inquiryId}/label`, payload);
-      setInquiry((prev) => prev ? { ...prev, ownerLabel: label === "No Label" ? null : label } : prev);
-      setShowLabelMenu(false);
-      toast({ title: "Label updated" });
-    } catch {
-      toast({ title: "Error", description: "Failed to update label", variant: "destructive" });
-    }
-  };
-
-  const handleStatusChange = async (status: string) => {
-    try {
-      await api.patch(`/inquiries/${inquiryId}`, { status });
-      setInquiry((prev) => prev ? { ...prev, status } : prev);
-      setShowStatusMenu(false);
-      toast({ title: "Status updated" });
-    } catch {
-      toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
-    }
-  };
-
   const handleAddReminder = async () => {
     if (!reminderTitle || !reminderDate) return;
     setSavingReminder(true);
@@ -287,6 +252,7 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
         scheduledAt: new Date(reminderDate).toISOString(),
         note: reminderNote || undefined,
         remindOwner: true,
+        remindAdmin: true,
       });
       if (res.data?.success && res.data.data) {
         setReminders((prev) => [...prev, res.data.data]);
@@ -305,56 +271,47 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
 
   if (loadingInquiry) {
     return (
-      <DashboardLayout defaultRole="owner">
+      <AdminDashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600" />
         </div>
-      </DashboardLayout>
+      </AdminDashboardLayout>
     );
   }
 
   if (!inquiry) {
     return (
-      <DashboardLayout defaultRole="owner">
+      <AdminDashboardLayout>
         <div className="text-center py-16">
-          <p className="text-gray-500">Inquiry not found or access denied.</p>
+          <p className="text-gray-500">Inquiry not found.</p>
           <Button variant="outline" className="mt-4" onClick={() => router.back()}>Go Back</Button>
         </div>
-      </DashboardLayout>
+      </AdminDashboardLayout>
     );
   }
 
   const statusCfg = STATUS_CONFIG[inquiry.status] || STATUS_CONFIG.NEW;
-  const currentLabel = inquiry.ownerLabel || "No Label";
 
   return (
-    <DashboardLayout defaultRole="owner">
+    <AdminDashboardLayout>
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-4 flex items-start gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/owner/dashboard/inquiries")} className="p-2 mt-0.5">
+          <Button variant="ghost" size="sm" onClick={() => router.push("/admin/dashboard/inquiries")} className="p-2 mt-0.5">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg font-bold text-gray-900 truncate">{inquiry.guestName}</h1>
-              <span className="text-sm text-gray-500">�</span>
+              <span className="text-sm text-gray-500">→</span>
               <span className="text-sm text-gray-600 truncate">{inquiry.propertyTitle}</span>
             </div>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <a href={`mailto:${inquiry.guestEmail}`} className="text-xs text-gray-500 hover:text-green-600">
-                {inquiry.guestEmail}
-              </a>
-              {inquiry.guestPhone && (
-                <>
-                  <span className="text-gray-300">�</span>
-                  <a href={`tel:${inquiry.guestPhone}`} className="text-xs text-gray-500 hover:text-green-600">
-                    {inquiry.guestPhone}
-                  </a>
-                </>
-              )}
-              <span className="text-gray-300">�</span>
-              <Link href={`/property/${inquiry.propertyId}`} className="text-xs text-green-600 hover:underline flex items-center gap-1">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap text-xs text-gray-500">
+              <span>{inquiry.guestEmail}</span>
+              {inquiry.guestPhone && <><span className="text-gray-300">·</span><span>{inquiry.guestPhone}</span></>}
+              {inquiry.ownerName && <><span className="text-gray-300">·</span><span>Owner: {inquiry.ownerName}</span></>}
+              <span className="text-gray-300">·</span>
+              <Link href={`/property/${inquiry.propertyId}`} className="text-green-600 hover:underline flex items-center gap-1">
                 <Home className="w-3 h-3" /> View Property
               </Link>
             </div>
@@ -365,7 +322,7 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
             {/* Status */}
             <div className="relative">
               <button
-                onClick={() => { setShowStatusMenu((v) => !v); setShowLabelMenu(false); }}
+                onClick={() => { setShowStatusMenu((v) => !v); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium ${statusCfg.color}`}
               >
                 {statusCfg.label}
@@ -386,34 +343,14 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
               )}
             </div>
 
-            {/* Label */}
-            <div className="relative">
-              <button
-                onClick={() => { setShowLabelMenu((v) => !v); setShowStatusMenu(false); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium ${LABEL_COLORS[currentLabel]}`}
-              >
-                <Tag className="w-3 h-3" />
-                {currentLabel}
-              </button>
-              {showLabelMenu && (
-                <div className="absolute right-0 mt-1 w-52 bg-white border rounded-[5px] shadow-lg z-20 py-1">
-                  <div className="flex items-center justify-between px-3 py-2 border-b">
-                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Label</span>
-                    <button onClick={() => setShowLabelMenu(false)}><X className="w-3 h-3 text-gray-400" /></button>
-                  </div>
-                  {LABELS.map((l) => (
-                    <button
-                      key={l}
-                      onClick={() => handleLabelChange(l)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${currentLabel === l ? "font-semibold" : ""}`}
-                    >
-                      <span className={`w-2 h-2 rounded-full border ${LABEL_COLORS[l]}`} />
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Note */}
+            <button
+              onClick={() => { setShowNotePanel((v) => !v); if (!showNotePanel) loadNote(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium text-gray-600 bg-white border-gray-200 hover:bg-gray-50"
+            >
+              <StickyNote className="w-3 h-3" />
+              Notes
+            </button>
 
             {/* Reminders */}
             <button
@@ -428,42 +365,30 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
                 </span>
               )}
             </button>
-            {/* Notes */}
-            <button
-              onClick={() => { setShowNoteModal(true); loadNote(); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium text-gray-600 bg-white border-gray-200 hover:bg-gray-50"
-            >
-              <StickyNote className="w-3 h-3" />
-              Notes
-            </button>
           </div>
         </div>
-        {/* Note modal */}
-        {showNoteModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-[5px] shadow-xl w-full max-w-md">
-              <div className="flex items-center justify-between px-4 py-3 border-b">
-                <div>
-                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <StickyNote className="w-4 h-4" /> Add notes
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">All notes are saved automatically. Only you can see them.</p>
-                </div>
-                <button onClick={() => setShowNoteModal(false)}><X className="w-4 h-4 text-gray-500" /></button>
-              </div>
-              <div className="p-4">
-                <Textarea
-                  placeholder="Write a private note..."
-                  value={note}
-                  onChange={(e) => handleNoteChange(e.target.value)}
-                  className="resize-none min-h-[120px] text-sm"
-                />
-                {savingNote && <p className="text-xs text-gray-400 mt-1">Saving...</p>}
-              </div>
+
+        {/* Note panel */}
+        {showNotePanel && (
+          <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-[5px] p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-yellow-900 flex items-center gap-2">
+                <StickyNote className="w-4 h-4" /> Private Note
+                {savingNote && <span className="text-xs text-yellow-600 font-normal">Saving…</span>}
+              </h3>
+              <button onClick={() => setShowNotePanel(false)}><X className="w-3.5 h-3.5 text-yellow-600" /></button>
             </div>
+            <Textarea
+              placeholder="Add a private note about this inquiry (only visible to admin)..."
+              value={note}
+              onChange={(e) => handleNoteChange(e.target.value)}
+              className="text-sm resize-none min-h-[80px] bg-white border-yellow-200"
+            />
+            <p className="text-xs text-yellow-700 mt-1">Notes are private and auto-saved.</p>
           </div>
         )}
 
+        {/* Reminders panel */}
         {showReminders && (
           <div className="mb-4 bg-amber-50 border border-amber-200 rounded-[5px] p-4">
             <div className="flex items-center justify-between mb-3">
@@ -535,20 +460,21 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
         {/* Chat area */}
         <div className="bg-white rounded-[5px] border flex flex-col" style={{ height: "calc(100vh - 260px)", minHeight: "460px" }}>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Original inquiry as first bubble from USER */}
+            {/* Original inquiry bubble from USER */}
             <div className="flex justify-start">
               <div className="max-w-[75%]">
                 <div className="bg-gray-100 text-gray-900 rounded-[5px] rounded-bl-none px-4 py-3">
                   <p className="text-sm whitespace-pre-wrap">{inquiry.message}</p>
                 </div>
                 <div className="flex items-center gap-1 mt-1">
-                  <span className="text-xs text-gray-400">{inquiry.guestName} � {formatTime(inquiry.createdAt)}</span>
+                  <span className="text-xs text-gray-400">{inquiry.guestName} · {formatTime(inquiry.createdAt)}</span>
                 </div>
               </div>
             </div>
 
             {messages.map((msg) => {
-              const isMe = msg.senderRole === "OWNER";
+              const isAdmin = msg.senderRole === "ADMIN";
+              const isOwner = msg.senderRole === "OWNER";
               const isSystem = msg.senderRole === "SYSTEM" || msg.messageType === "STATUS_CHANGE";
 
               if (isSystem) {
@@ -559,15 +485,22 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
                 );
               }
 
+              const isMe = isAdmin;
+              const bubbleColor = isAdmin
+                ? "bg-green-600 text-white rounded-br-none"
+                : isOwner
+                  ? "bg-blue-100 text-blue-900 rounded-bl-none"
+                  : "bg-gray-100 text-gray-900 rounded-bl-none";
+
               return (
                 <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
                   <div className="max-w-[75%]">
-                    <div className={`rounded-[5px] px-4 py-3 ${isMe ? "bg-green-600 text-white rounded-br-none" : "bg-gray-100 text-gray-900 rounded-bl-none"}`}>
+                    <div className={`rounded-[5px] px-4 py-3 ${bubbleColor}`}>
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     </div>
                     <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
                       <span className="text-xs text-gray-400">
-                        {isMe ? "You" : msg.senderName} � {formatTime(msg.createdAt)}
+                        {isMe ? "Admin (You)" : `${msg.senderName} (${msg.senderRole})`} · {formatTime(msg.createdAt)}
                       </span>
                     </div>
                   </div>
@@ -585,7 +518,7 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
           ) : (
             <div className="border-t px-4 py-3 flex gap-3 items-end bg-white">
               <Textarea
-                placeholder="Type your reply... (Enter to send, Shift+Enter for new line)"
+                placeholder="Type admin reply... (Enter to send, Shift+Enter for new line)"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -603,6 +536,6 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </AdminDashboardLayout>
   );
 }

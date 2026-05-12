@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   Inbox,
   User,
@@ -446,7 +447,17 @@ export default function AdminInquiriesPage() {
                       >
                         {inquiry.status.toUpperCase()}
                       </span>
-                      <span className="text-xs text-gray-500">{formatDate(inquiry.createdAt)}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">{formatDate(inquiry.createdAt)}</span>
+                        <Link
+                          href={`/admin/dashboard/inquiries/${inquiry.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs text-blue-600 hover:underline font-medium"
+                          title="Open chat thread"
+                        >
+                          Open Chat →
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))

@@ -255,6 +255,10 @@ model User {
   // Phase 3 — Bids
   bids            PropertyBid[]
 
+  // Phase 4 — Inquiry Chat
+  inquiryMessages  InquiryMessage[]  @relation("InquiryMessageSender")
+  inquiryReminders InquiryReminder[] @relation("InquiryReminderCreator")
+
   // Service Relations
   serviceProvider ServiceProvider?
   serviceBookings ServiceBooking[] @relation("ServiceClient")
@@ -572,11 +576,24 @@ model Inquiry {
 
   // Relations
   propertyId String
-  property   Property      @relation(fields: [propertyId], references: [id])
+  property   Property        @relation(fields: [propertyId], references: [id])
   userId     String?
-  user       User?         @relation(fields: [userId], references: [id])
+  user       User?           @relation(fields: [userId], references: [id])
   assignedTo String? // User ID of assigned staff
   notes      InquiryNote[]
+  messages   InquiryMessage[]
+  reminders  InquiryReminder[]
+
+  // Phase 4 — Chat fields
+  lastMessageAt    DateTime?
+  lastMessageBy    String?
+  unreadByOwner    Int      @default(0)
+  unreadByUser     Int      @default(0)
+  unreadByAdmin    Int      @default(0)
+  userLabel        String?
+  ownerLabel       String?
+  isDeletedByUser  Boolean  @default(false)
+  isDeletedByOwner Boolean  @default(false)
 
   // Timestamps
   createdAt   DateTime  @default(now())
@@ -589,6 +606,7 @@ model Inquiry {
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+  @@index([lastMessageAt])
 }
 
 model InquiryNote {
@@ -600,6 +618,49 @@ model InquiryNote {
   createdAt DateTime @default(now())
 
   @@index([inquiryId])
+}
+
+model InquiryMessage {
+  id          String  @id @default(cuid())
+  content     String
+  messageType String  @default("TEXT") // TEXT, STATUS_CHANGE, SYSTEM
+  senderRole  String                   // USER, OWNER, ADMIN, SYSTEM
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  senderId String?
+  sender   User?   @relation("InquiryMessageSender", fields: [senderId], references: [id])
+
+  readBy    String[] @default([])
+  createdAt DateTime @default(now())
+
+  @@index([inquiryId])
+  @@index([createdAt])
+  @@index([senderId])
+}
+
+model InquiryReminder {
+  id          String   @id @default(cuid())
+  title       String
+  scheduledAt DateTime
+  note        String?
+  remindOwner Boolean  @default(true)
+  remindAdmin Boolean  @default(false)
+  isCompleted Boolean  @default(false)
+  notifiedAt  DateTime?
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("InquiryReminderCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([inquiryId])
+  @@index([scheduledAt])
 }
 
 model Notification {

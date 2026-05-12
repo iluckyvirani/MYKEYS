@@ -395,11 +395,16 @@ export default function PropertyDetailsPage() {
             const response = await api.post("/inquiries", inquiryData);
 
             if (response.data?.success) {
-                console.log("Inquiry sent successfully:", response.data.data);
+                const newInquiryId = response.data.data?.id;
                 setShowInquiryModal(false);
                 setInquiryForm({ name: "", phone: "", message: "", email: "", budget: "", duration: "", type: "" });
-                setInquirySuccess("Inquiry sent successfully! The owner will review your message and get back to you soon.");
-                setTimeout(() => setInquirySuccess(null), 4000);
+                // Redirect to chat window
+                if (newInquiryId) {
+                    router.push(`/dashboard/inquiries/${newInquiryId}`);
+                } else {
+                    setInquirySuccess("Inquiry sent successfully! The owner will review your message and get back to you soon.");
+                    setTimeout(() => setInquirySuccess(null), 4000);
+                }
             } else {
                 alert(response.data?.message || "Failed to send inquiry");
             }
@@ -1392,16 +1397,34 @@ export default function PropertyDetailsPage() {
                                     ) : (
                                         // Long Rent or Buy - Inquiry Button
                                         <div className="space-y-4 mb-6">
-                                            <Button
-                                                onClick={() => setShowInquiryModal(true)}
-                                                className="w-full rounded-[5px] py-6 text-lg font-semibold mb-4 bg-linear-to-r from-green-600 to-emerald-600 cursor-pointer"
-                                            >
-                                                <MessageCircle className="w-5 h-5 mr-2" />
-                                                Send Inquiry
-                                            </Button>
-
+                                            {isLoggedIn ? (
+                                                <Button
+                                                    onClick={() => setShowInquiryModal(true)}
+                                                    className="w-full rounded-[5px] py-6 text-lg font-semibold mb-4 bg-linear-to-r from-green-600 to-emerald-600 cursor-pointer"
+                                                >
+                                                    <MessageCircle className="w-5 h-5 mr-2" />
+                                                    Send Inquiry
+                                                </Button>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    <p className="text-sm text-gray-600 text-center">Sign in to contact the owner</p>
+                                                    <Button
+                                                        onClick={() => router.push(`/login?redirect=/property/${property.id}`)}
+                                                        className="w-full rounded-[5px] py-5 font-semibold bg-linear-to-r from-green-600 to-emerald-600 cursor-pointer"
+                                                    >
+                                                        Log In to Send Inquiry
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => router.push(`/signup?redirect=/property/${property.id}`)}
+                                                        className="w-full rounded-[5px] py-5 font-semibold cursor-pointer"
+                                                    >
+                                                        Create Account
+                                                    </Button>
+                                                </div>
+                                            )}
                                             <div className="text-center text-sm text-gray-500">
-                                                <p>Contact owner directly via call or message</p>
+                                                <p>Contact owner directly via inquiry</p>
                                             </div>
                                         </div>
                                     )}

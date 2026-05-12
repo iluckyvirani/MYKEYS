@@ -258,19 +258,51 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       );
     }
 
-    // TODO:
-    // 1. Verify user is either the guest or owner
-    // 2. Mark inquiry as CLOSED instead of actually deleting
-    // 3. Send notification email to both parties
+    // Authenticate via Authorization header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, message: 'Unauthorized', data: null }, { status: 401 });
+    }
+
+    const { verifyAccessToken } = await import('@/lib/auth/jwt');
+    const token = authHeader.slice(7);
+    const payload = await verifyAccessToken(token);
+    if (!payload) {
+      return NextResponse.json({ success: false, message: 'Invalid token', data: null }, { status: 401 });
+    }
+
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id },
+      include: { property: { select: { ownerId: true } } },
+    });
+
+    if (!inquiry) {
+      return NextResponse.json({ success: false, message: 'Inquiry not found', data: null }, { status: 404 });
+    }
+
+    const isUser = inquiry.userId === payload.userId || inquiry.email === payload.email;
+    const isOwner = inquiry.property.ownerId === payload.userId;
+    const isAdmin = payload.role === 'ADMIN';
+
+    if (!isUser && !isOwner && !isAdmin) {
+      return NextResponse.json({ success: false, message: 'Unauthorized', data: null }, { status: 403 });
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (isUser) updateData.isDeletedByUser = true;
+    else if (isOwner) updateData.isDeletedByOwner = true;
+    else if (isAdmin) { updateData.isDeletedByUser = true; updateData.isDeletedByOwner = true; }
+
+    await prisma.inquiry.update({ where: { id }, data: updateData });
 
     return NextResponse.json(
-      { success: true, message: 'Inquiry closed successfully', data: null },
+      { success: true, message: 'Inquiry deleted successfully', data: null },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error closing inquiry:', error);
+    console.error('Error deleting inquiry:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to close inquiry', data: null },
+      { success: false, message: 'Failed to delete inquiry', data: null },
       { status: 500 }
     );
   }
