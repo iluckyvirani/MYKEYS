@@ -74,16 +74,18 @@ export async function POST(req: NextRequest) {
         const reviewerName = reviewer ? `${reviewer.firstName} ${reviewer.lastName}` : 'A guest';
 
         // Send notification to property owner
-        await notificationService.createReviewNotification(
-          property.ownerId,
-          {
-            reviewId: review.id,
-            propertyId: review.propertyId,
-            propertyTitle: property.title,
-            reviewerName: reviewerName,
-            rating: review.rating,
-          }
-        );
+        try {
+          await notificationService.createReviewNotification(
+            property.ownerId,
+            {
+              reviewId: review.id,
+              propertyId: review.propertyId,
+              propertyTitle: property.title,
+              reviewerName: reviewerName,
+              rating: review.rating,
+            }
+          );
+        } catch (e) { console.error('Review notification failed (non-fatal):', e); }
 
         // Get owner details for email
         const owner = await prisma.user.findUnique({
@@ -93,23 +95,27 @@ export async function POST(req: NextRequest) {
 
         // Send email to owner about the review
         if (owner && reviewer) {
-          await emailService.sendNewReviewNotificationEmail(
-            owner.email,
-            `${owner.firstName} ${owner.lastName}`,
-            reviewerName,
-            property.title,
-            review.rating,
-            review.comment || 'No comment provided',
-            review.propertyId
-          );
+          try {
+            await emailService.sendNewReviewNotificationEmail(
+              owner.email,
+              `${owner.firstName} ${owner.lastName}`,
+              reviewerName,
+              property.title,
+              review.rating,
+              review.comment || 'No comment provided',
+              review.propertyId
+            );
+          } catch (e) { console.error('Review email failed (non-fatal):', e); }
         }
 
         // Create notification for the reviewer (user) that their review was posted
-        await notificationService.createSystemNotification(
-          review.userId,
-          'Review Posted Successfully!',
-          `Your review for "${property.title}" has been posted successfully.`
-        );
+        try {
+          await notificationService.createSystemNotification(
+            review.userId,
+            'Review Posted Successfully!',
+            `Your review for "${property.title}" has been posted successfully.`
+          );
+        } catch (e) { console.error('Review posted notification failed (non-fatal):', e); }
       }
     }
 

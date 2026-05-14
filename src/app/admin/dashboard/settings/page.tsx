@@ -21,7 +21,7 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     api
-      .get("/api/admin/settings")
+      .get("/admin/settings")
       .then((res) => {
         const data = res.data?.data ?? res.data;
         setCommission(data?.shortRentCommissionPercent ?? 0);

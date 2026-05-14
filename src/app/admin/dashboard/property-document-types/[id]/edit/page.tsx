@@ -31,7 +31,7 @@ export default function EditPropertyDocumentTypePage({
 
   useEffect(() => {
     api
-      .get(`/api/admin/property-document-types/${id}`)
+      .get(`/admin/property-document-types/${id}`)
       .then((res) => setDocType(res.data?.data ?? res.data))
       .catch(() => setError("Failed to load document type"))
       .finally(() => setLoading(false));

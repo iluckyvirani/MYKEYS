@@ -56,7 +56,7 @@ export default function PackageBrowser({
 
   useEffect(() => {
     api
-      .get("/api/packages")
+      .get("/packages")
       .then((res) => setPackages(res.data?.data ?? []))
       .catch(() => setPackages([]))
       .finally(() => setLoading(false));

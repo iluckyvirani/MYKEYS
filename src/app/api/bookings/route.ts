@@ -294,35 +294,37 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
     // Create notifications for guest and owner
     const guestName = `${guest.firstName} ${guest.lastName}`;
     
-    // Notification to guest
-    await notificationService.createBookingNotification(
-      guest.id,
-      {
-        bookingId: createdBooking.id,
-        propertyTitle: property.title,
-        propertyId: property.id,
-        guestName: guestName,
-        checkIn: createdBooking.checkIn.toISOString().split('T')[0],
-        checkOut: createdBooking.checkOut.toISOString().split('T')[0],
-      },
-      'created',
-      'guest'
-    );
+    try {
+      await notificationService.createBookingNotification(
+        guest.id,
+        {
+          bookingId: createdBooking.id,
+          propertyTitle: property.title,
+          propertyId: property.id,
+          guestName: guestName,
+          checkIn: createdBooking.checkIn.toISOString().split('T')[0],
+          checkOut: createdBooking.checkOut.toISOString().split('T')[0],
+        },
+        'created',
+        'guest'
+      );
+    } catch (e) { console.error('Booking notification to guest failed (non-fatal):', e); }
 
-    // Notification to property owner
-    await notificationService.createBookingNotification(
-      property.ownerId,
-      {
-        bookingId: createdBooking.id,
-        propertyTitle: property.title,
-        propertyId: property.id,
-        guestName: guestName,
-        checkIn: createdBooking.checkIn.toISOString().split('T')[0],
-        checkOut: createdBooking.checkOut.toISOString().split('T')[0],
-      },
-      'created',
-      'owner'
-    );
+    try {
+      await notificationService.createBookingNotification(
+        property.ownerId,
+        {
+          bookingId: createdBooking.id,
+          propertyTitle: property.title,
+          propertyId: property.id,
+          guestName: guestName,
+          checkIn: createdBooking.checkIn.toISOString().split('T')[0],
+          checkOut: createdBooking.checkOut.toISOString().split('T')[0],
+        },
+        'created',
+        'owner'
+      );
+    } catch (e) { console.error('Booking notification to owner failed (non-fatal):', e); }
 
     // Get owner details for email
     const owner = await prisma.user.findUnique({
@@ -330,28 +332,30 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
       select: { firstName: true, lastName: true, email: true },
     });
 
-    // Send confirmation email to guest
-    await emailService.sendBookingConfirmationEmail(
-      guest.email,
-      guestName,
-      property.title,
-      createdBooking.checkIn.toISOString().split('T')[0],
-      createdBooking.checkOut.toISOString().split('T')[0],
-      createdBooking.totalAmount,
-      createdBooking.id
-    );
-
-    // Send notification email to owner
-    if (owner) {
-      await emailService.sendBookingNotificationEmailToOwner(
-        owner.email,
-        `${owner.firstName} ${owner.lastName}`,
+    try {
+      await emailService.sendBookingConfirmationEmail(
+        guest.email,
         guestName,
         property.title,
         createdBooking.checkIn.toISOString().split('T')[0],
         createdBooking.checkOut.toISOString().split('T')[0],
+        createdBooking.totalAmount,
         createdBooking.id
       );
+    } catch (e) { console.error('Booking confirmation email failed (non-fatal):', e); }
+
+    if (owner) {
+      try {
+        await emailService.sendBookingNotificationEmailToOwner(
+          owner.email,
+          `${owner.firstName} ${owner.lastName}`,
+          guestName,
+          property.title,
+          createdBooking.checkIn.toISOString().split('T')[0],
+          createdBooking.checkOut.toISOString().split('T')[0],
+          createdBooking.id
+        );
+      } catch (e) { console.error('Booking owner email failed (non-fatal):', e); }
     }
 
 

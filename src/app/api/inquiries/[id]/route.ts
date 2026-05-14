@@ -187,11 +187,13 @@ export const PATCH = withAuth<{ id: string }>(async (req: NextRequest, user: JWT
     // Send notification and email to guest when owner responds
     if (body.response && inquiry.user) {
       // Create notification for the guest
-      await notificationService.createSystemNotification(
-        inquiry.userId || '',
-        'Response to Your Inquiry!',
-        `The property owner has responded to your inquiry about "${updatedInquiry.property?.title || 'the property'}"`,
-      );
+      try {
+        await notificationService.createSystemNotification(
+          inquiry.userId || '',
+          'Response to Your Inquiry!',
+          `The property owner has responded to your inquiry about "${updatedInquiry.property?.title || 'the property'}"`,
+        );
+      } catch (e) { console.error('Inquiry response notification failed (non-fatal):', e); }
 
       // Get owner info to send in email
       const owner = await prisma.user.findUnique({
@@ -200,14 +202,16 @@ export const PATCH = withAuth<{ id: string }>(async (req: NextRequest, user: JWT
       });
 
       // Send response email to guest
-      await emailService.sendInquiryResponseEmail(
-        inquiry.user.email,
-        `${inquiry.user.firstName} ${inquiry.user.lastName}`,
-        owner ? `${owner.firstName} ${owner.lastName}` : 'Property Owner',
-        updatedInquiry.property?.title || 'the property',
-        body.response,
-        id
-      );
+      try {
+        await emailService.sendInquiryResponseEmail(
+          inquiry.user.email,
+          `${inquiry.user.firstName} ${inquiry.user.lastName}`,
+          owner ? `${owner.firstName} ${owner.lastName}` : 'Property Owner',
+          updatedInquiry.property?.title || 'the property',
+          body.response,
+          id
+        );
+      } catch (e) { console.error('Inquiry response email failed (non-fatal):', e); }
     }
 
     const mappedInquiry = {

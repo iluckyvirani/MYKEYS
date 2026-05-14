@@ -1,6 +1,7 @@
                                            I have to build package that have price of package , owner name , phone display 
                                                                lead owner or admin , document expired alert , type -days, month, years, number of 
                                                                properties with ul, one feature admin handle all handle listing properties , handle all inquires
+
                                                               add one feature for short rent properties like adds - who set highest bid that owner                             							      properties show on top on that pin code vise.
                                                               after booking of short rent the booking details with owner details goes to email in user.
 

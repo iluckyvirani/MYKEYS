@@ -281,16 +281,20 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
     });
 
     // Send notification to property owner
-    await notificationService.createInquiryNotification(
-      property.ownerId,
-      {
-        inquiryId: inquiry.id,
-        propertyTitle: property.title,
-        propertyId: property.id,
-        inquirerName: body.name,
-        inquiryType: inquiryType,
-      }
-    );
+    try {
+      await notificationService.createInquiryNotification(
+        property.ownerId,
+        {
+          inquiryId: inquiry.id,
+          propertyTitle: property.title,
+          propertyId: property.id,
+          inquirerName: body.name,
+          inquiryType: inquiryType,
+        }
+      );
+    } catch (notifErr) {
+      console.error('Failed to send inquiry notification (non-fatal):', notifErr);
+    }
 
     // Get owner email and name
     const owner = await prisma.user.findUnique({
@@ -299,30 +303,42 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
     });
 
     // Send thank you email to inquirer (guest)
-    await emailService.sendInquiryConfirmationEmail(
-      body.email,
-      body.name,
-      property.title
-    );
+    try {
+      await emailService.sendInquiryConfirmationEmail(
+        body.email,
+        body.name,
+        property.title
+      );
+    } catch (emailErr) {
+      console.error('Failed to send inquiry confirmation email (non-fatal):', emailErr);
+    }
 
     // Send notification email to property owner
     if (owner) {
-      await emailService.sendNewInquiryNotificationEmail(
-        owner.email,
-        `${owner.firstName} ${owner.lastName}`,
-        body.name,
-        property.title,
-        inquiry.id
-      );
+      try {
+        await emailService.sendNewInquiryNotificationEmail(
+          owner.email,
+          `${owner.firstName} ${owner.lastName}`,
+          body.name,
+          property.title,
+          inquiry.id
+        );
+      } catch (emailErr) {
+        console.error('Failed to send owner inquiry notification email (non-fatal):', emailErr);
+      }
     }
 
     // Create system notification for user (guest) - thank you message
     if (body.userId) {
-      await notificationService.createSystemNotification(
-        body.userId,
-        'Thank You for Your Inquiry!',
-        `Your inquiry about "${property.title}" has been received. The owner will respond soon.`
-      );
+      try {
+        await notificationService.createSystemNotification(
+          body.userId,
+          'Thank You for Your Inquiry!',
+          `Your inquiry about "${property.title}" has been received. The owner will respond soon.`
+        );
+      } catch (notifErr) {
+        console.error('Failed to send user system notification (non-fatal):', notifErr);
+      }
     }
 
     const response: InquiryResponse = {

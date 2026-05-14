@@ -75,17 +75,19 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
     const result = await paymentService.initiatePayment(data, user.userId);
 
     // Send pending payment notification to user
-    await notificationService.createPaymentNotification(
-      user.userId,
-      {
-        paymentId: result.payment.id,
-        bookingId: data.bookingId,
-        amount: data.amount,
-        currency: 'INR',
-        status: 'pending',
-      },
-      'pending'
-    );
+    try {
+      await notificationService.createPaymentNotification(
+        user.userId,
+        {
+          paymentId: result.payment.id,
+          bookingId: data.bookingId,
+          amount: data.amount,
+          currency: 'INR',
+          status: 'pending',
+        },
+        'pending'
+      );
+    } catch (e) { console.error('Payment notification failed (non-fatal):', e); }
 
     return successResponse(
       {

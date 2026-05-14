@@ -79,14 +79,18 @@ export async function POST(request: NextRequest) {
     });
 
     // Send welcome notification
-    await notificationService.createSystemNotification(
-      user.id,
-      "Welcome to MyKeys!",
-      `Welcome ${user.firstName}! We're excited to have you on MyKeys. Explore properties, create bookings, and connect with property owners.`
-    );
+    try {
+      await notificationService.createSystemNotification(
+        user.id,
+        "Welcome to MyKeys!",
+        `Welcome ${user.firstName}! We're excited to have you on MyKeys. Explore properties, create bookings, and connect with property owners.`
+      );
+    } catch (e) { console.error('Welcome notification failed (non-fatal):', e); }
 
     // Send welcome email
-    await emailService.sendWelcomeEmail(user.email, user.firstName);
+    try {
+      await emailService.sendWelcomeEmail(user.email, user.firstName);
+    } catch (e) { console.error('Welcome email failed (non-fatal):', e); }
 
     // Generate tokens (use USER as primary role)
     const { accessToken, refreshToken } = await generateTokenPair(
