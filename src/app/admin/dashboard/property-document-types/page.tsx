@@ -51,7 +51,7 @@ export default function AdminPropertyDocumentTypesPage() {
   const fetchTypes = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get("/api/admin/property-document-types");
+      const res = await api.get("/admin/property-document-types");
       setTypes(res.data?.data ?? []);
     } catch {
       setTypes([]);
@@ -68,7 +68,7 @@ export default function AdminPropertyDocumentTypesPage() {
     setDeleting(true);
     setDeleteError("");
     try {
-      await api.delete(`/api/admin/property-document-types/${id}`);
+      await api.delete(`/admin/property-document-types/${id}`);
       setDeleteConfirm(null);
       await fetchTypes();
     } catch (err: unknown) {

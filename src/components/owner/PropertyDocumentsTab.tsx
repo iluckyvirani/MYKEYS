@@ -96,8 +96,8 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
     setLoading(true);
     try {
       const [reqRes, docsRes] = await Promise.all([
-        api.get(`/api/properties/${propertyId}/documents/required`),
-        api.get(`/api/properties/${propertyId}/documents`),
+        api.get(`/properties/${propertyId}/documents/required`),
+        api.get(`/properties/${propertyId}/documents`),
       ]);
       setRequiredTypes(reqRes.data?.data ?? []);
       setUploadedDocs(docsRes.data?.data ?? []);
@@ -132,7 +132,7 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
     try {
       // Upload to Cloudinary via /api/upload
       const base64 = await toBase64(file);
-      const uploadRes = await api.post("/api/upload", {
+      const uploadRes = await api.post("/upload", {
         image: base64,
         folder: "mykeys/property-documents",
       });
@@ -140,7 +140,7 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
 
       const typeDates = dates[typeId] ?? { issuedDate: "", expiryDate: "" };
 
-      await api.post(`/api/properties/${propertyId}/documents`, {
+      await api.post(`/properties/${propertyId}/documents`, {
         documentTypeId: typeId,
         documentUrl: url,
         fileName: file.name,

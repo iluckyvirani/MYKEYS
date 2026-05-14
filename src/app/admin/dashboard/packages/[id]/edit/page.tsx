@@ -14,7 +14,7 @@ export default function EditPackagePage() {
 
   useEffect(() => {
     api
-      .get(`/api/admin/packages/${id}`)
+      .get(`/admin/packages/${id}`)
       .then((res) => setPkg(res.data?.data ?? res.data))
       .catch(() => setError("Failed to load package"))
       .finally(() => setLoading(false));

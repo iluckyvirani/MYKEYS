@@ -106,7 +106,7 @@ export default function OwnerPackageManager() {
 
   const fetchCurrent = async () => {
     try {
-      const res = await api.get("/api/owner/packages");
+      const res = await api.get("/owner/packages");
       setCurrentPkg(res.data?.data ?? null);
     } finally {
       setLoading(false);
@@ -119,7 +119,7 @@ export default function OwnerPackageManager() {
     setSubscribing(packageId);
     setSubError("");
     try {
-      await api.post("/api/owner/packages/subscribe", { packageId });
+      await api.post("/owner/packages/subscribe", { packageId });
       await fetchCurrent();
       setShowBrowser(false);
     } catch (err: any) {

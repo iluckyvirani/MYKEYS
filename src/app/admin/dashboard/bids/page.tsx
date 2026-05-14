@@ -82,7 +82,7 @@ export default function AdminBidsPage() {
     if (!confirm("Cancel this bid? This will immediately end the boost.")) return;
     setCancelling(bidId);
     try {
-      await api.patch(`/api/admin/bids/${bidId}/cancel`, {});
+      await api.patch(`/admin/bids/${bidId}/cancel`, {});
       setBids((prev) =>
         prev.map((b) => (b.id === bidId ? { ...b, status: "CANCELLED" } : b))
       );

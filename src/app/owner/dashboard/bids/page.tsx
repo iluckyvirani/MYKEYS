@@ -62,7 +62,7 @@ export default function OwnerBidsPage() {
     setCancelling(bidId);
     setCancelError("");
     try {
-      await api.delete(`/api/owner/bids/${bidId}`);
+      await api.delete(`/owner/bids/${bidId}`);
       setBids((prev) =>
         prev.map((b) => (b.id === bidId ? { ...b, status: "CANCELLED" } : b))
       );

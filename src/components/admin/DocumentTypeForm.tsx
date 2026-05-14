@@ -73,9 +73,9 @@ export default function DocumentTypeForm({ mode, id, initial }: Props) {
     setSaving(true);
     try {
       if (mode === "create") {
-        await api.post("/api/admin/property-document-types", form);
+        await api.post("/admin/property-document-types", form);
       } else {
-        await api.patch(`/api/admin/property-document-types/${id}`, form);
+        await api.patch(`/admin/property-document-types/${id}`, form);
       }
       router.push("/admin/dashboard/property-document-types");
     } catch (err: unknown) {

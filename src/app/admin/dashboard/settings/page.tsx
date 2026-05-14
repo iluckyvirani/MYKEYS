@@ -39,7 +39,7 @@ export default function AdminSettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      await api.patch("/api/admin/settings", {
+      await api.patch("/admin/settings", {
         shortRentCommissionPercent: commission,
         minBidAmountPerDay: minBid,
         maxBidDurationDays: maxDuration,

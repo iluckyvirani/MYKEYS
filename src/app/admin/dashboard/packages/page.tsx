@@ -44,7 +44,7 @@ export default function AdminPackagesPage() {
   const fetchPackages = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get("/api/admin/packages");
+      const res = await api.get("/admin/packages");
       setPackages(res.data?.data ?? []);
     } catch {
       setPackages([]);
@@ -59,7 +59,7 @@ export default function AdminPackagesPage() {
     setDeleting(true);
     setDeleteError("");
     try {
-      await api.delete(`/api/admin/packages/${id}`);
+      await api.delete(`/admin/packages/${id}`);
       setDeleteConfirm(null);
       await fetchPackages();
     } catch (err: any) {

@@ -196,7 +196,7 @@ export default function OwnerPropertiesPage() {
 
   useEffect(() => {
     fetchProperties();
-    api.get("/api/owner/packages").then((res) => setOwnerPkg(res.data?.data ?? null)).catch(() => {});
+    api.get("/owner/packages").then((res) => setOwnerPkg(res.data?.data ?? null)).catch(() => {});
   }, [fetchProperties]);
 
   const filteredProperties = useMemo(() => {

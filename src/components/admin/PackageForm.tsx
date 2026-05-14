@@ -63,9 +63,9 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
     setSaving(true);
     try {
       if (mode === "create") {
-        await api.post("/api/admin/packages", form);
+        await api.post("/admin/packages", form);
       } else {
-        await api.patch(`/api/admin/packages/${initialData!.id}`, form);
+        await api.patch(`/admin/packages/${initialData!.id}`, form);
       }
       router.push("/admin/dashboard/packages");
       router.refresh();

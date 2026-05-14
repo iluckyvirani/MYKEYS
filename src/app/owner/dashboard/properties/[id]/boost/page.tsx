@@ -137,7 +137,7 @@ export default function BoostPropertyPage({
             name: "MYKEYS — Property Boost",
             description: `Boost for ${property?.title} in ${zipCode} (${days} days)`,
             handler: async (payment: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-              await api.post(`/api/owner/bids/${res.data!.bid.id}/payment/verify`, {
+              await api.post(`/owner/bids/${res.data!.bid.id}/payment/verify`, {
                 razorpayOrderId: payment.razorpay_order_id,
                 razorpayPaymentId: payment.razorpay_payment_id,
                 razorpaySignature: payment.razorpay_signature,
