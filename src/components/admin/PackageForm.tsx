@@ -246,13 +246,13 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
       </div>
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" disabled={saving} className="bg-green-600 hover:bg-green-700 text-white px-6">
+        <Button type="submit" disabled={saving} className="bg-green-600 hover:bg-green-700 text-white px-6 cursor-pointer">
           {saving ? "Saving…" : mode === "create" ? "Create Package" : "Save Changes"}
         </Button>
         <Button
           type="button"
           variant="outline"
-          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          className="border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer"
           onClick={() => router.back()}
         >
           Cancel

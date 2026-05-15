@@ -494,191 +494,166 @@ export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
         <div className="lg:col-span-2 p-6">
           {selectedInquiry ? (
             <div>
-              <div className="flex items-start justify-between mb-6">
+              <div className="flex items-start justify-between mb-6 pb-6 border-b">
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">
                     {selectedInquiry.propertyTitle}
                   </h3>
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="flex items-center gap-1 text-gray-600">
+                  <div className="flex items-center gap-4 mt-3">
+                    <div className="flex items-center gap-2 text-gray-600">
                       <User className="w-4 h-4" />
-                      {selectedInquiry.guestName}
+                      <span className="text-sm">{selectedInquiry.guestName}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-gray-600">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Mail className="w-4 h-4" />
+                      <span className="text-sm">{selectedInquiry.guestEmail}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
                       <Calendar className="w-4 h-4" />
-                      {formatDate(selectedInquiry.createdAt)}
-                    </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${priorityColors[selectedInquiry.priority as keyof typeof priorityColors]}`}>
-                      {selectedInquiry.priority} priority
+                      <span className="text-sm">{formatDate(selectedInquiry.createdAt)}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowNotesModal(true);
-                      fetchNotes(selectedInquiry.id);
-                    }}
-                  >
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Notes
-                  </Button>
-                </div>
-              </div>
-
-              {/* Guest Info */}
-              <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Guest Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                    <Mail className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <div className="text-sm text-gray-500">Email</div>
-                      <div className="font-medium">{selectedInquiry.guestEmail}</div>
-                    </div>
+                <div className="flex flex-col gap-2">
+                  <div className={`px-3 py-1 rounded-full text-xs font-semibold ${priorityColors[selectedInquiry.priority as keyof typeof priorityColors]}`}>
+                    {selectedInquiry.priority.toUpperCase()} PRIORITY
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                    <Phone className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <div className="text-sm text-gray-500">Phone</div>
-                      <div className="font-medium">{selectedInquiry.guestPhone || "N/A"}</div>
-                    </div>
+                  <div className={`px-3 py-1 rounded-full text-xs font-semibold text-center ${statusColors[selectedInquiry.status as keyof typeof statusColors]}`}>
+                    {selectedInquiry.status.toUpperCase()}
                   </div>
                 </div>
               </div>
 
-              {/* Inquiry Details */}
-              <div className="mb-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Inquiry Details</h4>
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">Message</div>
-                    <div className="p-4 bg-gray-50 rounded-lg border">
-                      {selectedInquiry.message}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-white rounded-lg border">
-                      <div className="text-sm text-gray-500">Type</div>
-                      <div className="font-medium">{selectedInquiry.type.replace("_", " ")}</div>
-                    </div>
-                    {selectedInquiry.type !== "purchase" && (
-                      <div className="p-4 bg-white rounded-lg border">
-                        <div className="text-sm text-gray-500">Duration</div>
-                        <div className="font-medium">{selectedInquiry.duration || "N/A"}</div>
-                      </div>
-                    )}
-                    <div className="p-4 bg-white rounded-lg border">
-                      <div className="text-sm text-gray-500">Property Price</div>
-                      <div className="font-medium">
-                        {selectedInquiry.propertyPrice
-                          ? `£${selectedInquiry.propertyPrice.toLocaleString()}${selectedInquiry.type === "long_term" ? " /month" : " total"}`
-                          : "N/A"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-white rounded-lg border">
-                      <div className="text-sm text-gray-500 mb-2">Status</div>
-                      <div className="font-medium text-lg">{selectedInquiry.status.toUpperCase()}</div>
-                    </div>
-
-                    <div className="p-4 bg-white rounded-lg border">
-                      <div className="text-sm text-gray-500 mb-2">Priority</div>
-                      <select 
-                        value={selectedInquiry.priority}
-                        onChange={(e) => handlePriorityChange(selectedInquiry.id, e.target.value)}
-                        disabled={updatingId === selectedInquiry.id}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                    </div>
-                  </div>
+              {/* Quick Info Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="text-xs text-gray-600 mb-1">Inquiry Type</div>
+                  <div className="font-semibold text-gray-900">{selectedInquiry.type.replace("_", " ")}</div>
                 </div>
-              </div>
-
-              {/* Response Box */}
-              <div className="mb-6 border-t pt-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Response to User</h4>
-                
-                {selectedInquiry.response && !isEditingResponse ? (
-                  // Show existing response with edit button
-                  <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-green-900">Your Response (Visible to User)</span>
-                      <button
-                        onClick={() => {
-                          setIsEditingResponse(true);
-                          setResponseMessage(selectedInquiry.response || "");
-                        }}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                    <p className="text-gray-700 text-sm">{selectedInquiry.response}</p>
-                  </div>
-                ) : (
-                  // Show input for new or editing response
-                  <div className="space-y-4">
-                    <textarea
-                      value={responseMessage}
-                      onChange={(e) => setResponseMessage(e.target.value)}
-                      placeholder="Type your response message to be sent to the user..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={4}
-                    />
-                    <div className="flex gap-3">
-                      <Button 
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={handleSaveResponse}
-                        disabled={updatingId === selectedInquiry.id || !responseMessage.trim()}
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Send Response
-                      </Button>
-                      {isEditingResponse && (
-                        <Button 
-                          variant="outline"
-                          onClick={() => {
-                            setIsEditingResponse(false);
-                            setResponseMessage("");
-                          }}
-                          disabled={updatingId === selectedInquiry.id}
-                        >
-                          Cancel
-                        </Button>
-                      )}
-                    </div>
+                {selectedInquiry.type !== "purchase" && (
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <div className="text-xs text-gray-600 mb-1">Duration</div>
+                    <div className="font-semibold text-gray-900">{selectedInquiry.duration || "N/A"}</div>
                   </div>
                 )}
+                <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                  <div className="text-xs text-gray-600 mb-1">Property Price</div>
+                  <div className="font-semibold text-gray-900">
+                    {selectedInquiry.propertyPrice
+                      ? `£${selectedInquiry.propertyPrice.toLocaleString()}${selectedInquiry.type === "long_term" ? " /month" : ""}`
+                      : "N/A"}
+                  </div>
+                </div>
+              </div>
 
-                {/* Action Buttons */}
-                {selectedInquiry.response && !isEditingResponse && (
-                  <div className="flex gap-3 mt-4">
+              {/* Original Message */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Initial Inquiry Message</h4>
+                <div className="p-4 bg-gray-50 rounded-lg border">
+                  <p className="text-sm text-gray-700 leading-relaxed">{selectedInquiry.message}</p>
+                </div>
+              </div>
+
+              {/* Chat/Conversation View */}
+              <div className="mb-6 border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-gray-900">Conversation</h4>
+                  <div className="flex items-center gap-2">
+                    <select 
+                      value={selectedInquiry.priority}
+                      onChange={(e) => handlePriorityChange(selectedInquiry.id, e.target.value)}
+                      disabled={updatingId === selectedInquiry.id}
+                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="low">Low Priority</option>
+                      <option value="medium">Medium Priority</option>
+                      <option value="high">High Priority</option>
+                    </select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowNotesModal(true);
+                        fetchNotes(selectedInquiry.id);
+                      }}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Notes
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Chat Messages */}
+                <div className="bg-gray-50 rounded-lg border p-4 mb-4 max-h-80 overflow-y-auto space-y-4">
+                  {/* Guest Initial Message */}
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-xs font-semibold text-blue-700">
+                      {selectedInquiry.guestName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium text-gray-900">{selectedInquiry.guestName}</span>
+                        <span className="text-xs text-gray-500">{formatDate(selectedInquiry.createdAt)}</span>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-sm text-gray-700">{selectedInquiry.message}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Owner Response */}
+                  {selectedInquiry.response && (
+                    <div className="flex gap-3 justify-end">
+                      <div className="flex-1 max-w-xs">
+                        <div className="flex items-center gap-2 mb-1 justify-end">
+                          <span className="text-xs text-gray-500">{formatDate(selectedInquiry.updatedAt)}</span>
+                          <span className="text-sm font-medium text-gray-900">You</span>
+                        </div>
+                        <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                          <p className="text-sm text-gray-700">{selectedInquiry.response}</p>
+                        </div>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0 text-xs font-semibold text-green-700">
+                        O
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Reply Input Box */}
+                <div className="space-y-4">
+                  <textarea
+                    value={responseMessage}
+                    onChange={(e) => setResponseMessage(e.target.value)}
+                    placeholder={selectedInquiry.response ? "Type your reply..." : "Send a response to the guest..."}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    rows={3}
+                  />
+                  <div className="flex gap-3">
+                    <Button 
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={handleSaveResponse}
+                      disabled={updatingId === selectedInquiry.id || !responseMessage.trim()}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Send Message
+                    </Button>
                     <Button 
                       variant="outline"
                       onClick={handleMarkClosed}
-                      disabled={updatingId === selectedInquiry.id}
+                      disabled={updatingId === selectedInquiry.id || selectedInquiry.status === "closed"}
                     >
-                      Close Inquiry
+                      Close
                     </Button>
                     <Button 
                       variant="outline"
                       onClick={handleMarkConverted}
-                      disabled={updatingId === selectedInquiry.id}
+                      disabled={updatingId === selectedInquiry.id || selectedInquiry.status === "converted"}
                     >
                       Mark Converted
                     </Button>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           ) : (

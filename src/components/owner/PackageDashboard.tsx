@@ -1,44 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, TrendingUp, Database, Zap, Badge, Users, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, Check, X, Clock, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 
 interface PackageUsage {
   ownerId: string;
-  packageName: string;
-  packageTier: string;
-  activeSince: string;
-  expiresAt: string;
   status: string;
-  properties: {
-    used: number;
-    limit: number;
-    percentage: number;
-  };
-  featured: {
-    used: number;
-    limit: number;
-    percentage: number;
-  };
-  storage: {
-    usedGB: number;
-    limitGB: number;
-    percentage: number;
-  };
-  leads: {
-    usedToday: number;
-    totalUsed: number;
-    dailyLimit: number;
-    totalLimit: number;
-    dailyPercentage: number;
-    totalPercentage: number;
-  };
-  verifiedBadge: {
-    active: boolean;
-    expiresAt: string | null;
-  };
+  startDate: string;
+  endDate: string;
+  daysRemaining: number;
+  propertiesUsed: number;
+  propertiesLimit: number;
+  featuredUsed: number;
+  featuredLimit: number;
+  packageName: string;
+  price: number;
+  durationValue: number;
+  durationUnit: string;
+  showOwnerName: boolean;
+  showOwnerPhone: boolean;
+  directInquiryToOwner: boolean;
+  adminCCOnInquiry: boolean;
+  fullAdminSupport: boolean;
+  docExpiryAlert: boolean;
 }
 
 interface Props {
@@ -47,26 +33,26 @@ interface Props {
 }
 
 export default function PackageDashboard({ onUpgrade, onViewDetails }: Props) {
-  const [usage, setUsage] = useState<PackageUsage | null>(null);
+  const [packageData, setPackageData] = useState<PackageUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchUsage();
+    fetchPackageData();
   }, []);
 
-  const fetchUsage = async () => {
+  const fetchPackageData = async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await api.get<PackageUsage>("/owner/packages/usage");
       if (response.data) {
-        setUsage(response.data);
+        setPackageData(response.data);
       }
     } catch (err) {
-      setError("Failed to load package usage");
-      console.error("Error fetching usage:", err);
+      setError("Failed to load package information");
+      console.error("Error fetching package:", err);
     } finally {
       setLoading(false);
     }
@@ -74,69 +60,20 @@ export default function PackageDashboard({ onUpgrade, onViewDetails }: Props) {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchUsage();
+    await fetchPackageData();
     setRefreshing(false);
   };
 
-  const getUsageColor = (percentage: number): string => {
-    if (percentage >= 90) return "text-red-600";
-    if (percentage >= 70) return "text-yellow-600";
-    return "text-green-600";
-  };
-
-  const getProgressBarColor = (percentage: number): string => {
-    if (percentage >= 90) return "bg-red-600";
-    if (percentage >= 70) return "bg-yellow-600";
-    return "bg-green-600";
-  };
-
-  const UsageCard = ({
-    icon: Icon,
-    label,
-    used,
-    limit,
-    percentage,
-    unit = "",
-  }: {
-    icon: any;
-    label: string;
-    used: number;
-    limit: number;
-    percentage: number;
-    unit?: string;
-  }) => (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gray-100 rounded-lg">
-            <Icon className="w-5 h-5 text-gray-700" />
-          </div>
-          <h4 className="font-semibold text-gray-900">{label}</h4>
-        </div>
-        <span className={`text-sm font-bold ${getUsageColor(percentage)}`}>{percentage}%</span>
+  const FeatureItem = ({ label, included }: { label: string; included: boolean }) => (
+    <div className="flex items-center gap-3 py-2">
+      <div className={`p-1 rounded ${included ? "bg-green-100" : "bg-gray-100"}`}>
+        {included ? (
+          <Check className="w-5 h-5 text-green-600" />
+        ) : (
+          <X className="w-5 h-5 text-gray-400" />
+        )}
       </div>
-
-      <div className="space-y-2">
-        <p className="text-2xl font-bold text-gray-900">
-          {used}
-          <span className="text-sm text-gray-600 ml-1">{unit}</span>
-          <span className="text-gray-400"> / {limit}{unit}</span>
-        </p>
-
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className={`h-2 rounded-full transition-all ${getProgressBarColor(percentage)}`}
-            style={{ width: `${Math.min(percentage, 100)}%` }}
-          ></div>
-        </div>
-      </div>
-
-      {percentage >= 90 && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-red-600">
-          <AlertCircle className="w-4 h-4" />
-          <span>Limit nearly reached</span>
-        </div>
-      )}
+      <span className={included ? "text-gray-900 font-medium" : "text-gray-500"}>{label}</span>
     </div>
   );
 
@@ -148,7 +85,7 @@ export default function PackageDashboard({ onUpgrade, onViewDetails }: Props) {
     );
   }
 
-  if (error || !usage) {
+  if (error || !packageData) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
         <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
@@ -160,23 +97,19 @@ export default function PackageDashboard({ onUpgrade, onViewDetails }: Props) {
     );
   }
 
-  const daysRemaining = usage.expiresAt
-    ? Math.ceil((new Date(usage.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null;
-
   return (
     <div className="space-y-6">
       {/* Header Card */}
       <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg p-8">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-3xl font-bold mb-1">{usage.packageName} Plan</h2>
+            <h2 className="text-3xl font-bold mb-1">{packageData.packageName}</h2>
             <p className="text-green-100">
-              Active since {new Date(usage.activeSince).toLocaleDateString()}
+              Active since {new Date(packageData.startDate).toLocaleDateString()}
             </p>
-            {daysRemaining && daysRemaining > 0 && (
+            {packageData.daysRemaining > 0 && (
               <p className="text-green-100 mt-1">
-                {daysRemaining} days remaining until {new Date(usage.expiresAt).toLocaleDateString()}
+                {packageData.daysRemaining} days remaining until {new Date(packageData.endDate).toLocaleDateString()}
               </p>
             )}
           </div>
@@ -184,86 +117,88 @@ export default function PackageDashboard({ onUpgrade, onViewDetails }: Props) {
             <p className="text-green-100 text-sm mb-2">Status</p>
             <div
               className={`inline-block px-4 py-2 rounded-full font-semibold ${
-                usage.status === "ACTIVE"
+                packageData.status === "ACTIVE"
                   ? "bg-green-500 text-green-900"
                   : "bg-yellow-500 text-yellow-900"
               }`}
             >
-              {usage.status}
+              {packageData.status}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Usage Grid */}
+      {/* Price & Duration */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <UsageCard
-          icon={Users}
-          label="Properties"
-          used={usage.properties.used}
-          limit={usage.properties.limit}
-          percentage={usage.properties.percentage}
-        />
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Tag className="w-5 h-5 text-blue-600" />
+            </div>
+            <h3 className="font-semibold text-gray-900">Price</h3>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">£{packageData.price}</p>
+        </div>
 
-        <UsageCard
-          icon={Zap}
-          label="Featured Listings"
-          used={usage.featured.used}
-          limit={usage.featured.limit}
-          percentage={usage.featured.percentage}
-        />
-
-        <UsageCard
-          icon={Database}
-          label="Storage"
-          used={Math.round(usage.storage.usedGB * 10) / 10}
-          limit={usage.storage.limitGB}
-          percentage={usage.storage.percentage}
-          unit="GB"
-        />
-
-        <UsageCard
-          icon={TrendingUp}
-          label="Leads (Today)"
-          used={usage.leads.usedToday}
-          limit={usage.leads.dailyLimit}
-          percentage={usage.leads.dailyPercentage}
-        />
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Clock className="w-5 h-5 text-purple-600" />
+            </div>
+            <h3 className="font-semibold text-gray-900">Duration</h3>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">
+            {packageData.durationValue}
+            <span className="text-lg text-gray-600 ml-2">
+              {packageData.durationUnit === "days" && "days"}
+              {packageData.durationUnit === "months" && "months"}
+              {packageData.durationUnit === "years" && "years"}
+            </span>
+          </p>
+        </div>
       </div>
 
-      {/* Total Leads */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h4 className="font-semibold text-gray-900 mb-4">Total Leads (All Time)</h4>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-gray-700">
-              {usage.leads.totalUsed} / {usage.leads.totalLimit} Leads Used
-            </p>
-            <span className="text-sm font-bold text-gray-900">{usage.leads.totalPercentage}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
+      {/* Properties & Featured Listings */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="font-semibold text-gray-900 mb-4">Properties</h3>
+          <p className="text-2xl font-bold text-gray-900">
+            {packageData.propertiesUsed} <span className="text-gray-500">/ {packageData.propertiesLimit}</span>
+          </p>
+          <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
             <div
-              className={`h-3 rounded-full transition-all ${getProgressBarColor(usage.leads.totalPercentage)}`}
-              style={{ width: `${Math.min(usage.leads.totalPercentage, 100)}%` }}
+              className="h-2 rounded-full bg-green-600"
+              style={{ width: `${(packageData.propertiesUsed / packageData.propertiesLimit) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="font-semibold text-gray-900 mb-4">Featured Listings</h3>
+          <p className="text-2xl font-bold text-gray-900">
+            {packageData.featuredUsed} <span className="text-gray-500">/ {packageData.featuredLimit}</span>
+          </p>
+          <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="h-2 rounded-full bg-blue-600"
+              style={{ width: `${packageData.featuredLimit > 0 ? (packageData.featuredUsed / packageData.featuredLimit) * 100 : 0}%` }}
             ></div>
           </div>
         </div>
       </div>
 
-      {/* Verified Badge Status */}
-      {usage.verifiedBadge.active && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <div className="flex items-center gap-3">
-            <Badge className="w-6 h-6 text-blue-600" />
-            <div>
-              <h4 className="font-semibold text-blue-900">Verified Badge Active</h4>
-              <p className="text-sm text-blue-700">
-                Your account is verified and trusted by our platform
-              </p>
-            </div>
-          </div>
+      {/* Features */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="font-semibold text-gray-900 mb-4">Features Included</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FeatureItem label="Show Owner Name" included={packageData.showOwnerName} />
+          <FeatureItem label="Show Owner Phone" included={packageData.showOwnerPhone} />
+          <FeatureItem label="Direct Inquiry to Owner" included={packageData.directInquiryToOwner} />
+          <FeatureItem label="Admin CC on Inquiry" included={packageData.adminCCOnInquiry} />
+          <FeatureItem label="Full Admin Support" included={packageData.fullAdminSupport} />
+          <FeatureItem label="Document Expiry Alerts" included={packageData.docExpiryAlert} />
         </div>
-      )}
+      </div>
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -290,18 +225,6 @@ export default function PackageDashboard({ onUpgrade, onViewDetails }: Props) {
           Upgrade Plan
         </Button>
       </div>
-
-      {/* Upgrade Suggestion */}
-      {(usage.properties.percentage >= 80 ||
-        usage.leads.dailyPercentage >= 80 ||
-        usage.storage.percentage >= 80) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <p className="text-amber-900 text-sm">
-            ⚡ You're reaching limits on your current plan. Consider upgrading to unlock more features and higher
-            limits.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

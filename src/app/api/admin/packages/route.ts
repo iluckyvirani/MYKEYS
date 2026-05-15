@@ -10,8 +10,17 @@ import { ErrorCode } from '@/lib/auth/errors';
  */
 export const GET = withAuth(
   async (_req: NextRequest) => {
-    const packages = await packageService.getAll();
-    return successResponse(packages, 'Packages retrieved successfully', 200);
+    try {
+      const packages = await packageService.getAll();
+      return successResponse(packages, 'Packages retrieved successfully', 200);
+    } catch (error) {
+      console.error('Get packages error:', error);
+      return errorResponse(
+        'Failed to retrieve packages',
+        500,
+        ErrorCode.INTERNAL_SERVER_ERROR
+      );
+    }
   },
   { roles: [UserRole.ADMIN] }
 );
@@ -22,22 +31,31 @@ export const GET = withAuth(
  */
 export const POST = withAuth(
   async (req: NextRequest) => {
-    const data = await req.json();
+    try {
+      const data = await req.json();
 
-    if (!data.name || data.price === undefined || !data.durationValue || !data.durationUnit) {
+      if (!data.name || data.price === undefined || !data.durationValue || !data.durationUnit) {
+        return errorResponse(
+          'name, price, durationValue, and durationUnit are required',
+          400,
+          ErrorCode.VALIDATION_ERROR
+        );
+      }
+
+      if (!['days', 'months', 'years'].includes(data.durationUnit)) {
+        return errorResponse('durationUnit must be days, months, or years', 400, ErrorCode.VALIDATION_ERROR);
+      }
+
+      const pkg = await packageService.create(data);
+      return successResponse(pkg, 'Package created successfully', 201);
+    } catch (error) {
+      console.error('Create package error:', error);
       return errorResponse(
-        'name, price, durationValue, and durationUnit are required',
-        400,
-        ErrorCode.VALIDATION_ERROR
+        'Failed to create package',
+        500,
+        ErrorCode.INTERNAL_SERVER_ERROR
       );
     }
-
-    if (!['days', 'months', 'years'].includes(data.durationUnit)) {
-      return errorResponse('durationUnit must be days, months, or years', 400, ErrorCode.VALIDATION_ERROR);
-    }
-
-    const pkg = await packageService.create(data);
-    return successResponse(pkg, 'Package created successfully', 201);
   },
   { roles: [UserRole.ADMIN] }
 );

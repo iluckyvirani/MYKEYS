@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Crown, Check, Home, Zap, Loader2, Package } from "lucide-react";
+import { Crown, Check, Home, Loader2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,11 +10,11 @@ import { toast } from "@/hooks/use-toast";
 
 interface AvailablePackagesProps {
   packages: any[];
-  currentTier: string | null;
+  currentPackageId: string | null;
   onSubscribe: () => void;
 }
 
-export default function AvailablePackages({ packages, currentTier, onSubscribe }: AvailablePackagesProps) {
+export default function AvailablePackages({ packages, currentPackageId, onSubscribe }: AvailablePackagesProps) {
   const [subscribing, setSubscribing] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) =>
@@ -25,25 +25,17 @@ export default function AvailablePackages({ packages, currentTier, onSubscribe }
       maximumFractionDigits: 0,
     }).format(amount);
 
-  const getTierConfig = (tier: string) => {
-    switch (tier) {
-      case "BASIC":
-        return { color: "from-gray-400 to-gray-500", icon: Home, badge: "Basic" };
-      case "STANDARD":
-        return { color: "from-blue-500 to-blue-600", icon: Zap, badge: "Standard" };
-      case "PREMIUM":
-        return { color: "from-purple-500 to-purple-600", icon: Crown, badge: "Premium" };
-      default:
-        return { color: "from-gray-400 to-gray-500", icon: Package, badge: tier };
-    }
+  const getDurationLabel = (value: number, unit: string) => {
+    const unitMap = { days: "day", months: "month", years: "year" };
+    const label = unitMap[unit as keyof typeof unitMap] || unit;
+    return `${value} ${label}`;
   };
 
-  const handleSubscribe = async (packageId: string, duration: string) => {
+  const handleSubscribe = async (packageId: string) => {
     try {
       setSubscribing(packageId);
       const response = await api.post("/owner/packages/subscribe", {
         packageId,
-        duration,
       });
 
       toast({
@@ -84,33 +76,30 @@ export default function AvailablePackages({ packages, currentTier, onSubscribe }
         {packages
           .sort((a, b) => a.price - b.price)
           .map((pkg) => {
-            const tierConfig = getTierConfig(pkg.tier);
-            const TierIcon = tierConfig.icon;
-            const isCurrentTier = currentTier === pkg.tier;
+            const isCurrentPackage = currentPackageId === pkg.id;
 
             return (
               <Card
                 key={pkg.id}
                 className={`relative overflow-hidden hover:shadow-lg transition-shadow ${
-                  isCurrentTier ? "ring-2 ring-green-500" : ""
+                  isCurrentPackage ? "ring-2 ring-green-500" : ""
                 }`}
               >
-                {/* Tier Badge */}
-                <div className={`bg-linear-to-r ${tierConfig.color} p-4 text-white`}>
+                {/* Header */}
+                <div className="bg-linear-to-r from-gray-700 to-gray-800 p-4 text-white">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <TierIcon className="w-5 h-5" />
-                      <span className="font-semibold">{tierConfig.badge}</span>
+                      <Crown className="w-5 h-5" />
+                      <span className="font-semibold">{pkg.name}</span>
                     </div>
-                    {isCurrentTier && (
+                    {isCurrentPackage && (
                       <Badge className="bg-white/20 text-white border-white/30">
                         Current
                       </Badge>
                     )}
                   </div>
-                  <h3 className="text-2xl font-bold">{pkg.name}</h3>
-                  {pkg.description && (
-                    <p className="text-sm text-white/80 mt-1">{pkg.description}</p>
+                  {pkg.shortDescription && (
+                    <p className="text-sm text-white/80 mt-1">{pkg.shortDescription}</p>
                   )}
                 </div>
 
@@ -121,12 +110,14 @@ export default function AvailablePackages({ packages, currentTier, onSubscribe }
                       <span className="text-3xl font-bold text-gray-900">
                         {formatCurrency(pkg.price)}
                       </span>
-                      <span className="text-gray-600">/ {pkg.duration}</span>
                     </div>
+                    <span className="text-sm text-gray-600">
+                      / {getDurationLabel(pkg.durationValue, pkg.durationUnit)}
+                    </span>
                   </div>
 
                   {/* Core Features */}
-                  <div className="space-y-3 mb-6">
+                  <div className="space-y-3 mb-6 pb-6 border-b border-gray-200">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Properties</span>
                       <span className="font-semibold text-gray-900">
@@ -139,64 +130,57 @@ export default function AvailablePackages({ packages, currentTier, onSubscribe }
                         {pkg.featuredLimit === 0 ? "—" : pkg.featuredLimit}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Storage</span>
-                      <span className="font-semibold text-gray-900">{pkg.storageLimit} GB</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Daily Leads</span>
-                      <span className="font-semibold text-gray-900">{pkg.dailyLeadsLimit}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Total Leads</span>
-                      <span className="font-semibold text-gray-900">{pkg.totalLeadsLimit}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Support</span>
-                      <span className="font-semibold text-gray-900 capitalize">
-                        {pkg.supportLevel}
-                      </span>
-                    </div>
                   </div>
 
                   {/* Features Included */}
-                  {pkg.featuresIncluded && pkg.featuresIncluded.length > 0 && (
-                    <div className="mb-6">
-                      <h4 className="font-semibold text-gray-900 text-sm mb-3">Features Included</h4>
-                      <div className="space-y-2">
-                        {pkg.featuresIncluded.map((feature: string, index: number) => (
-                          <div key={index} className="flex items-start gap-2 text-sm">
-                            <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                            <span className="text-gray-700">{feature.replace(/_/g, " ")}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Additional Features */}
                   <div className="space-y-2 mb-6">
-                    <div className="flex items-center gap-2 text-sm">
-                      {pkg.hasVerifiedBadge ? (
-                        <Check className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <span className="w-4 h-4" />
-                      )}
-                      <span className={pkg.hasVerifiedBadge ? "text-gray-900" : "text-gray-400"}>
-                        Verified Badge
-                      </span>
-                    </div>
+                    {pkg.showOwnerName && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-600 shrink-0" />
+                        <span className="text-gray-700">Show Owner Name</span>
+                      </div>
+                    )}
+                    {pkg.showOwnerPhone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-600 shrink-0" />
+                        <span className="text-gray-700">Show Owner Phone</span>
+                      </div>
+                    )}
+                    {pkg.directInquiryToOwner && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-600 shrink-0" />
+                        <span className="text-gray-700">Direct Inquiry to Owner</span>
+                      </div>
+                    )}
+                    {pkg.adminCCOnInquiry && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-600 shrink-0" />
+                        <span className="text-gray-700">Admin CC on Inquiry</span>
+                      </div>
+                    )}
+                    {pkg.fullAdminSupport && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-600 shrink-0" />
+                        <span className="text-gray-700">Full Admin Support</span>
+                      </div>
+                    )}
+                    {pkg.docExpiryAlert && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-600 shrink-0" />
+                        <span className="text-gray-700">Document Expiry Alerts</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Subscribe Button */}
                   <div>
-                    {isCurrentTier ? (
+                    {isCurrentPackage ? (
                       <Button disabled className="w-full rounded-[5px]" variant="outline">
                         Current Plan
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => handleSubscribe(pkg.id, pkg.duration)}
+                        onClick={() => handleSubscribe(pkg.id)}
                         disabled={subscribing === pkg.id}
                         className="w-full rounded-[5px] bg-green-600 hover:bg-green-700"
                       >
@@ -205,8 +189,6 @@ export default function AvailablePackages({ packages, currentTier, onSubscribe }
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Processing...
                           </>
-                        ) : currentTier ? (
-                          "Upgrade"
                         ) : (
                           "Subscribe"
                         )}

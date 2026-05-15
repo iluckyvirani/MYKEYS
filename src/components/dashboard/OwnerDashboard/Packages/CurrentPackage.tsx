@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Crown, CheckCircle, Clock, Home, TrendingUp, HardDrive, Users, AlertCircle, Calendar, RefreshCw } from "lucide-react";
+import { Crown, CheckCircle, Clock, Home, TrendingUp, AlertCircle, Calendar, RefreshCw, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -27,7 +27,8 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
     );
   }
 
-  const { package: pkg } = currentPackage;
+  const pkg = currentPackage;
+  
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-GB", {
       style: "currency",
@@ -48,19 +49,6 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
     (new Date(packageUsage.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  const getTierConfig = (tier: string) => {
-    switch (tier) {
-      case "BASIC":
-        return { color: "bg-gray-100 text-gray-800", icon: Home };
-      case "STANDARD":
-        return { color: "bg-blue-100 text-blue-800", icon: Crown };
-      case "PREMIUM":
-        return { color: "bg-purple-100 text-purple-800", icon: Crown };
-      default:
-        return { color: "bg-gray-100 text-gray-800", icon: Home };
-    }
-  };
-
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "ACTIVE":
@@ -76,10 +64,23 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
     }
   };
 
-  const tierConfig = getTierConfig(pkg.tier);
+  const getUnitLabel = (unit: string) => {
+    switch (unit) {
+      case "days":
+        return "day";
+      case "months":
+        return "month";
+      case "years":
+        return "year";
+      default:
+        return unit;
+    }
+  };
+
   const statusConfig = getStatusConfig(packageUsage.status);
-  const TierIcon = tierConfig.icon;
   const StatusIcon = statusConfig.icon;
+  const propertiesRemaining = Math.max(0, pkg.propertiesLimit - packageUsage.propertiesUsed);
+  const featuredRemaining = Math.max(0, pkg.featuredLimit - packageUsage.featuredUsed);
 
   return (
     <div className="space-y-5">
@@ -89,11 +90,11 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
-                <TierIcon className="w-6 h-6" />
+                <Crown className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">{pkg.name}</h2>
-                <p className="text-green-100 text-sm capitalize">{pkg.tier} Tier</p>
+                <h2 className="text-xl font-bold">{pkg.packageName}</h2>
+                <p className="text-green-100 text-sm">Premium features for property owners</p>
               </div>
             </div>
             <Badge className={`${statusConfig.color} flex items-center gap-1`}>
@@ -104,7 +105,7 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
 
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold">{formatCurrency(pkg.price)}</span>
-            <span className="text-green-100">/ {pkg.duration}</span>
+            <span className="text-green-100">/ {pkg.durationValue} {getUnitLabel(pkg.durationUnit)}</span>
           </div>
         </div>
 
@@ -154,15 +155,15 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
                     <span className="text-sm font-medium text-gray-900">Properties</span>
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
-                    {packageUsage.propertiesUsed} / {packageUsage.propertiesLimit}
+                    {packageUsage.propertiesUsed} / {pkg.propertiesLimit}
                   </span>
                 </div>
                 <Progress
-                  value={(packageUsage.propertiesUsed / packageUsage.propertiesLimit) * 100}
+                  value={(packageUsage.propertiesUsed / pkg.propertiesLimit) * 100}
                   className="h-2"
                 />
                 <p className="text-xs text-gray-600 mt-1">
-                  {packageUsage.propertiesRemaining} remaining
+                  {propertiesRemaining} remaining
                 </p>
               </div>
 
@@ -174,75 +175,66 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
                     <span className="text-sm font-medium text-gray-900">Featured Listings</span>
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
-                    {packageUsage.featuredUsed} / {packageUsage.featuredLimit}
+                    {packageUsage.featuredUsed} / {pkg.featuredLimit}
                   </span>
                 </div>
                 <Progress
                   value={
-                    packageUsage.featuredLimit > 0
-                      ? (packageUsage.featuredUsed / packageUsage.featuredLimit) * 100
+                    pkg.featuredLimit > 0
+                      ? (packageUsage.featuredUsed / pkg.featuredLimit) * 100
                       : 0
                   }
                   className="h-2"
                 />
                 <p className="text-xs text-gray-600 mt-1">
-                  {packageUsage.featuredRemaining} remaining
-                </p>
-              </div>
-
-              {/* Storage Usage */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <HardDrive className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-900">Storage</span>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {packageUsage.storageUsed.toFixed(1)} GB / {packageUsage.storageLimit} GB
-                  </span>
-                </div>
-                <Progress value={packageUsage.storagePercentage} className="h-2" />
-                <p className="text-xs text-gray-600 mt-1">
-                  {packageUsage.storageRemaining.toFixed(1)} GB remaining
-                </p>
-              </div>
-
-              {/* Leads Usage */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-900">Total Leads</span>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {packageUsage.leadsUsedTotal} / {packageUsage.totalLeadsLimit}
-                  </span>
-                </div>
-                <Progress
-                  value={(packageUsage.leadsUsedTotal / packageUsage.totalLeadsLimit) * 100}
-                  className="h-2"
-                />
-                <p className="text-xs text-gray-600 mt-1">
-                  {packageUsage.leadsRemaining} remaining
+                  {featuredRemaining} remaining
                 </p>
               </div>
             </div>
           </div>
 
           {/* Features Included */}
-          {pkg.featuresIncluded && pkg.featuresIncluded.length > 0 && (
-            <div className="mt-6 pt-6 border-t">
-              <h3 className="font-semibold text-gray-900 mb-3">Features Included</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {pkg.featuresIncluded.map((feature: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                    <span className="text-gray-700">{feature.replace(/_/g, " ")}</span>
-                  </div>
-                ))}
-              </div>
+          <div className="mt-6 pt-6 border-t">
+            <h3 className="font-semibold text-gray-900 mb-3">Features Included</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {pkg.showOwnerName && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-600 shrink-0" />
+                  <span className="text-gray-700">Show Owner Name</span>
+                </div>
+              )}
+              {pkg.showOwnerPhone && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-600 shrink-0" />
+                  <span className="text-gray-700">Show Owner Phone</span>
+                </div>
+              )}
+              {pkg.directInquiryToOwner && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-600 shrink-0" />
+                  <span className="text-gray-700">Direct Inquiry to Owner</span>
+                </div>
+              )}
+              {pkg.adminCCOnInquiry && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-600 shrink-0" />
+                  <span className="text-gray-700">Admin CC on Inquiry</span>
+                </div>
+              )}
+              {pkg.fullAdminSupport && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-600 shrink-0" />
+                  <span className="text-gray-700">Full Admin Support</span>
+                </div>
+              )}
+              {pkg.docExpiryAlert && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-600 shrink-0" />
+                  <span className="text-gray-700">Document Expiry Alerts</span>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Actions */}
           <div className="mt-6 flex gap-3">
@@ -255,20 +247,15 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
       </Card>
 
       {/* Warning if near limits */}
-      {(packageUsage.propertiesRemaining <= 1 ||
-        packageUsage.storagePercentage > 80 ||
-        daysRemaining <= 7) && (
+      {(propertiesRemaining <= 1 || daysRemaining <= 7) && (
         <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h4 className="font-semibold text-yellow-900 mb-1">Action Required</h4>
               <ul className="text-sm text-yellow-800 space-y-1">
-                {packageUsage.propertiesRemaining <= 1 && (
-                  <li>• You're running low on property slots ({packageUsage.propertiesRemaining} remaining)</li>
-                )}
-                {packageUsage.storagePercentage > 80 && (
-                  <li>• Storage usage is high ({packageUsage.storagePercentage.toFixed(0)}% used)</li>
+                {propertiesRemaining <= 1 && (
+                  <li>• You're running low on property slots ({propertiesRemaining} remaining)</li>
                 )}
                 {daysRemaining <= 7 && daysRemaining > 0 && (
                   <li>• Your subscription expires in {daysRemaining} days</li>

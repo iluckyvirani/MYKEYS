@@ -156,58 +156,141 @@ export default function OwnerInquiriesPage() {
 
   return (
     <DashboardLayout defaultRole="owner">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Inquiries</h1>
-        <p className="text-gray-500 text-sm mt-1">Messages from prospective tenants and buyers</p>
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Inquiries</h1>
+            <p className="text-gray-600 mt-2">
+              Messages from prospective tenants and buyers
+            </p>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{threads.length}</div>
+                <div className="text-sm text-gray-600">All Inquiries</div>
+              </div>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <MessageSquare className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Active conversations
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{unreadCount}</div>
+                <div className="text-sm text-gray-600">Unread</div>
+              </div>
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <MailOpen className="w-5 h-5 text-orange-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Requires attention
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{notRepliedCount}</div>
+                <div className="text-sm text-gray-600">Not Replied</div>
+              </div>
+              <div className="p-2 bg-red-100 rounded-lg">
+                <MessageSquare className="w-5 h-5 text-red-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Awaiting response
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[5px] border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{deletedThreads.length}</div>
+                <div className="text-sm text-gray-600">Deleted</div>
+              </div>
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Trash2 className="w-5 h-5 text-gray-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Archived conversations
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Search + Filters */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input placeholder="Search by name, property or message..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-
-        <div className="relative">
-          <button onClick={() => { setShowLabelDropdown(v => !v); setShowSortDropdown(false); }} className="flex items-center gap-2 px-3 py-2 border rounded text-sm text-gray-600 bg-white hover:bg-gray-50">
-            <Tag className="w-3.5 h-3.5" />
-            {labelFilter === "all" ? "All labels" : labelFilter}
-            {labelFilter !== "all" && <button onClick={(e) => { e.stopPropagation(); setLabelFilter("all"); }}><X className="w-3 h-3" /></button>}
-          </button>
-          {showLabelDropdown && (
-            <div className="absolute right-0 mt-1 w-52 bg-white border rounded-[5px] shadow-lg z-20 py-1">
-              <button onClick={() => { setLabelFilter("all"); setShowLabelDropdown(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-500">All labels</button>
-              {LABELS.map(l => <button key={l} onClick={() => { setLabelFilter(l); setShowLabelDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${labelFilter === l ? "font-semibold" : ""}`}>{l}</button>)}
+      {/* Search + Filters Bar */}
+      <div className="bg-white rounded-[5px] border p-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex-1 w-full">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name, property or message..."
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-[5px] focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-          )}
-        </div>
+          </div>
 
-        <div className="relative">
-          <button onClick={() => { setShowSortDropdown(v => !v); setShowLabelDropdown(false); }} className="flex items-center gap-2 px-3 py-2 border rounded text-sm text-gray-600 bg-white hover:bg-gray-50">
-            <SortAsc className="w-3.5 h-3.5" /> {SORT_LABELS[sort]}
-          </button>
-          {showSortDropdown && (
-            <div className="absolute right-0 mt-1 w-40 bg-white border rounded-[5px] shadow-lg z-20 py-1">
-              {(Object.keys(SORT_LABELS) as SortKey[]).map(s => <button key={s} onClick={() => { setSort(s); setShowSortDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${sort === s ? "font-semibold" : ""}`}>{SORT_LABELS[s]}</button>)}
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <button onClick={() => { setShowLabelDropdown(v => !v); setShowSortDropdown(false); }} className="flex items-center gap-2 px-3 py-2 border rounded-[5px] text-sm text-gray-600 bg-white hover:bg-gray-50 transition-colors">
+                <Tag className="w-4 h-4" />
+                {labelFilter === "all" ? "All labels" : labelFilter}
+                {labelFilter !== "all" && <X className="w-3 h-3" />}
+              </button>
+              {showLabelDropdown && (
+                <div className="absolute right-0 mt-1 w-56 bg-white border rounded-[5px] shadow-lg z-20 py-1">
+                  <button onClick={() => { setLabelFilter("all"); setShowLabelDropdown(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-500">All labels</button>
+                  {LABELS.map(l => <button key={l} onClick={() => { setLabelFilter(l); setShowLabelDropdown(false); }} className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${labelFilter === l ? "font-semibold text-green-700" : ""}`}>{l}</button>)}
+                </div>
+              )}
             </div>
-          )}
+
+            <div className="relative">
+              <button onClick={() => { setShowSortDropdown(v => !v); setShowLabelDropdown(false); }} className="flex items-center gap-2 px-3 py-2 border rounded-[5px] text-sm text-gray-600 bg-white hover:bg-gray-50 transition-colors">
+                <SortAsc className="w-4 h-4" />
+                {SORT_LABELS[sort]}
+              </button>
+              {showSortDropdown && (
+                <div className="absolute right-0 mt-1 w-44 bg-white border rounded-[5px] shadow-lg z-20 py-1">
+                  {(Object.keys(SORT_LABELS) as SortKey[]).map(s => <button key={s} onClick={() => { setSort(s); setShowSortDropdown(false); }} className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${sort === s ? "font-semibold text-green-700" : ""}`}>{SORT_LABELS[s]}</button>)}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0 mb-4 border-b overflow-x-auto">
+      <div className="flex gap-0 mb-6 border-b border-gray-200 overflow-x-auto bg-white rounded-t-[5px]">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${tab === t.key ? "text-green-700 border-b-2 border-green-600 -mb-px" : "text-gray-500 hover:text-gray-700"}`}
+            className={`px-6 py-3 text-sm font-medium whitespace-nowrap transition-colors ${tab === t.key ? "text-green-700 border-b-2 border-green-600 -mb-px" : "text-gray-500 hover:text-gray-700"}`}
           >
             {t.label}
-            {t.count > 0 && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs font-medium ${tab === t.key ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>{t.count}</span>}
+            {t.count > 0 && <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${tab === t.key ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>{t.count}</span>}
           </button>
         ))}
       </div>
 
       {/* Thread List */}
-      <div className="bg-white rounded-[5px] border overflow-hidden">
+      <div className="bg-white rounded-b-[5px] border border-t-0 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600" />
@@ -215,7 +298,7 @@ export default function OwnerInquiriesPage() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-gray-900 font-medium mb-1">No conversations found</h3>
+            <h3 className="text-gray-900 font-semibold mb-1">No conversations found</h3>
             <p className="text-gray-500 text-sm">{tab === "all" ? "Inquiries from interested guests will appear here." : "Nothing to show here."}</p>
           </div>
         ) : (
@@ -226,31 +309,31 @@ export default function OwnerInquiriesPage() {
               return (
                 <li key={thread.id} className="relative group">
                   <Link href={`/owner/dashboard/inquiries/${thread.id}`}
-                    className={`flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ${hasUnread ? "bg-green-50/40" : ""}`}
+                    className={`flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${hasUnread ? "bg-green-50/30" : ""}`}
                   >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${hasUnread ? "bg-green-100" : "bg-gray-100"}`}>
-                      {hasUnread ? <MailOpen className="w-5 h-5 text-green-600" /> : <User className="w-5 h-5 text-gray-500" />}
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 mt-0.5 font-semibold text-white ${hasUnread ? "bg-green-600" : "bg-gray-300"}`}>
+                      {thread.guestName.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex items-center gap-2 mb-1">
                         <span className={`text-sm font-semibold truncate ${hasUnread ? "text-gray-900" : "text-gray-700"}`}>{thread.guestName}</span>
-                        {hasUnread && <><span className="shrink-0 w-2 h-2 rounded-full bg-green-600" /><span className="text-xs bg-green-600 text-white rounded-full px-1.5 py-0.5 font-medium shrink-0">{thread.unreadByOwner}</span></>}
+                        {hasUnread && <span className="text-xs bg-green-600 text-white rounded-full px-2 py-0.5 font-semibold shrink-0">{thread.unreadByOwner}</span>}
                       </div>
-                      <p className="text-xs text-gray-500 mb-0.5 font-medium uppercase tracking-wide truncate">{thread.propertyTitle}</p>
-                      <p className={`text-sm truncate ${hasUnread ? "text-gray-800 font-medium" : "text-gray-500"}`}>{thread.lastMessage}</p>
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
+                      <p className="text-xs text-gray-500 mb-1 font-medium">Property: <span className="font-semibold text-gray-700">{thread.propertyTitle}</span></p>
+                      <p className={`text-sm truncate ${hasUnread ? "text-gray-800 font-medium" : "text-gray-600"}`}>{thread.lastMessage}</p>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
                         {thread.ownerLabel && thread.ownerLabel !== "No Label" && (
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LABEL_COLORS[thread.ownerLabel] || "bg-gray-100 text-gray-600"}`}>{thread.ownerLabel}</span>
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${LABEL_COLORS[thread.ownerLabel] || "bg-gray-100 text-gray-600"}`}>{thread.ownerLabel}</span>
                         )}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="text-xs text-gray-400">{timeAgo(thread.lastMessageAt || thread.createdAt)}</span>
+                      <span className="text-xs text-gray-400 whitespace-nowrap">{timeAgo(thread.lastMessageAt || thread.createdAt)}</span>
                       <div className="flex items-center gap-1 mt-auto">
                         {tab !== "deleted" && (
-                          <button onClick={(e) => handleDelete(thread.id, e)} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all rounded" title="Delete">
-                            <Trash2 className="w-3.5 h-3.5" />
+                          <button onClick={(e) => handleDelete(thread.id, e)} className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all" title="Delete">
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         )}
                       </div>
