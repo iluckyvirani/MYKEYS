@@ -103,7 +103,7 @@ export default function OwnerPackagesPage() {
       <div className="mb-6">
         <AvailablePackages 
           packages={availablePackages} 
-          currentTier={currentPackage?.package?.tier || null}
+          currentPackageId={currentPackage?.package?.id || null}
           onSubscribe={handleRefresh}
         />
       </div>
