@@ -1183,7 +1183,7 @@ export default function PropertyDetailsPage() {
                                             // BUY: Show total amount
                                             <div>
                                                 <div className="flex items-baseline gap-2">
-                                                    <span className="text-3xl font-bold text-gray-900">{property.propertyPrice}</span>
+                                                    <span className="text-3xl font-bold text-gray-900">£{property.propertyPrice}</span>
                                                     <span className="text-gray-600">total</span>
                                                 </div>
                                                 <div className="mt-3 space-y-2 text-sm">
@@ -1236,7 +1236,7 @@ export default function PropertyDetailsPage() {
                                                 </div>
                                                 {property.originalPrice && (
                                                     <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-lg text-gray-500 line-through">{property.originalPrice}</span>
+                                                        <span className="text-lg text-gray-500 line-through">£{property.originalPrice}</span>
                                                         <span className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
                                                             7% off
                                                         </span>

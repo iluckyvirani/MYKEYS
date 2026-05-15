@@ -30,6 +30,14 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
             title: true,
             price: true,
             ownerId: true,
+            owner: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
           },
         },
         user: {
@@ -59,6 +67,7 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
       );
     }
 
+    const ownerUser = inquiry.property?.owner;
     const mappedInquiry = {
       id: inquiry.id,
       propertyId: inquiry.propertyId,
@@ -74,6 +83,13 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
       type: inquiry.type,
       duration: inquiry.duration,
       budget: inquiry.budget,
+      userLabel: inquiry.userLabel || null,
+      ownerLabel: inquiry.ownerLabel || null,
+      unreadByUser: inquiry.unreadByUser || 0,
+      unreadByOwner: inquiry.unreadByOwner || 0,
+      ownerName: ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : '',
+      ownerAvatar: ownerUser?.avatar || null,
+      ownerId: ownerUser?.id || '',
       createdAt: inquiry.createdAt.toISOString(),
       updatedAt: inquiry.updatedAt.toISOString(),
     };
