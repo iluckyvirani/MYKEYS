@@ -128,23 +128,59 @@ export const PATCH = withAuth<{ id: string }>(async (request: NextRequest, user:
       return errorResponse('Booking not found', 404, ErrorCode.RESOURCE_NOT_FOUND);
     }
 
-    // Verify user is the property owner
-    if (booking.property.ownerId !== user.userId) {
-      return errorResponse('Only property owner can update booking status', 403, ErrorCode.UNAUTHORIZED);
+    const isOwner = booking.property.ownerId === user.userId;
+    const isGuest = booking.guestId === user.userId;
+
+    if (!isOwner && !isGuest) {
+      return errorResponse('Only the property owner or the guest can update this booking', 403, ErrorCode.UNAUTHORIZED);
     }
 
-    // TODO:
-    // 1. Validate status transition
-    // 2. If CANCELLED, process refund
-    // 3. Send notification email
+    const currentStatus = booking.status as BookingStatus;
+    const requestedStatus = body.status as BookingStatus;
+
+    // ─── Valid transitions ───────────────────────────────────────────────────
+    // Owner: PENDING → CONFIRMED | CANCELLED
+    //        CONFIRMED → CHECKED_IN | CANCELLED
+    //        CHECKED_IN → CHECKED_OUT
+    //        CHECKED_OUT → COMPLETED
+    // Guest: PENDING → CANCELLED  (unpaid bookings only)
+    //        CONFIRMED → CANCELLED (if checkout hasn't started)
+    // ────────────────────────────────────────────────────────────────────────
+
+    const ownerTransitions: Partial<Record<BookingStatus, BookingStatus[]>> = {
+      [BookingStatus.PENDING]:    [BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
+      [BookingStatus.CONFIRMED]:  [BookingStatus.CHECKED_IN, BookingStatus.CANCELLED],
+      [BookingStatus.CHECKED_IN]: [BookingStatus.CHECKED_OUT],
+      [BookingStatus.CHECKED_OUT]:[BookingStatus.COMPLETED],
+    };
+
+    const guestTransitions: Partial<Record<BookingStatus, BookingStatus[]>> = {
+      [BookingStatus.PENDING]:   [BookingStatus.CANCELLED],
+      [BookingStatus.CONFIRMED]: [BookingStatus.CANCELLED],
+    };
+
+    const allowed = isOwner
+      ? ownerTransitions[currentStatus] ?? []
+      : guestTransitions[currentStatus] ?? [];
+
+    if (!allowed.includes(requestedStatus)) {
+      return errorResponse(
+        `Cannot transition booking from ${currentStatus} to ${requestedStatus}`,
+        400,
+        ErrorCode.VALIDATION_ERROR
+      );
+    }
+
+    // Build update data
+    const updateData: any = { status: requestedStatus, updatedAt: new Date() };
+    if (requestedStatus === BookingStatus.CANCELLED) {
+      updateData.cancelledAt = new Date();
+    }
 
     // Update booking in database
     const updatedBooking = await prisma.booking.update({
       where: { id },
-      data: {
-        status: body.status as BookingStatus,
-        updatedAt: new Date(),
-      },
+      data: updateData,
       include: {
         property: {
           select: {

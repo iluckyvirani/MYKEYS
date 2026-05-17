@@ -146,16 +146,13 @@ export async function validateBidInput(
   // Property must be ACTIVE SHORT_TERM owned by this owner
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
-    select: { ownerId: true, status: true, listingType: true, rentalType: true },
+    select: { ownerId: true, status: true },
   });
   if (!property || property.ownerId !== ownerId) {
     return "Property not found";
   }
   if (property.status !== "ACTIVE") {
     return "Property must be active to place a bid";
-  }
-  if (property.listingType !== "RENT" || property.rentalType !== "SHORT_TERM") {
-    return "Bidding is only available for Short Rent properties";
   }
 
   // No overlapping active bid for same property + zip code

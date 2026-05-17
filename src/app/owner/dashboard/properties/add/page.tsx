@@ -66,6 +66,7 @@ export default function AddPropertyPage() {
 
   // Step 4 — Documents: holds the created property ID after step 3 saves
   const [savedPropertyId, setSavedPropertyId] = useState<string | null>(null);
+  const [allRequiredDocsUploaded, setAllRequiredDocsUploaded] = useState(false);
   const [listingType, setListingType] = useState<"rent" | "buy">("rent");
   const [rentalType, setRentalType] = useState<"short" | "long">("short");
   const [amenities, setAmenities] = useState<AmenityOption[]>([]);
@@ -1290,12 +1291,20 @@ export default function AddPropertyPage() {
         </p>
       </div>
 
-      {savedPropertyId && <PropertyDocumentsTab propertyId={savedPropertyId} />}
+      {savedPropertyId && (
+        <PropertyDocumentsTab
+          propertyId={savedPropertyId}
+          onRequiredComplete={setAllRequiredDocsUploaded}
+        />
+      )}
 
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-[5px]">
         <p className="text-sm text-blue-700">
           <span className="font-semibold">Your property has been saved as a draft.</span>{" "}
-          Click <span className="font-semibold">Finish</span> to go to your properties list.
+          {allRequiredDocsUploaded
+            ? <>Click <span className="font-semibold">Finish</span> to go to your properties list.</>
+            : <>Upload all <span className="font-semibold">required</span> documents above to enable the Finish button.</>
+          }
         </p>
       </div>
     </div>
@@ -1363,7 +1372,8 @@ export default function AddPropertyPage() {
             <Button
               type="button"
               onClick={() => router.push("/owner/dashboard/properties")}
-              className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8 cursor-pointer"
+              disabled={!allRequiredDocsUploaded}
+              className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check className="w-4 h-4 mr-2" />
               Finish

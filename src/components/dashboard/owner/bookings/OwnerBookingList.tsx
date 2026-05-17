@@ -18,6 +18,8 @@ import {
   Home,
   Users,
   Loader,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 
 interface Booking {
@@ -40,8 +42,10 @@ interface BookingListProps {
   bookings: Booking[];
   loading?: boolean;
   empty?: boolean;
-  onConfirm?: (bookingId: string) => void;
+  onConfirm?: (booking: Booking) => void;
   onCancel?: (bookingId: string) => void;
+  onCheckIn?: (bookingId: string) => void;
+  onCheckOut?: (bookingId: string) => void;
 }
 
 export function OwnerBookingList({
@@ -50,6 +54,8 @@ export function OwnerBookingList({
   empty = false,
   onConfirm,
   onCancel,
+  onCheckIn,
+  onCheckOut,
 }: BookingListProps) {
   const getStatusConfig = (status: string) => {
     const normalizedStatus = status?.toLowerCase() || "";
@@ -59,6 +65,16 @@ export function OwnerBookingList({
         return {
           color: "bg-green-100 text-green-800 border-green-200",
           label: normalizedStatus === "active" ? "Active" : "Confirmed",
+        };
+      case "checked_in":
+        return {
+          color: "bg-blue-100 text-blue-800 border-blue-200",
+          label: "Checked In",
+        };
+      case "checked_out":
+        return {
+          color: "bg-indigo-100 text-indigo-800 border-indigo-200",
+          label: "Checked Out",
         };
       case "pending":
         return {
@@ -154,12 +170,21 @@ export function OwnerBookingList({
             {bookings.map((booking) => {
               const statusConfig = getStatusConfig(booking.status);
               const paymentConfig = getPaymentStatusConfig(booking.paymentStatus);
+              const upperStatus = booking.status?.toUpperCase() || "";
+
+              // Check In is available from the check-in date onwards
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const checkInDay = new Date(booking.checkInDate);
+              checkInDay.setHours(0, 0, 0, 0);
+              const canCheckIn = upperStatus === "CONFIRMED" && checkInDay <= today;
+              const canCheckOut = upperStatus === "CHECKED_IN";
 
               return (
                 <tr key={booking.id} className="hover:bg-gray-50 group">
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center shrink-0">
+                      <div className="w-12 h-12 rounded-lg bg-linear-to-br from-blue-100 to-green-100 flex items-center justify-center shrink-0">
                         <Home className="w-6 h-6 text-gray-600" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -223,7 +248,7 @@ export function OwnerBookingList({
                   </td>
 
                   <td className="py-4 px-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Link href={`/owner/dashboard/bookings/${booking.id}`}>
                         <Button
                           variant="ghost"
@@ -235,20 +260,43 @@ export function OwnerBookingList({
                         </Button>
                       </Link>
 
-                      {booking.status?.toUpperCase() === "PENDING" && (
+                      {upperStatus === "PENDING" && (
                         <Button
                           variant="outline"
                           size="sm"
                           className="text-green-600 hover:text-green-700 border-green-600 cursor-pointer"
-                          onClick={() => onConfirm?.(booking.id)}
+                          onClick={() => onConfirm?.(booking)}
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Confirm
                         </Button>
                       )}
-                      {["PENDING", "CONFIRMED"].includes(
-                        booking.status?.toUpperCase() || ""
-                      ) && (
+
+                      {canCheckIn && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700 border-blue-500 cursor-pointer"
+                          onClick={() => onCheckIn?.(booking.id)}
+                        >
+                          <LogIn className="w-4 h-4 mr-1" />
+                          Check In
+                        </Button>
+                      )}
+
+                      {canCheckOut && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-indigo-600 hover:text-indigo-700 border-indigo-500 cursor-pointer"
+                          onClick={() => onCheckOut?.(booking.id)}
+                        >
+                          <LogOut className="w-4 h-4 mr-1" />
+                          Check Out
+                        </Button>
+                      )}
+
+                      {["PENDING", "CONFIRMED"].includes(upperStatus) && (
                         <Button
                           variant="outline"
                           size="sm"

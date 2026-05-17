@@ -187,22 +187,6 @@ export default function BoostPropertyPage({
     );
   }
 
-  if (property.listingType !== "RENT" || property.rentalType !== "SHORT_TERM") {
-    return (
-      <DashboardLayout defaultRole="owner">
-        <div className="max-w-lg mx-auto mt-16 text-center">
-          <Zap className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Boost Not Available</h2>
-          <p className="text-gray-500 mb-6">
-            Bidding / Boost is only available for <strong>Short Rent</strong> properties.
-          </p>
-          <Link href={`/owner/dashboard/properties/${id}`}>
-            <Button variant="outline">Back to Property</Button>
-          </Link>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   if (success) {
     return (

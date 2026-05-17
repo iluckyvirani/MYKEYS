@@ -79,15 +79,10 @@ export default function OwnerBidsPage() {
     try {
       const res = await api.get("/owner/properties");
       const raw: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
-      // Filter to only active SHORT_TERM properties
-      const shortRent = raw.filter(
-        (p) =>
-          p.status === "active" &&
-          p.fullData?.rentalType === "SHORT_TERM" &&
-          p.fullData?.listingType === "RENT"
-      );
+      // Show all active properties regardless of type
+      const activeProps = raw.filter((p) => p.status === "active");
       setProperties(
-        shortRent.map((p) => ({
+        activeProps.map((p) => ({
           id: p.id,
           title: p.name ?? p.fullData?.title ?? "",
           zipCode: p.fullData?.zipCode ?? null,
@@ -130,7 +125,7 @@ export default function OwnerBidsPage() {
               My Boosts
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Boost a Short Rent property to appear at the top of search results.
+              Boost any active property to appear at the top of search results.
             </p>
           </div>
           <Button
@@ -157,7 +152,7 @@ export default function OwnerBidsPage() {
             <Zap className="w-12 h-12 text-gray-200 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">No Boosts Yet</h3>
             <p className="text-gray-400 mb-6 text-sm">
-              Boost a Short Rent property to appear at the top of search results.
+              Boost any of your active properties to appear at the top of search results.
             </p>
             <Button
               className="bg-amber-500 hover:bg-amber-600 text-white"
@@ -216,7 +211,7 @@ export default function OwnerBidsPage() {
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <div>
                 <h2 className="font-semibold text-gray-900">Select a Property to Boost</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Only active Short Rent properties can be boosted</p>
+                <p className="text-xs text-gray-500 mt-0.5">All active properties can be boosted</p>
               </div>
               <button onClick={() => setShowPicker(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
@@ -232,8 +227,8 @@ export default function OwnerBidsPage() {
               ) : properties.length === 0 ? (
                 <div className="text-center py-10 text-gray-400">
                   <Home className="w-10 h-10 mx-auto mb-3 text-gray-200" />
-                  <p className="text-sm font-medium text-gray-600 mb-1">No active Short Rent properties</p>
-                  <p className="text-xs">You need an active Short Rent listing to place a boost.</p>
+                  <p className="text-sm font-medium text-gray-600 mb-1">No active properties</p>
+                  <p className="text-xs">You need at least one active property listing to place a boost.</p>
                   <Link
                     href="/owner/dashboard/properties"
                     className="inline-block mt-4 text-xs text-amber-600 hover:underline"

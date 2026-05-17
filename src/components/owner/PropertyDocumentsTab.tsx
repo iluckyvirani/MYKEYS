@@ -49,6 +49,8 @@ interface PropertyDocument {
 
 interface Props {
   propertyId: string;
+  /** Called whenever required-doc completion status changes */
+  onRequiredComplete?: (allComplete: boolean) => void;
 }
 
 const STATUS_CONFIG: Record<
@@ -242,7 +244,7 @@ function DocumentPreviewModal({ doc, onClose }: PreviewModalProps) {
 }
 
 
-export default function PropertyDocumentsTab({ propertyId }: Props) {
+export default function PropertyDocumentsTab({ propertyId, onRequiredComplete }: Props) {
   const [requiredTypes, setRequiredTypes] = useState<DocumentType[]>([]);
   const [uploadedDocs, setUploadedDocs] = useState<PropertyDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -293,6 +295,18 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
   function getUploadedDoc(typeId: string) {
     return uploadedDocs.find((d) => d.documentTypeId === typeId);
   }
+
+  // Notify parent whenever required-doc status changes
+  useEffect(() => {
+    if (requiredTypes.length === 0) return;
+    const allComplete = requiredTypes
+      .filter((dt) => dt.isRequired)
+      .every((dt) => {
+        const doc = uploadedDocs.find((d) => d.documentTypeId === dt.id);
+        return doc && doc.status !== "REJECTED" && doc.status !== "EXPIRED";
+      });
+    onRequiredComplete?.(allComplete);
+  }, [uploadedDocs, requiredTypes, onRequiredComplete]);
 
   function toBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {

@@ -120,16 +120,37 @@ export default function OwnerBookingsPage() {
     if (!window.confirm("Are you sure you want to cancel this booking?")) return;
 
     try {
-      await api.patch(`/bookings/${bookingId}`, { 
-        status: "CANCELLED"
-      });
-
+      await api.patch(`/bookings/${bookingId}`, { status: "CANCELLED" });
       setBookings(bookings.map(b =>
         b.id === bookingId ? { ...b, status: "CANCELLED" } : b
       ));
     } catch (err) {
       console.error("Error cancelling booking:", err);
       alert("Failed to cancel booking");
+    }
+  };
+
+  const handleCheckIn = async (bookingId: string) => {
+    try {
+      await api.patch(`/bookings/${bookingId}`, { status: "CHECKED_IN" });
+      setBookings(bookings.map(b =>
+        b.id === bookingId ? { ...b, status: "CHECKED_IN" } : b
+      ));
+    } catch (err) {
+      console.error("Error checking in:", err);
+      alert("Failed to check in guest");
+    }
+  };
+
+  const handleCheckOut = async (bookingId: string) => {
+    try {
+      await api.patch(`/bookings/${bookingId}`, { status: "CHECKED_OUT" });
+      setBookings(bookings.map(b =>
+        b.id === bookingId ? { ...b, status: "CHECKED_OUT" } : b
+      ));
+    } catch (err) {
+      console.error("Error checking out:", err);
+      alert("Failed to check out guest");
     }
   };
 
@@ -383,6 +404,8 @@ export default function OwnerBookingsPage() {
           empty={bookings.length === 0}
           onConfirm={handleConfirmBooking}
           onCancel={handleCancelBooking}
+          onCheckIn={handleCheckIn}
+          onCheckOut={handleCheckOut}
         />
       ) : (
         <BookingCalendar />

@@ -137,8 +137,9 @@ export function RazorpayPaymentModal({
         );
       }
 
-      setPaymentCompleted(true);
+      // Call parent first so it can close/unmount the modal before we set local state
       onPaymentSuccess?.(paymentId);
+      setPaymentCompleted(true);
     } catch (err: any) {
       const errorMsg =
         err.response?.data?.message ||

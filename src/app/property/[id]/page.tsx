@@ -45,6 +45,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RazorpayPaymentModal } from "@/components/RazorpayPaymentModal";
+import { DatePickerInput } from "@/components/property/DatePickerInput";
 import { api } from "@/lib/api";
 import { CreateShortBookingRequest, PaymentMethod } from "@/types/bookings";
 import { formatDateToReadable } from "@/utils/utils";
@@ -171,6 +172,15 @@ export default function PropertyDetailsPage() {
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CREDIT_CARD);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentData, setPaymentData] = useState<{ bookingId: string, amount: number, propertyTitle: string } | null>(null);
+    const [showConfirmationPopup, setShowConfirmationPopup] = useState(false);
+    const [confirmedBookingInfo, setConfirmedBookingInfo] = useState<{
+        amount: number;
+        propertyTitle: string;
+        checkIn: string;
+        checkOut: string;
+        nights: number;
+        guests: number;
+    } | null>(null);
     const [nights, setNights] = useState(0);
     const [subtotal, setSubtotal] = useState(0);
     const [cleaningFeeAmount, setCleaningFeeAmount] = useState(0);
@@ -479,10 +489,8 @@ export default function PropertyDetailsPage() {
             const response = await api.post("/bookings", bookingRequest);
 
             if (response.data?.success) {
-                // Booking created successfully
                 const bookingData = response.data.data;
-
-                // Set payment data and show payment modal
+                // Open payment modal to complete the transaction
                 if (bookingData?.id && totalAmount > 0) {
                     setPaymentData({
                         bookingId: bookingData.id,
@@ -491,7 +499,6 @@ export default function PropertyDetailsPage() {
                     });
                     setShowPaymentModal(true);
                 }
-                setBookingSuccess("Booking confirmed! Now complete the payment.");
             } else {
                 setBookingError(response.data?.message || "Failed to create booking");
             }
@@ -1254,35 +1261,57 @@ export default function PropertyDetailsPage() {
 
                                     {/* Dynamic Form based on Business Model */}
                                     {property.rentalType === "short" && property.listingType === "rent" ? (
-                                        // Short Stay Booking Form
+                                        !isLoggedIn ? (
+                                            // Not logged in — show login prompt
+                                            <div className="space-y-4 mb-6">
+                                                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                                                    <Calendar className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                                                    <p className="font-semibold text-gray-800 mb-1">Sign in to Book</p>
+                                                    <p className="text-sm text-gray-500">You need an account to reserve this property.</p>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => router.push(`/login?redirect=/property/${property.id}`)}
+                                                    className="w-full rounded-xl py-6 text-lg font-semibold bg-linear-to-r from-green-600 to-emerald-600 cursor-pointer"
+                                                >
+                                                    <Calendar className="w-5 h-5 mr-2" />
+                                                    Login to Book
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    type="button"
+                                                    onClick={() => router.push(`/signup?redirect=/property/${property.id}`)}
+                                                    className="w-full rounded-xl py-5 font-semibold cursor-pointer"
+                                                >
+                                                    Create Account
+                                                </Button>
+                                                <p className="text-center text-xs text-gray-400">🔒 Secure payment processed by Hously</p>
+                                            </div>
+                                        ) : (
                                         <form onSubmit={handleBookingSubmit} className="space-y-4 mb-6">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Check-in
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        title="Check-in date"
-                                                        value={checkInDate}
-                                                        onChange={(e) => setCheckInDate(e.target.value)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                                        required
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Check-out
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        title="Check-out date"
-                                                        value={checkOutDate}
-                                                        onChange={(e) => setCheckOutDate(e.target.value)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                                        required
-                                                    />
-                                                </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <DatePickerInput
+                                                    label="Check-in"
+                                                    value={checkInDate}
+                                                    onChange={(val) => {
+                                                        setCheckInDate(val);
+                                                        if (checkOutDate && checkOutDate <= val) setCheckOutDate("");
+                                                    }}
+                                                    placeholder="Add date"
+                                                    rangeStart={checkInDate}
+                                                    rangeEnd={checkOutDate}
+                                                />
+                                                <DatePickerInput
+                                                    label="Check-out"
+                                                    value={checkOutDate}
+                                                    onChange={setCheckOutDate}
+                                                    placeholder="Add date"
+                                                    minDate={checkInDate
+                                                        ? (() => { const d = new Date(checkInDate + "T00:00:00"); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()
+                                                        : undefined}
+                                                    rangeStart={checkInDate}
+                                                    rangeEnd={checkOutDate}
+                                                />
                                             </div>
 
                                             <div>
@@ -1362,21 +1391,6 @@ export default function PropertyDetailsPage() {
                                                 </div>
                                             )}
 
-                                            {/* Success Message with Booking Confirmation */}
-                                            {bookingSuccess && (
-                                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                                                    <div className="flex items-start gap-3">
-                                                        <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-                                                        <div>
-                                                            <p className="font-medium text-green-900">{bookingSuccess}</p>
-                                                            <p className="text-sm text-green-700 mt-1">
-                                                                Check your email for booking confirmation and payment details.
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
                                             {/* Book Now Button for Short Stay */}
                                             <Button
                                                 type="submit"
@@ -1400,6 +1414,7 @@ export default function PropertyDetailsPage() {
                                                 <p>🔒 Secure payment processed by Hously</p>
                                             </div>
                                         </form>
+                                        ) /* end isLoggedIn ternary */
                                     ) : (
                                         // Long Rent or Buy - Inquiry Button
                                         <div className="space-y-4 mb-6">
@@ -1667,19 +1682,105 @@ export default function PropertyDetailsPage() {
                                 setPaymentData(null);
                             }}
                             onPaymentSuccess={() => {
+                                // Capture booking details BEFORE clearing state (dates reset totalAmount to 0)
+                                setConfirmedBookingInfo({
+                                    amount: paymentData!.amount,
+                                    propertyTitle: paymentData!.propertyTitle,
+                                    checkIn: checkInDate,
+                                    checkOut: checkOutDate,
+                                    nights,
+                                    guests,
+                                });
                                 setShowPaymentModal(false);
                                 setPaymentData(null);
                                 setCheckInDate("");
                                 setCheckOutDate("");
                                 setGuests(2);
-                                // Show success message
-                                setBookingSuccess("Payment completed successfully! Your booking is confirmed.");
-                                setTimeout(() => setBookingSuccess(null), 5000);
+                                setShowConfirmationPopup(true);
                             }}
                             onPaymentError={(error: string) => {
-                                setBookingError(error);
+                                setShowPaymentModal(false);
+                                setPaymentData(null);
+                                setBookingError(`Payment failed: ${error}. Please try again.`);
                             }}
                         />
+                    )}
+
+                    {/* Booking Confirmed Celebration Popup */}
+                    {showConfirmationPopup && confirmedBookingInfo && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-200 p-4">
+                            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full relative overflow-hidden">
+                                {/* Green header banner */}
+                                <div className="bg-linear-to-r from-green-500 to-emerald-600 px-8 pt-10 pb-14 text-center relative">
+                                    <span className="absolute top-4 left-5 text-2xl animate-bounce select-none">🎉</span>
+                                    <span className="absolute top-4 right-5 text-2xl animate-bounce [animation-delay:150ms] select-none">🎊</span>
+                                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                        <CheckCircle className="w-12 h-12 text-green-500" />
+                                    </div>
+                                    <h2 className="text-2xl font-extrabold text-white mb-1">Booking Confirmed!</h2>
+                                    <p className="text-green-100 text-sm">Payment successful — you&apos;re all set ✨</p>
+                                </div>
+
+                                {/* Body */}
+                                <div className="px-8 pb-8 -mt-6">
+                                    {/* Summary card */}
+                                    <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-5 mb-5 space-y-3 text-sm">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <span className="text-gray-400 shrink-0">Property</span>
+                                            <span className="font-semibold text-gray-800 text-right line-clamp-2">{confirmedBookingInfo.propertyTitle}</span>
+                                        </div>
+                                        <div className="border-t border-gray-50" />
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400">Check-in</span>
+                                            <span className="font-medium text-gray-700">
+                                                {new Date(confirmedBookingInfo.checkIn).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400">Check-out</span>
+                                            <span className="font-medium text-gray-700">
+                                                {new Date(confirmedBookingInfo.checkOut).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400">Duration</span>
+                                            <span className="font-medium text-gray-700">{confirmedBookingInfo.nights} night{confirmedBookingInfo.nights !== 1 ? 's' : ''} · {confirmedBookingInfo.guests} guest{confirmedBookingInfo.guests !== 1 ? 's' : ''}</span>
+                                        </div>
+                                        <div className="border-t border-gray-100" />
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-medium">Total Paid</span>
+                                            <span className="font-bold text-green-600 text-xl">£{confirmedBookingInfo.amount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400">Status</span>
+                                            <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 font-semibold px-3 py-1 rounded-full text-xs">
+                                                <CheckCircle className="w-3.5 h-3.5" /> Confirmed
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <p className="text-center text-gray-400 text-xs mb-5 leading-relaxed">
+                                        A confirmation email has been sent with your full booking details.
+                                    </p>
+
+                                    <div className="space-y-3">
+                                        <Button
+                                            onClick={() => { setShowConfirmationPopup(false); router.push("/dashboard/bookings"); }}
+                                            className="w-full rounded-xl py-3 text-base font-semibold bg-green-600 hover:bg-green-700 cursor-pointer"
+                                        >
+                                            View My Bookings
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setShowConfirmationPopup(false)}
+                                            className="w-full rounded-xl py-3 cursor-pointer border-gray-200 text-gray-600"
+                                        >
+                                            Stay on Page
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </>
             )}

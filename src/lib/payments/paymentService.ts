@@ -13,7 +13,7 @@ import {
   VerifyPaymentRequest,
   ProcessRefundRequest,
 } from '@/types/payment';
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus, BookingStatus } from '@prisma/client';
 
 /**
  * Payment Service
@@ -180,13 +180,15 @@ export const paymentService = {
         },
       });
 
-      // Update related booking/package status if applicable
+      // Auto-confirm booking when payment succeeds
       if (updatedPayment.bookingId) {
         await prisma.booking.update({
           where: { id: updatedPayment.bookingId },
           data: {
             paymentStatus: PaymentStatus.PAID,
             paidAmount: updatedPayment.amount,
+            balanceAmount: 0,
+            status: BookingStatus.CONFIRMED, // Auto-confirm on successful payment
           },
         });
       }
@@ -198,6 +200,25 @@ export const paymentService = {
         message: 'Payment verified successfully',
       };
     } catch (error: any) {
+      // Mark payment as FAILED in DB and cancel the associated booking
+      try {
+        const failedPayment = await prisma.payment.update({
+          where: { id: paymentId },
+          data: { status: PaymentStatus.FAILED },
+        });
+        if (failedPayment.bookingId) {
+          await prisma.booking.update({
+            where: { id: failedPayment.bookingId },
+            data: {
+              status: BookingStatus.CANCELLED,
+              paymentStatus: PaymentStatus.FAILED,
+              cancelledAt: new Date(),
+            },
+          });
+        }
+      } catch (dbError) {
+        console.error('Failed to mark payment/booking as failed in DB:', dbError);
+      }
       return {
         success: false,
         paymentId,
