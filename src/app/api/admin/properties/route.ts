@@ -277,16 +277,22 @@ export const POST = withAuth(
         : [];
 
       // --- Create property ---
+      const slug =
+        propertyData.title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") +
+        "-" +
+        Date.now();
+
       const property = await prisma.property.create({
         data: {
           ownerId: effectiveOwnerId,
+          slug,
           title: propertyData.title,
           description: propertyData.description || "",
           address: propertyData.address,
           city: propertyData.city || "",
           state: propertyData.state || "",
           country: propertyData.country || "United Kingdom",
-          zipCode: propertyData.zipCode || null,
+          zipCode: propertyData.zipCode || undefined,
           latitude: propertyData.latitude ? parseFloat(propertyData.latitude) : undefined,
           longitude: propertyData.longitude ? parseFloat(propertyData.longitude) : undefined,
           propertyType: propertyData.propertyType,
