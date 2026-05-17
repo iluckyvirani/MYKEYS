@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Zap, MapPin, Calendar, TrendingUp, Plus, X } from "lucide-react";
+import { Zap, MapPin, Calendar, TrendingUp, Plus, X, Home, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 interface BidDTO {
@@ -23,6 +23,14 @@ interface BidDTO {
   createdAt: string;
 }
 
+interface ShortProperty {
+  id: string;
+  title: string;
+  zipCode: string | null;
+  city: string;
+  status: string;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     ACTIVE: "bg-green-100 text-green-800",
@@ -37,10 +45,16 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function OwnerBidsPage() {
+  const router = useRouter();
   const [bids, setBids] = useState<BidDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState("");
+
+  // Property picker modal
+  const [showPicker, setShowPicker] = useState(false);
+  const [properties, setProperties] = useState<ShortProperty[]>([]);
+  const [loadingProps, setLoadingProps] = useState(false);
 
   useEffect(() => {
     fetchBids();
@@ -48,12 +62,43 @@ export default function OwnerBidsPage() {
 
   async function fetchBids() {
     try {
-      const res = await api.get<BidDTO[]>("/api/owner/bids");
-      if (res.data) setBids(res.data);
+      const res = await api.get<{ success: boolean; data: BidDTO[] }>("/owner/bids");
+      const data = res.data?.data ?? res.data;
+      if (Array.isArray(data)) setBids(data);
     } catch {
       // ignore
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function openPicker() {
+    setShowPicker(true);
+    if (properties.length > 0) return;
+    setLoadingProps(true);
+    try {
+      const res = await api.get("/owner/properties");
+      const raw: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
+      // Filter to only active SHORT_TERM properties
+      const shortRent = raw.filter(
+        (p) =>
+          p.status === "active" &&
+          p.fullData?.rentalType === "SHORT_TERM" &&
+          p.fullData?.listingType === "RENT"
+      );
+      setProperties(
+        shortRent.map((p) => ({
+          id: p.id,
+          title: p.name ?? p.fullData?.title ?? "",
+          zipCode: p.fullData?.zipCode ?? null,
+          city: p.fullData?.city ?? p.location ?? "",
+          status: p.status,
+        }))
+      );
+    } catch {
+      // ignore
+    } finally {
+      setLoadingProps(false);
     }
   }
 
@@ -63,9 +108,7 @@ export default function OwnerBidsPage() {
     setCancelError("");
     try {
       await api.delete(`/owner/bids/${bidId}`);
-      setBids((prev) =>
-        prev.map((b) => (b.id === bidId ? { ...b, status: "CANCELLED" } : b))
-      );
+      setBids((prev) => prev.map((b) => (b.id === bidId ? { ...b, status: "CANCELLED" } : b)));
     } catch (err: unknown) {
       setCancelError(err instanceof Error ? err.message : "Failed to cancel bid");
     } finally {
@@ -87,15 +130,16 @@ export default function OwnerBidsPage() {
               My Boosts
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Manage your property boosts to appear at the top of search results.
+              Boost a Short Rent property to appear at the top of search results.
             </p>
           </div>
-          <Link href="/owner/dashboard/properties">
-            <Button className="bg-amber-500 hover:bg-amber-600 text-white gap-2">
-              <Plus className="w-4 h-4" />
-              New Boost
-            </Button>
-          </Link>
+          <Button
+            className="bg-amber-500 hover:bg-amber-600 text-white gap-2"
+            onClick={openPicker}
+          >
+            <Plus className="w-4 h-4" />
+            New Boost
+          </Button>
         </div>
 
         {cancelError && (
@@ -112,18 +156,19 @@ export default function OwnerBidsPage() {
           <div className="text-center py-20 bg-white rounded-xl border border-gray-200">
             <Zap className="w-12 h-12 text-gray-200 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">No Boosts Yet</h3>
-            <p className="text-gray-400 mb-6">
+            <p className="text-gray-400 mb-6 text-sm">
               Boost a Short Rent property to appear at the top of search results.
             </p>
-            <Link href="/owner/dashboard/properties">
-              <Button className="bg-amber-500 hover:bg-amber-600 text-white">
-                Browse My Properties
-              </Button>
-            </Link>
+            <Button
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+              onClick={openPicker}
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Boost a Property
+            </Button>
           </div>
         ) : (
           <>
-            {/* Active bids */}
             {active.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
@@ -141,8 +186,6 @@ export default function OwnerBidsPage() {
                 </div>
               </section>
             )}
-
-            {/* Past bids */}
             {past.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
@@ -158,6 +201,77 @@ export default function OwnerBidsPage() {
           </>
         )}
       </div>
+
+      {/* Property Picker Modal */}
+      {showPicker && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPicker(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div>
+                <h2 className="font-semibold text-gray-900">Select a Property to Boost</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Only active Short Rent properties can be boosted</p>
+              </div>
+              <button onClick={() => setShowPicker(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Property list */}
+            <div className="flex-1 overflow-y-auto p-3">
+              {loadingProps ? (
+                <div className="flex justify-center py-10">
+                  <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-amber-500" />
+                </div>
+              ) : properties.length === 0 ? (
+                <div className="text-center py-10 text-gray-400">
+                  <Home className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                  <p className="text-sm font-medium text-gray-600 mb-1">No active Short Rent properties</p>
+                  <p className="text-xs">You need an active Short Rent listing to place a boost.</p>
+                  <Link
+                    href="/owner/dashboard/properties"
+                    className="inline-block mt-4 text-xs text-amber-600 hover:underline"
+                    onClick={() => setShowPicker(false)}
+                  >
+                    Go to My Properties &rarr;
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {properties.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setShowPicker(false);
+                        router.push(`/owner/dashboard/properties/${p.id}/boost`);
+                      }}
+                      className="w-full text-left flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-colors group"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                        <Home className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">{p.title}</p>
+                        <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {p.city}{p.zipCode ? ` · ${p.zipCode}` : ""}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-amber-500 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
@@ -177,7 +291,6 @@ function BidCard({
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-      {/* Left */}
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-semibold text-gray-900 truncate">{bid.propertyTitle}</p>
@@ -190,42 +303,43 @@ function BidCard({
           </span>
           <span className="flex items-center gap-1">
             <TrendingUp className="w-3.5 h-3.5" />
-            £{bid.amount.toFixed(2)}/day
+            &pound;{bid.amount.toFixed(2)}/day
           </span>
           <span className="flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5" />
-            {new Date(bid.startDate).toLocaleDateString("en-GB")} →{" "}
+            {new Date(bid.startDate).toLocaleDateString("en-GB")} &rarr;{" "}
             {new Date(bid.endDate).toLocaleDateString("en-GB")}
           </span>
         </div>
         {bid.status === "ACTIVE" && (
-          <p className="text-xs text-green-600 font-medium">
+          <p className="text-xs text-amber-600 font-medium">
             {bid.daysRemaining} day{bid.daysRemaining !== 1 ? "s" : ""} remaining
           </p>
         )}
       </div>
-
-      {/* Right */}
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex items-center gap-3 shrink-0">
         <div className="text-right">
-          <p className="text-xs text-gray-400">Total Paid</p>
-          <p className="text-lg font-bold text-gray-900">£{bid.totalCost.toFixed(2)}</p>
+          <p className="text-sm font-semibold text-gray-900">&pound;{bid.totalCost.toFixed(2)}</p>
+          <p className="text-xs text-gray-400">total paid</p>
         </div>
-        {onCancel && canCancel && (
+        {canCancel && onCancel && (
           <Button
-            variant="outline"
             size="sm"
-            className="border-red-200 text-red-600 hover:bg-red-50"
-            disabled={cancelling}
+            variant="outline"
             onClick={() => onCancel(bid.id)}
+            disabled={cancelling}
+            className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs"
           >
-            <X className="w-3.5 h-3.5 mr-1" />
-            {cancelling ? "Cancelling…" : "Cancel"}
+            {cancelling ? (
+              <span className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              "Cancel"
+            )}
           </Button>
         )}
         <Link href={`/owner/dashboard/properties/${bid.propertyId}/boost`}>
-          <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white gap-1">
-            <Zap className="w-3.5 h-3.5" />
+          <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs gap-1">
+            <Zap className="w-3 h-3" />
             Re-Boost
           </Button>
         </Link>

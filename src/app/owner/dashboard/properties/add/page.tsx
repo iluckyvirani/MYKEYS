@@ -1,6 +1,8 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { renderAmenityIcon } from "@/components/dashboard/AdminAmenityModal";
+import PropertyDocumentsTab from "@/components/owner/PropertyDocumentsTab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +33,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/lib/api";
+import LocationPickerMap, { LocationResult } from "@/components/common/LocationPickerMap";
 
 const propertyTypes = [
   { value: "APARTMENT", label: "Apartment", icon: Home },
@@ -46,6 +49,7 @@ const propertyTypes = [
 interface AmenityOption {
   id: string;
   name: string;
+  icon?: string;
 }
 
 export default function AddPropertyPage() {
@@ -59,6 +63,9 @@ export default function AddPropertyPage() {
   const [loadingAmenities, setLoadingAmenities] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+
+  // Step 4 — Documents: holds the created property ID after step 3 saves
+  const [savedPropertyId, setSavedPropertyId] = useState<string | null>(null);
   const [listingType, setListingType] = useState<"rent" | "buy">("rent");
   const [rentalType, setRentalType] = useState<"short" | "long">("short");
   const [amenities, setAmenities] = useState<AmenityOption[]>([]);
@@ -274,8 +281,12 @@ export default function AddPropertyPage() {
     setDragOverIndex(null);
   };
 
+  const submittingRef = useRef(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return; // prevent double-submit
+    submittingRef.current = true;
     
     try {
       setLoading(true);
@@ -336,7 +347,7 @@ export default function AddPropertyPage() {
         guests: formData.guests ? parseInt(formData.guests) : 2,
         amenities: formData.amenities,
         images: uploadedImages,
-        status: "ACTIVE"
+        status: "DRAFT"
       };
 
       if (listingType === "rent") {
@@ -383,7 +394,9 @@ export default function AddPropertyPage() {
       const response = await api.post("/properties", payload);
       
       if (response.data?.success) {
-        router.push("/owner/dashboard/properties");
+        const newPropertyId = response.data?.data?.id;
+        setSavedPropertyId(newPropertyId);
+        setStep(4);
       } else {
         setError(response.data?.message || "Failed to create property");
       }
@@ -392,6 +405,7 @@ export default function AddPropertyPage() {
       setError(err.response?.data?.message || "Failed to create property. Please try again.");
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
@@ -574,6 +588,25 @@ export default function AddPropertyPage() {
               value={formData.longitude}
               onChange={handleInputChange}
               placeholder="e.g., 72.8777"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <Label className="mb-1 block">Pick Location on Map</Label>
+            <LocationPickerMap
+              initialLat={formData.latitude ? parseFloat(formData.latitude) : undefined}
+              initialLng={formData.longitude ? parseFloat(formData.longitude) : undefined}
+              onLocationSelect={(loc: LocationResult) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  latitude: String(loc.lat),
+                  longitude: String(loc.lng),
+                  ...(loc.address && !prev.address ? { address: loc.address } : {}),
+                  ...(loc.city && !prev.city ? { city: loc.city } : {}),
+                  ...(loc.state && !prev.state ? { state: loc.state } : {}),
+                  ...(loc.zipCode && !prev.zipCode ? { zipCode: loc.zipCode } : {}),
+                }));
+              }}
             />
           </div>
 
@@ -1099,6 +1132,9 @@ export default function AddPropertyPage() {
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
+                  <span className={`mb-1 ${isSelected ? "text-green-700" : "text-gray-500"}`}>
+                    {renderAmenityIcon(amenity.icon || 'Sparkles', 'w-5 h-5')}
+                  </span>
                   <span className={`text-sm font-medium text-center ${isSelected ? "text-green-700" : "text-gray-700"}`}>
                     {amenity.name}
                   </span>
@@ -1244,15 +1280,37 @@ export default function AddPropertyPage() {
     </div>
   );
 
+  const renderStep4 = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Property Documents</h3>
+        <p className="text-sm text-gray-500">
+          Upload required documents for your property. These are reviewed by our admin team.
+          You can also skip and upload later from the property edit page.
+        </p>
+      </div>
+
+      {savedPropertyId && <PropertyDocumentsTab propertyId={savedPropertyId} />}
+
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-[5px]">
+        <p className="text-sm text-blue-700">
+          <span className="font-semibold">Your property has been saved as a draft.</span>{" "}
+          Click <span className="font-semibold">Finish</span> to go to your properties list.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <DashboardLayout defaultRole="owner">
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {step === 1 ? "List Your Property" : 
-               step === 2 ? "Property Details" : 
-               "Finalize Listing"}
+              {step === 1 ? "List Your Property" :
+               step === 2 ? "Property Details" :
+               step === 3 ? "Features & Images" :
+               "Property Documents"}
             </h1>
             <p className="text-gray-600 mt-2">
               Complete all steps to publish your property
@@ -1266,7 +1324,7 @@ export default function AddPropertyPage() {
         {/* Progress Steps */}
         <div className="mt-8">
           <div className="flex items-center justify-between">
-            {[1, 2, 3].map((stepNumber) => (
+            {[1, 2, 3, 4].map((stepNumber) => (
               <div key={stepNumber} className="flex items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
                   step === stepNumber
@@ -1284,10 +1342,11 @@ export default function AddPropertyPage() {
                     {stepNumber === 1 && "Basic Info"}
                     {stepNumber === 2 && "Details & Pricing"}
                     {stepNumber === 3 && "Features & Images"}
+                    {stepNumber === 4 && "Documents"}
                   </div>
                 </div>
-                {stepNumber < 3 && (
-                  <div className={`w-24 h-0.5 mx-4 ${
+                {stepNumber < 4 && (
+                  <div className={`w-16 h-0.5 mx-4 ${
                     step > stepNumber ? "bg-green-600" : "bg-gray-300"
                   }`}></div>
                 )}
@@ -1297,6 +1356,21 @@ export default function AddPropertyPage() {
         </div>
       </div>
 
+      {step === 4 ? (
+        <div className="bg-white rounded-[5px] border p-8">
+          {renderStep4()}
+          <div className="flex justify-end pt-8 mt-8 border-t">
+            <Button
+              type="button"
+              onClick={() => router.push("/owner/dashboard/properties")}
+              className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8 cursor-pointer"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Finish
+            </Button>
+          </div>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit}>
         <div className="bg-white rounded-[5px] border p-8">
           {error && (
@@ -1346,7 +1420,7 @@ export default function AddPropertyPage() {
                 {loading ? (
                   <>
                     <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Publishing...
+                    Saving...
                   </>
                 ) : uploadingImages ? (
                   <>
@@ -1355,8 +1429,8 @@ export default function AddPropertyPage() {
                   </>
                 ) : (
                   <>
-                    <Building className="w-4 h-4 mr-2" />
-                    Publish Property
+                    <Plus className="w-4 h-4 mr-2" />
+                    Save & Continue
                   </>
                 )}
               </Button>
@@ -1365,6 +1439,7 @@ export default function AddPropertyPage() {
         </div>
 
       </form>
+      )}
     </DashboardLayout>
   );
 }

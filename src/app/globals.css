@@ -137,6 +137,16 @@
 
 /* me css  */
 
+/* ── Google Maps Places Autocomplete dropdown ── */
+/* Ensure pac-container always sits above map layers and modals */
+.pac-container {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+.pac-item {
+  cursor: pointer;
+}
+
 
 .zoom-image {
   inset: calc(var(--spacing) * 0);

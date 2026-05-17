@@ -63,7 +63,7 @@ export default function AdminBidsPage() {
       if (statusFilter !== "ALL") params.set("status", statusFilter);
       if (zipFilter) params.set("zipCode", zipFilter);
 
-      const res = await api.get<BidsResponse>(`/api/admin/bids?${params}`);
+      const res = await api.get<BidsResponse>(`/admin/bids?${params}`);
       if (res.data) {
         setBids(res.data.bids ?? []);
         setTotal(res.data.total ?? 0);
@@ -145,7 +145,7 @@ export default function AdminBidsPage() {
           </div>
 
           {/* Zip filter */}
-          <div className="space-y-1 flex-1 min-w-[160px]">
+          <div className="space-y-1 flex-1 min-w-40">
             <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Zip Code</label>
             <div className="flex gap-2">
               <Input
@@ -205,7 +205,7 @@ export default function AdminBidsPage() {
                 <tbody className="divide-y divide-gray-50">
                   {bids.map((bid) => (
                     <tr key={bid.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-gray-900 max-w-[160px] truncate">
+                      <td className="px-4 py-3 font-medium text-gray-900 max-w-40 truncate">
                         {bid.propertyTitle}
                       </td>
                       <td className="px-4 py-3 text-gray-600">

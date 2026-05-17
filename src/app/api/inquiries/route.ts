@@ -43,6 +43,19 @@ export const GET = withAuth(async (req: NextRequest, user: JWTPayload) => {
     const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
 
     if (ownerId || forOwner) {
+      // Check if owner's active package routes inquiries to admin instead of owner
+      const activePkg = await prisma.ownerPackage.findFirst({
+        where: { ownerId: user.userId, status: 'ACTIVE', endDate: { gt: new Date() } },
+        include: { package: { select: { directInquiryToOwner: true } } },
+      });
+      if (activePkg && !activePkg.package.directInquiryToOwner) {
+        // fullAdminSupport package: admin handles all inquiries, owner sees none
+        return NextResponse.json({
+          success: true,
+          message: 'Inquiries are managed by admin for your current package',
+          data: { items: [], total: 0, page, pageSize, totalPages: 0 },
+        });
+      }
       // Owner inbox mode
       where.property = { ownerId: user.userId };
       // Tab filtering for owner
@@ -280,20 +293,29 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
       },
     });
 
-    // Send notification to property owner
-    try {
-      await notificationService.createInquiryNotification(
-        property.ownerId,
-        {
-          inquiryId: inquiry.id,
-          propertyTitle: property.title,
-          propertyId: property.id,
-          inquirerName: body.name,
-          inquiryType: inquiryType,
-        }
-      );
-    } catch (notifErr) {
-      console.error('Failed to send inquiry notification (non-fatal):', notifErr);
+    // Check owner's active package: does inquiry go directly to owner or through admin?
+    const ownerActivePkg = await prisma.ownerPackage.findFirst({
+      where: { ownerId: property.ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+      include: { package: { select: { directInquiryToOwner: true, fullAdminSupport: true } } },
+    });
+    const directToOwner = !ownerActivePkg || ownerActivePkg.package.directInquiryToOwner;
+
+    // Send notification to property owner only when directInquiryToOwner is true
+    if (directToOwner) {
+      try {
+        await notificationService.createInquiryNotification(
+          property.ownerId,
+          {
+            inquiryId: inquiry.id,
+            propertyTitle: property.title,
+            propertyId: property.id,
+            inquirerName: body.name,
+            inquiryType: inquiryType,
+          }
+        );
+      } catch (notifErr) {
+        console.error('Failed to send inquiry notification (non-fatal):', notifErr);
+      }
     }
 
     // Get owner email and name
@@ -313,8 +335,8 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
       console.error('Failed to send inquiry confirmation email (non-fatal):', emailErr);
     }
 
-    // Send notification email to property owner
-    if (owner) {
+    // Send notification email to property owner only when directInquiryToOwner is true
+    if (directToOwner && owner) {
       try {
         await emailService.sendNewInquiryNotificationEmail(
           owner.email,

@@ -72,7 +72,7 @@ export default function ManageLabelsPage() {
     <DashboardLayout defaultRole="user">
       {/* Header */}
       <div className="mb-8">
-        <Link href="/dashboard/inquiries" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-5 transition-colors">
+        <Link href="/user/dashboard/inquiries" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-5 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Inquiries
         </Link>
         <div className="flex items-center gap-3">

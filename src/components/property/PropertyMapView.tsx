@@ -282,11 +282,24 @@ export default function PropertyMapView({
     livePolylineRef.current = polyline;
     freehandPathRef.current = [];
 
+    // stopDrawing is called from both map mouseup AND native document mouseup
+    // (so releasing the mouse outside the map also ends the stroke)
+    const stopDrawing = () => {
+      if (!isMouseDownRef.current) return;
+      isMouseDownRef.current = false;
+      document.removeEventListener("mouseup", stopDrawing);
+      mapListenersRef.current.forEach((l) => google.maps.event.removeListener(l));
+      mapListenersRef.current = [];
+      finalizePath(freehandPathRef.current);
+    };
+
     const l1 = map.addListener("mousedown", (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return;
       isMouseDownRef.current = true;
       freehandPathRef.current = [e.latLng];
       polyline.setPath([e.latLng]);
+      // Attach to document so release anywhere (even outside the map) stops drawing
+      document.addEventListener("mouseup", stopDrawing);
     });
 
     const l2 = map.addListener("mousemove", (e: google.maps.MapMouseEvent) => {
@@ -295,13 +308,7 @@ export default function PropertyMapView({
       polyline.setPath(freehandPathRef.current);
     });
 
-    const l3 = map.addListener("mouseup", () => {
-      if (!isMouseDownRef.current) return;
-      isMouseDownRef.current = false;
-      mapListenersRef.current.forEach((l) => google.maps.event.removeListener(l));
-      mapListenersRef.current = [];
-      finalizePath(freehandPathRef.current);
-    });
+    const l3 = map.addListener("mouseup", stopDrawing);
 
     mapListenersRef.current = [l1, l2, l3];
   }, [finalizePath]);
@@ -671,7 +678,14 @@ export default function PropertyMapView({
 
       {/* ── Bottom Action Bar ────────────────────────────────────────────── */}
       {showBottomBar && (
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20">
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2">
+          {/* No-results hint */}
+          {drawnPropertyIds.length === 0 && (
+            <div className="bg-white border border-amber-300 text-amber-800 rounded-full px-5 py-2 text-sm font-medium shadow-md whitespace-nowrap">
+              No properties in this area — try drawing a larger area
+            </div>
+          )}
+
           <div className="bg-white rounded-full shadow-2xl border border-gray-200 px-2 py-1.5 flex items-center gap-1">
             <button onClick={handleDrawAgain} className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
               <RotateCcw className="w-4 h-4" />
@@ -695,9 +709,18 @@ export default function PropertyMapView({
               Save area
             </button>
             <div className="w-px h-5 bg-gray-200 mx-1" />
-            <button onClick={handleViewProperties} className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
+            {/* Disabled when no properties inside the drawn shape */}
+            <button
+              onClick={drawnPropertyIds.length > 0 ? handleViewProperties : undefined}
+              disabled={drawnPropertyIds.length === 0}
+              className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-colors ${
+                drawnPropertyIds.length > 0
+                  ? "text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
+                  : "text-gray-400 bg-gray-100 cursor-not-allowed"
+              }`}
+            >
               <Eye className="w-4 h-4" />
-              View properties
+              View {drawnPropertyIds.length > 0 ? `${drawnPropertyIds.length} ` : ""}propert{drawnPropertyIds.length === 1 ? "y" : "ies"}
             </button>
           </div>
         </div>

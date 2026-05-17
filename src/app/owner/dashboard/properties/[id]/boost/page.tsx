@@ -74,10 +74,10 @@ export default function BoostPropertyPage({
     (async () => {
       try {
         const [propRes] = await Promise.all([
-          api.get<PropertyInfo>(`/api/properties/${id}`),
+          api.get<{ success: boolean; data: PropertyInfo }>(`/properties/${id}`),
         ]);
         if (propRes.data) {
-          const p = propRes.data;
+          const p: PropertyInfo = propRes.data.data ?? (propRes.data as any);
           setProperty(p);
           setZipCode(p.zipCode ?? "");
 
@@ -96,13 +96,16 @@ export default function BoostPropertyPage({
 
   async function refreshHighest(zip: string) {
     try {
-      const res = await api.get<{ highest: HighestBid | null; settings: BidSettings }>(
-        `/api/bids/highest?zipCode=${encodeURIComponent(zip)}`
+      const res = await api.get<{ success: boolean; data: { highest: HighestBid | null; settings: BidSettings } }>(
+        `/bids/highest?zipCode=${encodeURIComponent(zip)}`
       );
-      if (res.data) {
-        setHighest(res.data.highest);
-        setSettings(res.data.settings);
-        setAmount(String(res.data.settings.minBidAmountPerDay));
+      const payload = res.data?.data ?? (res.data as any);
+      if (payload) {
+        setHighest(payload.highest);
+        if (payload.settings) {
+          setSettings(payload.settings);
+          setAmount(String(payload.settings.minBidAmountPerDay));
+        }
       }
     } catch {
       // non-fatal
@@ -115,7 +118,7 @@ export default function BoostPropertyPage({
     setSubmitting(true);
     try {
       const res = await api.post<{ bid: { id: string }; razorpayOrder?: { id: string }; keyId: string }>(
-        "/api/owner/bids",
+        "/owner/bids",
         {
           propertyId: id,
           zipCode: zipCode.trim(),
@@ -156,7 +159,10 @@ export default function BoostPropertyPage({
       setSuccess(true);
       setTimeout(() => router.push("/owner/dashboard/bids"), 1500);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to place bid";
+      const axiosErr = err as any;
+      const msg =
+        axiosErr?.response?.data?.message ??
+        (err instanceof Error ? err.message : "Failed to place bid");
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -223,7 +229,7 @@ export default function BoostPropertyPage({
       {/* Razorpay SDK */}
       <script src="https://checkout.razorpay.com/v1/checkout.js" async />
 
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Link href={`/owner/dashboard/properties/${id}`}>
@@ -242,7 +248,7 @@ export default function BoostPropertyPage({
 
         {/* Info card */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
-          <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
             <p className="font-medium mb-1">How Boosting Works</p>
             <ul className="space-y-0.5 text-amber-700">
@@ -256,7 +262,7 @@ export default function BoostPropertyPage({
         {/* Current highest bid */}
         {highest && (
           <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4">
-            <TrendingUp className="w-8 h-8 text-green-600 flex-shrink-0" />
+            <TrendingUp className="w-8 h-8 text-green-600 shrink-0" />
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
                 Current Highest Bid in {zipCode}

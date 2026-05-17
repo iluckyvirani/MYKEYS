@@ -31,27 +31,28 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
       );
     }
 
-    // Only owner can view notes
-    if (inquiry.property.ownerId !== user.userId) {
+    // Only owner or admin can view notes
+    const isOwner = inquiry.property.ownerId === user.userId;
+    const isAdmin = (user as any).role === 'ADMIN';
+    if (!isOwner && !isAdmin) {
       return NextResponse.json(
         { success: false, message: 'Unauthorized', data: null },
         { status: 403 }
       );
     }
 
-    const notes: any[] = await (prisma as any).inquiryNote.findMany({
-      where: { inquiryId },
+    // Return the single note for this owner (most recent)
+    const note: any = await (prisma as any).inquiryNote.findFirst({
+      where: { inquiryId, createdBy: user.userId },
       orderBy: { createdAt: 'desc' },
     });
 
-    const mappedNotes = notes.map((note: any) => ({
-      id: note.id,
-      content: note.content,
-      createdAt: note.createdAt.toISOString(),
-    }));
-
     return NextResponse.json(
-      { success: true, message: 'Notes retrieved successfully', data: mappedNotes },
+      {
+        success: true,
+        message: 'Note retrieved successfully',
+        data: note ? { id: note.id, content: note.content, createdAt: note.createdAt.toISOString() } : null,
+      },
       { status: 200 }
     );
   } catch (error) {
@@ -99,33 +100,41 @@ export const POST = withAuth<{ id: string }>(async (req: NextRequest, user: JWTP
       );
     }
 
-    // Only owner can create notes
-    if (inquiry.property.ownerId !== user.userId) {
+    // Only owner or admin can create notes
+    const isOwnerPost = inquiry.property.ownerId === user.userId;
+    const isAdminPost = (user as any).role === 'ADMIN';
+    if (!isOwnerPost && !isAdminPost) {
       return NextResponse.json(
         { success: false, message: 'Unauthorized', data: null },
         { status: 403 }
       );
     }
 
-    const note = await (prisma as any).inquiryNote.create({
-      data: {
-        inquiryId,
-        content: body.content,
-        createdBy: user.userId,
-      },
+    // Upsert: update existing note or create a new one
+    const existing: any = await (prisma as any).inquiryNote.findFirst({
+      where: { inquiryId, createdBy: user.userId },
     });
+
+    const note = existing
+      ? await (prisma as any).inquiryNote.update({
+          where: { id: existing.id },
+          data: { content: body.content },
+        })
+      : await (prisma as any).inquiryNote.create({
+          data: { inquiryId, content: body.content, createdBy: user.userId },
+        });
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Note created successfully',
+        message: 'Note saved successfully',
         data: {
           id: note.id,
           content: note.content,
           createdAt: note.createdAt.toISOString(),
         },
       },
-      { status: 201 }
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error creating note:', error);

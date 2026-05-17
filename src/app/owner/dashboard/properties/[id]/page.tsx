@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { renderAmenityIcon } from "@/components/dashboard/AdminAmenityModal";
+import PropertyDocumentsTab from "@/components/owner/PropertyDocumentsTab";
 import { Button } from "@/components/ui/button";
 import { 
   Building, 
@@ -16,18 +18,13 @@ import {
   Hotel,
   Home,
   Users,
-  Wifi,
   Car,
-  Wind,
-  Utensils,
-  Tv,
-  Shield,
   ChevronLeft,
-  MoreVertical,
   Clock,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -108,16 +105,7 @@ interface PropertyData {
   reviewCount: number;
 }
 
-const amenitiesList = [
-  { id: "wifi", label: "WiFi", icon: Wifi },
-  { id: "parking", label: "Parking", icon: Car },
-  { id: "ac", label: "Air Conditioning", icon: Wind },
-  { id: "kitchen", label: "Kitchen", icon: Utensils },
-  { id: "tv", label: "TV", icon: Tv },
-  { id: "pool", label: "Swimming Pool", icon: Wind },
-  { id: "gym", label: "Gym", icon: Wind },
-  { id: "security", label: "Security", icon: Shield },
-];
+
 
 export default function PropertyDetailsPage() {
   const params = useParams();
@@ -482,29 +470,32 @@ export default function PropertyDetailsPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Amenities</h3>
             {property.amenities && property.amenities.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {property.amenities.map((item) => {
-                  const amenityName = item.amenity.name.toLowerCase();
-                  const matchedAmenity = amenitiesList.find(a => 
-                    amenityName.includes(a.id) || a.id.includes(amenityName.split(' ')[0])
-                  );
-                  const Icon = matchedAmenity?.icon || Shield;
-                  
-                  return (
-                    <div 
-                      key={item.id} 
-                      className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200"
-                    >
-                      <Icon className="w-5 h-5 text-green-600" />
-                      <span className="font-medium text-green-700">
-                        {item.amenity.name}
-                      </span>
-                    </div>
-                  );
-                })}
+                {property.amenities.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200"
+                  >
+                    <span className="text-green-600 shrink-0">
+                      {renderAmenityIcon(item.amenity.icon as string ?? "", "w-5 h-5")}
+                    </span>
+                    <span className="font-medium text-green-700 text-sm">
+                      {item.amenity.name}
+                    </span>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-gray-500 text-center py-4">No amenities listed</p>
             )}
+          </div>
+
+          {/* Documents */}
+          <div className="bg-white rounded-[5px] border p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <FileText className="w-5 h-5 text-gray-700" />
+              <h3 className="text-lg font-semibold text-gray-900">Property Documents</h3>
+            </div>
+            <PropertyDocumentsTab propertyId={property.id} />
           </div>
 
           {/* Reviews */}
@@ -571,7 +562,7 @@ export default function PropertyDetailsPage() {
             </div>
             
             <div className="flex gap-2 flex-col">
-              <Link href={`/owner/dashboard/properties/${property.id}/bookings`}>
+              <Link href="/owner/dashboard/bookings">
                 <Button variant="outline" className="w-full justify-start cursor-pointer">
                   <Calendar className="w-4 h-4 mr-2" />
                   View Bookings

@@ -1,12 +1,12 @@
-"use client";
+﻿"use client";
 
 import { use, useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   ArrowLeft, Send, Home, Tag, X, CheckCircle,
-  Bell, ChevronDown, StickyNote
+  Bell, ChevronDown, StickyNote, User, Mail, Phone, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -90,6 +90,9 @@ interface InquiryDetail {
 export default function OwnerChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: inquiryId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from");
+  const backHref = from === "dashboard" ? "/owner/dashboard" : "/owner/dashboard/inquiries";
   const { toast } = useToast();
 
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
@@ -107,9 +110,12 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
   const [reminderDate, setReminderDate] = useState("");
   const [reminderNote, setReminderNote] = useState("");
   const [savingReminder, setSavingReminder] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
+  const [changingLabel, setChangingLabel] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [note, setNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  const [showTenantPanel, setShowTenantPanel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMsgIdRef = useRef<string>("");
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -144,8 +150,8 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
           unreadByOwner: d.unreadByOwner || 0,
           createdAt: d.createdAt,
           guestName: d.guestName,
-          guestEmail: d.guestEmail,
-          guestPhone: d.guestPhone,
+          guestEmail: d.guestEmail || d.email,
+          guestPhone: d.guestPhone || d.phone,
           message: d.message,
         });
       }
@@ -205,6 +211,11 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
     }
   }, [inquiryId]);
 
+  // Load reminders on mount so badge count is correct immediately
+  useEffect(() => {
+    loadReminders();
+  }, [loadReminders]);
+
   const handleSend = async () => {
     const content = text.trim();
     if (!content || sending) return;
@@ -256,6 +267,7 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
   };
 
   const handleLabelChange = async (label: string) => {
+    setChangingLabel(true);
     try {
       const payload = label === "No Label" ? { label: null } : { label };
       await api.patch(`/inquiries/${inquiryId}/label`, payload);
@@ -264,10 +276,13 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
       toast({ title: "Label updated" });
     } catch {
       toast({ title: "Error", description: "Failed to update label", variant: "destructive" });
+    } finally {
+      setChangingLabel(false);
     }
   };
 
   const handleStatusChange = async (status: string) => {
+    setChangingStatus(true);
     try {
       await api.patch(`/inquiries/${inquiryId}`, { status });
       setInquiry((prev) => prev ? { ...prev, status } : prev);
@@ -275,6 +290,8 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
       toast({ title: "Status updated" });
     } catch {
       toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+    } finally {
+      setChangingStatus(false);
     }
   };
 
@@ -329,35 +346,17 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
 
   return (
     <DashboardLayout defaultRole="owner">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-4 flex items-start gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/owner/dashboard/inquiries")} className="p-2 mt-0.5">
+          <Button variant="ghost" size="sm" onClick={() => router.push(backHref)} className="p-2 mt-0.5">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg font-bold text-gray-900 truncate">{inquiry.guestName}</h1>
-              <span className="text-sm text-gray-500">�</span>
-              <span className="text-sm text-gray-600 truncate">{inquiry.propertyTitle}</span>
-            </div>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <a href={`mailto:${inquiry.guestEmail}`} className="text-xs text-gray-500 hover:text-green-600">
-                {inquiry.guestEmail}
-              </a>
-              {inquiry.guestPhone && (
-                <>
-                  <span className="text-gray-300">�</span>
-                  <a href={`tel:${inquiry.guestPhone}`} className="text-xs text-gray-500 hover:text-green-600">
-                    {inquiry.guestPhone}
-                  </a>
-                </>
-              )}
-              <span className="text-gray-300">�</span>
-              <Link href={`/property/${inquiry.propertyId}`} className="text-xs text-green-600 hover:underline flex items-center gap-1">
-                <Home className="w-3 h-3" /> View Property
-              </Link>
-            </div>
+            <h1 className="text-lg font-bold text-gray-900 truncate">{inquiry.propertyTitle}</h1>
+            <Link href={`/property/${inquiry.propertyId}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
+              <Home className="w-3 h-3" /> View Property
+            </Link>
           </div>
 
           {/* Actions */}
@@ -365,11 +364,13 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
             {/* Status */}
             <div className="relative">
               <button
-                onClick={() => { setShowStatusMenu((v) => !v); setShowLabelMenu(false); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium ${statusCfg.color}`}
+                onClick={() => { if (!changingStatus) { setShowStatusMenu((v) => !v); setShowLabelMenu(false); } }}
+                disabled={changingStatus}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium ${statusCfg.color} disabled:opacity-60`}
               >
+                {changingStatus ? <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : null}
                 {statusCfg.label}
-                <ChevronDown className="w-3 h-3" />
+                {!changingStatus && <ChevronDown className="w-3 h-3" />}
               </button>
               {showStatusMenu && (
                 <div className="absolute right-0 mt-1 w-40 bg-white border rounded-[5px] shadow-lg z-20 py-1">
@@ -389,10 +390,11 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
             {/* Label */}
             <div className="relative">
               <button
-                onClick={() => { setShowLabelMenu((v) => !v); setShowStatusMenu(false); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium ${LABEL_COLORS[currentLabel]}`}
+                onClick={() => { if (!changingLabel) { setShowLabelMenu((v) => !v); setShowStatusMenu(false); } }}
+                disabled={changingLabel}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium ${LABEL_COLORS[currentLabel]} disabled:opacity-60`}
               >
-                <Tag className="w-3 h-3" />
+                {changingLabel ? <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : <Tag className="w-3 h-3" />}
                 {currentLabel}
               </button>
               {showLabelMenu && (
@@ -415,9 +417,18 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
               )}
             </div>
 
+            {/* Tenant Details */}
+            <button
+              onClick={() => setShowTenantPanel(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium text-gray-600 bg-white border-gray-200 hover:bg-gray-50"
+            >
+              <User className="w-3 h-3" />
+              Tenant Details
+              <ChevronRight className="w-3 h-3" />
+            </button>
             {/* Reminders */}
             <button
-              onClick={() => { setShowReminders((v) => !v); if (!showReminders) loadReminders(); }}
+              onClick={() => { setShowReminders((v) => !v); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium text-gray-600 bg-white border-gray-200 hover:bg-gray-50"
             >
               <Bell className="w-3 h-3" />
@@ -438,6 +449,63 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
             </button>
           </div>
         </div>
+        {/* Tenant Details Slide-over */}
+        {showTenantPanel && (
+          <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowTenantPanel(false)}>
+            <div className="bg-white w-full max-w-sm h-full shadow-xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <h3 className="font-semibold text-gray-900">Tenant Details</h3>
+                <button onClick={() => setShowTenantPanel(false)}><X className="w-4 h-4 text-gray-500" /></button>
+              </div>
+              <div className="p-5 space-y-5">
+                {/* Avatar + Name */}
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0 text-lg font-bold text-green-700">
+                    {inquiry.guestName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{inquiry.guestName}</p>
+                    <p className="text-xs text-gray-500">Prospective Tenant</p>
+                  </div>
+                </div>
+                {/* Contact info */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-[5px] border">
+                    <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500 mb-0.5">Email</p>
+                      <a href={`mailto:${inquiry.guestEmail}`} className="text-sm text-green-600 hover:underline truncate block">{inquiry.guestEmail}</a>
+                    </div>
+                  </div>
+                  {inquiry.guestPhone ? (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-[5px] border">
+                      <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-500 mb-0.5">Phone</p>
+                        <a href={`tel:${inquiry.guestPhone}`} className="text-sm text-green-600 hover:underline">{inquiry.guestPhone}</a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-[5px] border">
+                      <Phone className="w-4 h-4 text-gray-300 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-500 mb-0.5">Phone</p>
+                        <p className="text-sm text-gray-400">Not provided</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Inquiry info */}
+                <div className="pt-3 border-t">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Inquiry Info</p>
+                  <p className="text-xs text-gray-500">Property: <span className="font-medium text-gray-700">{inquiry.propertyTitle}</span></p>
+                  <p className="text-xs text-gray-500 mt-1">Started: <span className="font-medium text-gray-700">{new Date(inquiry.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Note modal */}
         {showNoteModal && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -542,7 +610,7 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
                   <p className="text-sm whitespace-pre-wrap">{inquiry.message}</p>
                 </div>
                 <div className="flex items-center gap-1 mt-1">
-                  <span className="text-xs text-gray-400">{inquiry.guestName} � {formatTime(inquiry.createdAt)}</span>
+                  <span className="text-xs text-gray-400">{inquiry.guestName} · {formatTime(inquiry.createdAt)}</span>
                 </div>
               </div>
             </div>
@@ -567,7 +635,7 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
                     </div>
                     <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
                       <span className="text-xs text-gray-400">
-                        {isMe ? "You" : msg.senderName} � {formatTime(msg.createdAt)}
+                        {isMe ? "You" : msg.senderName} · {formatTime(msg.createdAt)}
                       </span>
                     </div>
                   </div>

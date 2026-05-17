@@ -1,755 +1,195 @@
 ﻿// components/dashboard/OwnerDashboard/InquiryInbox.tsx
 "use client";
 
-import { Inbox, User, Search, MessageSquare, Phone, Mail, Calendar, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { formatDate } from "@/lib/utils";
-import { useState, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { MessageSquare, Search, Inbox, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
 
-interface Inquiry {
+interface InquiryThread {
   id: string;
-  propertyId: string;
   propertyTitle: string;
   guestName: string;
-  guestEmail: string;
-  guestPhone: string;
-  message: string;
-  createdAt: string;
-  updatedAt: string;
+  lastMessage: string;
+  lastMessageAt: string | null;
+  lastMessageRole: string;
   status: string;
-  priority: string;
-  type: string;
-  duration?: string;
-  propertyPrice?: number;
-  // budget?: number;
-  notes?: Note[];
-  response?: string;
-}
-
-interface Note {
-  id: string;
-  content: string;
+  unreadByOwner: number;
+  ownerLabel: string | null;
   createdAt: string;
 }
 
-const priorityColors = {
-  high: "bg-red-100 text-red-800 border-red-200",
-  medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  low: "bg-green-100 text-green-800 border-green-200",
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  NEW:       { label: "New",       color: "bg-blue-100 text-blue-800" },
+  READ:      { label: "Read",      color: "bg-gray-100 text-gray-700" },
+  REPLIED:   { label: "Replied",   color: "bg-green-100 text-green-800" },
+  CONVERTED: { label: "Converted", color: "bg-indigo-100 text-indigo-800" },
+  CLOSED:    { label: "Closed",    color: "bg-gray-200 text-gray-600" },
 };
 
-const statusColors = {
-  new: "bg-blue-100 text-blue-800",
-  read: "bg-gray-100 text-gray-800",
-  replied: "bg-green-100 text-green-800",
-  closed: "bg-purple-100 text-purple-800",
-  converted: "bg-indigo-100 text-indigo-800",
-  NEW: "bg-blue-100 text-blue-800",
-  READ: "bg-gray-100 text-gray-800",
-  REPLIED: "bg-green-100 text-green-800",
-  CLOSED: "bg-purple-100 text-purple-800",
-  CONVERTED: "bg-indigo-100 text-indigo-800",
+const LABEL_COLORS: Record<string, string> = {
+  "Viewing arranged":      "bg-blue-100 text-blue-700",
+  "Viewing completed":     "bg-green-100 text-green-700",
+  "Suitable":              "bg-emerald-100 text-emerald-700",
+  "Maybe":                 "bg-yellow-100 text-yellow-700",
+  "Rejected":              "bg-red-100 text-red-700",
+  "Waiting for paperwork": "bg-purple-100 text-purple-700",
 };
 
-interface InquiryInboxProps {
-  filters?: { status?: string; priority?: string; type?: string };
+function timeAgo(dateStr: string | null) {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-export default function InquiryInbox({ filters = {} }: InquiryInboxProps) {
-  const { toast } = useToast();
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
-  const [filter, setFilter] = useState("all");
-  const [search, setSearch] = useState("");
+export default function InquiryInbox() {
+  const [threads, setThreads] = useState<InquiryThread[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [showNotesModal, setShowNotesModal] = useState(false);
-  const [responseMessage, setResponseMessage] = useState("");
-  const [notesLoading, setNotesLoading] = useState(false);
-  const [isEditingResponse, setIsEditingResponse] = useState(false);
-  const [newNote, setNewNote] = useState("");
+  const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    fetchInquiries();
-  }, []);
-
-  const fetchInquiries = async () => {
+  const fetchThreads = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
-
-      const response = await api.get("/inquiries?forOwner=true&pageSize=100");
-      if (response.data?.success && response.data.data?.items) {
-        const inquiriesList = response.data.data.items.map((inq: any) => ({
-          id: inq.id,
-          propertyId: inq.propertyId,
-          propertyTitle: inq.propertyTitle,
-          guestName: inq.guestName,
-          guestEmail: inq.guestEmail,
-          guestPhone: inq.guestPhone,
-          message: inq.message,
-          createdAt: inq.createdAt,
-          updatedAt: inq.updatedAt,
-          status: (inq.status || "NEW").toLowerCase(),
-          priority: inq.priority || "medium",
-          type: inq.type,
-          duration: inq.type === "long_term" ? `${inq.desiredDurationMonths || 12} months` : inq.desiredDurationMonths,
-          propertyPrice: inq.propertyPrice || inq.pricePerMonth || 0,
-          // budget: inq.budget || inq.pricePerMonth,
-          response: inq.response || null,
-        }));
-        setInquiries(inquiriesList);
-        if (inquiriesList.length > 0) {
-          setSelectedInquiry(inquiriesList[0]);
-          // Mark first inquiry as read
-          if (inquiriesList[0].status === "new") {
-            handleStatusChange(inquiriesList[0].id, "read");
-          }
-        }
+      const res = await api.get("/inquiries?forOwner=true&pageSize=100&tab=all");
+      if (res.data?.success) {
+        setThreads(
+          (res.data.data?.items || []).map((inq: any) => ({
+            id: inq.id,
+            propertyTitle: inq.propertyTitle || "Property",
+            guestName: inq.guestName || "Guest",
+            lastMessage: inq.lastMessage || inq.message || "",
+            lastMessageAt: inq.lastMessageAt || inq.updatedAt || inq.createdAt,
+            lastMessageRole: inq.lastMessageRole || "USER",
+            status: (inq.status || "NEW").toUpperCase(),
+            unreadByOwner: inq.unreadByOwner || 0,
+            ownerLabel: inq.ownerLabel || null,
+            createdAt: inq.createdAt,
+          }))
+        );
       }
-    } catch (err) {
-      console.error("Error fetching inquiries:", err);
-      setError("Failed to fetch inquiries");
+    } catch {
+      // silent
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleStatusChange = async (inquiryId: string, newStatus: string) => {
-    try {
-      setUpdatingId(inquiryId);
-      await api.patch(`/inquiries/${inquiryId}`, { status: newStatus.toUpperCase() });
+  useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
-      setInquiries(
-        inquiries.map((inq) =>
-          inq.id === inquiryId ? { ...inq, status: newStatus } : inq
-        )
-      );
-
-      if (selectedInquiry?.id === inquiryId) {
-        setSelectedInquiry({ ...selectedInquiry, status: newStatus });
-      }
-      toast({ title: "Success", description: "Inquiry status updated." });
-    } catch (err) {
-      console.error("Error updating inquiry status:", err);
-      toast({ title: "Error", description: "Failed to update inquiry status.", variant: "destructive" });
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handlePriorityChange = async (inquiryId: string, newPriority: string) => {
-    try {
-      setUpdatingId(inquiryId);
-      await api.patch(`/inquiries/${inquiryId}`, { priority: newPriority });
-
-      setInquiries(
-        inquiries.map((inq) =>
-          inq.id === inquiryId ? { ...inq, priority: newPriority } : inq
-        )
-      );
-
-      if (selectedInquiry?.id === inquiryId) {
-        setSelectedInquiry({ ...selectedInquiry, priority: newPriority });
-      }
-      toast({ title: "Success", description: "Priority updated." });
-    } catch (err) {
-      console.error("Error updating inquiry priority:", err);
-      toast({ title: "Error", description: "Failed to update inquiry priority.", variant: "destructive" });
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handleSaveResponse = async () => {
-    if (!selectedInquiry || !responseMessage.trim()) {
-      toast({ title: "Validation", description: "Please enter a response message.", variant: "destructive" });
-      return;
-    }
-
-    try {
-      setUpdatingId(selectedInquiry.id);
-      // Save response to Inquiry.response field ONLY
-      await api.patch(`/inquiries/${selectedInquiry.id}`, { 
-        status: "REPLIED",
-        response: responseMessage 
-      });
-
-      // Update local state
-      setInquiries(
-        inquiries.map((inq) =>
-          inq.id === selectedInquiry.id ? { ...inq, status: "replied", response: responseMessage } : inq
-        )
-      );
-
-      setSelectedInquiry({ ...selectedInquiry, status: "replied", response: responseMessage });
-      setResponseMessage("");
-      setIsEditingResponse(false);
-      toast({
-        title: "Success",
-        description: "Response sent to user successfully!",
-      });
-    } catch (err) {
-      console.error("Error saving response:", err);
-      toast({
-        title: "Error",
-        description: "Failed to save response",
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handleAddNote = async () => {
-    if (!selectedInquiry || !newNote.trim()) {
-      toast({ title: "Validation", description: "Please enter a note.", variant: "destructive" });
-      return;
-    }
-
-    try {
-      setUpdatingId(selectedInquiry.id);
-      // Save as internal note
-      await api.post(`/inquiries/${selectedInquiry.id}/notes`, { content: newNote });
-
-      setNewNote("");
-      toast({
-        title: "Success",
-        description: "Note added successfully!",
-      });
-      
-      // Refresh notes
-      fetchNotes(selectedInquiry.id);
-    } catch (err) {
-      console.error("Error adding note:", err);
-      toast({
-        title: "Error",
-        description: "Failed to add note",
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const fetchNotes = async (inquiryId: string) => {
-    try {
-      setNotesLoading(true);
-      const response = await api.get(`/inquiries/${inquiryId}/notes`);
-      if (response.data?.success && response.data.data) {
-        setInquiries(
-          inquiries.map((inq) =>
-            inq.id === inquiryId ? { ...inq, notes: response.data.data } : inq
-          )
-        );
-
-        if (selectedInquiry?.id === inquiryId) {
-          setSelectedInquiry({ ...selectedInquiry, notes: response.data.data });
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching notes:", err);
-    } finally {
-      setNotesLoading(false);
-    }
-  };
-
-  const handleDeleteNote = async (inquiryId: string, noteId: string) => {
-    if (!confirm("Are you sure you want to delete this note?")) return;
-
-    try {
-      await api.delete(`/inquiries/${inquiryId}/notes/${noteId}`);
-      
-      // Update local state
-      const updatedInquiries = inquiries.map((inq) => {
-        if (inq.id === inquiryId) {
-          return {
-            ...inq,
-            notes: inq.notes?.filter((note) => note.id !== noteId),
-          };
-        }
-        return inq;
-      });
-
-      setInquiries(updatedInquiries);
-
-      if (selectedInquiry?.id === inquiryId) {
-        setSelectedInquiry({
-          ...selectedInquiry,
-          notes: selectedInquiry.notes?.filter((note) => note.id !== noteId),
-        });
-      }
-      toast({ title: "Success", description: "Note deleted." });
-    } catch (err) {
-      console.error("Error deleting note:", err);
-      toast({ title: "Error", description: "Failed to delete note.", variant: "destructive" });
-    }
-  };
-
-  const handleMarkClosed = async () => {
-    if (!selectedInquiry) return;
-
-    try {
-      setUpdatingId(selectedInquiry.id);
-      await api.patch(`/inquiries/${selectedInquiry.id}`, { status: "CLOSED" });
-
-      setInquiries(
-        inquiries.map((inq) =>
-          inq.id === selectedInquiry.id ? { ...inq, status: "closed" } : inq
-        )
-      );
-
-      setSelectedInquiry({ ...selectedInquiry, status: "closed" });
-      toast({ title: "Success", description: "Inquiry marked as closed." });
-    } catch (err) {
-      console.error("Error marking as closed:", err);
-      toast({ title: "Error", description: "Failed to mark as closed.", variant: "destructive" });
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handleMarkConverted = async () => {
-    if (!selectedInquiry) return;
-
-    try {
-      setUpdatingId(selectedInquiry.id);
-      await api.patch(`/inquiries/${selectedInquiry.id}`, { status: "CONVERTED" });
-
-      setInquiries(
-        inquiries.map((inq) =>
-          inq.id === selectedInquiry.id ? { ...inq, status: "converted" } : inq
-        )
-      );
-
-      setSelectedInquiry({ ...selectedInquiry, status: "converted" });
-      toast({ title: "Success", description: "Inquiry marked as converted." });
-    } catch (err) {
-      console.error("Error marking as converted:", err);
-      toast({ title: "Error", description: "Failed to mark as converted.", variant: "destructive" });
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const filteredInquiries = inquiries.filter((inq) => {
-    if (filter !== "all" && inq.status !== filter) return false;
-    if (search && !inq.guestName.toLowerCase().includes(search.toLowerCase()) && 
-        !inq.propertyTitle.toLowerCase().includes(search.toLowerCase())) return false;
-    // Apply advanced filters
-    if (filters.status && inq.status.toUpperCase() !== filters.status) return false;
-    if (filters.priority && inq.priority !== filters.priority) return false;
-    if (filters.type && inq.type !== filters.type) return false;
-    return true;
+  const filtered = threads.filter((t) => {
+    const q = search.toLowerCase();
+    return !q || t.guestName.toLowerCase().includes(q) || t.propertyTitle.toLowerCase().includes(q) || t.lastMessage.toLowerCase().includes(q);
   });
 
-  const unreadCount = inquiries.filter((inq) => inq.status === "new").length;
-  const newCount = inquiries.filter((inq) => inq.status === "new").length;
+  const unreadCount = threads.filter((t) => t.unreadByOwner > 0).length;
+  const notRepliedCount = threads.filter((t) => t.lastMessageRole !== "OWNER" && t.status !== "CLOSED").length;
 
   return (
     <div className="bg-white rounded-[5px] shadow-sm border">
-      <div className="p-5 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50">
-              <Inbox className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Inquiry Inbox</h3>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-sm text-gray-500">
-                  {inquiries.length} total inquiries
-                </span>
-                {unreadCount > 0 && (
-                  <Badge variant="destructive" className="animate-pulse">
-                    {unreadCount} unread
-                  </Badge>
-                )}
-                {newCount > 0 && (
-                  <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                    {newCount} new
-                  </Badge>
-                )}
-              </div>
-            </div>
+      {/* Header */}
+      <div className="px-5 py-4 border-b flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-blue-50">
+            <Inbox className="w-5 h-5 text-blue-600" />
           </div>
-          {/* <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
-            <Button className="bg-green-600 hover:bg-green-700">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Quick Reply Templates
-            </Button>
-          </div> */}
-        </div>
-
-        {/* Filters and Search */}
-        <div className="mt-6 flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search inquiries by guest or property..."
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2">
-            {["all", "new", "replied", "closed", "converted"].map((status) => (
-              <Button
-                key={status}
-                variant={filter === status ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter(status)}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-                {status === "new" && newCount > 0 && (
-                  <span className="ml-2 bg-white text-blue-600 text-xs px-1.5 py-0.5 rounded-full">
-                    {newCount}
-                  </span>
-                )}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3">
-        {/* Inquiry List */}
-        <div className="lg:col-span-1 border-r max-h-150 overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2 animate-spin" />
-                <p className="text-gray-500 text-sm">Loading inquiries...</p>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="p-4 text-red-600 text-sm">{error}</div>
-          ) : filteredInquiries.length === 0 ? (
-            <div className="p-4 text-gray-500 text-sm text-center py-8">No inquiries found</div>
-          ) : (
-            filteredInquiries.map((inquiry) => (
-              <div
-                key={inquiry.id}
-                className={`
-                  p-4 border-b cursor-pointer transition-colors hover:bg-gray-50
-                  ${selectedInquiry?.id === inquiry.id ? "bg-blue-50 border-l-4 border-l-blue-500" : ""}
-                  ${inquiry.status === "new" ? "bg-blue-50/50" : ""}
-                `}
-                onClick={() => {
-                  setSelectedInquiry(inquiry);
-                  if (inquiry.status === "new") {
-                    handleStatusChange(inquiry.id, "read");
-                  }
-                }}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium text-gray-900">{inquiry.guestName}</span>
-                    {inquiry.status === "new" && (
-                      <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                    )}
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${priorityColors[inquiry.priority as keyof typeof priorityColors]}`}>
-                    {inquiry.priority}
-                  </span>
-                </div>
-
-                <h4 className="font-semibold text-gray-900 mb-1">{inquiry.propertyTitle}</h4>
-                <p className="text-sm text-gray-600 line-clamp-2 mb-2">{inquiry.message}</p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded text-xs ${statusColors[inquiry.status as keyof typeof statusColors]}`}>
-                      {inquiry.status.toUpperCase()}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {formatDate(inquiry.createdAt)}
-                    </span>
-                  </div>
-                  {/* {inquiry.budget && (
-                    <div className="text-xs font-medium text-gray-900">
-                      £{inquiry.budget.toLocaleString()}
-                      <span className="text-gray-500 ml-1">
-                        {inquiry.type === "purchase" ? "" : "/" + (inquiry.type === "long_term" ? "month" : "night")}
-                      </span>
-                    </div>
-                  )} */}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Inquiry Details */}
-        <div className="lg:col-span-2 p-6">
-          {selectedInquiry ? (
-            <div>
-              <div className="flex items-start justify-between mb-6 pb-6 border-b">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {selectedInquiry.propertyTitle}
-                  </h3>
-                  <div className="flex items-center gap-4 mt-3">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <User className="w-4 h-4" />
-                      <span className="text-sm">{selectedInquiry.guestName}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Mail className="w-4 h-4" />
-                      <span className="text-sm">{selectedInquiry.guestEmail}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm">{formatDate(selectedInquiry.createdAt)}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className={`px-3 py-1 rounded-full text-xs font-semibold ${priorityColors[selectedInquiry.priority as keyof typeof priorityColors]}`}>
-                    {selectedInquiry.priority.toUpperCase()} PRIORITY
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-semibold text-center ${statusColors[selectedInquiry.status as keyof typeof statusColors]}`}>
-                    {selectedInquiry.status.toUpperCase()}
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Info Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                  <div className="text-xs text-gray-600 mb-1">Inquiry Type</div>
-                  <div className="font-semibold text-gray-900">{selectedInquiry.type.replace("_", " ")}</div>
-                </div>
-                {selectedInquiry.type !== "purchase" && (
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <div className="text-xs text-gray-600 mb-1">Duration</div>
-                    <div className="font-semibold text-gray-900">{selectedInquiry.duration || "N/A"}</div>
-                  </div>
-                )}
-                <div className="p-3 bg-green-50 rounded-lg border border-green-100">
-                  <div className="text-xs text-gray-600 mb-1">Property Price</div>
-                  <div className="font-semibold text-gray-900">
-                    {selectedInquiry.propertyPrice
-                      ? `£${selectedInquiry.propertyPrice.toLocaleString()}${selectedInquiry.type === "long_term" ? " /month" : ""}`
-                      : "N/A"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Original Message */}
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Initial Inquiry Message</h4>
-                <div className="p-4 bg-gray-50 rounded-lg border">
-                  <p className="text-sm text-gray-700 leading-relaxed">{selectedInquiry.message}</p>
-                </div>
-              </div>
-
-              {/* Chat/Conversation View */}
-              <div className="mb-6 border-t pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-semibold text-gray-900">Conversation</h4>
-                  <div className="flex items-center gap-2">
-                    <select 
-                      value={selectedInquiry.priority}
-                      onChange={(e) => handlePriorityChange(selectedInquiry.id, e.target.value)}
-                      disabled={updatingId === selectedInquiry.id}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs font-medium focus:outline-none focus:ring-2 focus:ring-green-500"
-                    >
-                      <option value="low">Low Priority</option>
-                      <option value="medium">Medium Priority</option>
-                      <option value="high">High Priority</option>
-                    </select>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowNotesModal(true);
-                        fetchNotes(selectedInquiry.id);
-                      }}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Notes
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Chat Messages */}
-                <div className="bg-gray-50 rounded-lg border p-4 mb-4 max-h-80 overflow-y-auto space-y-4">
-                  {/* Guest Initial Message */}
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-xs font-semibold text-blue-700">
-                      {selectedInquiry.guestName.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900">{selectedInquiry.guestName}</span>
-                        <span className="text-xs text-gray-500">{formatDate(selectedInquiry.createdAt)}</span>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 border border-gray-200">
-                        <p className="text-sm text-gray-700">{selectedInquiry.message}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Owner Response */}
-                  {selectedInquiry.response && (
-                    <div className="flex gap-3 justify-end">
-                      <div className="flex-1 max-w-xs">
-                        <div className="flex items-center gap-2 mb-1 justify-end">
-                          <span className="text-xs text-gray-500">{formatDate(selectedInquiry.updatedAt)}</span>
-                          <span className="text-sm font-medium text-gray-900">You</span>
-                        </div>
-                        <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                          <p className="text-sm text-gray-700">{selectedInquiry.response}</p>
-                        </div>
-                      </div>
-                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0 text-xs font-semibold text-green-700">
-                        O
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Reply Input Box */}
-                <div className="space-y-4">
-                  <textarea
-                    value={responseMessage}
-                    onChange={(e) => setResponseMessage(e.target.value)}
-                    placeholder={selectedInquiry.response ? "Type your reply..." : "Send a response to the guest..."}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                    rows={3}
-                  />
-                  <div className="flex gap-3">
-                    <Button 
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={handleSaveResponse}
-                      disabled={updatingId === selectedInquiry.id || !responseMessage.trim()}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Send Message
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={handleMarkClosed}
-                      disabled={updatingId === selectedInquiry.id || selectedInquiry.status === "closed"}
-                    >
-                      Close
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={handleMarkConverted}
-                      disabled={updatingId === selectedInquiry.id || selectedInquiry.status === "converted"}
-                    >
-                      Mark Converted
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-gray-900 mb-2">Select an inquiry</h4>
-              <p className="text-gray-500">Choose an inquiry from the list to view details</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Notes Modal */}
-      {showNotesModal && selectedInquiry && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-96 overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="border-b p-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  Private Notes - {selectedInquiry.propertyTitle}
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">Internal notes (not visible to user)</p>
-              </div>
-              <button
-                onClick={() => setShowNotesModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Notes List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {notesLoading ? (
-                <div className="text-center py-8">
-                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2 animate-spin" />
-                  <p className="text-gray-500 text-sm">Loading notes...</p>
-                </div>
-              ) : selectedInquiry.notes && selectedInquiry.notes.length > 0 ? (
-                selectedInquiry.notes.map((note) => (
-                  <div key={note.id} className="bg-gray-50 rounded-lg p-4 border">
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="text-xs text-gray-500">
-                        {formatDate(note.createdAt)}
-                      </span>
-                      <button
-                        onClick={() => handleDeleteNote(selectedInquiry.id, note.id)}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                    <p className="text-gray-700 text-sm">{note.content}</p>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8">
-                  <MessageSquare className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">No notes yet</p>
-                </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Inquiry Inbox</h3>
+            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+              <span className="text-sm text-gray-500">{threads.length} total</span>
+              {unreadCount > 0 && (
+                <span className="text-xs bg-orange-100 text-orange-700 font-semibold px-2 py-0.5 rounded-full">{unreadCount} unread</span>
+              )}
+              {notRepliedCount > 0 && (
+                <span className="text-xs bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded-full">{notRepliedCount} not replied</span>
               )}
             </div>
-
-            {/* Modal Footer - Add New Note Section */}
-            <div className="border-t p-4 space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Add New Note</label>
-                <textarea
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Type your internal note..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  onClick={handleAddNote}
-                  disabled={updatingId === selectedInquiry.id || !newNote.trim()}
-                >
-                  Save Note
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setShowNotesModal(false)}
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
           </div>
         </div>
-      )}
+        <Link href="/owner/dashboard/inquiries" className="flex items-center gap-1.5 text-xs text-green-600 hover:text-green-700 font-medium shrink-0">
+          View All <ExternalLink className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+
+      {/* Search */}
+      <div className="px-5 py-3 border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, property or message..."
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-[5px] focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Thread list */}
+      <div className="max-h-[520px] overflow-y-auto divide-y divide-gray-100">
+        {loading ? (
+          <div className="flex items-center justify-center py-14">
+            <div className="animate-spin rounded-full h-7 w-7 border-t-2 border-b-2 border-green-600" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-14">
+            <MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm">{threads.length === 0 ? "No inquiries yet." : "No results found."}</p>
+          </div>
+        ) : (
+          filtered.map((thread) => {
+            const statusCfg = STATUS_CONFIG[thread.status] || STATUS_CONFIG.NEW;
+            const hasUnread = thread.unreadByOwner > 0;
+            return (
+              <div key={thread.id} className={`flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ${hasUnread ? "bg-green-50/30" : ""}`}>
+                {/* Avatar */}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-white text-sm ${hasUnread ? "bg-green-600" : "bg-gray-300"}`}>
+                  {thread.guestName.charAt(0).toUpperCase()}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={`text-sm font-semibold truncate ${hasUnread ? "text-gray-900" : "text-gray-700"}`}>{thread.guestName}</span>
+                    {hasUnread && (
+                      <span className="text-xs bg-green-600 text-white rounded-full px-1.5 py-0.5 font-semibold shrink-0">{thread.unreadByOwner}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mb-0.5">
+                    <span className="font-semibold text-gray-700">{thread.propertyTitle}</span>
+                  </p>
+                  <p className={`text-sm truncate ${hasUnread ? "text-gray-800 font-medium" : "text-gray-500"}`}>{thread.lastMessage}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
+                    {thread.ownerLabel && thread.ownerLabel !== "No Label" && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LABEL_COLORS[thread.ownerLabel] || "bg-gray-100 text-gray-600"}`}>{thread.ownerLabel}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right side */}
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <span className="text-xs text-gray-400 whitespace-nowrap">{timeAgo(thread.lastMessageAt || thread.createdAt)}</span>
+                  <Link
+                    href={`/owner/dashboard/inquiries/${thread.id}?from=dashboard`}
+                    className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium border border-green-200 hover:border-green-400 rounded px-2 py-1 transition-colors"
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    Show Chat
+                  </Link>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

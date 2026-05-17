@@ -36,18 +36,14 @@ export const PATCH = withAuth<{ id: string }>(async (req: NextRequest, user: JWT
       data: isOwner ? { unreadByOwner: 0 } : { unreadByUser: 0 },
     });
 
-    // Mark messages as read by this user (add userId to readBy array if not already present)
-    const unreadMessages = await (prisma as any).inquiryMessage.findMany({
-      where: { inquiryId, readBy: { not: { has: user.userId } } },
-      select: { id: true, readBy: true },
+    // Mark all unread messages as read by this user in a single query
+    await prisma.inquiryMessage.updateMany({
+      where: {
+        inquiryId,
+        NOT: { readBy: { has: user.userId } },
+      },
+      data: { readBy: { push: user.userId } },
     });
-
-    for (const msg of unreadMessages) {
-      await (prisma as any).inquiryMessage.update({
-        where: { id: msg.id },
-        data: { readBy: { push: user.userId } },
-      });
-    }
 
     return NextResponse.json({ success: true, message: 'Marked as read', data: null });
   } catch (error) {

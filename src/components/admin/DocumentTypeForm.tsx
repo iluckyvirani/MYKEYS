@@ -2,10 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  FileText,
+  AlignLeft,
+  LayoutGrid,
+  ToggleLeft,
+  ListOrdered,
+  AlertCircle,
+  Save,
+  X,
+} from "lucide-react";
 import { api } from "@/lib/api";
 
 const APPLIES_OPTIONS = [
@@ -42,6 +52,30 @@ const defaults: FormValues = {
   isActive: true,
   sortOrder: 0,
 };
+
+function Toggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none ${
+        checked ? "bg-green-600" : "bg-gray-200"
+      }`}
+    >
+      <span
+        className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
 
 export default function DocumentTypeForm({ mode, id, initial }: Props) {
   const router = useRouter();
@@ -88,43 +122,92 @@ export default function DocumentTypeForm({ mode, id, initial }: Props) {
     }
   }
 
+  const toggleFields = [
+    {
+      key: "isRequired" as const,
+      label: "Required",
+      help: "Owner cannot publish without uploading this document",
+    },
+    {
+      key: "requireIssueDate" as const,
+      label: "Require Issue Date",
+      help: "Owner must enter when the document was issued",
+    },
+    {
+      key: "requireExpiryDate" as const,
+      label: "Require Expiry Date",
+      help: "Owner must enter the document expiry date",
+    },
+    {
+      key: "isActive" as const,
+      label: "Active",
+      help: "Inactive types are hidden from owners",
+    },
+  ];
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="bg-red-50 text-red-700 rounded px-4 py-2 text-sm">
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-[5px] px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           {error}
         </div>
       )}
 
-      {/* Name */}
-      <div className="space-y-1.5">
-        <Label htmlFor="name">
-          Document Name <span className="text-red-500">*</span>
-        </Label>
-        <Input
-          id="name"
-          placeholder="e.g. Gas Safety Certificate"
-          value={form.name}
-          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-        />
+      {/* ── Basic Info ─────────────────────────────────────────── */}
+      <div className="bg-white border rounded-[5px] p-6 space-y-5">
+        <div className="flex items-center gap-2 pb-3 border-b">
+          <FileText className="w-4 h-4 text-green-600" />
+          <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+            Document Info
+          </h2>
+        </div>
+
+        {/* Name */}
+        <div className="space-y-1.5">
+          <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+            Document Name <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="name"
+            placeholder="e.g. Gas Safety Certificate"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            className="h-9"
+          />
+        </div>
+
+        {/* Description */}
+        <div className="space-y-1.5">
+          <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+            <span className="flex items-center gap-1.5">
+              <AlignLeft className="w-3.5 h-3.5 text-gray-400" />
+              Description
+              <span className="text-gray-400 font-normal">(optional)</span>
+            </span>
+          </Label>
+          <Textarea
+            id="description"
+            placeholder="Helper text shown to the owner when uploading"
+            value={form.description}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, description: e.target.value }))
+            }
+            rows={2}
+            className="resize-none text-sm"
+          />
+        </div>
       </div>
 
-      {/* Description */}
-      <div className="space-y-1.5">
-        <Label htmlFor="description">Description (optional)</Label>
-        <Input
-          id="description"
-          placeholder="Helper text shown to the owner"
-          value={form.description}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, description: e.target.value }))
-          }
-        />
-      </div>
+      {/* ── Applies To ─────────────────────────────────────────── */}
+      <div className="bg-white border rounded-[5px] p-6 space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b">
+          <LayoutGrid className="w-4 h-4 text-green-600" />
+          <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+            Applies To
+          </h2>
+        </div>
 
-      {/* Applies To */}
-      <div className="space-y-2">
-        <Label>Applies To</Label>
         <div className="flex flex-wrap gap-2">
           {APPLIES_OPTIONS.map((opt) => {
             const active = form.appliesTo.includes(opt.value);
@@ -133,10 +216,10 @@ export default function DocumentTypeForm({ mode, id, initial }: Props) {
                 key={opt.value}
                 type="button"
                 onClick={() => toggleAppliesTo(opt.value)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                   active
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                    ? "bg-green-600 text-white border-green-600"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-green-400 hover:text-green-700"
                 }`}
               >
                 {opt.label}
@@ -145,63 +228,77 @@ export default function DocumentTypeForm({ mode, id, initial }: Props) {
           })}
         </div>
         <p className="text-xs text-gray-400">
-          Select "All Property Types" to apply to every listing.
+          Select &quot;All Property Types&quot; to apply to every listing.
         </p>
       </div>
 
-      {/* Toggles */}
-      <Card className="p-4 space-y-3">
-        {(
-          [
-            { key: "isRequired", label: "Required", help: "Owner cannot publish without this document" },
-            { key: "requireIssueDate", label: "Require Issue Date", help: "Owner must enter when the document was issued" },
-            { key: "requireExpiryDate", label: "Require Expiry Date", help: "Owner must enter the document expiry date" },
-            { key: "isActive", label: "Active", help: "Inactive types are not shown to owners" },
-          ] as const
-        ).map(({ key, label, help }) => (
-          <div key={key} className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-800">{label}</p>
-              <p className="text-xs text-gray-400">{help}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, [key]: !f[key] }))}
-              className={`w-10 h-5 rounded-full transition-colors ${
-                form[key] ? "bg-blue-600" : "bg-gray-200"
-              } relative`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                  form[key] ? "translate-x-5" : "translate-x-0"
-                }`}
+      {/* ── Settings / Toggles ─────────────────────────────────── */}
+      <div className="bg-white border rounded-[5px] p-6 space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b">
+          <ToggleLeft className="w-4 h-4 text-green-600" />
+          <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+            Settings
+          </h2>
+        </div>
+
+        <div className="divide-y">
+          {toggleFields.map(({ key, label, help }) => (
+            <div key={key} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+              <div>
+                <p className="text-sm font-medium text-gray-800">{label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{help}</p>
+              </div>
+              <Toggle
+                checked={form[key]}
+                onChange={() => setForm((f) => ({ ...f, [key]: !f[key] }))}
               />
-            </button>
-          </div>
-        ))}
-      </Card>
-
-      {/* Sort Order */}
-      <div className="space-y-1.5">
-        <Label htmlFor="sortOrder">Sort Order</Label>
-        <Input
-          id="sortOrder"
-          type="number"
-          min={0}
-          value={form.sortOrder}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))
-          }
-          className="w-32"
-        />
-        <p className="text-xs text-gray-400">
-          Lower numbers appear first (0 = top).
-        </p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving..." : mode === "create" ? "Create Document Type" : "Save Changes"}
+      {/* ── Sort Order ─────────────────────────────────────────── */}
+      <div className="bg-white border rounded-[5px] p-6 space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b">
+          <ListOrdered className="w-4 h-4 text-green-600" />
+          <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+            Display Order
+          </h2>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="sortOrder" className="text-sm font-medium text-gray-700">
+            Sort Order
+          </Label>
+          <Input
+            id="sortOrder"
+            type="number"
+            min={0}
+            value={form.sortOrder}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))
+            }
+            className="w-32 h-9"
+          />
+          <p className="text-xs text-gray-400">
+            Lower numbers appear first. 0 = top of the list.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Actions ────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 pt-2">
+        <Button
+          type="submit"
+          disabled={saving}
+          className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 cursor-pointer"
+        >
+          <Save className="w-4 h-4 mr-2" />
+          {saving
+            ? "Saving..."
+            : mode === "create"
+            ? "Create Document Type"
+            : "Save Changes"}
         </Button>
         <Button
           type="button"
@@ -209,7 +306,9 @@ export default function DocumentTypeForm({ mode, id, initial }: Props) {
           onClick={() =>
             router.push("/admin/dashboard/property-document-types")
           }
+          className="cursor-pointer"
         >
+          <X className="w-4 h-4 mr-2" />
           Cancel
         </Button>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { renderAmenityIcon } from "@/components/dashboard/AdminAmenityModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +44,7 @@ const propertyTypes = [
 interface AmenityOption {
   id: string;
   name: string;
+  icon?: string;
 }
 
 interface PropertyImage {
@@ -227,7 +229,7 @@ export default function EditPropertyPage() {
 
         // Fetch amenities
         const amenResponse = await api.get("/amenities?pageSize=50");
-        if (amenResponse.data?.amenities) {
+        if (amenResponse.data?.data?.items) {
           setAmenities(amenResponse.data.data.items);
         }
       } catch (err) {
@@ -383,7 +385,7 @@ export default function EditPropertyPage() {
       const response = await api.patch(`/properties/${id}`, payload);
       
       if (response.data?.success) {
-        router.push(`/owner/dashboard/properties/${id}`);
+        setStep(4);
       } else {
         setError(response.data?.message || "Failed to update property");
       }
@@ -932,6 +934,9 @@ export default function EditPropertyPage() {
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
+                  <span className={`mb-1 ${isSelected ? "text-green-700" : "text-gray-500"}`}>
+                    {renderAmenityIcon(amenity.icon || 'Sparkles', 'w-5 h-5')}
+                  </span>
                   <span className={`text-sm font-medium text-center ${isSelected ? "text-green-700" : "text-gray-700"}`}>
                     {amenity.name}
                   </span>
@@ -1089,6 +1094,34 @@ export default function EditPropertyPage() {
         </div>
       </div>
 
+      {step === 4 && id ? (
+        <div className="bg-white rounded-[5px] border p-8">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Property Documents</h3>
+              <p className="text-sm text-gray-500">Upload required documents for this property before publishing.</p>
+            </div>
+            <PropertyDocumentsTab propertyId={id} />
+          </div>
+          <div className="flex justify-between pt-8 mt-8 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep(3)}
+            >
+              Previous Step
+            </Button>
+            <Button
+              type="button"
+              onClick={() => router.push(`/owner/dashboard/properties/${id}`)}
+              className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Done
+            </Button>
+          </div>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit}>
         <div className="bg-white rounded-[5px] border p-8">
           {error && (
@@ -1104,15 +1137,6 @@ export default function EditPropertyPage() {
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
-          {step === 4 && id && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Property Documents</h3>
-                <p className="text-sm text-gray-500">Upload required documents for this property before publishing.</p>
-              </div>
-              <PropertyDocumentsTab propertyId={id} />
-            </div>
-          )}
 
           {/* Navigation Buttons */}
           <div className="flex justify-between pt-8 mt-8 border-t">
@@ -1128,13 +1152,13 @@ export default function EditPropertyPage() {
               <div></div>
             )}
 
-            {step < 4 ? (
+            {step < 3 ? (
               <Button
                 type="button"
-                onClick={() => step === 3 ? setStep(4) : setStep(step + 1)}
+                onClick={() => setStep(step + 1)}
                 className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
-                {step === 3 ? "Next: Documents" : "Next Step"}
+                Next Step
                 <Plus className="w-4 h-4 ml-2" />
               </Button>
             ) : (
@@ -1151,14 +1175,16 @@ export default function EditPropertyPage() {
                 ) : (
                   <>
                     <Check className="w-4 h-4 mr-2" />
-                    Save Changes
+                    Save & Continue
                   </>
                 )}
               </Button>
             )}
           </div>
         </div>
+
       </form>
+      )}
     </DashboardLayout>
   );
 }

@@ -74,6 +74,32 @@ export async function GET(
       return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
     }
 
+    // Fetch owner's active package to determine contact visibility
+    const ownerSub = await prisma.ownerPackage.findFirst({
+      where: { ownerId: property.ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+      select: { package: { select: { showOwnerName: true, showOwnerPhone: true } } },
+    });
+
+    const ownerVisibility = {
+      showName:  ownerSub?.package?.showOwnerName  ?? false,
+      showPhone: ownerSub?.package?.showOwnerPhone ?? false,
+    };
+
+    // Mask owner fields based on package flags
+    const maskedOwner = property.owner
+      ? {
+          id:          property.owner.id,
+          avatar:      property.owner.avatar,
+          companyName: property.owner.companyName,
+          website:     property.owner.website,
+          // Only expose these when package permits
+          firstName:   ownerVisibility.showName  ? property.owner.firstName  : undefined,
+          lastName:    ownerVisibility.showName  ? property.owner.lastName   : undefined,
+          email:       ownerVisibility.showName  ? property.owner.email      : undefined,
+          phone:       ownerVisibility.showPhone ? property.owner.phone      : undefined,
+        }
+      : null;
+
     // Calculate average rating
     const avgRating =
       property.reviews.length > 0
@@ -83,6 +109,8 @@ export async function GET(
 
     const propertyWithRating = {
       ...property,
+      owner: maskedOwner,
+      ownerVisibility,
       averageRating: Math.round(avgRating * 10) / 10,
       reviewCount: property.reviews.length,
     };

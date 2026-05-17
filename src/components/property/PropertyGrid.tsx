@@ -225,7 +225,9 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
             searchLocation={filters.searchLocation}
             onBackToList={(filteredIds) => {
               setIsMapView(false);
-              if (filteredIds && filteredIds.length > 0) {
+              // Always apply the filter if the map provided an explicit list
+              // (even 0 results — so the "0 in drawn area" + Clear banner shows)
+              if (filteredIds !== undefined) {
                 setFilteredByMapIds(new Set(filteredIds));
               }
             }}

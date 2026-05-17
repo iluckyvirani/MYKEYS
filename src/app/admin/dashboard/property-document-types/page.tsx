@@ -110,6 +110,7 @@ export default function AdminPropertyDocumentTypesPage() {
                 "/admin/dashboard/property-document-types/new"
               )
             }
+            className="cursor-pointer"
           >
             <Plus className="w-4 h-4 mr-1" /> New Document Type
           </Button>

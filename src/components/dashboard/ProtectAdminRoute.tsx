@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { MeResponse, UserDTO } from "@/types/auth";
 
+const ADMIN_AUTH_CACHE_KEY = "admin_auth_verified";
+
 interface ProtectAdminRouteProps {
   children: React.ReactNode;
 }
@@ -17,6 +19,14 @@ export default function ProtectAdminRoute({ children }: ProtectAdminRouteProps) 
   useEffect(() => {
     const checkAdminAccess = async () => {
       try {
+        // If already verified this session, skip the API call entirely
+        const cached = sessionStorage.getItem(ADMIN_AUTH_CACHE_KEY);
+        if (cached === "true") {
+          setIsAuthorized(true);
+          setIsLoading(false);
+          return;
+        }
+
         setIsLoading(true);
 
         // Get the stored user data first
@@ -54,14 +64,17 @@ export default function ProtectAdminRoute({ children }: ProtectAdminRouteProps) 
               router.push("/");
               return;
             }
+            sessionStorage.setItem(ADMIN_AUTH_CACHE_KEY, "true");
             setIsAuthorized(true);
           } else {
+            sessionStorage.setItem(ADMIN_AUTH_CACHE_KEY, "true");
             setIsAuthorized(true);
           }
         } catch (error: any) {
           // If token is expired or invalid
           if (error?.response?.status === 401) {
             console.error("Token expired or invalid");
+            sessionStorage.removeItem(ADMIN_AUTH_CACHE_KEY);
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
             localStorage.removeItem("user");
@@ -70,6 +83,7 @@ export default function ProtectAdminRoute({ children }: ProtectAdminRouteProps) 
           }
           // For other errors, still allow access if locally authorized
           console.error("Auth verification failed:", error);
+          sessionStorage.setItem(ADMIN_AUTH_CACHE_KEY, "true");
           setIsAuthorized(true);
         }
       } catch (error) {

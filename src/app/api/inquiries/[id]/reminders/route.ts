@@ -23,8 +23,9 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
       return NextResponse.json({ success: false, message: 'Inquiry not found', data: null }, { status: 404 });
     }
 
-    // Only owner can manage reminders
-    if (inquiry.property.ownerId !== user.userId) {
+    // Only owner or admin can manage reminders
+    const isAdmin = (user as any).role === 'ADMIN';
+    if (inquiry.property.ownerId !== user.userId && !isAdmin) {
       return NextResponse.json({ success: false, message: 'Unauthorized', data: null }, { status: 403 });
     }
 
@@ -85,7 +86,8 @@ export const POST = withAuth<{ id: string }>(async (req: NextRequest, user: JWTP
       return NextResponse.json({ success: false, message: 'Inquiry not found', data: null }, { status: 404 });
     }
 
-    if (inquiry.property.ownerId !== user.userId) {
+    const isAdminPost = (user as any).role === 'ADMIN';
+    if (inquiry.property.ownerId !== user.userId && !isAdminPost) {
       return NextResponse.json({ success: false, message: 'Unauthorized — only the owner can set reminders', data: null }, { status: 403 });
     }
 

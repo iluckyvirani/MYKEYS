@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { renderAmenityIcon } from "@/components/dashboard/AdminAmenityModal";
 import {
     Bed,
     Bath,
@@ -278,13 +279,18 @@ export default function PropertyDetailsPage() {
                         images: apiData.images?.map((img: any) => img.url) || emptyPropertyData.images,
                         amenities: apiData.amenities?.map((amenity: any) => ({
                             name: amenity.amenity.name,
-                            icon: <Wifi className="w-5 h-5" /> // Fallback icon
+                            icon: amenity.amenity.icon || 'Sparkles',
                         })) || emptyPropertyData.amenities,
                         averageRating: apiData.averageRating || emptyPropertyData.averageRating,
                         reviewsCount: apiData.reviewCount || emptyPropertyData.reviewsCount,
                         reviews: apiData.reviews || emptyPropertyData.reviews,
                         owner: apiData.owner ? {
-                            name: `${apiData.owner.firstName} ${apiData.owner.lastName}` || "Property Owner",
+                            name: (apiData.ownerVisibility?.showName && apiData.owner.firstName)
+                                ? `${apiData.owner.firstName} ${apiData.owner.lastName}`.trim()
+                                : "Property Owner",
+                            phone: apiData.ownerVisibility?.showPhone ? (apiData.owner.phone || null) : null,
+                            showName:  apiData.ownerVisibility?.showName  ?? false,
+                            showPhone: apiData.ownerVisibility?.showPhone ?? false,
                             joined: "Active",
                             verified: true,
                             responseRate: "95%",
@@ -925,9 +931,9 @@ export default function PropertyDetailsPage() {
 
                                     <TabsContent value="amenities" className="mt-6">
                                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                            {property.amenities.slice(0, showAllAmenities ? property.amenities.length : 8).map((amenity: { icon: React.ReactNode; name: string }, index: number) => (
+                                            {property.amenities.slice(0, showAllAmenities ? property.amenities.length : 8).map((amenity: { icon: string; name: string }, index: number) => (
                                                 <div key={index} className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                                                    <div className="text-green-600">{amenity.icon}</div>
+                                                    <div className="text-green-600">{renderAmenityIcon(amenity.icon, 'w-5 h-5')}</div>
                                                     <span>{amenity.name}</span>
                                                 </div>
                                             ))}
@@ -1429,7 +1435,7 @@ export default function PropertyDetailsPage() {
                                         </div>
                                     )}
 
-                                    {/* Owner/Contact Info - Only for Short Stay */}
+                                    {/* Owner/Contact Info */}
                                     {/* {property.rentalType === "short" && property.listingType === "rent" && ( */}
                                         <div className="mt-6 pt-6 border-t">
                                             <h4 className="font-bold mb-4">Contact</h4>
@@ -1459,6 +1465,14 @@ export default function PropertyDetailsPage() {
                                                     <MessageCircle className="w-4 h-4" />
                                                     <span>Response rate: {property.owner.responseRate}</span>
                                                 </div>
+                                                {property.owner.showPhone && property.owner.phone && (
+                                                    <div className="flex items-center gap-2">
+                                                        <Phone className="w-4 h-4" />
+                                                        <a href={`tel:${property.owner.phone}`} className="text-green-700 font-medium hover:underline">
+                                                            {property.owner.phone}
+                                                        </a>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     {/* )} */}

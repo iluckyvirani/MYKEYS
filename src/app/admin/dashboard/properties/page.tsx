@@ -2,7 +2,6 @@
 
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import AdminPropertyFilterModal from "@/components/dashboard/AdminPropertyFilterModal";
-import AdminPropertyList from "@/components/dashboard/AdminPropertyList";
 import { AdminPropertyStatusModal } from "@/components/dashboard/AdminPropertyStatusModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,34 +15,79 @@ import {
   List as ListIcon,
   X,
   Home,
-  AlertCircle,
   Loader,
+  Plus,
+  MapPin,
+  Building,
+  Calendar,
+  TrendingUp,
+  Hotel,
+  Star,
+  Eye,
+  Edit,
+  Trash2,
+  Bed,
+  Bath,
+  Maximize2,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/lib/api";
 
 interface Property {
   id: string;
   title: string;
   owner: string;
-  location: string;
-  type: string;
+  ownerId: string;
+  ownerEmail: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  propertyType: string;
+  listingType: string;
+  rentalType?: string;
   price: number;
-  status: "active" | "inactive" | "pending";
+  priceType?: string;
+  status: string;
   bookings: number;
+  bedrooms: number;
+  bathrooms: number;
+  sqft?: number;
   images?: Array<{ url: string; isPrimary: boolean }>;
-  rating?: number;
-  reviewCount?: number;
+  rating: number;
+  reviewCount: number;
+  createdAt: string;
 }
 
-interface Stats {
-  total: number;
-  active: number;
-  inactive: number;
-  totalRevenue: number;
-  averageRating: number;
-}
+const getStatusConfig = (status: string) => {
+  switch ((status || "").toLowerCase()) {
+    case "active": return { color: "bg-green-100 text-green-800 border-green-200", label: "Active", dot: "●" };
+    case "inactive": return { color: "bg-gray-100 text-gray-700 border-gray-200", label: "Inactive", dot: "○" };
+    case "pending_review":
+    case "pending": return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", label: "Pending", dot: "⏳" };
+    case "draft": return { color: "bg-gray-100 text-gray-500 border-gray-200", label: "Draft", dot: "✎" };
+    case "sold": return { color: "bg-purple-100 text-purple-800 border-purple-200", label: "Sold", dot: "✓" };
+    case "rented": return { color: "bg-blue-100 text-blue-800 border-blue-200", label: "Rented", dot: "✓" };
+    default: return { color: "bg-gray-100 text-gray-700 border-gray-200", label: status, dot: "?" };
+  }
+};
+
+const getListingBadge = (listingType: string, rentalType?: string) => {
+  const lt = (listingType || "").toUpperCase();
+  const rt = (rentalType || "").toUpperCase();
+  if (lt === "BUY") return { text: "For Sale", color: "bg-purple-100 text-purple-800 border-purple-200", Icon: TrendingUp };
+  if (rt === "SHORT_TERM") return { text: "Short Stay", color: "bg-green-100 text-green-800 border-green-200", Icon: Hotel };
+  if (rt === "LONG_TERM") return { text: "Long Term", color: "bg-blue-100 text-blue-800 border-blue-200", Icon: Calendar };
+  return { text: "For Rent", color: "bg-gray-100 text-gray-700 border-gray-200", Icon: Home };
+};
+
+const formatCurrency = (n: number) =>
+  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(n || 0);
+
+const getPrimaryImage = (images?: Array<{ url: string; isPrimary: boolean }>) =>
+  images?.find((i) => i.isPrimary)?.url || images?.[0]?.url || "";
 
 export default function AdminPropertiesPage() {
   const router = useRouter();
@@ -55,110 +99,70 @@ export default function AdminPropertiesPage() {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [appliedFilters, setAppliedFilters] = useState({
-    status: "ALL",
-    type: "ALL",
-  });
-  const [stats, setStats] = useState<Stats>({
-    total: 0,
-    active: 0,
-    inactive: 0,
-    totalRevenue: 0,
-    averageRating: 0,
-  });
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [appliedFilters, setAppliedFilters] = useState({ status: "ALL", type: "ALL" });
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, totalRevenue: 0, averageRating: 0 });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const fetchProperties = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      params.append("pageSize", "50");
+      const params = new URLSearchParams({ pageSize: "100" });
       if (searchTerm) params.append("search", searchTerm);
       if (appliedFilters.status !== "ALL") params.append("status", appliedFilters.status);
       if (appliedFilters.type !== "ALL") params.append("propertyType", appliedFilters.type);
-      
-      const response = await api.get(`/admin/properties?${params.toString()}`);
+
+      const response = await api.get(`/admin/properties?${params}`);
       if (response.data?.success && response.data?.data?.items) {
-        const apiProperties = response.data.data.items.map((property: any) => ({
-          id: property.id,
-          title: property.title,
-          owner: property.ownerName || "Unknown Owner",
-          location: property.city || "India",
-          type: property.propertyType || "Property",
-          price: property.price || 0,
-          status: (property.status || "ACTIVE").toLowerCase() as "active" | "inactive" | "pending",
-          bookings: property.bookingsCount || 0,
-          images: property.images?.map((img: any) => ({
-            url: img.url,
-            isPrimary: img.isPrimary,
-          })) || [],
-          rating: property.avgRating || 0,
-          reviewCount: property.reviewsCount || 0,
+        const items: Property[] = response.data.data.items.map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          owner: p.ownerName || "Unknown",
+          ownerId: p.ownerId || "",
+          ownerEmail: p.ownerEmail || "",
+          address: p.address || "",
+          city: p.city || "",
+          state: p.state || "",
+          zipCode: p.zipCode || "",
+          propertyType: p.propertyType || "Property",
+          listingType: p.listingType || "RENT",
+          rentalType: p.rentalType || "",
+          price: p.price || 0,
+          priceType: p.priceType || "NIGHTLY",
+          status: (p.status || "DRAFT").toLowerCase(),
+          bookings: p.bookingsCount || 0,
+          bedrooms: p.bedrooms || 0,
+          bathrooms: p.bathrooms || 0,
+          sqft: p.area || p.sqft || 0,
+          images: p.images || [],
+          rating: p.avgRating || 0,
+          reviewCount: p.reviewsCount || 0,
+          createdAt: p.createdAt || "",
         }));
-        setProperties(apiProperties);
-        calculateStats(apiProperties);
+        setProperties(items);
+        const active = items.filter((p) => p.status === "active").length;
+        const inactive = items.filter((p) => p.status === "inactive").length;
+        const avgRating = items.length ? items.reduce((s, p) => s + p.rating, 0) / items.length : 0;
+        setStats({
+          total: items.length,
+          active,
+          inactive,
+          totalRevenue: items.reduce((s, p) => s + p.price * p.bookings, 0),
+          averageRating: Math.round(avgRating * 10) / 10,
+        });
       }
     } catch (err) {
       console.error("Error fetching properties:", err);
-      setProperties([]);
     } finally {
       setLoading(false);
     }
   }, [searchTerm, appliedFilters]);
 
-  // Fetch properties
+  useEffect(() => { fetchProperties(); }, [fetchProperties]);
   useEffect(() => {
-    fetchProperties();
-  }, [fetchProperties]);
-
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProperties();
-    }, 300);
-    return () => clearTimeout(timer);
+    const t = setTimeout(fetchProperties, 300);
+    return () => clearTimeout(t);
   }, [searchTerm]);
-
-  // Calculate stats
-  const calculateStats = (props: Property[]) => {
-    const activeCount = props.filter((p) => p.status === "active").length;
-    const inactiveCount = props.filter((p) => p.status === "inactive").length;
-    const totalRev = props.reduce((sum, p) => sum + p.price * p.bookings, 0);
-    const avgRating =
-      props.length > 0
-        ? props.reduce((sum, p) => sum + (p.rating || 0), 0) / props.length
-        : 0;
-
-    setStats({
-      total: props.length,
-      active: activeCount,
-      inactive: inactiveCount,
-      totalRevenue: totalRev,
-      averageRating: Math.round(avgRating * 10) / 10,
-    });
-  };
-
-  // Properties are already filtered by API
-  const filteredProperties = properties;
-
-  const handleApplyFilters = (filters: { status: string; type: string }) => {
-    setAppliedFilters(filters);
-  };
-
-  const handleResetFilters = () => {
-    setAppliedFilters({ status: "ALL", type: "ALL" });
-  };
-
-  const handleEditProperty = (property: Property) => {
-    setEditingProperty(property);
-    setStatusModalOpen(true);
-  };
-
-  const handleViewProperty = (property: Property) => {
-    router.push(`/admin/dashboard/properties/${property.id}`);
-  };
 
   const handleStatusUpdate = async (propertyId: string, status: string, notes?: string) => {
     setUpdatingStatus(true);
@@ -169,38 +173,195 @@ export default function AdminPropertiesPage() {
       setEditingProperty(null);
     } catch (error) {
       console.error("Error updating property status:", error);
-      alert("Failed to update property status");
     } finally {
       setUpdatingStatus(false);
     }
   };
 
-  const removeFilter = (filterType: string) => {
-    setAppliedFilters((prev) => ({
-      ...prev,
-      [filterType]: "ALL",
-    }));
-  };
-
   const handleDelete = async (propertyId: string) => {
     setDeleting(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await api.delete(`/admin/properties/${propertyId}`);
+    } catch {
+      // ignore – remove from UI anyway
+    } finally {
       setProperties((prev) => prev.filter((p) => p.id !== propertyId));
-      calculateStats(properties.filter((p) => p.id !== propertyId));
       setDeleteConfirm(null);
       setDeleting(false);
-    }, 500);
+    }
   };
 
-  const formatCurrency = (amount: number) => {
-    if (amount >= 10000000) {
-      return `£${(amount / 10000000).toFixed(2)} Cr`;
-    }
-    if (amount >= 100000) {
-      return `£${(amount / 100000).toFixed(1)} L`;
-    }
-    return `£${amount.toLocaleString()}`;
+  const removeFilter = (key: string) => setAppliedFilters((p) => ({ ...p, [key]: "ALL" }));
+
+  const renderGridCard = (property: Property) => {
+    const status = getStatusConfig(property.status);
+    const listing = getListingBadge(property.listingType, property.rentalType);
+    const ListingIcon = listing.Icon;
+    const image = getPrimaryImage(property.images);
+    const priceLabel =
+      property.listingType.toUpperCase() === "BUY"
+        ? " total"
+        : (property.priceType || "NIGHTLY").toUpperCase() === "MONTHLY"
+        ? "/mo"
+        : "/night";
+
+    return (
+      <div
+        key={property.id}
+        className="bg-white rounded-[5px] border border-gray-200 hover:border-green-300 hover:shadow-xl transition-all duration-300 overflow-hidden group"
+      >
+        {/* Image */}
+        <div className="relative h-52 overflow-hidden bg-gray-100">
+          {image ? (
+            <img
+              src={image}
+              alt={property.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-300">
+              <Building className="w-12 h-12" />
+            </div>
+          )}
+          <div className="absolute top-3 left-3 space-y-1.5">
+            <div className={`px-2.5 py-1 rounded-full text-xs font-medium border ${status.color}`}>
+              {status.dot} {status.label}
+            </div>
+            <div className={`px-2.5 py-1 rounded-full text-xs font-medium border ${listing.color} flex items-center gap-1`}>
+              <ListingIcon className="w-3 h-3" />
+              {listing.text}
+            </div>
+          </div>
+          {/* Owner badge top-right */}
+          <div className="absolute top-3 right-3 max-w-27.5 truncate bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+            {property.owner}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-1">
+            <h4 className="font-semibold text-gray-900 truncate flex-1 min-w-0">{property.title}</h4>
+            <div className="flex items-center gap-1 pl-2 shrink-0">
+              <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-400" />
+              <span className="text-sm font-medium text-gray-700">{property.rating.toFixed(1)}</span>
+              <span className="text-xs text-gray-400">({property.reviewCount})</span>
+            </div>
+          </div>
+          <div className="text-sm text-gray-500 flex items-center gap-1 mb-3 truncate">
+            <MapPin className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">
+              {property.city}{property.state ? `, ${property.state}` : ""}{property.zipCode ? ` ${property.zipCode}` : ""}
+            </span>
+          </div>
+
+          {/* Beds/baths/sqft */}
+          <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
+            <div className="flex items-center gap-1"><Bed className="w-3.5 h-3.5" />{property.bedrooms}</div>
+            <div className="flex items-center gap-1"><Bath className="w-3.5 h-3.5" />{property.bathrooms}</div>
+            {property.sqft ? (
+              <div className="flex items-center gap-1"><Maximize2 className="w-3.5 h-3.5" />{property.sqft.toLocaleString()}</div>
+            ) : null}
+            <div className="ml-auto text-xs text-gray-400 capitalize">{(property.propertyType || "").toLowerCase()}</div>
+          </div>
+
+          {/* Price + bookings */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <span className="text-lg font-bold text-gray-900">{formatCurrency(property.price)}</span>
+              <span className="text-sm text-gray-500 ml-1">{priceLabel}</span>
+            </div>
+            <div className="text-xs text-gray-500">{property.bookings} bookings</div>
+          </div>
+
+          {/* Actions */}
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
+            <Link href={`/admin/dashboard/properties/${property.id}`}>
+              <Button variant="outline" size="sm" className="w-full rounded-[5px]">
+                <Eye className="w-3.5 h-3.5 mr-1" /> View
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full rounded-[5px]"
+              onClick={() => { setEditingProperty(property); setStatusModalOpen(true); }}
+            >
+              <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full rounded-[5px] text-red-600 hover:text-red-700 hover:border-red-300"
+              onClick={() => setDeleteConfirm(property.id)}
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderListRow = (property: Property) => {
+    const status = getStatusConfig(property.status);
+    const listing = getListingBadge(property.listingType, property.rentalType);
+    const image = getPrimaryImage(property.images);
+    return (
+      <tr key={property.id} className="border-b hover:bg-gray-50">
+        <td className="py-3 px-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+              {image ? (
+                <img src={image} alt={property.title} className="w-full h-full object-cover" />
+              ) : (
+                <Building className="w-6 h-6 text-gray-300 m-3" />
+              )}
+            </div>
+            <div>
+              <div className="font-medium text-gray-900 truncate max-w-48">{property.title}</div>
+              <div className="text-xs text-gray-500 capitalize">{(property.propertyType || "").toLowerCase()}</div>
+            </div>
+          </div>
+        </td>
+        <td className="py-3 px-4 text-sm text-gray-600">
+          <div>{property.city}{property.state ? `, ${property.state}` : ""}</div>
+          <div className="text-xs text-gray-400">{property.zipCode}</div>
+        </td>
+        <td className="py-3 px-4 text-sm text-gray-600">{property.owner}</td>
+        <td className="py-3 px-4 text-sm text-gray-600">{property.bedrooms}bd · {property.bathrooms}ba</td>
+        <td className="py-3 px-4">
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${listing.color}`}>{listing.text}</span>
+        </td>
+        <td className="py-3 px-4">
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${status.color}`}>{status.label}</span>
+        </td>
+        <td className="py-3 px-4 font-medium text-gray-900">{formatCurrency(property.price)}</td>
+        <td className="py-3 px-4">
+          <div className="flex items-center gap-1">
+            <Link href={`/admin/dashboard/properties/${property.id}`}>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><Eye className="w-4 h-4" /></Button>
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => { setEditingProperty(property); setStatusModalOpen(true); }}
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+              onClick={() => setDeleteConfirm(property.id)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </td>
+      </tr>
+    );
   };
 
   return (
@@ -212,79 +373,50 @@ export default function AdminPropertiesPage() {
             <h1 className="text-3xl font-bold text-gray-900">Properties</h1>
             <p className="text-gray-600 mt-1">Manage all properties on the platform</p>
           </div>
-          <Button className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]">
-            <Download className="w-4 h-4 mr-2" />
-            Export Properties
-          </Button>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/dashboard/properties/add">
+              <Button className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Property
+              </Button>
+            </Link>
+            <Button variant="outline" className="rounded-[5px]">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card className="p-6 rounded-[5px]">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Total Properties</p>
-              <h3 className="text-3xl font-bold text-gray-900 mt-2">
-                {stats.total}
-              </h3>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-[5px]">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Active</p>
-              <h3 className="text-3xl font-bold text-green-600 mt-2">
-                {stats.active}
-              </h3>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-[5px]">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Inactive</p>
-              <h3 className="text-3xl font-bold text-gray-900 mt-2">
-                {stats.inactive}
-              </h3>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-[5px]">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Total Revenue</p>
-              <h3 className="text-2xl font-bold text-blue-600 mt-2">
-                {formatCurrency(stats.totalRevenue)}
-              </h3>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-[5px]">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Avg Rating</p>
-              <h3 className="text-3xl font-bold text-yellow-600 mt-2">
-                {stats.averageRating}
-              </h3>
-            </div>
-          </Card>
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {[
+            { label: "Total Properties", value: stats.total, color: "text-gray-900" },
+            { label: "Active", value: stats.active, color: "text-green-600" },
+            { label: "Inactive", value: stats.inactive, color: "text-gray-700" },
+            { label: "Total Revenue", value: formatCurrency(stats.totalRevenue), color: "text-blue-600" },
+            { label: "Avg Rating", value: stats.averageRating || "—", color: "text-yellow-600" },
+          ].map(({ label, value, color }) => (
+            <Card key={label} className="p-5 rounded-[5px]">
+              <p className="text-sm text-gray-500 font-medium">{label}</p>
+              <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
+            </Card>
+          ))}
         </div>
 
-        {/* Search & Filter Bar */}
-        <Card className="p-6 rounded-[5px]">
-          <div className="flex gap-4 mb-4">
+        {/* Search & Filter */}
+        <Card className="p-4 rounded-[5px]">
+          <div className="flex gap-3 mb-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search by title, location, or owner..."
+                placeholder="Search by title, location, or owner…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 rounded-[5px]"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setFilterModalOpen(true)}
-              className="rounded-[5px]"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Advanced Filters
+            <Button variant="outline" onClick={() => setFilterModalOpen(true)} className="rounded-[5px]">
+              <Filter className="w-4 h-4 mr-2" /> Filters
             </Button>
             <Button
               variant="outline"
@@ -304,32 +436,25 @@ export default function AdminPropertiesPage() {
             </Button>
           </div>
 
-          {/* Applied Filters Display */}
           {(appliedFilters.status !== "ALL" || appliedFilters.type !== "ALL") && (
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-wrap gap-2">
               {appliedFilters.status !== "ALL" && (
-                <Badge variant="secondary" className="flex items-center gap-2">
-                  Status: {appliedFilters.status}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
-                    onClick={() => removeFilter("status")}
-                  />
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Status: {appliedFilters.status}{" "}
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("status")} />
                 </Badge>
               )}
               {appliedFilters.type !== "ALL" && (
-                <Badge variant="secondary" className="flex items-center gap-2">
-                  Type: {appliedFilters.type}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
-                    onClick={() => removeFilter("type")}
-                  />
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Type: {appliedFilters.type}{" "}
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("type")} />
                 </Badge>
               )}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleResetFilters}
-                className="text-red-600 hover:text-red-700 cursor-pointer"
+                onClick={() => setAppliedFilters({ status: "ALL", type: "ALL" })}
+                className="text-red-600 text-sm h-6 px-2"
               >
                 Clear all
               </Button>
@@ -337,114 +462,84 @@ export default function AdminPropertiesPage() {
           )}
         </Card>
 
-        {/* Properties Section */}
-        <Card className="p-6 rounded-[5px]">
-          {/* Loading State */}
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader className="w-8 h-8 text-green-600 animate-spin" />
-              <p className="text-gray-600 mt-3">Loading properties...</p>
-            </div>
-          )}
+        {/* Properties */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <Loader className="w-8 h-8 text-green-600 animate-spin" />
+            <p className="text-gray-500 mt-3">Loading properties…</p>
+          </div>
+        ) : properties.length === 0 ? (
+          <div className="text-center py-16 bg-white border rounded-[5px]">
+            <Home className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-gray-800">No properties found</h3>
+            <p className="text-gray-500 mt-1 mb-5">Add the first property to get started</p>
+            <Link href="/admin/dashboard/properties/add">
+              <Button className="bg-green-600 hover:bg-green-700 text-white rounded-[5px]">
+                <Plus className="w-4 h-4 mr-2" /> Add Property
+              </Button>
+            </Link>
+          </div>
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {properties.map(renderGridCard)}
+          </div>
+        ) : (
+          <div className="bg-white rounded-[5px] border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  {["Property", "Location", "Owner", "Beds/Baths", "Listing Type", "Status", "Price", "Actions"].map((h) => (
+                    <th key={h} className="text-left py-3 px-4 font-medium text-gray-600">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>{properties.map(renderListRow)}</tbody>
+            </table>
+          </div>
+        )}
 
-          {/* Empty State */}
-          {!loading && properties.length === 0 && (
-            <div className="text-center py-12">
-              <Home className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-900 mb-1">
-                No properties found
-              </h3>
-              <p className="text-gray-600 mb-6">
-                No properties have been added yet
-              </p>
-            </div>
-          )}
-
-          {/* Error Alert */}
-          {!loading && filteredProperties.length === 0 && properties.length > 0 && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-[5px] flex gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-medium text-yellow-900">No results</h3>
-                <p className="text-sm text-yellow-800">
-                  No properties match your search and filter criteria
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Properties List */}
-          {!loading && filteredProperties.length > 0 && (
-            <AdminPropertyList
-              properties={filteredProperties}
-              viewMode={viewMode}
-              onView={handleViewProperty}
-              onEdit={handleEditProperty}
-              onDelete={(id) => setDeleteConfirm(id)}
-            />
-          )}
-        </Card>
-
-        {/* Delete Confirmation Dialog */}
+        {/* Delete confirm */}
         {deleteConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <Card className="w-full max-w-sm rounded-[5px]">
-              <div className="p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-2">
-                  Delete Property
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Are you sure you want to delete this property? This action cannot be
-                  undone.
-                </p>
-                <div className="flex gap-3 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => setDeleteConfirm(null)}
-                    disabled={deleting}
-                    className="rounded-[5px]"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDelete(deleteConfirm)}
-                    disabled={deleting}
-                    className="rounded-[5px]"
-                  >
-                    {deleting ? "Deleting..." : "Delete"}
-                  </Button>
-                </div>
+            <Card className="w-full max-w-sm rounded-[5px] p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Delete Property</h2>
+              <p className="text-gray-600 mb-6">Are you sure? This action cannot be undone.</p>
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={deleting} className="rounded-[5px]">
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={() => handleDelete(deleteConfirm)} disabled={deleting} className="rounded-[5px]">
+                  {deleting ? "Deleting…" : "Delete"}
+                </Button>
               </div>
             </Card>
           </div>
         )}
       </div>
 
-      {/* Filter Modal */}
       <AdminPropertyFilterModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
         filters={appliedFilters}
-        onApplyFilters={handleApplyFilters}
-        onResetFilters={handleResetFilters}
+        onApplyFilters={(f) => setAppliedFilters(f)}
+        onResetFilters={() => setAppliedFilters({ status: "ALL", type: "ALL" })}
       />
 
-      {/* Property Status Modal */}
       <AdminPropertyStatusModal
         isOpen={statusModalOpen}
-        onClose={() => {
-          setStatusModalOpen(false);
-          setEditingProperty(null);
-        }}
+        onClose={() => { setStatusModalOpen(false); setEditingProperty(null); }}
         onSave={handleStatusUpdate}
-        property={editingProperty ? {
-          id: editingProperty.id,
-          title: editingProperty.title,
-          location: editingProperty.location,
-          status: editingProperty.status.toUpperCase(),
-          ownerName: editingProperty.owner,
-        } : null}
+        property={
+          editingProperty
+            ? {
+                id: editingProperty.id,
+                title: editingProperty.title,
+                location: editingProperty.city,
+                status: editingProperty.status.toUpperCase(),
+                ownerName: editingProperty.owner,
+              }
+            : null
+        }
         loading={updatingStatus}
       />
     </AdminDashboardLayout>

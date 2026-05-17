@@ -42,13 +42,14 @@ const adminNavigation = [
   { name: "Packages", href: "/admin/dashboard/packages", icon: Package },
   { name: "Service Categories", href: "/admin/dashboard/categories", icon: Grid3x3 },
   { name: "Amenities", href: "/admin/dashboard/amenities", icon: BarChart3 },
-  { name: "Ads & Campaigns", href: "/admin/dashboard/ads", icon: Zap },
   { name: "Boosts / Bids", href: "/admin/dashboard/bids", icon: Zap },
   { name: "Documents", href: "/admin/dashboard/documents", icon: FileCheck },
+  { name: "Property Doc Types", href: "/admin/dashboard/property-document-types", icon: FileCheck },
   { name: "Inquiries", href: "/admin/dashboard/inquiries", icon: MessageSquare },
   { name: "Reports", href: "/admin/dashboard/reports", icon: BarChart2 },
   { name: "Audit Logs", href: "/admin/dashboard/audit-logs", icon: LogsIcon },
   { name: "Team Management", href: "/admin/dashboard/team", icon: UserCog },
+  { name: "Settings", href: "/admin/dashboard/settings", icon: Settings },
   { name: "Profile", href: "/admin/dashboard/profile", icon: Settings },
 ];
 

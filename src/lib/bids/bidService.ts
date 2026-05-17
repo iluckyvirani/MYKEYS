@@ -135,7 +135,11 @@ export async function validateBidInput(
   if (days < 1) {
     return "End date must be after start date";
   }
-  if (startDate < new Date(Date.now() - 60 * 1000)) {
+  const startDay = new Date(startDate);
+  startDay.setUTCHours(0, 0, 0, 0);
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  if (startDay < todayStart) {
     return "Start date cannot be in the past";
   }
 

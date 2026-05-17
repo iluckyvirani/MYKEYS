@@ -5,10 +5,12 @@ import { successResponse, errorResponse } from "@/lib/response";
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { packageService } from "@/lib/packages/packageService";
 
 /**
  * PATCH /api/owner/properties/[id]/status
  * Update property status (owner only for owned properties)
+ * Enforces package limit for LONG_RENT and BUY properties.
  */
 export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
@@ -34,7 +36,7 @@ export const PATCH = withAuth<{ id: string }>(
 
       const existingProperty = await prisma.property.findUnique({
         where: { id },
-        select: { id: true, ownerId: true, status: true },
+        select: { id: true, ownerId: true, status: true, listingType: true, rentalType: true },
       });
 
       if (!existingProperty) {
@@ -45,14 +47,36 @@ export const PATCH = withAuth<{ id: string }>(
         return errorResponse("You don't have permission to update this property", 403, ErrorCode.FORBIDDEN);
       }
 
+      // ── Package gate (LONG_RENT and BUY only, not applied to admins) ──────
+      const isGated =
+        existingProperty.listingType === "BUY" ||
+        (existingProperty.listingType === "RENT" && existingProperty.rentalType !== "SHORT_TERM");
+
+      if (statusRaw === "ACTIVE" && isGated && user.role !== "ADMIN") {
+        const { allowed, reason } = await packageService.canPublish(existingProperty.ownerId);
+        if (!allowed) {
+          return errorResponse(reason!, 403, ErrorCode.FORBIDDEN);
+        }
+        // Increment slot usage only when going from non-ACTIVE → ACTIVE
+        if (existingProperty.status !== "ACTIVE") {
+          await packageService.incrementPropertyUsage(existingProperty.ownerId);
+        }
+      }
+
+      // ── Decrement slot when deactivating a previously ACTIVE gated property ─
+      if (
+        statusRaw !== "ACTIVE" &&
+        existingProperty.status === "ACTIVE" &&
+        isGated &&
+        user.role !== "ADMIN"
+      ) {
+        await packageService.decrementPropertyUsage(existingProperty.ownerId);
+      }
+
       const updated = await prisma.property.update({
         where: { id },
         data: { status: statusRaw as PropertyStatus },
-        select: {
-          id: true,
-          status: true,
-          updatedAt: true,
-        },
+        select: { id: true, status: true, updatedAt: true },
       });
 
       return successResponse(updated, "Property status updated successfully");
@@ -67,3 +91,4 @@ export const PATCH = withAuth<{ id: string }>(
   },
   { roles: ["OWNER" as any, "ADMIN" as any] }
 );
+

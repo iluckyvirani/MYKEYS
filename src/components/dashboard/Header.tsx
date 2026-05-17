@@ -41,6 +41,21 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
+      // Use cached user data from localStorage to avoid calling /auth/me on every page navigation
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          const userData = parsed.data ? parsed.data : parsed;
+          if (userData?.firstName) {
+            setUser(userData);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // fall through to API call
+        }
+      }
       const response = await api.get<MeResponse>("/auth/me");
       if (response.data) {
         setUser(response.data.data);
@@ -57,8 +72,17 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
     }
   };
 
+  const NOTIF_CACHE_KEY = "notif_last_fetch";
+  const NOTIF_CACHE_TTL = 30000; // 30 seconds
+
   const fetchUnreadNotifications = async () => {
     try {
+      // Skip if fetched within the last 30 seconds (avoids spam on remount)
+      const lastFetch = sessionStorage.getItem(NOTIF_CACHE_KEY);
+      if (lastFetch && Date.now() - parseInt(lastFetch) < NOTIF_CACHE_TTL) {
+        return;
+      }
+      sessionStorage.setItem(NOTIF_CACHE_KEY, String(Date.now()));
       const response = await api.get("/notifications?limit=100");
       const notifications: Notification[] =
         response.data?.notifications || response.data?.data?.items || [];

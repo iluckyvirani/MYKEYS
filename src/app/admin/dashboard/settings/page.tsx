@@ -56,7 +56,7 @@ export default function AdminSettingsPage() {
 
   return (
     <AdminDashboardLayout>
-      <div className="space-y-6 max-w-2xl">
+      <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Settings className="w-6 h-6 text-gray-600" /> Platform Settings

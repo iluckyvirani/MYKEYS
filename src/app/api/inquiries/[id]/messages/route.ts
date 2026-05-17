@@ -29,10 +29,12 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
 
     const isOwner = inquiry.property.ownerId === user.userId;
     const isUser = inquiry.userId === user.userId;
+    const isAdmin = (user as any).role === 'ADMIN';
 
-    if (!isOwner && !isUser) {
+    if (!isOwner && !isUser && !isAdmin) {
       return NextResponse.json({ success: false, message: 'Unauthorized', data: null }, { status: 403 });
     }
+
 
     let afterCreatedAt: Date | undefined;
     if (afterId) {
@@ -101,12 +103,25 @@ export const POST = withAuth<{ id: string }>(async (req: NextRequest, user: JWTP
 
     const isOwner = inquiry.property.ownerId === user.userId;
     const isUser = inquiry.userId === user.userId;
+    const isAdminSender = (user as any).role === 'ADMIN';
 
-    if (!isOwner && !isUser) {
+    if (!isOwner && !isUser && !isAdminSender) {
       return NextResponse.json({ success: false, message: 'Unauthorized', data: null }, { status: 403 });
     }
 
-    const senderRole = isOwner ? 'OWNER' : 'USER';
+    // Admin can only send messages when the property owner has fullAdminSupport package
+    if (isAdminSender) {
+      const ownerPkg = await prisma.ownerPackage.findFirst({
+        where: { ownerId: inquiry.property.ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+        include: { package: { select: { fullAdminSupport: true, directInquiryToOwner: true } } },
+      });
+      const adminCanChat = ownerPkg && ownerPkg.package.fullAdminSupport && !ownerPkg.package.directInquiryToOwner;
+      if (!adminCanChat) {
+        return NextResponse.json({ success: false, message: 'Admin cannot send messages for this inquiry', data: null }, { status: 403 });
+      }
+    }
+
+    const senderRole = isOwner ? 'OWNER' : isAdminSender ? 'OWNER' : 'USER';
 
     const message = await (prisma as any).inquiryMessage.create({
       data: {

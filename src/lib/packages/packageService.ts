@@ -132,6 +132,45 @@ export const packageService = {
     return { allowed: true };
   },
 
+  async canFeature(ownerId: string): Promise<{ allowed: boolean; reason?: string }> {
+    const sub = await prisma.ownerPackage.findFirst({
+      where: { ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+      include: { package: true },
+    });
+
+    if (!sub) {
+      return { allowed: false, reason: 'You need an active package to feature properties.' };
+    }
+
+    const limit = sub.package.featuredLimit;
+    if (limit <= 0) {
+      return { allowed: false, reason: 'Your current package does not include featured listings. Upgrade to enable this feature.' };
+    }
+
+    if (sub.featuredUsed >= limit) {
+      return {
+        allowed: false,
+        reason: `You have used all ${limit} featured slot${limit === 1 ? '' : 's'} in your package. Unfeature another property first.`,
+      };
+    }
+
+    return { allowed: true };
+  },
+
+  async incrementFeaturedUsage(ownerId: string) {
+    return prisma.ownerPackage.updateMany({
+      where: { ownerId, status: 'ACTIVE' },
+      data: { featuredUsed: { increment: 1 } },
+    });
+  },
+
+  async decrementFeaturedUsage(ownerId: string) {
+    return prisma.ownerPackage.updateMany({
+      where: { ownerId, status: 'ACTIVE' },
+      data: { featuredUsed: { decrement: 1 } },
+    });
+  },
+
   async getOwnerPackageUsage(ownerId: string): Promise<OwnerPackageWithUsage | null> {
     return this.getOwnerActivePackage(ownerId);
   },

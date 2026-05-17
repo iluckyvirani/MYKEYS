@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { MeResponse, UserDTO } from "@/types/auth";
@@ -14,13 +14,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const authChecked = useRef(false);
 
   useEffect(() => {
-    // Skip auth check for login page
+    // Skip auth check for login page (render-level check handles display)
     if (pathname === "/admin/login") {
       setIsLoading(false);
       return;
     }
+
+    // Prevent re-verification on every navigation (pathname change)
+    if (authChecked.current) return;
+    authChecked.current = true;
 
     const checkAdminAccess = async () => {
       try {
@@ -57,6 +62,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           return;
         }
 
+        // If ProtectAdminRoute already verified this session, skip the API call
+        if (sessionStorage.getItem("admin_auth_verified") === "true") {
+          setIsAuthorized(true);
+          setIsLoading(false);
+          return;
+        }
+
         // Verify with backend to ensure token is still valid
         try {
           const response = await api.get<MeResponse>("/auth/me");
@@ -66,13 +78,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               router.push("/");
               return;
             }
+            sessionStorage.setItem("admin_auth_verified", "true");
             setIsAuthorized(true);
           } else {
+            sessionStorage.setItem("admin_auth_verified", "true");
             setIsAuthorized(true);
           }
         } catch (error: any) {
           if (error?.response?.status === 401) {
             console.error("Token expired");
+            sessionStorage.removeItem("admin_auth_verified");
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
             localStorage.removeItem("user");
@@ -91,7 +106,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     };
 
     checkAdminAccess();
-  }, [router, pathname]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Allow login page to render without auth check
   if (pathname === "/admin/login") {

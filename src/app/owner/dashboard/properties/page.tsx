@@ -18,6 +18,7 @@ import {
   AlertCircle,
   MapPin,
   Package,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -35,7 +36,7 @@ interface OwnerProperty {
   rentalType: "short" | "long" | null;
   price: number;
   priceType: "nightly" | "monthly" | "total";
-  status: "active" | "inactive" | "maintenance" | "pending";
+  status: "active" | "inactive" | "maintenance" | "pending" | "draft" | "sold" | "rented";
   rating: number;
   reviews: number;
   propertyType: string;
@@ -51,6 +52,7 @@ interface OwnerProperty {
   lastBooking: string | null;
   amenities: string[];
   createdAt: string | null;
+  isFeatured: boolean;
 }
 
 const getStatusConfig = (status: string) => {
@@ -78,6 +80,24 @@ const getStatusConfig = (status: string) => {
         color: "bg-blue-100 text-blue-800 border-blue-200",
         label: "Pending",
         icon: "⏳",
+      };
+    case "draft":
+      return {
+        color: "bg-gray-100 text-gray-600 border-gray-200",
+        label: "Draft",
+        icon: "✎",
+      };
+    case "sold":
+      return {
+        color: "bg-purple-100 text-purple-800 border-purple-200",
+        label: "Sold",
+        icon: "✓",
+      };
+    case "rented":
+      return {
+        color: "bg-blue-100 text-blue-800 border-blue-200",
+        label: "Rented",
+        icon: "✓",
       };
     default:
       return {
@@ -146,7 +166,7 @@ const normalizeProperty = (item: any): OwnerProperty => {
     rentalType: listingTypeRaw === "BUY" ? null : rentalTypeRaw === "SHORT_TERM" ? "short" : rentalTypeRaw === "LONG_TERM" ? "long" : null,
     price: Number(full.propertyPrice ?? full.price ?? 0),
     priceType: listingTypeRaw === "BUY" ? "total" : priceTypeRaw === "NIGHTLY" ? "nightly" : "monthly",
-    status: statusRaw === "active" || statusRaw === "inactive" || statusRaw === "maintenance" || statusRaw === "pending" ? statusRaw : "active",
+    status: (statusRaw as any) || "draft",
     rating: Number(item?.rating ?? full.averageRating ?? 0),
     reviews: Number(item?.reviews ?? full.reviewCount ?? 0),
     propertyType: String(full.propertyType ?? "property"),
@@ -164,6 +184,7 @@ const normalizeProperty = (item: any): OwnerProperty => {
       ? full.amenities.map((a: any) => (typeof a === "string" ? a : a?.name || ""))
       : [],
     createdAt: full.createdAt ?? null,
+    isFeatured: Boolean(full.isFeatured ?? false),
   };
 };
 
@@ -174,6 +195,7 @@ export default function OwnerPropertiesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [loading, setLoading] = useState(true);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [updatingFeaturedId, setUpdatingFeaturedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ownerPkg, setOwnerPkg] = useState<OwnerPackageWithUsage | null>(null);
 
@@ -246,6 +268,28 @@ export default function OwnerPropertiesPage() {
   const isGated = (p: OwnerProperty) => p.listingType === "buy" || p.rentalType === "long";
   const hasPackage = ownerPkg !== null;
   const packageFull = hasPackage && ownerPkg!.propertiesLimit > 0 && ownerPkg!.propertiesUsed >= ownerPkg!.propertiesLimit;
+  const featuredLimit = ownerPkg?.featuredLimit ?? 0;
+  const featuredUsed  = ownerPkg?.featuredUsed  ?? 0;
+  const canFeatureMore = featuredLimit > 0 && featuredUsed < featuredLimit;
+
+  const toggleFeatured = async (id: string) => {
+    const current = properties.find((p) => p.id === id);
+    if (!current) return;
+    const next = !current.isFeatured;
+    try {
+      setUpdatingFeaturedId(id);
+      await api.patch(`/owner/properties/${id}/featured`, { isFeatured: next });
+      setProperties((prev) =>
+        prev.map((prop) => (prop.id === id ? { ...prop, isFeatured: next } : prop))
+      );
+      // Refresh package usage counts
+      api.get("/owner/packages").then((res) => setOwnerPkg(res.data?.data ?? null)).catch(() => {});
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Failed to update featured status");
+    } finally {
+      setUpdatingFeaturedId(null);
+    }
+  };
 
   return (
     <DashboardLayout defaultRole="owner">
@@ -530,6 +574,14 @@ export default function OwnerPropertiesPage() {
                     </div>
                   </div>
 
+                  {/* Featured badge on card */}
+                  {property.isFeatured && (
+                    <div className="flex items-center gap-1 text-xs text-amber-600 font-medium mb-2">
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      Featured
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-100">
                     <Link href={`/owner/dashboard/properties/${property.id}`} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full rounded-[5px] cursor-pointer">
@@ -563,6 +615,36 @@ export default function OwnerPropertiesPage() {
                       </Button>
                     )}
                   </div>
+
+                  {/* Featured toggle — only visible when package supports it */}
+                  {featuredLimit > 0 && (
+                    <div className="mt-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className={`w-full rounded-[5px] text-xs gap-1.5 ${
+                          property.isFeatured
+                            ? "text-amber-600 hover:text-amber-700"
+                            : canFeatureMore
+                            ? "text-gray-500 hover:text-amber-600"
+                            : "text-gray-300 cursor-not-allowed"
+                        }`}
+                        disabled={updatingFeaturedId === property.id || (!property.isFeatured && !canFeatureMore)}
+                        onClick={() => toggleFeatured(property.id)}
+                        title={
+                          property.isFeatured
+                            ? "Remove from featured"
+                            : !canFeatureMore
+                            ? `Featured limit reached (${featuredUsed}/${featuredLimit})`
+                            : `Feature this property (${featuredUsed}/${featuredLimit} used)`
+                        }
+                      >
+                        <Star className={`w-3.5 h-3.5 ${property.isFeatured ? "fill-amber-400 text-amber-400" : ""}`} />
+                        {property.isFeatured ? "Remove Featured" : `Feature (${featuredUsed}/${featuredLimit})`}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -579,6 +661,7 @@ export default function OwnerPropertiesPage() {
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Type</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Featured</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
@@ -625,6 +708,25 @@ export default function OwnerPropertiesPage() {
                         </>
                       ) : (
                         <div className="text-sm text-gray-500">-</div>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
+                      {featuredLimit > 0 ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 w-8 p-0 ${
+                            property.isFeatured ? "text-amber-500" : canFeatureMore ? "text-gray-400 hover:text-amber-500" : "text-gray-200 cursor-not-allowed"
+                          }`}
+                          disabled={updatingFeaturedId === property.id || (!property.isFeatured && !canFeatureMore)}
+                          onClick={() => toggleFeatured(property.id)}
+                          title={property.isFeatured ? "Remove featured" : !canFeatureMore ? `Limit reached (${featuredUsed}/${featuredLimit})` : `Feature property`}
+                        >
+                          <Star className={`w-4 h-4 ${property.isFeatured ? "fill-amber-400" : ""}`} />
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
                       )}
                     </td>
                     <td className="py-4 px-4">

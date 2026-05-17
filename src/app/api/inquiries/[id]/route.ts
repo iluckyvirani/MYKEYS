@@ -35,6 +35,8 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
                 id: true,
                 firstName: true,
                 lastName: true,
+                email: true,
+                phone: true,
                 avatar: true,
               },
             },
@@ -59,8 +61,8 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
       );
     }
 
-    // Verify user is either the inquirer or the property owner
-    if (inquiry.userId !== user.userId && inquiry.property?.ownerId !== user.userId) {
+    // Verify user is either the inquirer, the property owner, or an admin
+    if (inquiry.userId !== user.userId && inquiry.property?.ownerId !== user.userId && (user as any).role !== 'ADMIN') {
       return NextResponse.json(
         { success: false, message: 'Unauthorized', data: null },
         { status: 403 }
@@ -68,6 +70,19 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
     }
 
     const ownerUser = inquiry.property?.owner;
+
+    // Check owner's active package for fullAdminSupport flag
+    let fullAdminSupport = false;
+    if (ownerUser?.id) {
+      const ownerPkg = await prisma.ownerPackage.findFirst({
+        where: { ownerId: ownerUser.id, status: 'ACTIVE', endDate: { gt: new Date() } },
+        include: { package: { select: { fullAdminSupport: true, directInquiryToOwner: true } } },
+      });
+      if (ownerPkg) {
+        fullAdminSupport = ownerPkg.package.fullAdminSupport && !ownerPkg.package.directInquiryToOwner;
+      }
+    }
+
     const mappedInquiry = {
       id: inquiry.id,
       propertyId: inquiry.propertyId,
@@ -75,7 +90,7 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
       guestId: inquiry.userId || '',
       guestName: inquiry.name || (inquiry.user ? `${inquiry.user.firstName} ${inquiry.user.lastName}` : ''),
       guestEmail: inquiry.email,
-      guestPhone: inquiry.phone || '',
+      guestPhone: inquiry.phone || inquiry.user?.phone || '',
       message: inquiry.message,
       ownerResponse: (inquiry as any).response,
       status: inquiry.status as InquiryStatus,
@@ -88,8 +103,11 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
       unreadByUser: inquiry.unreadByUser || 0,
       unreadByOwner: inquiry.unreadByOwner || 0,
       ownerName: ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : '',
+      ownerEmail: ownerUser?.email || '',
+      ownerPhone: ownerUser?.phone || '',
       ownerAvatar: ownerUser?.avatar || null,
       ownerId: ownerUser?.id || '',
+      fullAdminSupport,
       createdAt: inquiry.createdAt.toISOString(),
       updatedAt: inquiry.updatedAt.toISOString(),
     };
@@ -128,9 +146,9 @@ export const PATCH = withAuth<{ id: string }>(async (req: NextRequest, user: JWT
       );
     }
 
-    if (!body.status && !body.priority && !body.response) {
+    if (!body.status && !body.priority && !body.response && body.ownerLabel === undefined) {
       return NextResponse.json(
-        { success: false, message: 'status, priority, or response is required', data: null },
+        { success: false, message: 'status, priority, response, or ownerLabel is required', data: null },
         { status: 400 }
       );
     }
@@ -150,6 +168,7 @@ export const PATCH = withAuth<{ id: string }>(async (req: NextRequest, user: JWT
             firstName: true,
             lastName: true,
             email: true,
+            phone: true,
           },
         },
       },
@@ -162,8 +181,9 @@ export const PATCH = withAuth<{ id: string }>(async (req: NextRequest, user: JWT
       );
     }
 
-    // Verify user is the property owner
-    if (inquiry.property?.ownerId !== user.userId) {
+    // Verify user is the property owner or admin
+    const isPatchAdmin = (user as any).role === 'ADMIN';
+    if (inquiry.property?.ownerId !== user.userId && !isPatchAdmin) {
       return NextResponse.json(
         { success: false, message: 'Only property owner can update inquiry status', data: null },
         { status: 403 }
@@ -185,6 +205,10 @@ export const PATCH = withAuth<{ id: string }>(async (req: NextRequest, user: JWT
 
     if (body.response) {
       updateData.response = body.response;
+    }
+
+    if (body.ownerLabel !== undefined) {
+      updateData.ownerLabel = body.ownerLabel || null;
     }
 
     const updatedInquiry = await prisma.inquiry.update({
@@ -237,7 +261,7 @@ export const PATCH = withAuth<{ id: string }>(async (req: NextRequest, user: JWT
       guestId: updatedInquiry.userId || '',
       guestName: updatedInquiry.name || (inquiry.user ? `${inquiry.user.firstName} ${inquiry.user.lastName}` : ''),
       guestEmail: updatedInquiry.email,
-      guestPhone: updatedInquiry.phone || '',
+      guestPhone: updatedInquiry.phone || inquiry.user?.phone || '',
       message: updatedInquiry.message,
       response: updatedInquiry.response,
       status: updatedInquiry.status as InquiryStatus,

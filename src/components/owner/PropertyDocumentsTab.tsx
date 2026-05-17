@@ -15,6 +15,11 @@ import {
   AlertTriangle,
   Trash2,
   Eye,
+  X,
+  ExternalLink,
+  ZoomIn,
+  ZoomOut,
+  Download,
 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -78,38 +83,210 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isImageFile(fileName: string) {
+  return /\.(jpe?g|png|webp|gif)$/i.test(fileName);
+}
+
+function isPdfFile(fileName: string) {
+  return /\.pdf$/i.test(fileName);
+}
+
+// ── Document Preview Modal ──────────────────────────────────────────────────
+interface PreviewModalProps {
+  doc: PropertyDocument;
+  onClose: () => void;
+}
+
+function DocumentPreviewModal({ doc, onClose }: PreviewModalProps) {
+  const [imgScale, setImgScale] = useState(1);
+  const isImage = isImageFile(doc.fileName);
+  const isPdf = isPdfFile(doc.fileName);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-[5px] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileText className="w-4 h-4 text-gray-500 shrink-0" />
+            <span className="font-medium text-gray-900 truncate text-sm">
+              {doc.fileName}
+            </span>
+            <span className="text-xs text-gray-400 shrink-0">
+              ({formatBytes(doc.fileSize)})
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-4">
+            {isImage && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setImgScale((s) => Math.max(0.5, s - 0.25))}
+                  className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+                  title="Zoom out"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <span className="text-xs text-gray-500 w-10 text-center">
+                  {Math.round(imgScale * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setImgScale((s) => Math.min(3, s + 0.25))}
+                  className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+                  title="Zoom in"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+              </>
+            )}
+            <a
+              href={doc.documentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+              title="Open in new tab"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </a>
+            <a
+              href={doc.documentUrl}
+              download={doc.fileName}
+              className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+              title="Download"
+            >
+              <Download className="w-4 h-4" />
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Preview body */}
+        <div className="flex-1 overflow-auto bg-gray-100 flex items-start justify-center p-4 min-h-0">
+          {isImage ? (
+            <div
+              className="transition-transform duration-150 origin-top"
+              style={{ transform: `scale(${imgScale})` }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={doc.documentUrl}
+                alt={doc.fileName}
+                className="max-w-full rounded shadow"
+                style={{ maxHeight: "70vh" }}
+              />
+            </div>
+          ) : isPdf ? (
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(doc.documentUrl)}&embedded=true`}
+              title={doc.fileName}
+              className="w-full bg-white rounded"
+              style={{ height: "70vh", minHeight: 400 }}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <FileText className="w-16 h-16 text-gray-300 mb-4" />
+              <p className="text-gray-600 font-medium mb-2">
+                Preview not available for this file type
+              </p>
+              <a
+                href={doc.documentUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open file in new tab
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t flex items-center justify-between text-xs text-gray-500 shrink-0 bg-gray-50">
+          <span>
+            {doc.issuedDate && `Issued: ${new Date(doc.issuedDate).toLocaleDateString("en-GB")}  `}
+            {doc.expiryDate && `Expires: ${new Date(doc.expiryDate).toLocaleDateString("en-GB")}`}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onClose}
+          >
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export default function PropertyDocumentsTab({ propertyId }: Props) {
   const [requiredTypes, setRequiredTypes] = useState<DocumentType[]>([]);
   const [uploadedDocs, setUploadedDocs] = useState<PropertyDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string>("");
+  const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<PropertyDocument | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const fetchedTypesRef = useRef(false);
 
   // Per-type date states (for issue/expiry date inputs before upload)
   const [dates, setDates] = useState<
     Record<string, { issuedDate: string; expiryDate: string }>
   >({});
 
-  async function fetchData() {
-    setLoading(true);
+  // Fetch required document types ONCE — they don't change during the session
+  async function fetchRequiredTypes() {
     try {
-      const [reqRes, docsRes] = await Promise.all([
-        api.get(`/properties/${propertyId}/documents/required`),
-        api.get(`/properties/${propertyId}/documents`),
-      ]);
-      setRequiredTypes(reqRes.data?.data ?? []);
-      setUploadedDocs(docsRes.data?.data ?? []);
+      const res = await api.get(`/properties/${propertyId}/documents/required`);
+      setRequiredTypes(res.data?.data ?? []);
     } catch {
       /* silently fail */
-    } finally {
-      setLoading(false);
+    }
+  }
+
+  // Fetch only the uploaded docs — called after every upload/delete
+  async function refreshDocs() {
+    try {
+      const res = await api.get(`/properties/${propertyId}/documents`);
+      setUploadedDocs(res.data?.data ?? []);
+    } catch {
+      /* silently fail */
     }
   }
 
   useEffect(() => {
-    fetchData();
+    if (fetchedTypesRef.current) return; // prevent StrictMode double-invoke
+    fetchedTypesRef.current = true;
+
+    setLoading(true);
+    Promise.all([fetchRequiredTypes(), refreshDocs()]).finally(() =>
+      setLoading(false)
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyId]);
 
@@ -124,6 +301,27 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  }
+
+  function validateDates(typeId: string, dt: DocumentType): string {
+    const typeDates = dates[typeId] ?? { issuedDate: "", expiryDate: "" };
+    if (dt.requireIssueDate && !typeDates.issuedDate) {
+      return "Issue date is required before uploading.";
+    }
+    if (dt.requireExpiryDate && !typeDates.expiryDate) {
+      return "Expiry date is required before uploading.";
+    }
+    return "";
+  }
+
+  function handleUploadClick(typeId: string, dt: DocumentType) {
+    const err = validateDates(typeId, dt);
+    if (err) {
+      setDateErrors((prev) => ({ ...prev, [typeId]: err }));
+      return;
+    }
+    setDateErrors((prev) => ({ ...prev, [typeId]: "" }));
+    fileRefs.current[typeId]?.click();
   }
 
   async function handleUpload(typeId: string, file: File) {
@@ -150,7 +348,8 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
         expiryDate: typeDates.expiryDate || undefined,
       });
 
-      await fetchData();
+      // Only refresh the uploaded docs list — required types haven't changed
+      await refreshDocs();
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -164,10 +363,9 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
   async function handleDelete(doc: PropertyDocument) {
     setDeletingId(doc.id);
     try {
-      await api.delete(
-        `/api/properties/${propertyId}/documents/${doc.id}`
-      );
-      await fetchData();
+      await api.delete(`/properties/${propertyId}/documents/${doc.id}`);
+      // Only refresh the uploaded docs list
+      await refreshDocs();
     } catch {
       /* silently fail */
     } finally {
@@ -191,7 +389,14 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      {previewDoc && (
+        <DocumentPreviewModal
+          doc={previewDoc}
+          onClose={() => setPreviewDoc(null)}
+        />
+      )}
+      <div className="space-y-4">
       {uploadError && (
         <div className="bg-red-50 text-red-700 rounded px-4 py-2 text-sm">
           {uploadError}
@@ -204,6 +409,11 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
         const typeDates = dates[dt.id] ?? { issuedDate: "", expiryDate: "" };
         const isUploading = uploadingId === dt.id;
         const isDeleting = deletingId === uploaded?.id;
+        const needsDates =
+          !uploaded ||
+          uploaded.status === "REJECTED" ||
+          uploaded.status === "EXPIRED";
+        const dateError = dateErrors[dt.id] ?? "";
 
         return (
           <Card key={dt.id} className="p-4">
@@ -267,57 +477,62 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
                 )}
 
                 {/* Date inputs — show when no uploaded doc or when rejected/expired */}
-                {(!uploaded ||
-                  uploaded.status === "REJECTED" ||
-                  uploaded.status === "EXPIRED") && (
-                  <div className="mt-3 flex flex-wrap gap-4">
-                    {dt.requireIssueDate && (
-                      <div className="space-y-1">
-                        <Label className="text-xs">
-                          Issue Date <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          type="date"
-                          className="text-xs h-8 w-40"
-                          value={typeDates.issuedDate}
-                          onChange={(e) =>
-                            setDates((d) => ({
-                              ...d,
-                              [dt.id]: {
-                                ...(d[dt.id] ?? {
-                                  issuedDate: "",
-                                  expiryDate: "",
-                                }),
-                                issuedDate: e.target.value,
-                              },
-                            }))
-                          }
-                        />
-                      </div>
-                    )}
-                    {dt.requireExpiryDate && (
-                      <div className="space-y-1">
-                        <Label className="text-xs">
-                          Expiry Date <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          type="date"
-                          className="text-xs h-8 w-40"
-                          value={typeDates.expiryDate}
-                          onChange={(e) =>
-                            setDates((d) => ({
-                              ...d,
-                              [dt.id]: {
-                                ...(d[dt.id] ?? {
-                                  issuedDate: "",
-                                  expiryDate: "",
-                                }),
-                                expiryDate: e.target.value,
-                              },
-                            }))
-                          }
-                        />
-                      </div>
+                {needsDates && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex flex-wrap gap-4">
+                      {dt.requireIssueDate && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">
+                            Issue Date <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            type="date"
+                            className="text-xs h-8 w-40"
+                            value={typeDates.issuedDate}
+                            onChange={(e) => {
+                              setDates((d) => ({
+                                ...d,
+                                [dt.id]: {
+                                  ...(d[dt.id] ?? {
+                                    issuedDate: "",
+                                    expiryDate: "",
+                                  }),
+                                  issuedDate: e.target.value,
+                                },
+                              }));
+                              setDateErrors((prev) => ({ ...prev, [dt.id]: "" }));
+                            }}
+                          />
+                        </div>
+                      )}
+                      {dt.requireExpiryDate && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">
+                            Expiry Date <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            type="date"
+                            className="text-xs h-8 w-40"
+                            value={typeDates.expiryDate}
+                            onChange={(e) => {
+                              setDates((d) => ({
+                                ...d,
+                                [dt.id]: {
+                                  ...(d[dt.id] ?? {
+                                    issuedDate: "",
+                                    expiryDate: "",
+                                  }),
+                                  expiryDate: e.target.value,
+                                },
+                              }));
+                              setDateErrors((prev) => ({ ...prev, [dt.id]: "" }));
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {dateError && (
+                      <p className="text-xs text-red-600">{dateError}</p>
                     )}
                   </div>
                 )}
@@ -326,14 +541,13 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
               {/* Actions */}
               <div className="flex items-center gap-2 shrink-0">
                 {uploaded && uploaded.status !== "REJECTED" && uploaded.status !== "EXPIRED" && (
-                  <a
-                    href={uploaded.documentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDoc(uploaded)}
+                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5" /> View
-                  </a>
+                  </button>
                 )}
 
                 {/* Upload / Re-upload */}
@@ -354,7 +568,8 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
                   size="sm"
                   variant={uploaded ? "outline" : "default"}
                   disabled={isUploading}
-                  onClick={() => fileRefs.current[dt.id]?.click()}
+                  onClick={() => handleUploadClick(dt.id, dt)}
+                  className="cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5 mr-1" />
                   {isUploading
@@ -369,7 +584,7 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                     disabled={isDeleting}
                     onClick={() => handleDelete(uploaded)}
                   >
@@ -399,5 +614,6 @@ export default function PropertyDocumentsTab({ propertyId }: Props) {
         documents uploaded
       </div>
     </div>
+    </>
   );
 }

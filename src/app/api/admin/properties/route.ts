@@ -219,3 +219,119 @@ export const PATCH = withAuth(
   },
   { roles: ["ADMIN" as any] }
 );
+
+/**
+ * POST /api/admin/properties
+ * Create a property on behalf of an owner (must have fullAdminSupport package)
+ * or as admin's own listing when no ownerId is provided.
+ * Body: { ownerId?, title, address, city, state, country, zipCode, latitude, longitude,
+ *         propertyType, listingType, rentalType?, price, priceType, ... images[] }
+ * Roles: ADMIN only
+ */
+export const POST = withAuth(
+  async (request: NextRequest, user: JWTPayload) => {
+    try {
+      const body = await request.json();
+      const { ownerId, ...propertyData } = body;
+
+      // --- Determine who owns the listing ---
+      let effectiveOwnerId: string;
+
+      if (ownerId) {
+        // Verify this owner has an active fullAdminSupport package
+        const ownerPkg = await prisma.ownerPackage.findFirst({
+          where: {
+            ownerId,
+            status: "ACTIVE",
+            package: { fullAdminSupport: true },
+          },
+          select: { id: true },
+        });
+
+        if (!ownerPkg) {
+          return errorResponse(
+            "Selected owner does not have an active Full Admin Support package",
+            400,
+            ErrorCode.VALIDATION_ERROR
+          );
+        }
+        effectiveOwnerId = ownerId;
+      } else {
+        // Admin creates the property under their own account
+        effectiveOwnerId = (user as any).id;
+      }
+
+      // --- Validate required fields ---
+      const { title, address, propertyType, listingType, price } = propertyData;
+      if (!title || !address || !propertyType || !listingType || !price) {
+        return errorResponse(
+          "title, address, propertyType, listingType, and price are required",
+          400,
+          ErrorCode.VALIDATION_ERROR
+        );
+      }
+
+      // --- Build images payload ---
+      const images: { url: string; isPrimary: boolean }[] = Array.isArray(propertyData.images)
+        ? propertyData.images
+        : [];
+
+      // --- Create property ---
+      const property = await prisma.property.create({
+        data: {
+          ownerId: effectiveOwnerId,
+          title: propertyData.title,
+          description: propertyData.description || "",
+          address: propertyData.address,
+          city: propertyData.city || "",
+          state: propertyData.state || "",
+          country: propertyData.country || "United Kingdom",
+          zipCode: propertyData.zipCode || null,
+          latitude: propertyData.latitude ? parseFloat(propertyData.latitude) : null,
+          longitude: propertyData.longitude ? parseFloat(propertyData.longitude) : null,
+          propertyType: propertyData.propertyType,
+          listingType: propertyData.listingType,
+          rentalType: propertyData.rentalType || null,
+          price: parseFloat(propertyData.price),
+          priceType: propertyData.priceType || "NIGHTLY",
+          bedrooms: propertyData.bedrooms ? parseInt(propertyData.bedrooms) : 0,
+          bathrooms: propertyData.bathrooms ? parseInt(propertyData.bathrooms) : 0,
+          sqft: propertyData.sqft ? parseInt(propertyData.sqft) : null,
+          guests: propertyData.guests ? parseInt(propertyData.guests) : 2,
+          status: "DRAFT",
+          amenities: Array.isArray(propertyData.amenities) ? propertyData.amenities : [],
+          // Rent-specific
+          securityDeposit: propertyData.securityDeposit ? parseFloat(propertyData.securityDeposit) : null,
+          cleaningFee: propertyData.cleaningFee ? parseFloat(propertyData.cleaningFee) : null,
+          serviceFee: propertyData.serviceFee ? parseFloat(propertyData.serviceFee) : null,
+          minStay: propertyData.minStay ? parseInt(propertyData.minStay) : null,
+          maxStay: propertyData.maxStay ? parseInt(propertyData.maxStay) : null,
+          checkInTime: propertyData.checkInTime || null,
+          checkOutTime: propertyData.checkOutTime || null,
+          selfCheckIn: propertyData.selfCheckIn ?? false,
+          parking: propertyData.parking ?? false,
+          // Buy-specific
+          propertyPrice: propertyData.propertyPrice ? parseFloat(propertyData.propertyPrice) : null,
+          yearBuilt: propertyData.yearBuilt ? parseInt(propertyData.yearBuilt) : null,
+          images: images.length
+            ? { create: images.map((img, i) => ({ url: img.url, isPrimary: i === 0 })) }
+            : undefined,
+        },
+        include: {
+          images: { select: { id: true, url: true, isPrimary: true } },
+          owner: { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+      });
+
+      return successResponse(property, "Property created successfully");
+    } catch (error: any) {
+      console.error("Admin create property error:", error);
+      return errorResponse(
+        error.message || "Failed to create property",
+        500,
+        ErrorCode.INTERNAL_SERVER_ERROR
+      );
+    }
+  },
+  { roles: ["ADMIN" as any] }
+);

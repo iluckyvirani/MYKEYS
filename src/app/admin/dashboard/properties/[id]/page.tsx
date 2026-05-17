@@ -1,9 +1,10 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Mail, Phone, MapPin, Building, Star, Home, AlertCircle, Users, DollarSign, Eye, Calendar, CheckCircle, FileText, XCircle, Clock } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building, Star, Home, AlertCircle, Users, DollarSign, Eye, Calendar, CheckCircle, FileText, XCircle, Clock, X, ExternalLink, ZoomIn, ZoomOut, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
+import { renderAmenityIcon } from "@/components/dashboard/AdminAmenityModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,92 @@ import { api } from "@/lib/api";
 
 interface PropertyDetailPageProps {
   params: Promise<{ id: string }>;
+}
+
+// ── Document preview helpers ─────────────────────────────────────────────────
+
+function fmtBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+function isImgFile(name: string) { return /\.(jpe?g|png|webp|gif)$/i.test(name); }
+function isPdfFile(name: string) { return /\.pdf$/i.test(name); }
+
+function DocPreviewModal({ doc, onClose }: { doc: any; onClose: () => void }) {
+  const [scale, setScale] = useState(1);
+  const isImg = isImgFile(doc.fileName);
+  const isPdf = isPdfFile(doc.fileName);
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-[5px] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileText className="w-4 h-4 text-gray-500 shrink-0" />
+            <span className="font-medium text-gray-900 truncate text-sm">{doc.fileName}</span>
+            <span className="text-xs text-gray-400 shrink-0">({fmtBytes(doc.fileSize)})</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-4">
+            {isImg && (
+              <>
+                <button type="button" onClick={() => setScale((s) => Math.max(0.5, s - 0.25))} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Zoom out"><ZoomOut className="w-4 h-4" /></button>
+                <span className="text-xs text-gray-500 w-10 text-center">{Math.round(scale * 100)}%</span>
+                <button type="button" onClick={() => setScale((s) => Math.min(3, s + 0.25))} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Zoom in"><ZoomIn className="w-4 h-4" /></button>
+              </>
+            )}
+            <a href={doc.documentUrl} target="_blank" rel="noreferrer" className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Open in new tab"><ExternalLink className="w-4 h-4" /></a>
+            <a href={doc.documentUrl} download={doc.fileName} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Download"><Download className="w-4 h-4" /></a>
+            <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Close"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-auto bg-gray-100 flex items-start justify-center p-4 min-h-0">
+          {isImg ? (
+            <div className="transition-transform duration-150 origin-top" style={{ transform: `scale(${scale})` }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={doc.documentUrl} alt={doc.fileName} className="max-w-full rounded shadow" style={{ maxHeight: "70vh" }} />
+            </div>
+          ) : isPdf ? (
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(doc.documentUrl)}&embedded=true`}
+              title={doc.fileName}
+              className="w-full bg-white rounded"
+              style={{ height: "70vh", minHeight: 400 }}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <FileText className="w-16 h-16 text-gray-300 mb-4" />
+              <p className="text-gray-600 font-medium mb-2">Preview not available for this file type</p>
+              <a href={doc.documentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                <ExternalLink className="w-4 h-4" /> Open file in new tab
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t flex items-center justify-between text-xs text-gray-500 shrink-0 bg-gray-50">
+          <span>
+            {doc.issuedDate && `Issued: ${new Date(doc.issuedDate).toLocaleDateString("en-GB")}  `}
+            {doc.expiryDate && `Expires: ${new Date(doc.expiryDate).toLocaleDateString("en-GB")}`}
+          </span>
+          <Button type="button" size="sm" variant="outline" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Admin Property Documents sub-component ──────────────────────────────────
@@ -26,6 +113,7 @@ function AdminPropertyDocuments({ propertyId }: { propertyId: string }) {
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState<string | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<any | null>(null);
   const [verifyModal, setVerifyModal] = useState<{
     docId: string;
     action: "VERIFIED" | "REJECTED";
@@ -70,6 +158,7 @@ function AdminPropertyDocuments({ propertyId }: { propertyId: string }) {
 
   return (
     <div className="bg-white rounded-[8px] border p-6 space-y-4">
+      {previewDoc && <DocPreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
       <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
         <FileText className="w-5 h-5 text-blue-600" /> Property Documents
       </h3>
@@ -107,19 +196,18 @@ function AdminPropertyDocuments({ propertyId }: { propertyId: string }) {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={doc.documentUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDoc(doc)}
+                      className="text-xs text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" /> View
-                    </a>
+                    </button>
                     {doc.status !== "VERIFIED" && (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-green-600 border-green-300 hover:bg-green-50 text-xs"
+                        className="text-green-600 border-green-300 hover:bg-green-50 text-xs cursor-pointer"
                         onClick={() =>
                           setVerifyModal({
                             docId: doc.id,
@@ -135,7 +223,7 @@ function AdminPropertyDocuments({ propertyId }: { propertyId: string }) {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-red-600 border-red-300 hover:bg-red-50 text-xs"
+                        className="text-red-600 border-red-300 hover:bg-red-50 text-xs cursor-pointer"
                         onClick={() =>
                           setVerifyModal({
                             docId: doc.id,
@@ -411,7 +499,7 @@ export default function PropertyDetailPage({ params }: PropertyDetailPageProps) 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {propertyData.amenities.map((item: any) => (
                       <div key={item.amenity.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                        <span className="text-orange-600">{item.amenity.icon}</span>
+                        <span className="text-orange-600">{renderAmenityIcon(item.amenity.icon || "", "w-4 h-4")}</span>
                         <span className="text-sm text-gray-700">{item.amenity.name}</span>
                       </div>
                     ))}

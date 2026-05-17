@@ -86,6 +86,16 @@ export const GET = withAuth(
                 price: true,
               },
             },
+            packages: {
+              where: { status: "ACTIVE" },
+              select: {
+                package: {
+                  select: { name: true, fullAdminSupport: true },
+                },
+              },
+              take: 1,
+              orderBy: { startDate: "desc" },
+            },
             _count: {
               select: {
                 properties: true,
@@ -102,6 +112,7 @@ export const GET = withAuth(
         const activeProperties = o.properties.filter(
           (p: any) => p.status === "ACTIVE"
         ).length;
+        const activePkg = o.packages?.[0]?.package ?? null;
 
         return {
           id: o.id,
@@ -115,7 +126,9 @@ export const GET = withAuth(
           totalProperties: o._count.properties,
           activeProperties,
           totalBookings: o._count.bookingsAsOwner,
-          properties: o.properties.slice(0, 5), // Show last 5 properties
+          properties: o.properties.slice(0, 5),
+          packageName: activePkg?.name ?? null,
+          hasFullAdminSupport: activePkg?.fullAdminSupport ?? false,
         };
       });
 

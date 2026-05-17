@@ -100,6 +100,7 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [note, setNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  const [changingLabel, setChangingLabel] = useState(false);
   const [showOwnerPanel, setShowOwnerPanel] = useState(false);
   const [ownerProperties, setOwnerProperties] = useState<OwnerProperty[]>([]);
   const [loadingOwner, setLoadingOwner] = useState(false);
@@ -248,6 +249,7 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
   };
 
   const handleLabelChange = async (label: string) => {
+    setChangingLabel(true);
     try {
       const payload = label === "No Label" ? { label: null } : { label };
       await api.patch(`/inquiries/${inquiryId}/label`, payload);
@@ -256,6 +258,8 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
       toast({ title: "Label updated" });
     } catch {
       toast({ title: "Error", description: "Failed to update label", variant: "destructive" });
+    } finally {
+      setChangingLabel(false);
     }
   };
 
@@ -288,7 +292,7 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
     <DashboardLayout defaultRole="user">
       {/* Back + Header */}
       <div className="mb-4 flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/user/dashboard/inquiries")} className="p-2">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/user/dashboard/inquiries")} className="p-2 cursor-pointer">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1 min-w-0">
@@ -313,7 +317,7 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
         {/* Note button */}
         <button
           onClick={() => { setShowNoteModal(true); loadNote(); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium text-gray-600 bg-white border-gray-200 hover:bg-gray-50 shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium text-gray-600 bg-white border-gray-200 hover:bg-gray-50 shrink-0 cursor-pointer"
         >
           <StickyNote className="w-3 h-3" />
           Notes
@@ -333,7 +337,7 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
                 setLoadingOwner(false);
               }
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium text-gray-600 bg-white border-gray-200 hover:bg-gray-50 shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium text-gray-600 bg-white border-gray-200 hover:bg-gray-50 shrink-0 cursor-pointer"
           >
             <User className="w-3 h-3" />
             View Owner
@@ -344,10 +348,11 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
         {/* Label picker */}
         <div className="relative shrink-0">
           <button
-            onClick={() => setShowLabelMenu((v) => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${LABEL_COLORS[currentLabel]}`}
+            onClick={() => { if (!changingLabel) setShowLabelMenu((v) => !v); }}
+            disabled={changingLabel}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors cursor-pointer disabled:opacity-60 ${LABEL_COLORS[currentLabel]}`}
           >
-            <Tag className="w-3 h-3" />
+            {changingLabel ? <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : <Tag className="w-3 h-3" />}
             {currentLabel}
           </button>
           {showLabelMenu && (

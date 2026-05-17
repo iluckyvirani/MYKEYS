@@ -62,7 +62,7 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
           beds: property.bedrooms || 0,
           baths: property.bathrooms || 0,
           propertyType: property.propertyType || "Property",
-          isFeatured: true,
+          isFeatured: property.isFeatured ?? false,
           isNew: false,
           minStay: property.minStay || 1,
           minTerm: property.minTerm || 1,
