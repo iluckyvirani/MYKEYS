@@ -46,3 +46,18 @@ add package one feature that admin can handle all things all inqueries go to adm
 
 
 
+Guest books
+    ↓
+PENDING / Payment: PENDING
+    ↓
+Guest pays (Razorpay)
+    ├── Payment SUCCESS ──→ CONFIRMED / Payment: PAID  ✅ (auto, no owner action needed)
+    └── Payment FAILED  ──→ CANCELLED / Payment: FAILED ❌ (auto)
+    
+CONFIRMED
+    ├── Owner: CHECKED_IN   (guest arrives)
+    │       ↓ Owner: CHECKED_OUT (guest leaves)
+    │           ↓ Cron: COMPLETED (auto after checkout date)
+    └── Owner or Guest: CANCELLED
+
+
