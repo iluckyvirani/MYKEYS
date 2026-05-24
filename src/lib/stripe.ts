@@ -5,19 +5,31 @@
 
 import Stripe from 'stripe';
 
-const secretKey = process.env.STRIPE_SECRET_KEY;
+// Lazy singleton — validated at request time, not at build/import time.
+// This prevents `next build` from crashing when env vars aren't set in CI.
+let _stripe: Stripe | undefined;
 
-if (!secretKey) {
-  throw new Error(
-    'Missing Stripe credentials. Please set STRIPE_SECRET_KEY in environment variables.'
-  );
+function getStripeInstance(): Stripe {
+  if (!_stripe) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error(
+        'Missing Stripe credentials. Please set STRIPE_SECRET_KEY in environment variables.'
+      );
+    }
+    _stripe = new Stripe(secretKey, {
+      apiVersion: '2026-04-22.dahlia',
+    });
+  }
+  return _stripe;
 }
 
 /**
- * Server-side Stripe instance (used in API routes and server actions only)
+ * Server-side Stripe instance (used in API routes and server actions only).
+ * Proxy so call-sites keep the same `stripe.xyz` syntax unchanged.
  */
-export const stripe = new Stripe(secretKey, {
-  apiVersion: '2026-04-22.dahlia',
+export const stripe = new Proxy({} as Stripe, {
+  get: (_target, prop) => getStripeInstance()[prop as keyof Stripe],
 });
 
 /**
