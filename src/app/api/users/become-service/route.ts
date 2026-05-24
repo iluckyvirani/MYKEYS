@@ -63,6 +63,9 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       bio: body.bio,
       category: body.category || 'plumbing',
+      categories: Array.isArray(body.categoryIds) && body.categoryIds.length > 0
+        ? body.categoryIds
+        : body.category ? [body.category] : [],
       subcategories: body.subcategories || [],
       serviceAreas: body.serviceAreas || [],
       specializations: body.specializations || [],

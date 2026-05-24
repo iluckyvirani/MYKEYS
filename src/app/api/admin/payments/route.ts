@@ -95,11 +95,26 @@ export const GET = withAuth(
             booking: {
               select: {
                 id: true,
+                checkIn: true,
+                checkOut: true,
+                nights: true,
+                status: true,
                 property: {
-                  select: {
-                    title: true,
-                  },
+                  select: { id: true, title: true, city: true, state: true },
                 },
+                guest: {
+                  select: { id: true, firstName: true, lastName: true, email: true },
+                },
+                owner: {
+                  select: { id: true, firstName: true, lastName: true, email: true },
+                },
+              },
+            },
+            package: {
+              select: {
+                id: true,
+                status: true,
+                package: { select: { id: true, name: true } },
               },
             },
           },
@@ -111,18 +126,39 @@ export const GET = withAuth(
       const paymentDTOs = payments.map((p: any) => ({
         id: p.id,
         transactionId: p.transactionId,
+        stripePaymentIntentId: p.stripePaymentIntentId,
+        stripeChargeId: p.stripeChargeId,
         userId: p.userId,
-        userName: `${p.user?.firstName} ${p.user?.lastName}`,
-        userEmail: p.user?.email,
+        userName: p.user ? `${p.user.firstName} ${p.user.lastName}` : "Unknown",
+        userEmail: p.user?.email ?? null,
+        // Booking details
         bookingId: p.bookingId,
-        propertyTitle: p.booking?.property?.title || "N/A",
+        bookingStatus: p.booking?.status ?? null,
+        checkIn: p.booking?.checkIn ?? null,
+        checkOut: p.booking?.checkOut ?? null,
+        nights: p.booking?.nights ?? null,
+        propertyId: p.booking?.property?.id ?? null,
+        propertyTitle: p.booking?.property?.title ?? null,
+        propertyCity: p.booking?.property?.city ?? null,
+        guestId: p.booking?.guest?.id ?? null,
+        guestName: p.booking?.guest ? `${p.booking.guest.firstName} ${p.booking.guest.lastName}` : null,
+        guestEmail: p.booking?.guest?.email ?? null,
+        ownerId: p.booking?.owner?.id ?? null,
+        ownerName: p.booking?.owner ? `${p.booking.owner.firstName} ${p.booking.owner.lastName}` : null,
+        ownerEmail: p.booking?.owner?.email ?? null,
+        // Package details
+        packageId: p.packageId,
+        packageName: p.package?.package?.name ?? null,
+        subscriptionStatus: p.package?.status ?? null,
+        // Payment data
         amount: p.amount,
-        currency: p.currency || "INR",
+        currency: p.currency || "GBP",
+        commissionPercent: p.commissionPercent ?? null,
+        commissionAmount: p.commissionAmount ?? null,
+        ownerEarnings: p.ownerEarnings ?? null,
         status: p.status,
         paymentMethod: p.paymentMethod,
-        razorpayOrderId: p.razorpayOrderId,
-        razorpayPaymentId: p.razorpayPaymentId,
-        description: p.description,
+        paymentType: p.bookingId ? "BOOKING" : "PACKAGE",
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
       }));

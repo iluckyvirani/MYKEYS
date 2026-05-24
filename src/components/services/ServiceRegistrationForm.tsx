@@ -46,7 +46,7 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     serviceAreas: [] as string[],
     instantBooking: false,
@@ -112,7 +112,11 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   ];
 
   const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId);
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
   };
 
   const handleAreaToggle = (area: string) => {
@@ -229,7 +233,7 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   const handleClose = () => {
     // Reset form when closing
     setStep(1);
-    setSelectedCategory(null);
+    setSelectedCategories([]);
     setFormData({
       serviceAreas: [] as string[],
       instantBooking: false,
@@ -243,7 +247,7 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   };
 
   const canProceed = () => {
-    if (step === 1) return selectedCategory !== null;
+    if (step === 1) return selectedCategories.length > 0;
     if (step === 2) return formData.serviceAreas.length > 0;
     if (step === 3) return !formData.instantBooking || (formData.instantPrice !== "" && parseFloat(formData.instantPrice) > 0);
     if (step === 4) return SERVICE_REQUIRED_DOCUMENTS.every((docType) =>
@@ -255,7 +259,9 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   const handleSubmit = () => {
     const data = {
       ...formData,
-      categoryId: selectedCategory,
+      categoryIds: selectedCategories,
+      // keep single-category compat for APIs that still expect one
+      categoryId: selectedCategories[0] ?? null,
     };
     onSubmit?.(data);
   };
@@ -330,8 +336,13 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Your Service Category</h2>
-                <p className="text-gray-600">Choose the primary category you specialize in</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Your Service Categories</h2>
+                <p className="text-gray-600">
+                  Choose all categories you specialise in — you can select multiple.{" "}
+                  {selectedCategories.length > 0 && (
+                    <span className="font-semibold text-green-700">{selectedCategories.length} selected</span>
+                  )}
+                </p>
               </div>
 
               {loadingCategories ? (
@@ -346,28 +357,37 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {categories.map((category) => (
-                    <motion.div
-                      key={category.id}
-                      onClick={() => handleCategorySelect(category.id)}
-                      className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
-                        selectedCategory === category.id
-                          ? "border-green-600 bg-green-50"
-                          : "border-gray-200 hover:border-green-400"
-                      }`}
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      <div className="text-center">
-                        {category.icon && (
-                          <div className="text-4xl mb-2">{category.icon}</div>
+                  {categories.map((category) => {
+                    const isSelected = selectedCategories.includes(category.id);
+                    return (
+                      <motion.div
+                        key={category.id}
+                        onClick={() => handleCategorySelect(category.id)}
+                        className={`relative p-6 rounded-lg border-2 cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-green-600 bg-green-50 shadow-md"
+                            : "border-gray-200 hover:border-green-400"
+                        }`}
+                        whileHover={{ scale: 1.03 }}
+                      >
+                        {/* Checkmark badge */}
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-green-600 flex items-center justify-center">
+                            <CheckCircle className="w-4 h-4 text-white" />
+                          </div>
                         )}
-                        <h3 className="font-bold text-gray-900 mt-2">{category.name}</h3>
-                        {category.description && (
-                          <p className="text-sm text-gray-600 mt-1">{category.description}</p>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
+                        <div className="text-center">
+                          {category.icon && (
+                            <div className="text-4xl mb-2">{category.icon}</div>
+                          )}
+                          <h3 className="font-bold text-gray-900 mt-2">{category.name}</h3>
+                          {category.description && (
+                            <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </div>

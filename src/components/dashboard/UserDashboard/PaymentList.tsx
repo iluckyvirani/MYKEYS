@@ -1,7 +1,7 @@
 ﻿// components/dashboard/UserDashboard/PaymentList.tsx
 "use client";
 
-import { CreditCard, Calendar, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { CreditCard, Calendar, CheckCircle, XCircle, RefreshCw, MapPin, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Payment {
@@ -13,6 +13,14 @@ interface Payment {
   amount: number;
   status: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "PARTIAL";
   paymentMethod?: string;
+  transactionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  booking?: {
+    id: string;
+    checkIn: string;
+    checkOut: string;
+    property?: { id: string; title: string; city: string; state: string } | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
   reference?: string;
@@ -94,10 +102,20 @@ export default function PaymentList({ payments, type, emptyMessage }: PaymentLis
               {/* Payment Info */}
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-4">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900">
                       {getPaymentTypeLabel(payment.paymentType)}
                     </h3>
+                    {/* Property title */}
+                    {(payment.booking?.property?.title || payment.propertyTitle) && (
+                      <div className="flex items-center gap-1 text-sm text-gray-700 mt-1">
+                        <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                        <span>{payment.booking?.property?.title ?? payment.propertyTitle}</span>
+                        {payment.booking?.property?.city && (
+                          <span className="text-gray-400">· {payment.booking.property.city}</span>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-4 mt-2 flex-wrap">
                       <div className="flex items-center gap-1 text-sm text-gray-600">
                         <CreditCard className="w-4 h-4" />
@@ -141,6 +159,39 @@ export default function PaymentList({ payments, type, emptyMessage }: PaymentLis
                       {payment.reference || payment.reason || "—"}
                     </div>
                   </div>
+                </div>
+
+                {/* Transaction / Stripe details */}
+                <div className="mt-3 bg-gray-50 rounded-[5px] p-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-gray-600">
+                  {payment.bookingId && (
+                    <div className="flex items-center gap-1">
+                      <Hash className="w-3 h-3 text-gray-400" />
+                      <span className="text-gray-400">Booking ID:</span>
+                      <span className="font-mono truncate" title={payment.bookingId}>{payment.bookingId}</span>
+                    </div>
+                  )}
+                  {payment.stripePaymentIntentId && (
+                    <div className="flex items-center gap-1">
+                      <Hash className="w-3 h-3 text-gray-400" />
+                      <span className="text-gray-400">Stripe Intent:</span>
+                      <span className="font-mono truncate" title={payment.stripePaymentIntentId}>{payment.stripePaymentIntentId}</span>
+                    </div>
+                  )}
+                  {payment.transactionId && (
+                    <div className="flex items-center gap-1">
+                      <Hash className="w-3 h-3 text-gray-400" />
+                      <span className="text-gray-400">Transaction ID:</span>
+                      <span className="font-mono truncate" title={payment.transactionId}>{payment.transactionId}</span>
+                    </div>
+                  )}
+                  {payment.booking?.checkIn && (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-gray-400" />
+                      <span className="text-gray-400">Check-in:</span>
+                      <span>{formatDate(payment.booking.checkIn)}</span>
+                      {payment.booking.checkOut && <><span className="text-gray-300">→</span><span>{formatDate(payment.booking.checkOut)}</span></>}
+                    </div>
+                  )}
                 </div>
               </div>
 

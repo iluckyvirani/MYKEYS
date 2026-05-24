@@ -63,38 +63,42 @@ export const POST = withAuth(
       return errorResponse(validationError, 400, ErrorCode.VALIDATION_ERROR);
     }
 
-    // Calculate total cost for Razorpay order
+    // Calculate total cost for Stripe PaymentIntent
     const days = Math.max(
       1,
       Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
     );
     const totalCost = parseFloat((Number(amount) * days).toFixed(2));
 
-    // Create Razorpay order
-    let razorpayOrder: { id: string } | null = null;
+    // Create Stripe PaymentIntent
+    let stripeClientSecret: string | null = null;
+    let stripePaymentIntentId: string | null = null;
     try {
-      const { razorpayInstance } = await import("@/lib/razorpay");
-      razorpayOrder = await razorpayInstance.orders.create({
-        amount: Math.round(totalCost * 100), // pence
-        currency: "GBP",
-        notes: {
+      const { stripe, toPence } = await import("@/lib/stripe");
+      const intent = await stripe.paymentIntents.create({
+        amount: toPence(totalCost),
+        currency: "gbp",
+        automatic_payment_methods: { enabled: true },
+        metadata: {
           propertyId,
           zipCode,
           ownerId: user!.userId,
           bidType: "property_boost",
         },
-      }) as { id: string };
+      });
+      stripeClientSecret = intent.client_secret;
+      stripePaymentIntentId = intent.id;
     } catch {
-      // Razorpay unavailable in dev — proceed without order
+      // Stripe unavailable in dev — proceed without intent
     }
 
     // Create bid record
     const bid = await createBid(input);
 
-    // Store razorpay order id if we got one
-    if (razorpayOrder) {
+    // Store stripe intent id if we got one
+    if (stripePaymentIntentId) {
       const { updateBidPayment } = await import("@/lib/bids/bidService");
-      await updateBidPayment(bid.id, { razorpayOrderId: razorpayOrder.id });
+      await updateBidPayment(bid.id, { stripePaymentIntentId });
     }
 
     // Also return the current highest bid for this zip for display
@@ -102,10 +106,10 @@ export const POST = withAuth(
 
     return successResponse(
       {
-        bid: { ...bid, razorpayOrderId: razorpayOrder?.id ?? null },
-        razorpayOrder,
+        bid: { ...bid, stripePaymentIntentId: stripePaymentIntentId ?? null },
+        clientSecret: stripeClientSecret,
         currentHighest,
-        keyId: process.env.RAZORPAY_KEY_ID ?? "",
+        publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
       },
       "Bid placed successfully",
       201

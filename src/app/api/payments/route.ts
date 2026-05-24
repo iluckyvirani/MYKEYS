@@ -82,7 +82,7 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
           paymentId: result.payment.id,
           bookingId: data.bookingId,
           amount: data.amount,
-          currency: 'INR',
+          currency: 'GBP',
           status: 'pending',
         },
         'pending'
@@ -92,7 +92,7 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
     return successResponse(
       {
         payment: result.payment,
-        razorpayOrder: result.razorpayOrder,
+        clientSecret: result.clientSecret,
       },
       'Payment initiated successfully',
       201

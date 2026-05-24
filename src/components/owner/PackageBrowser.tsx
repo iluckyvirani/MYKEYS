@@ -27,7 +27,7 @@ interface PackageRecord {
 
 interface PackageBrowserProps {
   currentPackageId?: string;
-  onSelect: (packageId: string) => void;
+  onSelect: (packageId: string, price: number, packageName: string) => void;
   subscribing?: string | null; // packageId being subscribed
 }
 
@@ -134,7 +134,7 @@ export default function PackageBrowser({
             <Button
               className="mt-auto w-full bg-green-600 hover:bg-green-700 text-white"
               disabled={isCurrent || isSubscribing}
-              onClick={() => onSelect(pkg.id)}
+              onClick={() => onSelect(pkg.id, pkg.price, pkg.name)}
             >
               {isCurrent ? "Active Plan" : isSubscribing ? "Processing…" : "Get This Plan"}
             </Button>

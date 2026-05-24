@@ -130,7 +130,7 @@ export const POST = withAuth<{ id: string }>(
       return successResponse(
         {
           payment: result.payment,
-          razorpayOrder: result.razorpayOrder,
+          clientSecret: result.clientSecret,
           booking: {
             id: booking.id,
             totalAmount: booking.totalAmount,

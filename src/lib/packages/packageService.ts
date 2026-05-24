@@ -68,6 +68,68 @@ export const packageService = {
 
   // ─── Owner subscription ───────────────────────────────────────────────────
 
+  /**
+   * Create a PENDING subscription — the OwnerPackage is created but not yet active.
+   * Call activateSubscription() after payment succeeds.
+   */
+  async createPendingSubscription(
+    ownerId: string,
+    packageId: string
+  ): Promise<{ ownerPackageId: string; price: number }> {
+    const pkg = await prisma.package.findUnique({ where: { id: packageId } });
+    if (!pkg) throw new Error('Package not found');
+    if (!pkg.isActive) throw new Error('Package is not available for purchase');
+
+    // Clean up stale PENDING subscriptions for the same package/owner pair
+    await prisma.ownerPackage.deleteMany({
+      where: { ownerId, packageId, status: 'PENDING' },
+    });
+
+    const placeholder = new Date();
+    const sub = await prisma.ownerPackage.create({
+      data: {
+        packageId,
+        ownerId,
+        status: 'PENDING',
+        startDate: placeholder,
+        endDate: placeholder,
+      },
+    });
+
+    return { ownerPackageId: sub.id, price: pkg.price };
+  },
+
+  /**
+   * Activate an OwnerPackage after a successful payment.
+   * Cancels any previously active subscription for the same owner.
+   */
+  async activateSubscription(ownerPackageId: string, paymentId: string): Promise<void> {
+    const ownerPkg = await prisma.ownerPackage.findUnique({
+      where: { id: ownerPackageId },
+      include: { package: true },
+    });
+    if (!ownerPkg) return;
+
+    // Cancel existing active subscriptions
+    await prisma.ownerPackage.updateMany({
+      where: { ownerId: ownerPkg.ownerId, status: 'ACTIVE', id: { not: ownerPackageId } },
+      data: { status: 'CANCELLED', cancelledAt: new Date() },
+    });
+
+    const startDate = new Date();
+    const endDate = calcEndDate(
+      startDate,
+      ownerPkg.package.durationValue,
+      ownerPkg.package.durationUnit as DurationUnit
+    );
+
+    await prisma.ownerPackage.update({
+      where: { id: ownerPackageId },
+      data: { status: 'ACTIVE', startDate, endDate, lastPaymentId: paymentId },
+    });
+  },
+
+  /** @deprecated Use createPendingSubscription + Stripe payment instead */
   async subscribeOwner(ownerId: string, packageId: string): Promise<OwnerPackageWithUsage> {
     const pkg = await prisma.package.findUnique({ where: { id: packageId } });
     if (!pkg) throw new Error('Package not found');

@@ -44,17 +44,17 @@ export function validateCurrency(currency: string): boolean {
 }
 
 /**
- * Convert amount to paise (smallest unit in Indian currency)
+ * Convert amount to pence (smallest GBP unit)
  */
-export function amountToPaise(amount: number): number {
+export function amountToPence(amount: number): number {
   return Math.round(amount * 100);
 }
 
 /**
- * Convert paise to amount
+ * Convert pence to amount
  */
-export function paiseToAmount(paise: number): number {
-  return Math.round(paise / 100);
+export function penceToAmount(pence: number): number {
+  return Math.round(pence) / 100;
 }
 
 /**

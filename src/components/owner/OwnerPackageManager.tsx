@@ -9,6 +9,7 @@ import { Clock, Building2, AlertTriangle, Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { OwnerPackageWithUsage } from "@/types/package";
 import PackageBrowser from "./PackageBrowser";
+import PackagePaymentModal from "./PackagePaymentModal";
 
 interface ActivePackageCardProps {
   sub: OwnerPackageWithUsage;
@@ -97,12 +98,19 @@ function ActivePackageCard({ sub, onRenew }: ActivePackageCardProps) {
   );
 }
 
+interface PendingPayment {
+  ownerPackageId: string;
+  packageName: string;
+  price: number;
+}
+
 export default function OwnerPackageManager() {
   const [currentPkg, setCurrentPkg] = useState<OwnerPackageWithUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBrowser, setShowBrowser] = useState(false);
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [subError, setSubError] = useState("");
+  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
 
   const fetchCurrent = async () => {
     try {
@@ -115,18 +123,32 @@ export default function OwnerPackageManager() {
 
   useEffect(() => { fetchCurrent(); }, []);
 
-  async function handleSelect(packageId: string) {
+  /** Step 1: Create PENDING OwnerPackage → open payment modal */
+  async function handleSelect(packageId: string, price: number, packageName: string) {
     setSubscribing(packageId);
     setSubError("");
     try {
-      await api.post("/owner/packages/subscribe", { packageId });
-      await fetchCurrent();
-      setShowBrowser(false);
+      const res = await api.post("/owner/packages/subscribe", { packageId });
+      const { ownerPackageId } = res.data.data;
+      setPendingPayment({ ownerPackageId, packageName, price });
     } catch (err: any) {
-      setSubError(err?.response?.data?.message ?? "Failed to subscribe. Please try again.");
+      setSubError(err?.response?.data?.message ?? "Failed to initiate subscription. Please try again.");
     } finally {
       setSubscribing(null);
     }
+  }
+
+  /** Step 2: Payment succeeded → activate package in UI */
+  function handlePaymentSuccess() {
+    setPendingPayment(null);
+    setShowBrowser(false);
+    setSubError("");
+    fetchCurrent();
+  }
+
+  /** Payment modal closed without success */
+  function handlePaymentClose() {
+    setPendingPayment(null);
   }
 
   if (loading) return <p className="text-gray-400 py-8">Loading package info…</p>;
@@ -178,6 +200,20 @@ export default function OwnerPackageManager() {
           />
         </div>
       )}
+
+      {/* Stripe payment modal — opens after pending subscription is created */}
+      {pendingPayment && (
+        <PackagePaymentModal
+          isOpen={true}
+          ownerPackageId={pendingPayment.ownerPackageId}
+          packageName={pendingPayment.packageName}
+          amount={pendingPayment.price}
+          onClose={handlePaymentClose}
+          onSuccess={handlePaymentSuccess}
+          onError={(msg) => setSubError(msg)}
+        />
+      )}
     </div>
   );
 }
+

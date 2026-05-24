@@ -38,7 +38,7 @@ export enum PaymentType {
 export interface InitiateBookingPaymentRequest {
   bookingId: string;
   amount: number;
-  currency?: string; // Default: INR
+  currency?: string; // Default: GBP
   paymentMethod: PaymentMethod;
 }
 
@@ -48,7 +48,7 @@ export interface InitiateBookingPaymentRequest {
 export interface InitiatePackagePaymentRequest {
   packageId: string;
   amount: number;
-  currency?: string; // Default: INR
+  currency?: string; // Default: GBP
   paymentMethod: PaymentMethod;
 }
 
@@ -65,12 +65,10 @@ export interface InitiatePaymentRequest {
 }
 
 /**
- * Request to verify Razorpay payment
+ * Request to confirm a Stripe payment (after client-side confirmPayment)
  */
-export interface VerifyPaymentRequest {
-  razorpayOrderId: string;
-  razorpayPaymentId: string;
-  razorpaySignature: string;
+export interface ConfirmPaymentRequest {
+  stripePaymentIntentId?: string;
 }
 
 /**
@@ -95,23 +93,40 @@ export interface PaymentDTO {
   paymentMethod: PaymentMethod;
   status: PaymentStatus;
   transactionId: string | null;
-  
-  // Razorpay fields
-  razorpayOrderId: string | null;
-  razorpayPaymentId: string | null;
-  razorpaySignature: string | null;
-  
+
+  // Stripe fields
+  stripePaymentIntentId: string | null;
+  stripeChargeId: string | null;
+
+  // Commission fields
+  commissionPercent: number | null;
+  commissionAmount: number | null;
+  ownerEarnings: number | null;
+
   // Relations
   bookingId: string | null;
   packageId: string | null;
   userId: string;
-  
+
   // Metadata
   metadata: Record<string, any> | null;
-  
+
   // Type inference
   paymentType: PaymentType;
-  
+
+  // Expanded relation data (present when fetched with include)
+  booking?: {
+    id: string;
+    checkIn: string;
+    checkOut: string;
+    property?: { id: string; title: string; city: string; state: string } | null;
+    guest?: { id: string; firstName: string; lastName: string; email: string } | null;
+  } | null;
+  package?: {
+    id: string;
+    name: string | null;
+  } | null;
+
   // Timestamps
   createdAt: string;
   updatedAt: string;
@@ -123,17 +138,21 @@ export interface PaymentDTO {
 export interface PaymentDetailDTO extends PaymentDTO {
   booking?: {
     id: string;
-    guestName: string;
-    propertyTitle: string;
-    totalAmount: number;
-    checkInDate: string;
-    checkOutDate: string;
-  };
+    checkIn: string;
+    checkOut: string;
+    guestName?: string;
+    propertyTitle?: string;
+    totalAmount?: number;
+    checkInDate?: string;
+    checkOutDate?: string;
+    property?: { id: string; title: string; city: string; state: string } | null;
+    guest?: { id: string; firstName: string; lastName: string; email: string } | null;
+  } | null;
   package?: {
     id: string;
-    name: string;
-    price: number;
-  };
+    name: string | null;
+    price?: number;
+  } | null;
   user?: {
     id: string;
     firstName: string;
@@ -143,14 +162,13 @@ export interface PaymentDetailDTO extends PaymentDTO {
 }
 
 /**
- * Razorpay order creation response
+ * Stripe PaymentIntent creation response
  */
-export interface RazorpayOrderResponse {
-  orderId: string;
+export interface StripePaymentIntentResponse {
+  clientSecret: string;
+  paymentIntentId: string;
   amount: number;
   currency: string;
-  receipt: string;
-  status: string;
 }
 
 /**
@@ -206,46 +224,11 @@ export interface PaymentListResponse {
   };
 }
 
-// ============= RAZORPAY TYPES =============
+// ============= STRIPE TYPES =============
 
 /**
- * Razorpay configuration
+ * Stripe configuration (publishable key exposed to the client)
  */
-export interface RazorpayConfig {
-  keyId: string;
-  keySecret: string;
-}
-
-/**
- * Razorpay webhook payload
- */
-export interface RazorpayWebhookPayload {
-  event: string;
-  payload: {
-    payment?: {
-      entity: {
-        id: string;
-        entity: string;
-        amount: number;
-        currency: string;
-        status: string;
-        order_id: string;
-        [key: string]: any;
-      };
-    };
-    order?: {
-      entity: {
-        id: string;
-        entity: string;
-        amount: number;
-        amount_paid: number;
-        amount_due: number;
-        currency: string;
-        receipt: string;
-        status: string;
-        [key: string]: any;
-      };
-    };
-    [key: string]: any;
-  };
+export interface StripeConfig {
+  publishableKey: string;
 }

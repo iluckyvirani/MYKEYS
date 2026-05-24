@@ -35,6 +35,7 @@ export const PUT = withAuth(async (request: NextRequest, user: JWTPayload) => {
       state: body.state,
       bio: body.bio,
       category: body.category,
+      categories: body.categories,
       specializations: body.specializations,
       certifications: body.certifications,
       serviceAreas: body.serviceAreas,

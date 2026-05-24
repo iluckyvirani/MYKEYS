@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RazorpayPaymentModal } from "@/components/RazorpayPaymentModal";
+import { StripePaymentModal } from "@/components/StripePaymentModal";
 import { DatePickerInput } from "@/components/property/DatePickerInput";
 import { api } from "@/lib/api";
 import { CreateShortBookingRequest, PaymentMethod } from "@/types/bookings";
@@ -1670,9 +1670,9 @@ export default function PropertyDetailsPage() {
                         </div>
                     )}
 
-                    {/* Razorpay Payment Modal */}
+                    {/* Stripe Payment Modal */}
                     {showPaymentModal && paymentData && (
-                        <RazorpayPaymentModal
+                        <StripePaymentModal
                             isOpen={showPaymentModal}
                             bookingId={paymentData.bookingId}
                             amount={paymentData.amount}

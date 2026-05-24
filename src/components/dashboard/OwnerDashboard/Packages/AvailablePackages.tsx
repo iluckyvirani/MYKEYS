@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import PackagePaymentModal from "@/components/owner/PackagePaymentModal";
 
 interface AvailablePackagesProps {
   packages: any[];
@@ -14,15 +15,22 @@ interface AvailablePackagesProps {
   onSubscribe: () => void;
 }
 
+interface PendingPayment {
+  ownerPackageId: string;
+  packageName: string;
+  price: number;
+}
+
 export default function AvailablePackages({ packages, currentPackageId, onSubscribe }: AvailablePackagesProps) {
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-GB", {
       style: "currency",
       currency: "GBP",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(amount);
 
   const getDurationLabel = (value: number, unit: string) => {
@@ -31,24 +39,17 @@ export default function AvailablePackages({ packages, currentPackageId, onSubscr
     return `${value} ${label}`;
   };
 
-  const handleSubscribe = async (packageId: string) => {
+  const handleSubscribe = async (pkg: { id: string; name: string; price: number }) => {
     try {
-      setSubscribing(packageId);
-      const response = await api.post("/owner/packages/subscribe", {
-        packageId,
-      });
-
-      toast({
-        title: "Success",
-        description: "Package subscription initiated successfully",
-      });
-
-      onSubscribe(); // Refresh parent data
+      setSubscribing(pkg.id);
+      const response = await api.post("/owner/packages/subscribe", { packageId: pkg.id });
+      const { ownerPackageId } = response.data.data;
+      setPendingPayment({ ownerPackageId, packageName: pkg.name, price: pkg.price });
     } catch (error: any) {
-      console.error("Error subscribing to package:", error);
+      console.error("Error initiating package subscription:", error);
       toast({
         title: "Subscription Failed",
-        description: error.response?.data?.error || "Failed to subscribe to package",
+        description: error.response?.data?.message || error.response?.data?.error || "Failed to initiate subscription",
         variant: "destructive",
       });
     } finally {
@@ -180,7 +181,7 @@ export default function AvailablePackages({ packages, currentPackageId, onSubscr
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => handleSubscribe(pkg.id)}
+                        onClick={() => handleSubscribe(pkg)}
                         disabled={subscribing === pkg.id}
                         className="w-full rounded-[5px] bg-green-600 hover:bg-green-700"
                       >
@@ -200,6 +201,24 @@ export default function AvailablePackages({ packages, currentPackageId, onSubscr
             );
           })}
       </div>
+
+      {/* Stripe payment modal */}
+      {pendingPayment && (
+        <PackagePaymentModal
+          isOpen={true}
+          ownerPackageId={pendingPayment.ownerPackageId}
+          packageName={pendingPayment.packageName}
+          amount={pendingPayment.price}
+          onClose={() => setPendingPayment(null)}
+          onSuccess={() => {
+            const name = pendingPayment.packageName;
+            setPendingPayment(null);
+            toast({ title: "Package Activated", description: `${name} is now active on your account.` });
+            onSubscribe();
+          }}
+          onError={(msg) => toast({ title: "Payment Failed", description: msg, variant: "destructive" })}
+        />
+      )}
     </div>
   );
 }

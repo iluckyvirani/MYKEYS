@@ -6,6 +6,7 @@ export interface ServiceProviderInput {
   userId: string;
   bio?: string;
   category: string;
+  categories?: string[]; // All selected category IDs
   subcategories: { id: string; name: string; category: string }[];
   serviceAreas: string[];
   specializations?: string[];
@@ -189,6 +190,9 @@ export const serviceService = {
         userId: data.userId,
         bio: data.bio,
         category: data.category,
+        categories: data.categories && data.categories.length > 0
+          ? data.categories
+          : [data.category],
         subcategories: data.subcategories as any,
         serviceAreas: data.serviceAreas as any,
         specializations: data.specializations as any,
@@ -1137,6 +1141,7 @@ export const serviceService = {
       reviews: provider.totalReviews,
       avatar: provider.user.avatar,
       category: provider.category,
+      categories: provider.categories || [],
       serviceAreas: (provider.serviceAreas as string[]) || [],
       documentVerified: provider.documentVerified,
       instantBookingEnabled: provider.instantBookingEnabled,
@@ -1155,6 +1160,7 @@ export const serviceService = {
     state?: string;
     bio?: string;
     category?: string;
+    categories?: string[];
     specializations?: string[];
     certifications?: string[];
     serviceAreas?: string[];
@@ -1168,8 +1174,9 @@ export const serviceService = {
       userUpdate.firstName = parts[0];
       userUpdate.lastName = parts.slice(1).join(' ') || '';
     }
-    if (data.email !== undefined) userUpdate.email = data.email;
-    if (data.phone !== undefined) userUpdate.phone = data.phone;
+    if (data.email !== undefined && data.email !== '') userUpdate.email = data.email;
+    // Normalize empty string → null to avoid unique constraint violation on phone
+    if (data.phone !== undefined) userUpdate.phone = data.phone.trim() || null;
     if (data.city !== undefined) userUpdate.city = data.city;
     if (data.state !== undefined) userUpdate.state = data.state;
 
@@ -1181,6 +1188,11 @@ export const serviceService = {
     const providerUpdate: any = {};
     if (data.bio !== undefined) providerUpdate.bio = data.bio;
     if (data.category !== undefined) providerUpdate.category = data.category;
+    if (data.categories !== undefined && data.categories.length > 0) {
+      providerUpdate.categories = data.categories;
+      // keep primary category in sync with first selected
+      if (!data.category) providerUpdate.category = data.categories[0];
+    }
     if (data.specializations !== undefined) providerUpdate.specializations = data.specializations;
     if (data.certifications !== undefined) providerUpdate.certifications = data.certifications;
     if (data.serviceAreas !== undefined) providerUpdate.serviceAreas = data.serviceAreas;

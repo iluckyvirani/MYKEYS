@@ -30,7 +30,7 @@ export interface BidDTO {
   status: string;
   daysRemaining: number;
   paymentId: string | null;
-  razorpayOrderId: string | null;
+  stripePaymentIntentId: string | null;
   createdAt: string;
 }
 
@@ -69,7 +69,7 @@ function mapBid(bid: any): BidDTO {
     status: bid.status,
     daysRemaining: daysRemaining(bid.endDate),
     paymentId: bid.paymentId,
-    razorpayOrderId: bid.razorpayOrderId,
+    stripePaymentIntentId: bid.stripePaymentIntentId,
     createdAt: bid.createdAt.toISOString(),
   };
 }
@@ -197,7 +197,7 @@ export async function createBid(input: PlaceBidInput): Promise<BidDTO> {
 
 export async function updateBidPayment(
   bidId: string,
-  data: { paymentId?: string; razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string }
+  data: { paymentId?: string; stripePaymentIntentId?: string; stripeChargeId?: string }
 ): Promise<BidDTO> {
   const bid = await prisma.propertyBid.update({
     where: { id: bidId },

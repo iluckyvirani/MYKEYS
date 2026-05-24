@@ -13,13 +13,44 @@ import { api } from "@/lib/api";
 
 interface Payment {
   id: string;
-  transactionId: string;
-  paidBy: string;
+  transactionId: string | null;
+  stripePaymentIntentId: string | null;
+  stripeChargeId: string | null;
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  bookingId: string | null;
+  bookingStatus: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  nights: number | null;
+  propertyId: string | null;
+  propertyTitle: string | null;
+  propertyCity: string | null;
+  guestId: string | null;
+  guestName: string | null;
+  guestEmail: string | null;
+  ownerId: string | null;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  packageId: string | null;
+  packageName: string | null;
+  subscriptionStatus: string | null;
   amount: number;
-  method: string;
-  date: string;
-  status: "completed" | "pending" | "failed";
-  type: string;
+  currency: string;
+  commissionPercent: number | null;
+  commissionAmount: number | null;
+  ownerEarnings: number | null;
+  status: string;
+  paymentMethod: string;
+  paymentType: "BOOKING" | "PACKAGE";
+  createdAt: string;
+  updatedAt: string;
+  // legacy compat
+  paidBy?: string;
+  method?: string;
+  date?: string;
+  type?: string;
 }
 
 export default function PaymentsPage() {
@@ -48,24 +79,11 @@ export default function PaymentsPage() {
       if (appliedFilters.method) params.append("paymentMethod", appliedFilters.method);
       
       const response = await api.get(`/admin/payments?${params.toString()}`);
-      if (response.data?.success && response.data?.data?.items?.payments) {
-        const apiPayments = response.data.data.items.payments.map((payment: any) => {
-          // Map API status to component status
-          let status: "completed" | "pending" | "failed" = "pending";
-          if (payment.status === "PAID") status = "completed";
-          else if (payment.status === "FAILED") status = "failed";
-          
-          return {
-            id: payment.id,
-            transactionId: payment.transactionId || "N/A",
-            paidBy: payment.userName || "Unknown User",
-            amount: payment.amount || 0,
-            method: payment.paymentMethod || "Unknown",
-            date: payment.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
-            status,
-            type: "Booking",
-          };
-        });
+      if (response.data?.success && response.data?.data?.items) {
+        // The API returns the enriched DTO array directly – pass through as-is
+        const raw = response.data.data.items;
+        // Support both response shapes (items is array or items.payments)
+        const apiPayments = Array.isArray(raw) ? raw : (raw.payments ?? []);
         setPayments(apiPayments);
       }
     } catch (err) {
@@ -275,8 +293,6 @@ export default function PaymentsPage() {
         <AdminPaymentList
           payments={filteredPayments}
           loading={loading}
-          empty={filteredPayments.length === 0}
-          onView={handleViewPayment}
         />
 
         {/* Filter Modal */}

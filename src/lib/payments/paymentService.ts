@@ -1,6 +1,5 @@
 import { prisma } from '../prisma';
-import { razorpayInstance } from '../razorpay';
-import crypto from 'crypto';
+import { stripe, toPence } from '../stripe';
 import {
   InitiatePaymentRequest,
   PaymentDTO,
@@ -10,26 +9,24 @@ import {
   PaymentVerificationResponse,
   RefundResponse,
   PaymentType,
-  VerifyPaymentRequest,
+  ConfirmPaymentRequest,
   ProcessRefundRequest,
 } from '@/types/payment';
 import { PaymentStatus, BookingStatus } from '@prisma/client';
 
 /**
  * Payment Service
- * Handles payment operations, Razorpay integration, and refunds
+ * Handles payment operations using Stripe and manages payment records.
  */
 export const paymentService = {
   /**
-   * Initiate a new payment - Create payment record and Razorpay order
+   * Initiate a new payment — Create a Stripe PaymentIntent and a DB record.
    */
   async initiatePayment(data: InitiatePaymentRequest, userId: string) {
-    // Validate Razorpay configuration
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      throw new Error('Razorpay credentials not configured');
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('Stripe credentials not configured');
     }
 
-    // Validate input
     if (!data.amount || data.amount <= 0) {
       throw new Error('Invalid amount');
     }
@@ -38,149 +35,176 @@ export const paymentService = {
       throw new Error('Either bookingId or packageId must be provided');
     }
 
-    // Validate booking/package exists if provided
     if (data.bookingId) {
-      const booking = await prisma.booking.findUnique({
-        where: { id: data.bookingId },
-      });
-      if (!booking) {
-        throw new Error('Booking not found');
-      }
+      const booking = await prisma.booking.findUnique({ where: { id: data.bookingId } });
+      if (!booking) throw new Error('Booking not found');
     }
 
     if (data.packageId) {
-      const pkg = await prisma.ownerPackage.findUnique({
-        where: { id: data.packageId },
-      });
-      if (!pkg) {
-        throw new Error('Package not found');
-      }
+      const pkg = await prisma.ownerPackage.findUnique({ where: { id: data.packageId } });
+      if (!pkg) throw new Error('Package not found');
     }
 
     try {
-      const amountInPaise = Math.round(data.amount * 100);
-      
-      console.log('Creating Razorpay order:', {
-        amount: data.amount,
-        amountInPaise,
-        currency: data.currency || 'INR',
-        bookingId: data.bookingId,
-        packageId: data.packageId,
-      });
+      const amountInPence = toPence(data.amount);
+      const currency = (data.currency || 'GBP').toLowerCase();
 
-      // Create Razorpay order
-      const razorpayOrder = await razorpayInstance.orders.create({
-        amount: amountInPaise, // Convert to paise
-        currency: data.currency || 'INR',
-        receipt: `${data.bookingId || data.packageId}-${Date.now()}`,
-        notes: {
-          bookingId: data.bookingId || null,
-          packageId: data.packageId || null,
+      // Check for an existing payment record for this booking/package
+      const existingPayment = data.bookingId
+        ? await prisma.payment.findUnique({ where: { bookingId: data.bookingId } })
+        : data.packageId
+        ? await prisma.payment.findFirst({ where: { packageId: data.packageId, userId } })
+        : null;
+
+      if (existingPayment) {
+        // If already paid, reject
+        if (existingPayment.status === PaymentStatus.PAID) {
+          throw new Error('This booking has already been paid');
+        }
+
+        // Try to reuse the existing Stripe PaymentIntent
+        if (existingPayment.stripePaymentIntentId) {
+          const intent = await stripe.paymentIntents.retrieve(
+            existingPayment.stripePaymentIntentId
+          );
+          if (intent.status === 'requires_payment_method' || intent.status === 'requires_confirmation') {
+            return {
+              payment: this.mapPaymentToDTO(existingPayment),
+              clientSecret: intent.client_secret,
+            };
+          }
+          // Intent is in a terminal/unusable state — cancel it and create a fresh one
+          if (!['succeeded', 'canceled'].includes(intent.status)) {
+            await stripe.paymentIntents.cancel(existingPayment.stripePaymentIntentId);
+          }
+        }
+
+        // Create a new PaymentIntent and update the existing record
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amountInPence,
+          currency,
+          automatic_payment_methods: { enabled: true },
+          metadata: {
+            bookingId: data.bookingId || '',
+            packageId: data.packageId || '',
+            userId,
+            ...(data.metadata as Record<string, string> | undefined),
+          },
+        });
+
+        const updated = await prisma.payment.update({
+          where: { id: existingPayment.id },
+          data: {
+            stripePaymentIntentId: paymentIntent.id,
+            status: PaymentStatus.PENDING,
+            amount: data.amount,
+            updatedAt: new Date(),
+          },
+        });
+
+        return {
+          payment: this.mapPaymentToDTO(updated),
+          clientSecret: paymentIntent.client_secret,
+        };
+      }
+
+      // No existing record — create Stripe PaymentIntent and DB row
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInPence,
+        currency,
+        automatic_payment_methods: { enabled: true },
+        metadata: {
+          bookingId: data.bookingId || '',
+          packageId: data.packageId || '',
           userId,
-          ...data.metadata,
-        },
-      }) as any;
-
-      console.log('Razorpay order created successfully:', {
-        orderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        status: razorpayOrder.status,
-      });
-
-      // Create payment record in database
-      const payment = await prisma.payment.create({
-        data: {
-          amount: data.amount,
-          currency: data.currency || 'INR',
-          paymentMethod: data.paymentMethod,
-          status: PaymentStatus.PENDING,
-          razorpayOrderId: razorpayOrder.id,
-          bookingId: data.bookingId,
-          packageId: data.packageId,
-          userId,
-          metadata: data.metadata || {},
+          ...(data.metadata as Record<string, string> | undefined),
         },
       });
+
+      // Persist payment record (guard against race-condition duplicate with P2002 catch)
+      let payment;
+      try {
+        payment = await prisma.payment.create({
+          data: {
+            amount: data.amount,
+            currency: data.currency || 'GBP',
+            paymentMethod: data.paymentMethod,
+            status: PaymentStatus.PENDING,
+            stripePaymentIntentId: paymentIntent.id,
+            bookingId: data.bookingId,
+            packageId: data.packageId,
+            userId,
+            metadata: data.metadata || {},
+          },
+        });
+      } catch (createErr: any) {
+        // P2002 = unique constraint violation — another concurrent request already created it
+        if (createErr?.code === 'P2002' && data.bookingId) {
+          const existing = await prisma.payment.findUnique({
+            where: { bookingId: data.bookingId },
+          });
+          if (existing?.stripePaymentIntentId) {
+            // Cancel the orphaned intent we just created
+            await stripe.paymentIntents.cancel(paymentIntent.id).catch(() => null);
+            const existingIntent = await stripe.paymentIntents.retrieve(
+              existing.stripePaymentIntentId
+            );
+            return {
+              payment: this.mapPaymentToDTO(existing),
+              clientSecret: existingIntent.client_secret,
+            };
+          }
+        }
+        throw createErr;
+      }
 
       return {
         payment: this.mapPaymentToDTO(payment),
-        razorpayOrder: {
-          orderId: razorpayOrder.id,
-          amount: razorpayOrder.amount,
-          currency: razorpayOrder.currency,
-        },
+        clientSecret: paymentIntent.client_secret,
       };
     } catch (error: any) {
-      console.error('Razorpay order creation error:', {
-        error,
-        errorMessage: error?.message,
-        errorResponse: error?.response,
-        errorDescription: error?.description,
-        statusCode: error?.statusCode,
-        errorCode: error?.error?.code,
-        description: error?.error?.description,
-        fullError: JSON.stringify(error, null, 2),
-      });
-      
-      // Extract error message from various error object structures
-      const errorMessage = 
-        error?.error?.description ||
-        error?.description || 
-        error?.message || 
-        error?.response?.data?.error?.description || 
-        error?.response?.message ||
-        'Unknown error occurred';
-      
-      throw new Error(`Failed to initiate payment: ${errorMessage}`);
+      const message = error?.raw?.message || error?.message || 'Unknown error occurred';
+      throw new Error(`Failed to initiate payment: ${message}`);
     }
   },
 
   /**
-   * Verify Razorpay payment signature
+   * Confirm a Stripe payment — retrieve the PaymentIntent and verify it succeeded.
    */
-  async verifyPayment(
+  async confirmPayment(
     paymentId: string,
-    data: VerifyPaymentRequest,
+    data: ConfirmPaymentRequest,
     userId: string
   ): Promise<PaymentVerificationResponse> {
     try {
-      // Fetch payment from database
-      const payment = await prisma.payment.findUnique({
-        where: { id: paymentId },
-      });
+      const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+      if (!payment) throw new Error('Payment not found');
+      if (payment.userId !== userId) throw new Error('Unauthorized');
 
-      if (!payment) {
-        throw new Error('Payment not found');
+      const intentId = data.stripePaymentIntentId || payment.stripePaymentIntentId;
+      if (!intentId) throw new Error('Stripe PaymentIntent ID missing');
+
+      const intent = await stripe.paymentIntents.retrieve(intentId);
+
+      if (intent.status !== 'succeeded') {
+        throw new Error(`Payment has not succeeded (status: ${intent.status})`);
       }
 
-      // Verify user owns this payment
-      if (payment.userId !== userId) {
-        throw new Error('Unauthorized');
-      }
+      const chargeId =
+        typeof intent.latest_charge === 'string'
+          ? intent.latest_charge
+          : (intent.latest_charge as any)?.id ?? null;
 
-      // Verify signature
-      const signature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
-        .update(`${data.razorpayOrderId}|${data.razorpayPaymentId}`)
-        .digest('hex');
-
-      if (signature !== data.razorpaySignature) {
-        throw new Error('Invalid payment signature');
-      }
-
-      // Update payment record with verification details
       const updatedPayment = await prisma.payment.update({
         where: { id: paymentId },
         data: {
-          razorpayPaymentId: data.razorpayPaymentId,
-          razorpaySignature: data.razorpaySignature,
+          stripeChargeId: chargeId,
           status: PaymentStatus.PAID,
-          transactionId: data.razorpayPaymentId,
+          transactionId: chargeId,
           updatedAt: new Date(),
         },
       });
 
-      // Auto-confirm booking when payment succeeds
       if (updatedPayment.bookingId) {
         await prisma.booking.update({
           where: { id: updatedPayment.bookingId },
@@ -188,19 +212,24 @@ export const paymentService = {
             paymentStatus: PaymentStatus.PAID,
             paidAmount: updatedPayment.amount,
             balanceAmount: 0,
-            status: BookingStatus.CONFIRMED, // Auto-confirm on successful payment
+            status: BookingStatus.CONFIRMED,
           },
         });
+      }
+
+      // Activate the OwnerPackage if this payment is for a package subscription
+      if (updatedPayment.packageId) {
+        const { packageService } = await import('@/lib/packages/packageService');
+        await packageService.activateSubscription(updatedPayment.packageId, paymentId);
       }
 
       return {
         success: true,
         paymentId: updatedPayment.id,
         status: updatedPayment.status,
-        message: 'Payment verified successfully',
+        message: 'Payment confirmed successfully',
       };
     } catch (error: any) {
-      // Mark payment as FAILED in DB and cancel the associated booking
       try {
         const failedPayment = await prisma.payment.update({
           where: { id: paymentId },
@@ -216,20 +245,20 @@ export const paymentService = {
             },
           });
         }
-      } catch (dbError) {
-        console.error('Failed to mark payment/booking as failed in DB:', dbError);
+      } catch (dbErr) {
+        console.error('Failed to mark payment/booking as failed:', dbErr);
       }
       return {
         success: false,
         paymentId,
         status: PaymentStatus.FAILED,
-        message: error.message || 'Payment verification failed',
+        message: error.message || 'Payment confirmation failed',
       };
     }
   },
 
   /**
-   * Process refund for a payment
+   * Process a refund via Stripe.
    */
   async processRefund(
     paymentId: string,
@@ -237,40 +266,27 @@ export const paymentService = {
     userId: string
   ): Promise<RefundResponse> {
     try {
-      // Fetch payment
-      const payment = await prisma.payment.findUnique({
-        where: { id: paymentId },
-      });
-
-      if (!payment) {
-        throw new Error('Payment not found');
-      }
-
-      // Verify user owns this payment
-      if (payment.userId !== userId) {
-        throw new Error('Unauthorized');
-      }
-
-      // Check if payment can be refunded
+      const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+      if (!payment) throw new Error('Payment not found');
+      if (payment.userId !== userId) throw new Error('Unauthorized');
       if (payment.status !== PaymentStatus.PAID) {
         throw new Error('Only paid payments can be refunded');
       }
-
-      if (!payment.razorpayPaymentId) {
-        throw new Error('Cannot refund payment without Razorpay payment ID');
+      if (!payment.stripeChargeId && !payment.stripePaymentIntentId) {
+        throw new Error('Cannot refund payment — no Stripe charge found');
       }
 
-      // Process refund via Razorpay
       const refundAmount = refundData.amount || payment.amount;
-      const refund = await razorpayInstance.payments.refund(payment.razorpayPaymentId, {
-        amount: Math.round(refundAmount * 100), // Convert to paise
-        notes: {
-          reason: refundData.reason,
-          refundedAt: new Date().toISOString(),
-        },
-      }) as any;
 
-      // Update payment status
+      const refund = await stripe.refunds.create({
+        ...(payment.stripeChargeId
+          ? { charge: payment.stripeChargeId }
+          : { payment_intent: payment.stripePaymentIntentId! }),
+        amount: toPence(refundAmount),
+        reason: 'requested_by_customer',
+        metadata: { reason: refundData.reason },
+      });
+
       const updatedPayment = await prisma.payment.update({
         where: { id: paymentId },
         data: {
@@ -280,19 +296,15 @@ export const paymentService = {
             ...(payment.metadata as any),
             refundId: refund.id,
             refundReason: refundData.reason,
-            refundAmount: refundAmount,
+            refundAmount,
           },
         },
       });
 
-      // Update related booking if applicable
       if (updatedPayment.bookingId) {
         await prisma.booking.update({
           where: { id: updatedPayment.bookingId },
-          data: {
-            paymentStatus: PaymentStatus.REFUNDED,
-            paidAmount: 0,
-          },
+          data: { paymentStatus: PaymentStatus.REFUNDED, paidAmount: 0 },
         });
       }
 
@@ -300,7 +312,7 @@ export const paymentService = {
         refundId: refund.id,
         paymentId: updatedPayment.id,
         amount: refundAmount,
-        status: refund.status,
+        status: refund.status ?? 'pending',
         message: 'Refund processed successfully',
       };
     } catch (error: any) {
@@ -309,7 +321,7 @@ export const paymentService = {
   },
 
   /**
-   * Get all payments with filtering and pagination
+   * Get all payments with filtering and pagination.
    */
   async getPayments(filters: PaymentFilter = {}): Promise<PaymentListResponse> {
     const {
@@ -326,30 +338,38 @@ export const paymentService = {
       sortOrder = 'desc',
     } = filters;
 
-    // Build where clause
     const where: any = {};
-
     if (userId) where.userId = userId;
     if (status) where.status = status;
     if (paymentMethod) where.paymentMethod = paymentMethod;
     if (bookingId) where.bookingId = bookingId;
     if (packageId) where.packageId = packageId;
-
     if (fromDate || toDate) {
       where.createdAt = {};
       if (fromDate) where.createdAt.gte = fromDate;
       if (toDate) where.createdAt.lte = toDate;
     }
 
-    // Fetch payments and total count
     const skip = (page - 1) * limit;
     const [payments, total] = await Promise.all([
       prisma.payment.findMany({
         where,
         skip,
         take: limit,
-        orderBy: {
-          [sortBy]: sortOrder,
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          booking: {
+            select: {
+              id: true,
+              checkIn: true,
+              checkOut: true,
+              property: { select: { id: true, title: true, city: true, state: true } },
+              guest: { select: { id: true, firstName: true, lastName: true, email: true } },
+            },
+          },
+          package: {
+            select: { id: true, package: { select: { id: true, name: true } } },
+          },
         },
       }),
       prisma.payment.count({ where }),
@@ -357,77 +377,40 @@ export const paymentService = {
 
     return {
       payments: payments.map((p) => this.mapPaymentToDTO(p)),
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   },
 
   /**
-   * Get single payment by ID with related data
+   * Get a single payment by ID with related data.
    */
   async getPaymentById(paymentId: string, userId: string): Promise<PaymentDetailDTO> {
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
       include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
         booking: {
           select: {
             id: true,
             guests: true,
-            property: {
-              select: {
-                title: true,
-              },
-            },
+            property: { select: { title: true } },
             checkIn: true,
             checkOut: true,
             totalAmount: true,
-            guest: {
-              select: {
-                firstName: true,
-                lastName: true,
-              },
-            },
+            guest: { select: { firstName: true, lastName: true } },
           },
         },
         package: {
-          select: {
-            id: true,
-            package: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-              },
-            },
-          },
+          select: { id: true, package: { select: { id: true, name: true, price: true } } },
         },
       },
     });
 
-    if (!payment) {
-      throw new Error('Payment not found');
-    }
-
-    // Verify user owns this payment
-    if (payment.userId !== userId) {
-      throw new Error('Unauthorized');
-    }
+    if (!payment) throw new Error('Payment not found');
+    if (payment.userId !== userId) throw new Error('Unauthorized');
 
     const dto = this.mapPaymentToDTO(payment);
 
-    // Add related data if exists
     const detailDTO: PaymentDetailDTO = {
       ...dto,
       user: payment.user
@@ -441,11 +424,20 @@ export const paymentService = {
       booking: payment.booking
         ? {
             id: payment.booking.id,
+            checkIn: payment.booking.checkIn.toISOString(),
+            checkOut: payment.booking.checkOut.toISOString(),
+            checkInDate: payment.booking.checkIn.toISOString().split('T')[0],
+            checkOutDate: payment.booking.checkOut.toISOString().split('T')[0],
             guestName: `${payment.booking.guest.firstName} ${payment.booking.guest.lastName}`,
             propertyTitle: payment.booking.property.title,
             totalAmount: payment.booking.totalAmount,
-            checkInDate: payment.booking.checkIn.toISOString().split('T')[0],
-            checkOutDate: payment.booking.checkOut.toISOString().split('T')[0],
+            property: { id: '', title: payment.booking.property.title, city: '', state: '' },
+            guest: {
+              id: '',
+              firstName: payment.booking.guest.firstName,
+              lastName: payment.booking.guest.lastName,
+              email: '',
+            },
           }
         : undefined,
       package: payment.package
@@ -461,18 +453,17 @@ export const paymentService = {
   },
 
   /**
-   * Get payment by Razorpay Order ID
+   * Get payment by Stripe PaymentIntent ID.
    */
-  async getPaymentByOrderId(orderId: string): Promise<PaymentDTO | null> {
+  async getPaymentByIntentId(intentId: string): Promise<PaymentDTO | null> {
     const payment = await prisma.payment.findFirst({
-      where: { razorpayOrderId: orderId },
+      where: { stripePaymentIntentId: intentId },
     });
-
     return payment ? this.mapPaymentToDTO(payment) : null;
   },
 
   /**
-   * Map Payment DB model to DTO
+   * Map Payment DB model to DTO.
    */
   mapPaymentToDTO(payment: any): PaymentDTO {
     return {
@@ -482,21 +473,40 @@ export const paymentService = {
       paymentMethod: payment.paymentMethod,
       status: payment.status,
       transactionId: payment.transactionId,
-      razorpayOrderId: payment.razorpayOrderId,
-      razorpayPaymentId: payment.razorpayPaymentId,
-      razorpaySignature: payment.razorpaySignature,
+      stripePaymentIntentId: payment.stripePaymentIntentId,
+      stripeChargeId: payment.stripeChargeId,
       bookingId: payment.bookingId,
       packageId: payment.packageId,
       userId: payment.userId,
       metadata: payment.metadata,
       paymentType: payment.bookingId ? PaymentType.BOOKING : PaymentType.PACKAGE,
+      // Commission / earnings (short-term rentals)
+      commissionPercent: payment.commissionPercent ?? null,
+      commissionAmount: payment.commissionAmount ?? null,
+      ownerEarnings: payment.ownerEarnings ?? null,
+      // Expanded relations (present when fetched with include)
+      booking: payment.booking
+        ? {
+            id: payment.booking.id,
+            checkIn: payment.booking.checkIn?.toISOString?.() ?? payment.booking.checkIn,
+            checkOut: payment.booking.checkOut?.toISOString?.() ?? payment.booking.checkOut,
+            property: payment.booking.property ?? null,
+            guest: payment.booking.guest ?? null,
+          }
+        : undefined,
+      package: payment.package
+        ? {
+            id: payment.package.id,
+            name: payment.package.package?.name ?? null,
+          }
+        : undefined,
       createdAt: payment.createdAt.toISOString(),
       updatedAt: payment.updatedAt.toISOString(),
     };
   },
 
   /**
-   * Update payment status (internal use)
+   * Update payment status (internal use).
    */
   async updatePaymentStatus(paymentId: string, status: PaymentStatus) {
     return await prisma.payment.update({
@@ -506,34 +516,22 @@ export const paymentService = {
   },
 
   /**
-   * Get payment summary for user
+   * Get payment summary for a user.
    */
   async getUserPaymentSummary(userId: string) {
     const payments = await prisma.payment.findMany({
       where: { userId },
-      select: {
-        status: true,
-        amount: true,
-      },
+      select: { status: true, amount: true },
     });
 
-    const summary = {
+    return {
       totalPayments: payments.length,
-      totalAmount: payments.reduce((sum, p) => sum + p.amount, 0),
-      paidAmount: payments
-        .filter((p) => p.status === PaymentStatus.PAID)
-        .reduce((sum, p) => sum + p.amount, 0),
-      pendingAmount: payments
-        .filter((p) => p.status === PaymentStatus.PENDING)
-        .reduce((sum, p) => sum + p.amount, 0),
-      failedAmount: payments
-        .filter((p) => p.status === PaymentStatus.FAILED)
-        .reduce((sum, p) => sum + p.amount, 0),
-      refundedAmount: payments
-        .filter((p) => p.status === PaymentStatus.REFUNDED)
-        .reduce((sum, p) => sum + p.amount, 0),
+      totalAmount: payments.reduce((s, p) => s + p.amount, 0),
+      paidAmount: payments.filter((p) => p.status === PaymentStatus.PAID).reduce((s, p) => s + p.amount, 0),
+      pendingAmount: payments.filter((p) => p.status === PaymentStatus.PENDING).reduce((s, p) => s + p.amount, 0),
+      failedAmount: payments.filter((p) => p.status === PaymentStatus.FAILED).reduce((s, p) => s + p.amount, 0),
+      refundedAmount: payments.filter((p) => p.status === PaymentStatus.REFUNDED).reduce((s, p) => s + p.amount, 0),
     };
-
-    return summary;
   },
 };
+

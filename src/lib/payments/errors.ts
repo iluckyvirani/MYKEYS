@@ -13,7 +13,7 @@ export enum PaymentErrorCode {
   UNAUTHORIZED_PAYMENT = 'UNAUTHORIZED_PAYMENT',
   PAYMENT_ALREADY_PROCESSED = 'PAYMENT_ALREADY_PROCESSED',
   INVALID_SIGNATURE = 'INVALID_SIGNATURE',
-  RAZORPAY_ERROR = 'RAZORPAY_ERROR',
+  STRIPE_ERROR = 'STRIPE_ERROR',
   REFUND_NOT_ALLOWED = 'REFUND_NOT_ALLOWED',
   DUPLICATE_SUBSCRIPTION = 'DUPLICATE_SUBSCRIPTION',
   STATUS_TRANSITION_ERROR = 'STATUS_TRANSITION_ERROR',
@@ -105,10 +105,10 @@ export const createPaymentError = {
       400
     ),
 
-  razorpayError: (message: string, error?: any) =>
+  stripeError: (message: string, error?: any) =>
     new PaymentError(
-      PaymentErrorCode.RAZORPAY_ERROR,
-      `Razorpay error: ${message}`,
+      PaymentErrorCode.STRIPE_ERROR,
+      `Stripe error: ${message}`,
       400,
       { originalError: error?.message }
     ),

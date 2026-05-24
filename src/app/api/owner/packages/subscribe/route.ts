@@ -6,8 +6,10 @@ import { ErrorCode } from '@/lib/auth/errors';
 
 /**
  * POST /api/owner/packages/subscribe
- * Owner buys a package. Body: { packageId: string }
- * After this, create a Razorpay payment order separately.
+ * Creates a PENDING OwnerPackage and returns the ownerPackageId + price.
+ * The caller must then open the Stripe payment modal and pay.
+ * The package is activated inside confirmPayment() after payment succeeds.
+ * Body: { packageId: string }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -20,11 +22,11 @@ export async function POST(request: NextRequest) {
       return errorResponse('packageId is required', 400, ErrorCode.VALIDATION_ERROR);
     }
 
-    const ownerPackage = await packageService.subscribeOwner(authUser.userId, packageId);
-    return successResponse(ownerPackage, 'Successfully subscribed to package', 201);
+    const result = await packageService.createPendingSubscription(authUser.userId, packageId);
+    return successResponse(result, 'Subscription initiated — complete payment to activate', 201);
   } catch (error: any) {
-    console.error('Error subscribing to package:', error);
+    console.error('Error initiating package subscription:', error);
     const status = error.message === 'Package not found' ? 404 : 400;
-    return errorResponse(error.message || 'Failed to subscribe to package', status, ErrorCode.VALIDATION_ERROR);
+    return errorResponse(error.message || 'Failed to initiate package subscription', status, ErrorCode.VALIDATION_ERROR);
   }
 }

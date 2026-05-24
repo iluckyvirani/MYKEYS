@@ -105,12 +105,13 @@ export default function UseCasesSection() {
 
     try {
       const payload = {
-        category: data.categoryId,  // ServiceCategoryInfo.id (UUID)
+        category: data.categoryId,  // ServiceCategoryInfo.id (primary)
+        categoryIds: data.categoryIds ?? [],  // All selected category IDs
         subcategories: data.subcategories || [],
         serviceAreas: data.serviceAreas || [],
         bio: data.bio || "",
         instantBookingEnabled: data.instantBooking || false,
-        instantBookingPrice: data.instantPrice ? parseFloat(data.instantPrice) : undefined,
+        instantBookingPrice: data.instantBooking ? parseFloat(data.instantPrice) || undefined : undefined,
       };
 
       const response = await api.post("/users/become-service", payload);

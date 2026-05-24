@@ -25,7 +25,6 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { DOCUMENT_TYPE_LABELS, DocumentType } from "@/types/document";
-import { SERVICE_CATEGORIES } from "@/types/service";
 
 // Types
 interface ProfileData {
@@ -46,7 +45,14 @@ interface ProfileData {
   reviews: number;
   avatar: string | null;
   category: string;
+  categories: string[];
   documentVerified: boolean;
+}
+
+interface AvailableCategory {
+  id: string;
+  name: string;
+  icon?: string;
 }
 
 interface UserDocument {
@@ -62,7 +68,7 @@ const EMPTY_PROFILE: ProfileData = {
   specializations: [], certifications: [], serviceAreas: [],
   instantBookingEnabled: false, instantBookingPrice: null,
   joinDate: "", completedBookings: 0, rating: 0, reviews: 0,
-  avatar: null, category: "", documentVerified: false,
+  avatar: null, category: "", categories: [], documentVerified: false,
 };
 
 // Tag input helper
@@ -118,9 +124,10 @@ export default function ServiceProfilePage() {
   const [documents, setDocuments] = useState<UserDocument[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState<AvailableCategory[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { fetchProfile(); fetchDocuments(); }, []);
+  useEffect(() => { fetchProfile(); fetchDocuments(); fetchCategories(); }, []);
 
   const fetchProfile = async () => {
     try {
@@ -139,6 +146,13 @@ export default function ServiceProfilePage() {
       if (res.data?.data) setDocuments(res.data.data);
     } catch (err) { /* silent */ }
     finally { setDocumentsLoading(false); }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get("/services/categories");
+      if (res.data?.data) setAvailableCategories(res.data.data);
+    } catch { /* silent */ }
   };
 
   const fileToBase64 = (file: File): Promise<string> =>
@@ -173,7 +187,8 @@ export default function ServiceProfilePage() {
       const res = await api.put("/service/profile", {
         name: form.name, email: form.email, phone: form.phone,
         city: form.city, state: form.state, bio: form.bio,
-        category: form.category,
+        category: form.categories[0] ?? form.category,
+        categories: form.categories.length > 0 ? form.categories : [form.category],
         specializations: form.specializations, certifications: form.certifications,
         serviceAreas: form.serviceAreas,
         instantBookingEnabled: form.instantBookingEnabled,
@@ -325,22 +340,46 @@ export default function ServiceProfilePage() {
           <div className="bg-white rounded-[5px] border p-6 space-y-6">
             <AlertError /><AlertSuccess />
             <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Service Category</h4>
-              <div>
-                <Label htmlFor="category">Primary Category</Label>
-                <select
-                  id="category"
-                  value={form.category}
-                  onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-                  disabled={saving}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-[5px] focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-sm disabled:opacity-60 bg-white"
-                >
-                  <option value="">Select a category</option>
-                  {Object.entries(SERVICE_CATEGORIES).map(([key, cat]) => (
-                    <option key={key} value={key}>{cat.label}</option>
-                  ))}
-                </select>
-              </div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Service Categories</h4>
+              <p className="text-sm text-gray-500 mb-3">Select all categories you specialise in. The first selected becomes your primary category.</p>
+              {availableCategories.length === 0 ? (
+                <p className="text-sm text-gray-400">Loading categories…</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {availableCategories.map((cat) => {
+                    const isSelected = form.categories.includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        disabled={saving}
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            categories: isSelected
+                              ? p.categories.filter((id) => id !== cat.id)
+                              : [...p.categories, cat.id],
+                          }))
+                        }
+                        className={`relative flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                          isSelected
+                            ? "border-green-600 bg-green-50"
+                            : "border-gray-200 hover:border-green-400 bg-white"
+                        } disabled:opacity-60`}
+                      >
+                        {cat.icon && <span className="text-2xl shrink-0">{cat.icon}</span>}
+                        <span className={`text-sm font-medium ${isSelected ? "text-green-800" : "text-gray-700"}`}>{cat.name}</span>
+                        {isSelected && (
+                          <CheckCircle className="w-4 h-4 text-green-600 absolute top-2 right-2 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {form.categories.length === 0 && (
+                <p className="text-xs text-red-500 mt-2">Please select at least one category.</p>
+              )}
             </div>
             <div>
               <TagInput label="Your specializations" tags={form.specializations}

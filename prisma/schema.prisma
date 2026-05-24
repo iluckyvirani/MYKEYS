@@ -487,9 +487,8 @@ model Payment {
   paymentMethod     PaymentMethod
   status            PaymentStatus @default(PENDING)
   transactionId     String?       @unique
-  razorpayOrderId   String?
-  razorpayPaymentId String?
-  razorpaySignature String?
+  stripePaymentIntentId String?
+  stripeChargeId        String?
 
   // Commission fields (for short rent bookings)
   commissionPercent Float? // Rate applied at time of payment (e.g. 10 = 10%)
@@ -798,10 +797,9 @@ model PropertyBid {
   status    String   @default("ACTIVE") // ACTIVE, EXPIRED, CANCELLED
 
   // Payment
-  paymentId          String?
-  razorpayOrderId    String?
-  razorpayPaymentId  String?
-  razorpaySignature  String?
+  paymentId             String?
+  stripePaymentIntentId String?
+  stripeChargeId        String?
 
   // Relations
   propertyId String
@@ -967,7 +965,8 @@ model ServiceProvider {
 
   // Professional Info
   bio             String?
-  category        String // ServiceCategoryInfo.id
+  category        String   // ServiceCategoryInfo.id (primary category)
+  categories      String[] @default([]) // All selected ServiceCategoryInfo.ids
   subcategories   Json // Array of subcategory objects [{id, name, category}]
   serviceAreas    Json // Array of service area strings
   specializations Json? // Array of specialization strings

@@ -31,7 +31,8 @@ export default function ServiceRegisterPage() {
       // Map form data to API format
       const payload = {
         bio: data.bio || "",
-        category: data.categoryId,  // ServiceCategoryInfo.id
+        category: data.categoryId,  // ServiceCategoryInfo.id (primary)
+        categoryIds: data.categoryIds ?? [],  // All selected category IDs
         subcategories: [],
         serviceAreas: data.serviceAreas || [],
         specializations: [],

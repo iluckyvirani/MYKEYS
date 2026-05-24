@@ -156,7 +156,7 @@ export const POST = withAuth<{ id: string }>(
       const result = await paymentService.initiatePayment(
         {
           amount: data.amount,
-          currency: data.currency || 'INR',
+          currency: data.currency || 'GBP',
           paymentMethod: data.paymentMethod,
           packageId: id,
           metadata: {
@@ -173,7 +173,7 @@ export const POST = withAuth<{ id: string }>(
       return successResponse(
         {
           payment: result.payment,
-          razorpayOrder: result.razorpayOrder,
+          clientSecret: result.clientSecret,
           package: {
             id: pkg.package.id,
             name: pkg.package.name,

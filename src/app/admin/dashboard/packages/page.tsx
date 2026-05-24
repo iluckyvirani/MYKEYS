@@ -166,7 +166,7 @@ export default function AdminPackagesPage() {
                           )}
                         </td>
                         <td className="py-3 pr-4 font-semibold text-gray-900">
-                          £{pkg.price.toFixed(2)}
+                          £{pkg.price}
                         </td>
                         <td className="py-3 pr-4 text-gray-600">
                           {formatDuration(pkg.durationValue, pkg.durationUnit)}

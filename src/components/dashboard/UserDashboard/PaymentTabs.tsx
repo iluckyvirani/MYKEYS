@@ -16,6 +16,14 @@ interface Payment {
   amount: number;
   status: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "PARTIAL";
   paymentMethod?: string;
+  transactionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  booking?: {
+    id: string;
+    checkIn: string;
+    checkOut: string;
+    property?: { id: string; title: string; city: string; state: string } | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
   reference?: string;
