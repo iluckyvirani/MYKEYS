@@ -10,35 +10,12 @@ import RecentPayments from "@/components/dashboard/UserDashboard/RecentPayments"
 import QuickActions from "@/components/dashboard/UserDashboard/QuickActions";
 import Notifications from "@/components/dashboard/UserDashboard/Notifications";
 import BookingTrendChart from "@/components/dashboard/charts/BookingTrendChart";
-import { useEffect, useState } from "react";
+import DashboardGreeting from "@/components/dashboard/DashboardGreeting";
 
 export default function UserDashboardPage() {
-  const [userName, setUserName] = useState("User");
-
-  useEffect(() => {
-    // Get user name from localStorage
-    const userDataStr = localStorage.getItem("user");
-    if (userDataStr) {
-      try {
-        const userData = JSON.parse(userDataStr);
-        const firstName = userData.data?.firstName || "User";
-        setUserName(firstName);
-      } catch (err) {
-        console.error("Error parsing user data:", err);
-      }
-    }
-  }, []);
   return (
     <DashboardLayout defaultRole="user">
-      {/* Welcome Section */}
-      <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-900">
-          Welcome back, {userName}! 👋
-        </h1>
-        <p className="text-gray-600 text-sm mt-2">
-          Here's what's happening with your bookings and inquiries today.
-        </p>
-      </div>
+      <DashboardGreeting subtitle="Here's what's happening with your bookings and inquiries today." />
 
       {/* Stats Cards */}
       <div className="mb-5">

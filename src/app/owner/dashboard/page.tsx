@@ -8,26 +8,12 @@ import BookingCalendar from "@/components/dashboard/OwnerDashboard/BookingCalend
 import InquiryInbox from "@/components/dashboard/OwnerDashboard/InquiryInbox";
 import RevenueChart from "@/components/dashboard/OwnerDashboard/RevenueChart";
 import QuickActions from "@/components/dashboard/OwnerDashboard/QuickActions";
+import DashboardGreeting from "@/components/dashboard/DashboardGreeting";
 
 export default function OwnerDashboardPage() {
   return (
     <DashboardLayout defaultRole="owner">
-      {/* Welcome Section */}
-      <div className="mb-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Owner Dashboard
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Manage your properties, bookings, and inquiries from one place.
-            </p>
-          </div>
-          <div className="text-sm text-gray-500">
-            Last updated: Today, 10:30 AM
-          </div>
-        </div>
-      </div>
+      <DashboardGreeting subtitle="Manage your properties, bookings, and inquiries from one place." />
 
       {/* Stats Cards */}
       <div className="mb-5">

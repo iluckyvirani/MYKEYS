@@ -8,36 +8,12 @@ import ServiceRequests from "@/components/dashboard/ServiceDashboard/ServiceRequ
 import EarningsChart from "@/components/dashboard/ServiceDashboard/EarningsChart";
 import ReviewsCard from "@/components/dashboard/ServiceDashboard/ReviewsCard";
 import QuickActions from "@/components/dashboard/ServiceDashboard/QuickActions";
-import { useEffect, useState } from "react";
+import DashboardGreeting from "@/components/dashboard/DashboardGreeting";
 
 export default function ServiceDashboardPage() {
-  const [serviceName, setServiceName] = useState("Service Professional");
-
-  useEffect(() => {
-    // Get service name from localStorage
-    const userDataStr = localStorage.getItem("user");
-    if (userDataStr) {
-      try {
-        const userData = JSON.parse(userDataStr);
-        const firstName = userData.data?.firstName || "Service Professional";
-        setServiceName(firstName);
-      } catch (err) {
-        console.error("Error parsing user data:", err);
-      }
-    }
-  }, []);
-
   return (
     <DashboardLayout defaultRole="service">
-      {/* Welcome Section */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, {serviceName}! 👋
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Here's your service performance overview and recent bookings.
-        </p>
-      </div>
+      <DashboardGreeting subtitle="Here's your service performance overview and recent bookings." />
 
       {/* Stats Cards */}
       <div className="mb-6">

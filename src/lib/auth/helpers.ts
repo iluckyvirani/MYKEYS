@@ -3,6 +3,24 @@ import { UserDTO, UserRole, UserStatus } from "@/types/auth";
 import { prisma } from "@/lib/prisma";
 
 /**
+ * Read logged-in user from localStorage (handles both raw UserDTO and wrapped shapes)
+ */
+export function getStoredUserFromLocalStorage(): UserDTO | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem("user");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as UserDTO | { data?: UserDTO };
+    if (parsed && typeof parsed === "object" && "data" in parsed && parsed.data) {
+      return parsed.data;
+    }
+    return parsed as UserDTO;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Convert Prisma User model to UserDTO (exclude password)
  */
 export async function toUserDTO(user: User): Promise<UserDTO> {

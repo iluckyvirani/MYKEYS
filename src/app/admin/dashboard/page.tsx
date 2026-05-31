@@ -8,16 +8,13 @@ import AdminRecentUsers from "@/components/dashboard/AdminDashboard/AdminRecentU
 import AdminRecentOwners from "@/components/dashboard/AdminDashboard/AdminRecentOwners";
 import AdminRecentBookings from "@/components/dashboard/AdminDashboard/AdminRecentBookings";
 import AdminRecentPayments from "@/components/dashboard/AdminDashboard/AdminRecentPayments";
+import DashboardGreeting from "@/components/dashboard/DashboardGreeting";
 
 export default function AdminDashboard() {
   return (
     <AdminDashboardLayout>
       <div className="space-y-5">
-        {/* Welcome Section */}
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here's an overview of your platform.</p>
-        </div>
+        <DashboardGreeting subtitle="Here's an overview of your platform." />
 
         {/* Stats Cards */}
         <AdminStatsCards />
