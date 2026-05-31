@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { getStoredUserFromLocalStorage } from "@/lib/auth/helpers";
+import { getStoredUserFromLocalStorage } from "@/lib/auth/storedUser";
 import { MeResponse, UserDTO } from "@/types/auth";
 
 export function useCurrentUser() {
