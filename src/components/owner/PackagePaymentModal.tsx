@@ -8,20 +8,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
   PaymentElement,
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
+import type { Stripe } from "@stripe/stripe-js";
 import { X, Loader2, AlertCircle, CheckCircle2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
+import { getStripePromise } from "@/lib/stripe-client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -158,6 +155,12 @@ export default function PackagePaymentModal({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [activated, setActivated] = useState(false);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setStripePromise(getStripePromise());
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || clientSecret) return;
@@ -272,7 +275,7 @@ export default function PackagePaymentModal({
         )}
 
         {/* Stripe form */}
-        {!activated && !loading && clientSecret && paymentId && (
+        {!activated && !loading && clientSecret && paymentId && stripePromise && (
           <Elements
             stripe={stripePromise}
             options={{

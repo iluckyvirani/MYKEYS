@@ -6,21 +6,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
   PaymentElement,
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
+import type { Stripe } from "@stripe/stripe-js";
 import { X, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-
-// Initialise Stripe outside of the render cycle
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
+import { getStripePromise } from "@/lib/stripe-client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -168,6 +164,12 @@ export function StripePaymentModal({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setStripePromise(getStripePromise());
+  }, [isOpen]);
 
   // Create the PaymentIntent when the modal opens
   useEffect(() => {
@@ -280,7 +282,7 @@ export function StripePaymentModal({
         )}
 
         {/* Stripe Elements form */}
-        {!paymentCompleted && !loading && clientSecret && paymentId && (
+        {!paymentCompleted && !loading && clientSecret && paymentId && stripePromise && (
           <Elements
             stripe={stripePromise}
             options={{

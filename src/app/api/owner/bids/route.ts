@@ -8,6 +8,7 @@ import {
   getHighestBidForZip,
   PlaceBidInput,
 } from "@/lib/bids/bidService";
+import { readStripePublishableKey } from "@/lib/stripe-config";
 import { successResponse, errorResponse } from "@/lib/response";
 import { ErrorCode } from "@/lib/auth/errors";
 
@@ -100,12 +101,19 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     // Also return the current highest bid for this zip for display
     const currentHighest = await getHighestBidForZip(input.zipCode);
 
+    let publishableKey = "";
+    try {
+      publishableKey = readStripePublishableKey();
+    } catch {
+      // Client can fall back to /api/payments/stripe-config
+    }
+
     return successResponse(
       {
         bid: { ...bid, stripePaymentIntentId: stripePaymentIntentId ?? null },
         clientSecret: stripeClientSecret,
         currentHighest,
-        publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
+        publishableKey,
       },
       "Bid placed successfully",
       201
