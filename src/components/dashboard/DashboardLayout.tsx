@@ -32,7 +32,7 @@ export default function DashboardLayout({
       <Sidebar role={role} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content */}
-      <div className="lg:pl-50">
+      <div className="lg:pl-64">
         {/* Header */}
         <Header
           role={role}

@@ -3,7 +3,15 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Zap, MapPin, Calendar, TrendingUp, Plus, X, Home, ChevronRight } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Zap, MapPin, Calendar, TrendingUp, Plus, X, Home, ChevronRight, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -50,6 +58,7 @@ export default function OwnerBidsPage() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState("");
+  const [bidToCancel, setBidToCancel] = useState<BidDTO | null>(null);
 
   // Property picker modal
   const [showPicker, setShowPicker] = useState(false);
@@ -97,15 +106,20 @@ export default function OwnerBidsPage() {
     }
   }
 
-  async function handleCancel(bidId: string) {
-    if (!confirm("Cancel this bid? This can only be done within 1 hour of placement.")) return;
+  async function confirmCancelBoost() {
+    if (!bidToCancel) return;
+    const bidId = bidToCancel.id;
     setCancelling(bidId);
     setCancelError("");
     try {
       await api.delete(`/owner/bids/${bidId}`);
       setBids((prev) => prev.map((b) => (b.id === bidId ? { ...b, status: "CANCELLED" } : b)));
+      setBidToCancel(null);
     } catch (err: unknown) {
-      setCancelError(err instanceof Error ? err.message : "Failed to cancel bid");
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        (err instanceof Error ? err.message : "Failed to cancel boost");
+      setCancelError(msg);
     } finally {
       setCancelling(null);
     }
@@ -174,7 +188,7 @@ export default function OwnerBidsPage() {
                     <BidCard
                       key={bid.id}
                       bid={bid}
-                      onCancel={handleCancel}
+                      onCancel={() => setBidToCancel(bid)}
                       cancelling={cancelling === bid.id}
                     />
                   ))}
@@ -196,6 +210,76 @@ export default function OwnerBidsPage() {
           </>
         )}
       </div>
+
+      {/* Cancel boost confirmation modal */}
+      <Dialog
+        open={bidToCancel !== null}
+        onOpenChange={(open) => {
+          if (!open && !cancelling) {
+            setBidToCancel(null);
+            setCancelError("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!cancelling}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Cancel Boost?
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 text-left text-sm text-gray-600">
+                <p>
+                  Are you sure you want to cancel this boost? Your property will no longer appear
+                  at the top of search results for this zip code.
+                </p>
+                {bidToCancel && (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-gray-700">
+                    <p className="font-medium text-gray-900">{bidToCancel.propertyTitle}</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {bidToCancel.zipCode} · £{bidToCancel.amount.toFixed(2)}/day
+                    </p>
+                  </div>
+                )}
+                <p className="text-xs text-amber-700">
+                  Cancellations are only allowed within 1 hour of placing the boost.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          {cancelError && bidToCancel && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {cancelError}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setBidToCancel(null);
+                setCancelError("");
+              }}
+              disabled={!!cancelling}
+            >
+              Keep Boost
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmCancelBoost}
+              disabled={!!cancelling}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {cancelling ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "Yes, Cancel Boost"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Property Picker Modal */}
       {showPicker && (
@@ -277,7 +361,7 @@ function BidCard({
   cancelling,
 }: {
   bid: BidDTO;
-  onCancel?: (id: string) => void;
+  onCancel?: () => void;
   cancelling?: boolean;
 }) {
   const canCancel =
@@ -321,7 +405,7 @@ function BidCard({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onCancel(bid.id)}
+            onClick={onCancel}
             disabled={cancelling}
             className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs"
           >

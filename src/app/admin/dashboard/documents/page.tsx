@@ -14,7 +14,7 @@ interface Document {
   id: string;
   documentType: string;
   submittedBy: string;
-  userType: string;
+  userTypes: string[];
   submittedDate: string;
   status: "pending" | "approved" | "rejected";
   documentUrl?: string;
@@ -73,18 +73,25 @@ export default function DocumentsPage() {
             SERVICE_TRAINING_CERTIFICATE: "Training Certificate",
           };
 
-          // Map user type for display
+          // Map user roles for display
           const userTypeMap: { [key: string]: string } = {
             USER: "User",
             OWNER: "Owner",
             SERVICE: "Service Provider",
+            ADMIN: "Admin",
           };
+
+          const rawRoles: string[] = Array.isArray(doc.userTypes)
+            ? doc.userTypes
+            : doc.userType
+            ? [doc.userType]
+            : ["USER"];
 
           return {
             id: doc.id,
             documentType: docTypeMap[doc.documentType] || doc.documentType,
             submittedBy: doc.userName || "Unknown",
-            userType: userTypeMap[doc.userType] || doc.userType || "User",
+            userTypes: rawRoles.map((role) => userTypeMap[role] || role),
             submittedDate: doc.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
             status,
             documentUrl: doc.documentUrl,

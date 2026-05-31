@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAccessToken, JWTPayload } from "./jwt";
 // import { UserRole } from "@prisma/client";
 import { errorResponse } from "@/lib/response";
+import { prisma } from "@/lib/prisma";
 
 
 
@@ -41,14 +42,19 @@ export function extractToken(request: NextRequest): string | null {
 export async function authenticate(
   request: NextRequest
 ): Promise<JWTPayload | null> {
-  const token = extractToken(request);
-
-  if (!token) {
-    return null;
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const payload = await verifyAccessToken(authHeader.substring(7));
+    if (payload) return payload;
+    // Expired/invalid Bearer token — fall back to httpOnly cookie
   }
 
-  const payload = await verifyAccessToken(token);
-  return payload;
+  const cookieToken = request.cookies.get("accessToken")?.value;
+  if (cookieToken) {
+    return verifyAccessToken(cookieToken);
+  }
+
+  return null;
 }
 
 /**
@@ -64,8 +70,22 @@ export async function requireAuth(request: NextRequest): Promise<JWTPayload> {
   return user;
 }
 
+async function userHasAnyRole(
+  userId: string,
+  allowedRoles: string[]
+): Promise<boolean> {
+  const assignment = await prisma.userRoleAssignment.findFirst({
+    where: {
+      userId,
+      role: { in: allowedRoles as ("USER" | "OWNER" | "SERVICE" | "ADMIN")[] },
+    },
+    select: { id: true },
+  });
+  return assignment !== null;
+}
+
 /**
- * Require specific role(s)
+ * Require specific role(s) — checks JWT role and database role assignments
  */
 export async function requireRole(
   request: NextRequest,
@@ -73,11 +93,15 @@ export async function requireRole(
 ): Promise<JWTPayload> {
   const user = await requireAuth(request);
 
-  if (!allowedRoles.includes(user.role)) {
-    throw new Error("FORBIDDEN");
+  if (allowedRoles.includes(user.role)) {
+    return user;
   }
 
-  return user;
+  if (await userHasAnyRole(user.userId, allowedRoles)) {
+    return user;
+  }
+
+  throw new Error("FORBIDDEN");
 }
 
 /**
@@ -108,23 +132,14 @@ export function withAuth<TParams extends Record<string, string> = Record<string,
   options?: { roles?: UserRole[] }
 ) {
   return async (request: NextRequest, context?: { params: Promise<TParams> }) => {
-    try {
-      let user: JWTPayload;
+    let user: JWTPayload;
 
+    try {
       if (options?.roles) {
         user = await requireRole(request, options.roles);
       } else {
         user = await requireAuth(request);
       }
-
-      // Resolve Promise-based params for Next.js 15+
-      let resolvedContext: { params: TParams } | undefined;
-      if (context) {
-        const params = await context.params;
-        resolvedContext = { params };
-      }
-
-      return await handler(request, user, resolvedContext);
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === "UNAUTHORIZED") {
@@ -137,7 +152,22 @@ export function withAuth<TParams extends Record<string, string> = Record<string,
           );
         }
       }
+      console.error("Auth middleware error:", error);
       return errorResponse("Authentication failed", 401);
+    }
+
+    let resolvedContext: { params: TParams } | undefined;
+    if (context?.params) {
+      resolvedContext = { params: await context.params };
+    }
+
+    try {
+      return await handler(request, user, resolvedContext);
+    } catch (error) {
+      console.error("API handler error:", error);
+      const message =
+        error instanceof Error ? error.message : "Internal server error";
+      return errorResponse(message, 500);
     }
   };
 }

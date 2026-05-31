@@ -8,7 +8,7 @@ interface Document {
   id: string;
   documentType: string;
   submittedBy: string;
-  userType: string;
+  userTypes: string[];
   submittedDate: string;
   status: "pending" | "approved" | "rejected";
 }
@@ -60,6 +60,8 @@ export function AdminDocumentList({
         return "bg-purple-100 text-purple-800";
       case "Service Provider":
         return "bg-orange-100 text-orange-800";
+      case "Admin":
+        return "bg-slate-100 text-slate-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -89,7 +91,7 @@ export function AdminDocumentList({
               Submitted By
             </th>
             <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
-              User Type
+              User Roles
             </th>
             <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
               Submitted Date
@@ -110,9 +112,13 @@ export function AdminDocumentList({
               </td>
               <td className="px-6 py-4 text-sm text-gray-600">{document.submittedBy}</td>
               <td className="px-6 py-4 text-sm">
-                <Badge className={getUserTypeColor(document.userType)}>
-                  {document.userType}
-                </Badge>
+                <div className="flex flex-wrap gap-1">
+                  {document.userTypes.map((type) => (
+                    <Badge key={type} className={getUserTypeColor(type)}>
+                      {type}
+                    </Badge>
+                  ))}
+                </div>
               </td>
               <td className="px-6 py-4 text-sm text-gray-600">{document.submittedDate}</td>
               <td className="px-6 py-4 text-sm">

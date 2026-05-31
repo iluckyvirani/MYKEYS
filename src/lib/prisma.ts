@@ -13,15 +13,31 @@ const pool = new Pool({
 });
 const adapter = new PrismaPg(pool);
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const globalForPrisma = global as unknown as {
+  prisma: PrismaClient | undefined;
+  prismaVersion: string | undefined;
+};
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+/** Bump when Prisma schema changes so dev server picks up regenerated client */
+const PRISMA_CLIENT_VERSION = "20260531-stripe-bid-columns";
+
+function createPrismaClient() {
+  return new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
+}
+
+// In dev, discard cached client after `prisma generate` (avoids stale column maps in Turbopack)
+const cached =
+  process.env.NODE_ENV !== "production" &&
+  globalForPrisma.prismaVersion === PRISMA_CLIENT_VERSION
+    ? globalForPrisma.prisma
+    : undefined;
+
+export const prisma = cached ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
+  globalForPrisma.prismaVersion = PRISMA_CLIENT_VERSION;
 }

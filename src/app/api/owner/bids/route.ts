@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { withAuth, UserRole } from "@/lib/auth/middleware";
+import { withAuth } from "@/lib/auth/middleware";
 import {
   getOwnerBids,
   createBid,
@@ -15,21 +15,17 @@ import { ErrorCode } from "@/lib/auth/errors";
  * GET /api/owner/bids
  * Return all bids placed by the authenticated owner.
  */
-export const GET = withAuth(
-  async (_req: NextRequest, user) => {
-    const bids = await getOwnerBids(user!.userId);
-    return successResponse(bids, "Bids retrieved successfully");
-  },
-  { roles: [UserRole.OWNER] }
-);
+export const GET = withAuth(async (_req: NextRequest, user) => {
+  const bids = await getOwnerBids(user.userId);
+  return successResponse(bids, "Bids retrieved successfully");
+});
 
 /**
  * POST /api/owner/bids
  * Place a new bid. Creates a Razorpay order for the total cost.
  * Body: { propertyId, zipCode, amount, startDate, endDate }
  */
-export const POST = withAuth(
-  async (req: NextRequest, user) => {
+export const POST = withAuth(async (req: NextRequest, user) => {
     const body = await req.json();
     const { propertyId, zipCode, amount, startDate, endDate } = body;
 
@@ -51,7 +47,7 @@ export const POST = withAuth(
 
     const input: PlaceBidInput = {
       propertyId,
-      ownerId: user!.userId,
+      ownerId: user.userId,
       zipCode: String(zipCode).trim(),
       amount: Number(amount),
       startDate: start,
@@ -82,7 +78,7 @@ export const POST = withAuth(
         metadata: {
           propertyId,
           zipCode,
-          ownerId: user!.userId,
+          ownerId: user.userId,
           bidType: "property_boost",
         },
       });
@@ -114,6 +110,4 @@ export const POST = withAuth(
       "Bid placed successfully",
       201
     );
-  },
-  { roles: [UserRole.OWNER] }
-);
+});

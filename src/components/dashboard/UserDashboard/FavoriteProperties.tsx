@@ -135,7 +135,7 @@ export default function FavoriteProperties() {
           <h4 className="text-lg font-medium text-gray-900 mb-2">No favorite properties yet</h4>
           <p className="text-gray-500 max-w-md mx-auto mb-6">Save properties you like by clicking the heart icon</p>
           <Button asChild className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
-            <Link href="/short-rent">Browse Properties</Link>
+            <Link href="/rent/short-rent">Browse Properties</Link>
           </Button>
         </div>
       ) : (

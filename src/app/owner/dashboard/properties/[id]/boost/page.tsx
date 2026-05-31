@@ -45,6 +45,7 @@ export default function BoostPropertyPage({
     maxBoostedSlotsPerZip: 3,
   });
   const [highest, setHighest] = useState<HighestBid | null>(null);
+  const [ownActiveBid, setOwnActiveBid] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -82,8 +83,9 @@ export default function BoostPropertyPage({
           setZipCode(p.zipCode ?? "");
 
           // Fetch highest bid info for this zip
+          const ownBid = await refreshOwnActiveBid(p.zipCode ?? "");
           if (p.zipCode) {
-            await refreshHighest(p.zipCode);
+            await refreshHighest(p.zipCode, ownBid);
           }
         }
       } catch {
@@ -94,7 +96,24 @@ export default function BoostPropertyPage({
     })();
   }, [id]);
 
-  async function refreshHighest(zip: string) {
+  async function refreshOwnActiveBid(zip: string): Promise<number | null> {
+    try {
+      const res = await api.get<{ success: boolean; data: Array<{ propertyId: string; zipCode: string; amount: number; status: string }> }>(
+        "/owner/bids"
+      );
+      const bids = res.data?.data ?? [];
+      const active = bids.find(
+        (b) => b.propertyId === id && b.zipCode === zip && b.status === "ACTIVE"
+      );
+      const value = active?.amount ?? null;
+      setOwnActiveBid(value);
+      return value;
+    } catch {
+      return null;
+    }
+  }
+
+  async function refreshHighest(zip: string, currentOwnBid?: number | null) {
     try {
       const res = await api.get<{ success: boolean; data: { highest: HighestBid | null; settings: BidSettings } }>(
         `/bids/highest?zipCode=${encodeURIComponent(zip)}`
@@ -104,7 +123,15 @@ export default function BoostPropertyPage({
         setHighest(payload.highest);
         if (payload.settings) {
           setSettings(payload.settings);
-          setAmount(String(payload.settings.minBidAmountPerDay));
+          const minFromSettings = payload.settings.minBidAmountPerDay;
+          const ownBid = currentOwnBid ?? ownActiveBid;
+          const minFromOwn =
+            ownBid != null ? ownBid + 0.01 : minFromSettings;
+          const minFromHighest =
+            payload.highest != null ? payload.highest.amount + 0.01 : minFromSettings;
+          setAmount(
+            String(Math.max(minFromSettings, minFromOwn, minFromHighest).toFixed(2))
+          );
         }
       }
     } catch {
@@ -244,6 +271,23 @@ export default function BoostPropertyPage({
         </div>
 
         {/* Current highest bid */}
+        {ownActiveBid != null && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-4">
+            <Zap className="w-8 h-8 text-blue-600 shrink-0" />
+            <div>
+              <p className="text-xs text-blue-600 uppercase tracking-wide font-medium">
+                Your Current Boost
+              </p>
+              <p className="text-xl font-bold text-gray-900">
+                £{ownActiveBid.toFixed(2)}/day
+              </p>
+              <p className="text-xs text-blue-700">
+                Re-boost with a higher amount to upgrade your ranking.
+              </p>
+            </div>
+          </div>
+        )}
+
         {highest && (
           <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4">
             <TrendingUp className="w-8 h-8 text-green-600 shrink-0" />
@@ -281,9 +325,13 @@ export default function BoostPropertyPage({
                 </Label>
                 <Input
                   value={zipCode}
-                  onChange={(e) => {
-                    setZipCode(e.target.value);
-                    if (e.target.value.length >= 3) refreshHighest(e.target.value);
+                  onChange={async (e) => {
+                    const zip = e.target.value;
+                    setZipCode(zip);
+                    if (zip.length >= 3) {
+                      const ownBid = await refreshOwnActiveBid(zip);
+                      await refreshHighest(zip, ownBid);
+                    }
                   }}
                   placeholder="e.g. SW1A"
                   className="bg-gray-50 border-gray-200 focus:bg-white"
@@ -310,7 +358,9 @@ export default function BoostPropertyPage({
                 />
                 <p className="text-xs text-gray-400">
                   Minimum £{settings.minBidAmountPerDay.toFixed(2)}/day.
-                  {highest
+                  {ownActiveBid != null
+                    ? ` Re-boost above £${ownActiveBid.toFixed(2)}/day.`
+                    : highest
                     ? ` Bid above £${highest.amount.toFixed(2)}/day to rank first.`
                     : " Be the first to boost in this zip code!"}
                 </p>

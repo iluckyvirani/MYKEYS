@@ -46,6 +46,18 @@ export async function toUserDTO(user: User): Promise<UserDTO> {
 }
 
 /**
+ * Normalize role assignments to an ordered unique role list
+ */
+export function extractUserRolesFromAssignments(
+  roleAssignments: { role: string }[]
+): string[] {
+  const ROLE_ORDER = ["USER", "OWNER", "SERVICE", "ADMIN"] as const;
+  const roleSet = new Set(roleAssignments.map((r) => r.role));
+  const ordered = ROLE_ORDER.filter((role) => roleSet.has(role));
+  return ordered.length > 0 ? [...ordered] : ["USER"];
+}
+
+/**
  * Get user's full name
  */
 export function getUserFullName(user: User | UserDTO): string {

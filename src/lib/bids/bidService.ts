@@ -155,18 +155,22 @@ export async function validateBidInput(
     return "Property must be active to place a bid";
   }
 
-  // No overlapping active bid for same property + zip code
-  const overlap = await prisma.propertyBid.findFirst({
+  const now = new Date();
+
+  // Re-boost: new amount must exceed the owner's current active bid for this property + zip
+  const ownActiveBid = await prisma.propertyBid.findFirst({
     where: {
       propertyId,
+      ownerId,
       zipCode: input.zipCode,
       status: "ACTIVE",
-      startDate: { lte: endDate },
-      endDate: { gte: startDate },
+      endDate: { gte: now },
     },
+    orderBy: { amount: "desc" },
   });
-  if (overlap) {
-    return "You already have an active bid for this property and zip code in that period";
+
+  if (ownActiveBid && amount <= ownActiveBid.amount) {
+    return `Re-boost amount must be higher than your current bid of £${ownActiveBid.amount.toFixed(2)}/day`;
   }
 
   return null;
@@ -177,6 +181,17 @@ export async function validateBidInput(
 export async function createBid(input: PlaceBidInput): Promise<BidDTO> {
   const days = daysBetween(input.startDate, input.endDate);
   const totalCost = parseFloat((input.amount * days).toFixed(2));
+
+  // Supersede previous active boosts for the same property + zip (re-boost upgrade)
+  await prisma.propertyBid.updateMany({
+    where: {
+      propertyId: input.propertyId,
+      ownerId: input.ownerId,
+      zipCode: input.zipCode,
+      status: "ACTIVE",
+    },
+    data: { status: "CANCELLED" },
+  });
 
   const bid = await prisma.propertyBid.create({
     data: {
@@ -337,10 +352,19 @@ export async function getBoostedPropertyIds(
       endDate: { gte: now },
     },
     orderBy: { amount: "desc" },
-    take: maxSlots,
     select: { propertyId: true },
   });
-  return bids.map((b) => b.propertyId);
+
+  // One slot per property — highest bid per property wins
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const bid of bids) {
+    if (seen.has(bid.propertyId)) continue;
+    seen.add(bid.propertyId);
+    ids.push(bid.propertyId);
+    if (ids.length >= maxSlots) break;
+  }
+  return ids;
 }
 
 // ─── Current highest bid for a zip code (shown in bid form) ──────────────────

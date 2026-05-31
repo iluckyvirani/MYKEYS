@@ -298,15 +298,21 @@ export default function PropertyDocumentsTab({ propertyId, onRequiredComplete }:
 
   // Notify parent whenever required-doc status changes
   useEffect(() => {
-    if (requiredTypes.length === 0) return;
-    const allComplete = requiredTypes
-      .filter((dt) => dt.isRequired)
-      .every((dt) => {
-        const doc = uploadedDocs.find((d) => d.documentTypeId === dt.id);
-        return doc && doc.status !== "REJECTED" && doc.status !== "EXPIRED";
-      });
+    if (loading) return;
+
+    const requiredOnly = requiredTypes.filter((dt) => dt.isRequired);
+    // No required document types for this property — allow finish immediately
+    if (requiredOnly.length === 0) {
+      onRequiredComplete?.(true);
+      return;
+    }
+
+    const allComplete = requiredOnly.every((dt) => {
+      const doc = uploadedDocs.find((d) => d.documentTypeId === dt.id);
+      return doc && doc.status !== "REJECTED" && doc.status !== "EXPIRED";
+    });
     onRequiredComplete?.(allComplete);
-  }, [uploadedDocs, requiredTypes, onRequiredComplete]);
+  }, [uploadedDocs, requiredTypes, onRequiredComplete, loading]);
 
   function toBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {

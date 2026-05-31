@@ -4,6 +4,7 @@ import { successResponse, errorResponse, paginatedResponse } from "@/lib/respons
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { extractUserRolesFromAssignments } from "@/lib/auth/helpers";
 
 /**
  * GET /api/admin/documents
@@ -103,7 +104,7 @@ export const GET = withAuth(
         userId: doc.userId,
         userName: doc.user ? `${doc.user?.firstName} ${doc.user?.lastName}`.trim() : "Unknown",
         userEmail: doc.user?.email || "",
-        userType: doc.user?.roles?.[0]?.role || "USER",
+        userTypes: extractUserRolesFromAssignments(doc.user?.roles ?? []),
       }));
 
       return paginatedResponse(

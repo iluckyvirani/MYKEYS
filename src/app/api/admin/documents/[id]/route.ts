@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from "@/lib/response";
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { extractUserRolesFromAssignments } from "@/lib/auth/helpers";
 
 /**
  * GET /api/admin/documents/:id
@@ -47,7 +48,7 @@ export const GET = withAuth<{ id: string }>(
           userName: document.user ? `${document.user.firstName} ${document.user.lastName}`.trim() : "Unknown",
           userEmail: document.user?.email || "",
           userPhone: document.user?.phone || "",
-          userType: document.user?.roles?.[0]?.role || "USER",
+          userTypes: extractUserRolesFromAssignments(document.user?.roles ?? []),
         },
         "Document retrieved successfully"
       );
