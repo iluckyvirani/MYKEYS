@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
 import { getBoostedPropertyIds, getAdminSettings } from "@/lib/bids/bidService";
+import { getDocumentVerificationStatesForProperties } from "@/lib/documents/documentService";
 
 /**
  * GET /api/properties
@@ -140,8 +141,28 @@ export async function GET(request: NextRequest) {
       prisma.property.count({ where }),
     ]);
 
+    const verificationByProperty = await getDocumentVerificationStatesForProperties(
+      properties.map((p) => ({
+        id: p.id,
+        listingType: p.listingType,
+        rentalType: p.rentalType,
+      }))
+    );
+
+    const publiclyVisible = properties.filter((property) => {
+      if (property.status !== "ACTIVE") return true;
+      const docState = verificationByProperty.get(property.id);
+      if (!docState?.hasRequiredDocuments) return true;
+      return docState.allVerified;
+    });
+
+    const visibleTotal =
+      status === "ACTIVE"
+        ? publiclyVisible.length
+        : total;
+
     // Calculate average rating for each property
-    const propertiesWithRating = properties.map((property: any) => {
+    const propertiesWithRating = publiclyVisible.map((property: any) => {
       const avgRating =
         property.reviews.length > 0
           ? property.reviews.reduce((sum: number, r: any) => sum + r.rating, 0) /
@@ -182,7 +203,7 @@ export async function GET(request: NextRequest) {
 
     return paginatedResponse(
       propertiesWithRating,
-      total,
+      visibleTotal,
       page,
       pageSize,
       "Properties retrieved successfully"

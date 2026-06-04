@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getDocumentDateValidationError } from "@/lib/documents/documentDateValidation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -137,6 +138,26 @@ export async function upsertPropertyDocument(
   propertyId: string,
   input: PropertyDocumentInput
 ) {
+  const documentType = await prisma.propertyDocumentType.findUnique({
+    where: { id: input.documentTypeId },
+    select: { requireIssueDate: true, requireExpiryDate: true },
+  });
+  if (!documentType) {
+    throw new Error("Document type not found");
+  }
+
+  const dateError = getDocumentDateValidationError(
+    input.issuedDate ?? "",
+    input.expiryDate ?? "",
+    {
+      requireIssueDate: documentType.requireIssueDate,
+      requireExpiryDate: documentType.requireExpiryDate,
+    }
+  );
+  if (dateError) {
+    throw new Error(dateError);
+  }
+
   // One document per type per property — if already exists, replace it
   const existing = await prisma.propertyDocument.findFirst({
     where: { propertyId, documentTypeId: input.documentTypeId },
@@ -172,6 +193,28 @@ export async function updatePropertyDocument(
     where: { id: docId, propertyId },
   });
   if (!existing) throw new Error("Document not found");
+
+  const documentType = await prisma.propertyDocumentType.findUnique({
+    where: { id: existing.documentTypeId },
+    select: { requireIssueDate: true, requireExpiryDate: true },
+  });
+
+  const nextIssued =
+    input.issuedDate !== undefined
+      ? input.issuedDate
+      : existing.issuedDate?.toISOString().slice(0, 10) ?? "";
+  const nextExpiry =
+    input.expiryDate !== undefined
+      ? input.expiryDate
+      : existing.expiryDate?.toISOString().slice(0, 10) ?? "";
+
+  const dateError = getDocumentDateValidationError(nextIssued, nextExpiry, {
+    requireIssueDate: documentType?.requireIssueDate,
+    requireExpiryDate: documentType?.requireExpiryDate,
+  });
+  if (dateError) {
+    throw new Error(dateError);
+  }
 
   return prisma.propertyDocument.update({
     where: { id: docId },
@@ -212,7 +255,7 @@ export async function verifyPropertyDocument(
   docId: string,
   input: DocumentVerifyInput
 ) {
-  return prisma.propertyDocument.update({
+  const updated = await prisma.propertyDocument.update({
     where: { id: docId },
     data: {
       status: input.status,
@@ -225,6 +268,10 @@ export async function verifyPropertyDocument(
       property: { select: { id: true, title: true, ownerId: true } },
     },
   });
+
+  await enforcePropertyInactiveUntilDocumentsVerified(updated.property.id);
+
+  return updated;
 }
 
 // ─── Cron: Check expiry ───────────────────────────────────────────────────────
@@ -297,6 +344,152 @@ export async function processDocumentExpiry() {
 }
 
 // ─── Gate check: can property be published? ───────────────────────────────────
+
+export type PropertyDocumentVerificationState = {
+  hasRequiredDocuments: boolean;
+  allVerified: boolean;
+  pendingReview: boolean;
+  missingUpload: boolean;
+  hasRejected: boolean;
+  canActivate: boolean;
+};
+
+/**
+ * Document verification state for a single property.
+ */
+export async function getPropertyDocumentVerificationState(
+  propertyId: string,
+  listingType: string,
+  rentalType?: string | null
+): Promise<PropertyDocumentVerificationState> {
+  const required = (await getRequiredDocumentTypes(listingType, rentalType)).filter(
+    (dt) => dt.isRequired
+  );
+
+  if (required.length === 0) {
+    return {
+      hasRequiredDocuments: false,
+      allVerified: true,
+      pendingReview: false,
+      missingUpload: false,
+      hasRejected: false,
+      canActivate: true,
+    };
+  }
+
+  const docs = await prisma.propertyDocument.findMany({
+    where: {
+      propertyId,
+      documentTypeId: { in: required.map((d) => d.id) },
+    },
+    select: { documentTypeId: true, status: true },
+  });
+  const byType = new Map(docs.map((d) => [d.documentTypeId, d.status]));
+
+  let missingUpload = false;
+  let pendingReview = false;
+  let hasRejected = false;
+
+  for (const dt of required) {
+    const status = byType.get(dt.id);
+    if (!status) missingUpload = true;
+    else if (status === "PENDING") pendingReview = true;
+    else if (status === "REJECTED") hasRejected = true;
+    else if (status !== "VERIFIED") missingUpload = true;
+  }
+
+  const allVerified =
+    !missingUpload &&
+    !pendingReview &&
+    !hasRejected &&
+    required.every((dt) => byType.get(dt.id) === "VERIFIED");
+
+  return {
+    hasRequiredDocuments: true,
+    allVerified,
+    pendingReview,
+    missingUpload,
+    hasRejected,
+    canActivate: allVerified,
+  };
+}
+
+export async function getDocumentVerificationStatesForProperties(
+  properties: Array<{
+    id: string;
+    listingType: string;
+    rentalType?: string | null;
+  }>
+): Promise<Map<string, PropertyDocumentVerificationState>> {
+  const result = new Map<string, PropertyDocumentVerificationState>();
+  await Promise.all(
+    properties.map(async (p) => {
+      const state = await getPropertyDocumentVerificationState(
+        p.id,
+        p.listingType,
+        p.rentalType
+      );
+      result.set(p.id, state);
+    })
+  );
+  return result;
+}
+
+export function documentVerificationBlockMessage(
+  state: PropertyDocumentVerificationState
+): string {
+  if (!state.hasRequiredDocuments || state.allVerified) return "";
+  if (state.missingUpload) {
+    return "Upload all required property documents before activating this listing.";
+  }
+  if (state.hasRejected) {
+    return "One or more documents were rejected. Re-upload and wait for admin verification.";
+  }
+  if (state.pendingReview) {
+    return "Documents are pending admin verification. Your listing will stay inactive until approved.";
+  }
+  return "Property documents must be verified by admin before this listing can go active.";
+}
+
+/**
+ * If property is ACTIVE but required documents are not all verified, set INACTIVE.
+ */
+export async function enforcePropertyInactiveUntilDocumentsVerified(
+  propertyId: string
+): Promise<void> {
+  const property = await prisma.property.findUnique({
+    where: { id: propertyId },
+    select: {
+      id: true,
+      status: true,
+      listingType: true,
+      rentalType: true,
+      ownerId: true,
+    },
+  });
+  if (!property || property.status !== "ACTIVE") return;
+
+  const state = await getPropertyDocumentVerificationState(
+    propertyId,
+    property.listingType,
+    property.rentalType
+  );
+  if (!state.hasRequiredDocuments || state.allVerified) return;
+
+  await prisma.property.update({
+    where: { id: propertyId },
+    data: { status: "INACTIVE" },
+  });
+
+  const isGated =
+    property.listingType === "BUY" ||
+    (property.listingType === "RENT" && property.rentalType !== "SHORT_TERM");
+
+  if (isGated) {
+    const { packageService } = await import("@/lib/packages/packageService");
+    await packageService.decrementPropertyUsage(property.ownerId);
+  }
+}
 
 /**
  * Returns missing required document types for a property.

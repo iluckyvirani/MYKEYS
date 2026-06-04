@@ -19,6 +19,10 @@ import { X, Loader2, AlertCircle, CheckCircle2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { getStripePromise } from "@/lib/stripe-client";
+import {
+  buildStripeElementsOptions,
+  stripePaymentElementOptions,
+} from "@/lib/stripe/elementsOptions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -109,8 +113,12 @@ function PaymentForm({ paymentId, packageName, amount, onSuccess, onError }: Pay
         </div>
       </div>
 
+      <p className="text-xs text-gray-500">
+        Saved cards appear automatically. Tick save in Stripe to store your card for future payments.
+      </p>
+
       <PaymentElement
-        options={{ layout: "tabs" }}
+        options={stripePaymentElementOptions}
         onReady={() => setElementsReady(true)}
       />
 
@@ -278,13 +286,7 @@ export default function PackagePaymentModal({
         {!activated && !loading && clientSecret && paymentId && stripePromise && (
           <Elements
             stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: {
-                theme: "stripe",
-                variables: { colorPrimary: "#16a34a" },
-              },
-            }}
+            options={buildStripeElementsOptions(clientSecret)}
           >
             <PaymentForm
               paymentId={paymentId}

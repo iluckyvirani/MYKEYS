@@ -434,9 +434,6 @@ export default function AddPropertyPage() {
             </div>
             <h4 className="font-semibold text-gray-900 mb-2">Short Stay</h4>
             <p className="text-sm text-gray-600">Airbnb-style, per night bookings</p>
-            <div className="mt-4 text-sm text-green-600 font-medium">
-              Commission: 10-15%
-            </div>
           </button>
 
           <button
@@ -456,9 +453,6 @@ export default function AddPropertyPage() {
             </div>
             <h4 className="font-semibold text-gray-900 mb-2">Long Term Rent</h4>
             <p className="text-sm text-gray-600">Monthly rentals, 2+ months minimum</p>
-            <div className="mt-4 text-sm text-blue-600 font-medium">
-              Commission: 5-8%
-            </div>
           </button>
 
           <button
@@ -475,9 +469,6 @@ export default function AddPropertyPage() {
             </div>
             <h4 className="font-semibold text-gray-900 mb-2">For Sale</h4>
             <p className="text-sm text-gray-600">One-time property sale</p>
-            <div className="mt-4 text-sm text-purple-600 font-medium">
-              Commission: 1.5-3.5%
-            </div>
           </button>
         </div>
       </div>
@@ -516,6 +507,31 @@ export default function AddPropertyPage() {
           </div>
 
           <div className="md:col-span-2">
+            <Label className="mb-1 block">Property location</Label>
+            <LocationPickerMap
+              initialLat={formData.latitude ? parseFloat(formData.latitude) : undefined}
+              initialLng={formData.longitude ? parseFloat(formData.longitude) : undefined}
+              onLocationSelect={(loc: LocationResult) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  latitude: String(loc.lat),
+                  longitude: String(loc.lng),
+                  ...(loc.address ? { address: loc.address } : {}),
+                  ...(loc.city ? { city: loc.city } : {}),
+                  ...(loc.state ? { state: loc.state } : {}),
+                  ...(loc.zipCode ? { zipCode: loc.zipCode } : {}),
+                }));
+              }}
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <p className="text-sm text-gray-600 mb-3">
+              Address details — filled automatically when you pick a location on the map. You can edit anything below.
+            </p>
+          </div>
+
+          <div className="md:col-span-2">
             <Label htmlFor="address">Complete Address *</Label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -525,7 +541,7 @@ export default function AddPropertyPage() {
                 value={formData.address}
                 onChange={handleInputChange}
                 className="pl-10"
-                placeholder="Street, City, State, Postal Code"
+                placeholder="Auto-filled from map, or type manually"
                 required
               />
             </div>
@@ -575,7 +591,7 @@ export default function AddPropertyPage() {
               step="any"
               value={formData.latitude}
               onChange={handleInputChange}
-              placeholder="e.g., 19.0760"
+              placeholder="Filled from map"
             />
           </div>
 
@@ -588,26 +604,7 @@ export default function AddPropertyPage() {
               step="any"
               value={formData.longitude}
               onChange={handleInputChange}
-              placeholder="e.g., 72.8777"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <Label className="mb-1 block">Pick Location on Map</Label>
-            <LocationPickerMap
-              initialLat={formData.latitude ? parseFloat(formData.latitude) : undefined}
-              initialLng={formData.longitude ? parseFloat(formData.longitude) : undefined}
-              onLocationSelect={(loc: LocationResult) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  latitude: String(loc.lat),
-                  longitude: String(loc.lng),
-                  ...(loc.address && !prev.address ? { address: loc.address } : {}),
-                  ...(loc.city && !prev.city ? { city: loc.city } : {}),
-                  ...(loc.state && !prev.state ? { state: loc.state } : {}),
-                  ...(loc.zipCode && !prev.zipCode ? { zipCode: loc.zipCode } : {}),
-                }));
-              }}
+              placeholder="Filled from map"
             />
           </div>
 

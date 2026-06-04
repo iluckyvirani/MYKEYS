@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from "@/lib/response";
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { getDocumentVerificationStatesForProperties } from "@/lib/documents/documentService";
 
 /**
  * GET /api/owner/properties
@@ -44,8 +45,17 @@ export const GET = withAuth(
         },
       });
 
+      const verificationByProperty = await getDocumentVerificationStatesForProperties(
+        properties.map((p) => ({
+          id: p.id,
+          listingType: p.listingType,
+          rentalType: p.rentalType,
+        }))
+      );
+
       // Calculate statistics for each property
       const propertiesWithStats = properties.map((property) => {
+        const docVerification = verificationByProperty.get(property.id);
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
@@ -104,12 +114,26 @@ export const GET = withAuth(
           property.images[0]?.url ||
           null;
 
+        const dbStatus = property.status.toLowerCase();
+        const documentsVerified = docVerification?.allVerified ?? true;
+        const documentsPendingVerification =
+          Boolean(docVerification?.hasRequiredDocuments) && !documentsVerified;
+
         return {
           id: property.id,
           name: property.title,
           location: `${property.city}, ${property.state}`,
           type: property.propertyType,
-          status: property.status.toLowerCase(),
+          status: dbStatus,
+          documentsVerified,
+          documentsPendingVerification,
+          documentVerification: docVerification
+            ? {
+                pendingReview: docVerification.pendingReview,
+                missingUpload: docVerification.missingUpload,
+                hasRejected: docVerification.hasRejected,
+              }
+            : null,
           price: property.price,
           priceType: property.priceType,
           occupancy: Math.max(0, Math.min(100, occupancyRate)), // Ensure 0-100 range

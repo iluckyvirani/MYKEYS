@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search, MapPin, Loader } from "lucide-react";
+import { Search, MapPin, Loader, Info } from "lucide-react";
 
 export interface LocationResult {
   lat: number;
@@ -174,7 +174,18 @@ export default function LocationPickerMap({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      <div className="flex gap-3 rounded-[5px] border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
+        <Info className="w-5 h-5 shrink-0 text-green-600 mt-0.5" aria-hidden />
+        <div>
+          <p className="font-medium">Pick your property on the map</p>
+          <p className="mt-1 text-green-800 leading-relaxed">
+            Search for an address or postcode, click anywhere on the map, or drag the pin.
+            We&apos;ll auto-fill your street address, city, region, postcode, and coordinates — you can edit any field afterwards.
+          </p>
+        </div>
+      </div>
+
       {/* Search input */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -197,9 +208,11 @@ export default function LocationPickerMap({
         <div ref={mapRef} className="w-full h-full" />
       </div>
 
-      <p className="text-xs text-gray-500 flex items-center gap-1">
-        <MapPin className="w-3 h-3 text-gray-400" />
-        Search for a location or click the map to pin the property — latitude &amp; longitude will be filled automatically.
+      <p className="text-xs text-gray-500 flex items-start gap-1.5">
+        <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+        <span>
+          Tip: Use the search box or tap the map — your address details below will update automatically.
+        </span>
       </p>
     </div>
   );

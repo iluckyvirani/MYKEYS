@@ -17,6 +17,10 @@ import { X, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { getStripePromise } from "@/lib/stripe-client";
+import {
+  buildStripeElementsOptions,
+  stripePaymentElementOptions,
+} from "@/lib/stripe/elementsOptions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,11 +121,11 @@ function PaymentForm({
         </div>
       </div>
 
-      <PaymentElement
-        options={{
-          layout: "tabs",
-        }}
-      />
+      <p className="text-xs text-gray-500">
+        Use a saved card or enter new details. You can save your payment info for faster checkout next time.
+      </p>
+
+      <PaymentElement options={stripePaymentElementOptions} />
 
       {error && (
         <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -285,13 +289,7 @@ export function StripePaymentModal({
         {!paymentCompleted && !loading && clientSecret && paymentId && stripePromise && (
           <Elements
             stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: {
-                theme: "stripe",
-                variables: { colorPrimary: "#16a34a" },
-              },
-            }}
+            options={buildStripeElementsOptions(clientSecret)}
           >
             <PaymentForm
               paymentId={paymentId}

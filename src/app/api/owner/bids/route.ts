@@ -72,17 +72,20 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     let stripePaymentIntentId: string | null = null;
     try {
       const { stripe, toPence } = await import("@/lib/stripe");
-      const intent = await stripe.paymentIntents.create({
-        amount: toPence(totalCost),
-        currency: "gbp",
-        automatic_payment_methods: { enabled: true },
-        metadata: {
-          propertyId,
-          zipCode,
-          ownerId: user.userId,
-          bidType: "property_boost",
-        },
-      });
+      const { withStripeCustomerForPayment } = await import("@/lib/stripe/customer");
+      const intent = await stripe.paymentIntents.create(
+        await withStripeCustomerForPayment(user.userId, {
+          amount: toPence(totalCost),
+          currency: "gbp",
+          automatic_payment_methods: { enabled: true },
+          metadata: {
+            propertyId,
+            zipCode,
+            ownerId: user.userId,
+            bidType: "property_boost",
+          },
+        })
+      );
       stripeClientSecret = intent.client_secret;
       stripePaymentIntentId = intent.id;
     } catch {

@@ -548,10 +548,10 @@ export default function AdminAddPropertyPage() {
                   ...p,
                   latitude: String(loc.lat),
                   longitude: String(loc.lng),
-                  ...(loc.address && !p.address ? { address: loc.address } : {}),
-                  ...(loc.city && !p.city ? { city: loc.city } : {}),
-                  ...(loc.state && !p.state ? { state: loc.state } : {}),
-                  ...(loc.zipCode && !p.zipCode ? { zipCode: loc.zipCode } : {}),
+                  ...(loc.address ? { address: loc.address } : {}),
+                  ...(loc.city ? { city: loc.city } : {}),
+                  ...(loc.state ? { state: loc.state } : {}),
+                  ...(loc.zipCode ? { zipCode: loc.zipCode } : {}),
                 }));
               }}
             />

@@ -6,6 +6,10 @@ import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
 import { packageService } from "@/lib/packages/packageService";
+import {
+  getPropertyDocumentVerificationState,
+  documentVerificationBlockMessage,
+} from "@/lib/documents/documentService";
 
 /**
  * PATCH /api/owner/properties/[id]/status
@@ -52,14 +56,28 @@ export const PATCH = withAuth<{ id: string }>(
         existingProperty.listingType === "BUY" ||
         (existingProperty.listingType === "RENT" && existingProperty.rentalType !== "SHORT_TERM");
 
-      if (statusRaw === "ACTIVE" && isGated && user.role !== "ADMIN") {
-        const { allowed, reason } = await packageService.canPublish(existingProperty.ownerId);
-        if (!allowed) {
-          return errorResponse(reason!, 403, ErrorCode.FORBIDDEN);
+      if (statusRaw === "ACTIVE" && user.role !== "ADMIN") {
+        const docState = await getPropertyDocumentVerificationState(
+          id,
+          existingProperty.listingType,
+          existingProperty.rentalType
+        );
+        if (!docState.canActivate) {
+          return errorResponse(
+            documentVerificationBlockMessage(docState),
+            403,
+            ErrorCode.FORBIDDEN
+          );
         }
-        // Increment slot usage only when going from non-ACTIVE → ACTIVE
-        if (existingProperty.status !== "ACTIVE") {
-          await packageService.incrementPropertyUsage(existingProperty.ownerId);
+
+        if (isGated) {
+          const { allowed, reason } = await packageService.canPublish(existingProperty.ownerId);
+          if (!allowed) {
+            return errorResponse(reason!, 403, ErrorCode.FORBIDDEN);
+          }
+          if (existingProperty.status !== "ACTIVE") {
+            await packageService.incrementPropertyUsage(existingProperty.ownerId);
+          }
         }
       }
 

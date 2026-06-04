@@ -1189,7 +1189,7 @@ export default function PropertyDetailsPage() {
 
                             {/* Right Column - Booking/Inquiry Panel */}
                             <div className="lg:col-span-1">
-                                <div className="sticky top-24 bg-white rounded-[5px] shadow-lg border p-5">
+                                <div className="sticky top-24 bg-white rounded-[5px] shadow-lg border p-5 overflow-visible">
                                     {/* Price Display - DIFFERENT FOR EACH BUSINESS MODEL */}
                                     <div className="mb-6">
                                         {property.listingType === "buy" ? (
@@ -1289,7 +1289,7 @@ export default function PropertyDetailsPage() {
                                             </div>
                                         ) : (
                                         <form onSubmit={handleBookingSubmit} className="space-y-4 mb-6">
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
                                                 <DatePickerInput
                                                     label="Check-in"
                                                     value={checkInDate}
@@ -1297,7 +1297,8 @@ export default function PropertyDetailsPage() {
                                                         setCheckInDate(val);
                                                         if (checkOutDate && checkOutDate <= val) setCheckOutDate("");
                                                     }}
-                                                    placeholder="Add date"
+                                                    placeholder="DD/MM/YYYY"
+                                                    align="auto"
                                                     rangeStart={checkInDate}
                                                     rangeEnd={checkOutDate}
                                                 />
@@ -1305,7 +1306,8 @@ export default function PropertyDetailsPage() {
                                                     label="Check-out"
                                                     value={checkOutDate}
                                                     onChange={setCheckOutDate}
-                                                    placeholder="Add date"
+                                                    placeholder="DD/MM/YYYY"
+                                                    align="auto"
                                                     minDate={checkInDate
                                                         ? (() => { const d = new Date(checkInDate + "T00:00:00"); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()
                                                         : undefined}

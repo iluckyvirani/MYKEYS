@@ -70,17 +70,29 @@ export const POST = withAuth<{ id: string }>(
       );
     }
 
-    const doc = await upsertPropertyDocument(ctx!.params.id, {
-      documentTypeId: data.documentTypeId,
-      documentUrl: data.documentUrl,
-      fileName: data.fileName,
-      fileSize: data.fileSize,
-      mimeType: data.mimeType,
-      issuedDate: data.issuedDate,
-      expiryDate: data.expiryDate,
-    });
+    try {
+      const doc = await upsertPropertyDocument(ctx!.params.id, {
+        documentTypeId: data.documentTypeId,
+        documentUrl: data.documentUrl,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
+        mimeType: data.mimeType,
+        issuedDate: data.issuedDate,
+        expiryDate: data.expiryDate,
+      });
 
-    return successResponse(doc, "Document uploaded successfully", 201);
+      return successResponse(doc, "Document uploaded successfully", 201);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      if (
+        message.includes("date") ||
+        message.includes("Date") ||
+        message.includes("Document type not found")
+      ) {
+        return errorResponse(message, 400, ErrorCode.VALIDATION_ERROR);
+      }
+      throw err;
+    }
   },
   { roles: [UserRole.OWNER, UserRole.ADMIN] }
 );

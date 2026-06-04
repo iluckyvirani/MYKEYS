@@ -22,6 +22,7 @@ import {
   Download,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { getDocumentDateValidationError } from "@/lib/documents/documentDateValidation";
 
 interface DocumentType {
   id: string;
@@ -325,13 +326,42 @@ export default function PropertyDocumentsTab({ propertyId, onRequiredComplete }:
 
   function validateDates(typeId: string, dt: DocumentType): string {
     const typeDates = dates[typeId] ?? { issuedDate: "", expiryDate: "" };
-    if (dt.requireIssueDate && !typeDates.issuedDate) {
-      return "Issue date is required before uploading.";
+    const err = getDocumentDateValidationError(
+      typeDates.issuedDate,
+      typeDates.expiryDate,
+      {
+        requireIssueDate: dt.requireIssueDate,
+        requireExpiryDate: dt.requireExpiryDate,
+      }
+    );
+    if (!err) return "";
+    if (err.includes("required")) {
+      return `${err.replace(/\.$/, "")} before uploading.`;
     }
-    if (dt.requireExpiryDate && !typeDates.expiryDate) {
-      return "Expiry date is required before uploading.";
-    }
-    return "";
+    return err;
+  }
+
+  function updateTypeDates(
+    typeId: string,
+    dt: DocumentType,
+    patch: Partial<{ issuedDate: string; expiryDate: string }>
+  ) {
+    setDates((d) => {
+      const next = {
+        ...(d[typeId] ?? { issuedDate: "", expiryDate: "" }),
+        ...patch,
+      };
+      const validationErr = getDocumentDateValidationError(
+        next.issuedDate,
+        next.expiryDate,
+        {
+          requireIssueDate: dt.requireIssueDate,
+          requireExpiryDate: dt.requireExpiryDate,
+        }
+      );
+      setDateErrors((prev) => ({ ...prev, [typeId]: validationErr }));
+      return { ...d, [typeId]: next };
+    });
   }
 
   function handleUploadClick(typeId: string, dt: DocumentType) {
@@ -344,7 +374,13 @@ export default function PropertyDocumentsTab({ propertyId, onRequiredComplete }:
     fileRefs.current[typeId]?.click();
   }
 
-  async function handleUpload(typeId: string, file: File) {
+  async function handleUpload(typeId: string, file: File, dt: DocumentType) {
+    const err = validateDates(typeId, dt);
+    if (err) {
+      setDateErrors((prev) => ({ ...prev, [typeId]: err }));
+      return;
+    }
+
     setUploadingId(typeId);
     setUploadError("");
     try {
@@ -509,19 +545,10 @@ export default function PropertyDocumentsTab({ propertyId, onRequiredComplete }:
                             type="date"
                             className="text-xs h-8 w-40"
                             value={typeDates.issuedDate}
-                            onChange={(e) => {
-                              setDates((d) => ({
-                                ...d,
-                                [dt.id]: {
-                                  ...(d[dt.id] ?? {
-                                    issuedDate: "",
-                                    expiryDate: "",
-                                  }),
-                                  issuedDate: e.target.value,
-                                },
-                              }));
-                              setDateErrors((prev) => ({ ...prev, [dt.id]: "" }));
-                            }}
+                            max={typeDates.expiryDate || undefined}
+                            onChange={(e) =>
+                              updateTypeDates(dt.id, dt, { issuedDate: e.target.value })
+                            }
                           />
                         </div>
                       )}
@@ -534,19 +561,10 @@ export default function PropertyDocumentsTab({ propertyId, onRequiredComplete }:
                             type="date"
                             className="text-xs h-8 w-40"
                             value={typeDates.expiryDate}
-                            onChange={(e) => {
-                              setDates((d) => ({
-                                ...d,
-                                [dt.id]: {
-                                  ...(d[dt.id] ?? {
-                                    issuedDate: "",
-                                    expiryDate: "",
-                                  }),
-                                  expiryDate: e.target.value,
-                                },
-                              }));
-                              setDateErrors((prev) => ({ ...prev, [dt.id]: "" }));
-                            }}
+                            min={typeDates.issuedDate || undefined}
+                            onChange={(e) =>
+                              updateTypeDates(dt.id, dt, { expiryDate: e.target.value })
+                            }
                           />
                         </div>
                       )}
@@ -580,16 +598,17 @@ export default function PropertyDocumentsTab({ propertyId, onRequiredComplete }:
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) handleUpload(dt.id, file);
+                    if (file) handleUpload(dt.id, file, dt);
                     e.target.value = "";
                   }}
                 />
                 <Button
                   size="sm"
                   variant={uploaded ? "outline" : "default"}
-                  disabled={isUploading}
+                  disabled={isUploading || Boolean(dateError)}
                   onClick={() => handleUploadClick(dt.id, dt)}
                   className="cursor-pointer"
+                  title={dateError || undefined}
                 >
                   <Upload className="w-3.5 h-3.5 mr-1" />
                   {isUploading

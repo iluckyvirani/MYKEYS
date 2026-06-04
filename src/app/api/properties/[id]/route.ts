@@ -5,6 +5,10 @@ import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
 import { packageService } from "@/lib/packages/packageService";
+import {
+  getPropertyDocumentVerificationState,
+  documentVerificationBlockMessage,
+} from "@/lib/documents/documentService";
 
 /**
  * GET /api/properties/[id]
@@ -72,6 +76,17 @@ export async function GET(
 
     if (!property) {
       return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
+    }
+
+    if (property.status === "ACTIVE") {
+      const docState = await getPropertyDocumentVerificationState(
+        property.id,
+        property.listingType,
+        property.rentalType
+      );
+      if (docState.hasRequiredDocuments && !docState.allVerified) {
+        return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
+      }
     }
 
     // Fetch owner's active package to determine contact visibility
@@ -164,6 +179,19 @@ export const PATCH = withAuth<{ id: string }>(
         const effectiveListingType = body.listingType ?? existingProperty.listingType;
         const effectiveRentalType  = body.rentalType  ?? existingProperty.rentalType;
 
+        const docState = await getPropertyDocumentVerificationState(
+          id,
+          effectiveListingType,
+          effectiveRentalType
+        );
+        if (!docState.canActivate) {
+          return errorResponse(
+            documentVerificationBlockMessage(docState),
+            403,
+            ErrorCode.FORBIDDEN
+          );
+        }
+
         const needsPackage =
           effectiveListingType === 'BUY' ||
           (effectiveListingType === 'RENT' && effectiveRentalType !== 'SHORT_TERM');
@@ -173,7 +201,6 @@ export const PATCH = withAuth<{ id: string }>(
           if (!allowed) {
             return errorResponse(reason!, 403, ErrorCode.FORBIDDEN);
           }
-          // If the property is being published for the first time, increment usage
           if (existingProperty.status !== 'ACTIVE') {
             await packageService.incrementPropertyUsage(existingProperty.ownerId);
           }

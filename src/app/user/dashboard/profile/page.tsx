@@ -9,6 +9,7 @@ import SecuritySettings from "@/components/dashboard/UserDashboard/SecuritySetti
 import NotificationSettings from "@/components/dashboard/UserDashboard/NotificationSettings";
 import DocumentList from "@/components/dashboard/UserDashboard/DocumentList";
 import DocumentUploadModal from "@/components/dashboard/UserDashboard/DocumentUploadModal";
+import PaymentMethods from "@/components/dashboard/UserDashboard/PaymentMethods";
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { MeResponse, UserDTO } from "@/types/auth";
@@ -223,10 +224,10 @@ export default function ProfilePage() {
               <Bell className="w-4 h-4" />
               Notifications
             </TabsTrigger> */}
-            {/* <TabsTrigger value="payment" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
+            <TabsTrigger value="payment" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
               <CreditCard className="w-4 h-4" />
               Payment Methods
-            </TabsTrigger> */}
+            </TabsTrigger>
             <TabsTrigger value="documents" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
               <FileText className="w-4 h-4" />
               Documents
@@ -246,14 +247,9 @@ export default function ProfilePage() {
               <NotificationSettings />
             </TabsContent> */}
 
-            {/* <TabsContent value="payment" className="m-0">
-              <div className="text-center py-12">
-                <CreditCard className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Payment Methods</h3>
-                <p className="text-gray-500">Manage your saved payment methods here.</p>
-                <Button className="mt-4">Add Payment Method</Button>
-              </div>
-            </TabsContent> */}
+            <TabsContent value="payment" className="m-0">
+              <PaymentMethods />
+            </TabsContent>
 
             <TabsContent value="documents" className="m-0">
               <div className="space-y-6">

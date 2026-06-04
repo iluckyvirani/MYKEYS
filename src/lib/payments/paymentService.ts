@@ -1,5 +1,6 @@
 import { prisma } from '../prisma';
 import { stripe, toPence } from '../stripe';
+import { withStripeCustomerForPayment } from '../stripe/customer';
 import {
   InitiatePaymentRequest,
   PaymentDTO,
@@ -80,17 +81,19 @@ export const paymentService = {
         }
 
         // Create a new PaymentIntent and update the existing record
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: amountInPence,
-          currency,
-          automatic_payment_methods: { enabled: true },
-          metadata: {
-            bookingId: data.bookingId || '',
-            packageId: data.packageId || '',
-            userId,
-            ...(data.metadata as Record<string, string> | undefined),
-          },
-        });
+        const paymentIntent = await stripe.paymentIntents.create(
+          await withStripeCustomerForPayment(userId, {
+            amount: amountInPence,
+            currency,
+            automatic_payment_methods: { enabled: true },
+            metadata: {
+              bookingId: data.bookingId || '',
+              packageId: data.packageId || '',
+              userId,
+              ...(data.metadata as Record<string, string> | undefined),
+            },
+          })
+        );
 
         const updated = await prisma.payment.update({
           where: { id: existingPayment.id },
@@ -109,17 +112,19 @@ export const paymentService = {
       }
 
       // No existing record — create Stripe PaymentIntent and DB row
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amountInPence,
-        currency,
-        automatic_payment_methods: { enabled: true },
-        metadata: {
-          bookingId: data.bookingId || '',
-          packageId: data.packageId || '',
-          userId,
-          ...(data.metadata as Record<string, string> | undefined),
-        },
-      });
+      const paymentIntent = await stripe.paymentIntents.create(
+        await withStripeCustomerForPayment(userId, {
+          amount: amountInPence,
+          currency,
+          automatic_payment_methods: { enabled: true },
+          metadata: {
+            bookingId: data.bookingId || '',
+            packageId: data.packageId || '',
+            userId,
+            ...(data.metadata as Record<string, string> | undefined),
+          },
+        })
+      );
 
       // Persist payment record (guard against race-condition duplicate with P2002 catch)
       let payment;

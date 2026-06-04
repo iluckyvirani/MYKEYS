@@ -238,6 +238,9 @@ model User {
   taxId       String?
   website     String?
 
+  /// Stripe Customer ID for saved payment methods
+  stripeCustomerId String? @unique
+
   // Relations
   properties      Property[]
   bookingsAsGuest Booking[]      @relation("GuestBookings")

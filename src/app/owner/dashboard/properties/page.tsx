@@ -19,6 +19,7 @@ import {
   MapPin,
   Package,
   Star,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -53,6 +54,8 @@ interface OwnerProperty {
   amenities: string[];
   createdAt: string | null;
   isFeatured: boolean;
+  documentsVerified: boolean;
+  documentsPendingVerification: boolean;
 }
 
 const getStatusConfig = (status: string) => {
@@ -185,7 +188,16 @@ const normalizeProperty = (item: any): OwnerProperty => {
       : [],
     createdAt: full.createdAt ?? null,
     isFeatured: Boolean(full.isFeatured ?? false),
+    documentsVerified: item?.documentsVerified ?? full.documentsVerified ?? true,
+    documentsPendingVerification:
+      item?.documentsPendingVerification ?? full.documentsPendingVerification ?? false,
   };
+};
+
+const documentVerificationBadge = {
+  color: "bg-amber-100 text-amber-900 border-amber-200",
+  label: "Pending document verification",
+  icon: "📄",
 };
 
 export default function OwnerPropertiesPage() {
@@ -221,11 +233,14 @@ export default function OwnerPropertiesPage() {
     api.get("/owner/packages").then((res) => setOwnerPkg(res.data?.data ?? null)).catch(() => {});
   }, [fetchProperties]);
 
+  const isListedActive = (p: OwnerProperty) =>
+    p.status === "active" && !p.documentsPendingVerification;
+
   const filteredProperties = useMemo(() => {
     return properties
       .filter((property) => {
         if (filter === "all") return true;
-        if (filter === "active") return property.status === "active";
+        if (filter === "active") return isListedActive(property);
         if (filter === "inactive") return property.status === "inactive";
         if (filter === "short") return property.rentalType === "short";
         if (filter === "long") return property.rentalType === "long";
@@ -244,7 +259,7 @@ export default function OwnerPropertiesPage() {
   const togglePropertyStatus = async (id: string) => {
     const current = properties.find((p) => p.id === id);
     if (!current) return;
-    const nextStatus = current.status === "active" ? "inactive" : "active";
+    const nextStatus = isListedActive(current) ? "inactive" : "active";
 
     try {
       setUpdatingStatusId(id);
@@ -259,7 +274,7 @@ export default function OwnerPropertiesPage() {
     }
   };
 
-  const activeCount = properties.filter((p) => p.status === "active").length;
+  const activeCount = properties.filter(isListedActive).length;
   const totalRevenue = properties.reduce((sum, p) => sum + p.revenue, 0);
   const totalBookings = properties.reduce((sum, p) => sum + p.bookings, 0);
   const avgRating = properties.length > 0 ? (properties.reduce((sum, p) => sum + p.rating, 0) / properties.length).toFixed(1) : "0.0";
@@ -306,7 +321,18 @@ export default function OwnerPropertiesPage() {
           </Button>
         </div>
       )}
-      {hasPackage && packageFull && properties.some((p) => isGated(p) && p.status !== "active") && (
+      {properties.some((p) => p.documentsPendingVerification) && (
+        <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-[5px] p-4 text-amber-900">
+          <FileText className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
+          <div className="flex-1">
+            <p className="font-semibold">Document verification required</p>
+            <p className="text-sm mt-0.5">
+              Listings stay inactive until an admin verifies all required property documents — even if you have an active package.
+            </p>
+          </div>
+        </div>
+      )}
+      {hasPackage && packageFull && properties.some((p) => isGated(p) && !isListedActive(p)) && (
         <div className="mb-5 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-[5px] p-4 text-blue-900">
           <Package className="w-5 h-5 shrink-0 mt-0.5 text-blue-600" />
           <div className="flex-1">
@@ -491,7 +517,9 @@ export default function OwnerPropertiesPage() {
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredProperties.map((property) => {
-            const statusConfig = getStatusConfig(property.status);
+            const statusConfig = property.documentsPendingVerification
+              ? documentVerificationBadge
+              : getStatusConfig(property.status);
             const listingBadge = getListingTypeBadge(property.listingType, property.rentalType);
             const ListingIcon = listingBadge.icon;
 
@@ -599,9 +627,19 @@ export default function OwnerPropertiesPage() {
                       <Button asChild size="sm" className="flex-1 rounded-[5px] bg-amber-500 hover:bg-amber-600 text-white text-xs">
                         <Link href="/owner/packages"><Package className="w-3 h-3 mr-1" />Get Package</Link>
                       </Button>
-                    ) : isGated(property) && packageFull && property.status !== "active" ? (
+                    ) : isGated(property) && packageFull && !isListedActive(property) ? (
                       <Button asChild size="sm" variant="outline" className="flex-1 rounded-[5px] text-xs">
                         <Link href="/owner/packages">Upgrade</Link>
+                      </Button>
+                    ) : property.documentsPendingVerification ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 rounded-[5px] text-xs text-amber-700 border-amber-200"
+                        disabled
+                        title="Waiting for admin to verify property documents"
+                      >
+                        Awaiting verification
                       </Button>
                     ) : (
                       <Button
@@ -611,7 +649,7 @@ export default function OwnerPropertiesPage() {
                         disabled={updatingStatusId === property.id}
                         onClick={() => togglePropertyStatus(property.id)}
                       >
-                        {property.status === "active" ? "Deactivate" : "Activate"}
+                        {isListedActive(property) ? "Deactivate" : "Activate"}
                       </Button>
                     )}
                   </div>
@@ -667,7 +705,9 @@ export default function OwnerPropertiesPage() {
             </thead>
             <tbody>
               {filteredProperties.map((property) => {
-                const statusConfig = getStatusConfig(property.status);
+                const statusConfig = property.documentsPendingVerification
+                  ? documentVerificationBadge
+                  : getStatusConfig(property.status);
                 const listingBadge = getListingTypeBadge(property.listingType, property.rentalType);
 
                 return (
@@ -745,9 +785,19 @@ export default function OwnerPropertiesPage() {
                             <Button asChild size="sm" className="h-8 px-2 bg-amber-500 hover:bg-amber-600 text-white text-xs">
                               <Link href="/owner/packages"><Package className="w-3 h-3 mr-1" />Get Package</Link>
                             </Button>
-                          ) : isGated(property) && packageFull && property.status !== "active" ? (
+                          ) : isGated(property) && packageFull && !isListedActive(property) ? (
                             <Button asChild size="sm" variant="outline" className="h-8 px-2 text-xs">
                               <Link href="/owner/packages">Upgrade</Link>
+                            </Button>
+                          ) : property.documentsPendingVerification ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 text-xs text-amber-700"
+                              disabled
+                              title="Waiting for admin document verification"
+                            >
+                              Awaiting verification
                             </Button>
                           ) : (
                             <Button
@@ -757,7 +807,7 @@ export default function OwnerPropertiesPage() {
                               className="h-8 px-2"
                               onClick={() => togglePropertyStatus(property.id)}
                             >
-                              {property.status === "active" ? "Deactivate" : "Activate"}
+                              {isListedActive(property) ? "Deactivate" : "Activate"}
                             </Button>
                           )}
                       </div>
@@ -774,7 +824,7 @@ export default function OwnerPropertiesPage() {
         <div className="mt-6 bg-white rounded-[5px] border p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="text-sm text-gray-600">
-              Showing {filteredProperties.length} of {properties.length} properties • {filteredProperties.filter((p) => p.status === "active").length} active
+              Showing {filteredProperties.length} of {properties.length} properties • {filteredProperties.filter(isListedActive).length} active
             </div>
             <div className="flex items-center gap-4">
               <div className="text-center">
