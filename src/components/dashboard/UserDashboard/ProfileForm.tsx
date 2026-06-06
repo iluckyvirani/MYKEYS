@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { UserDTO, UpdateProfileRequest, MeResponse } from "@/types/auth";
+import { GENDER_OPTIONS } from "@/lib/user/profileFields";
 import { Upload, User } from "lucide-react";
 
 interface ProfileFormProps {
@@ -18,6 +19,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
     lastName: "",
     phone: "",
     birthDate: "",
+    gender: "",
     address: "",
     city: "",
     state: "",
@@ -53,6 +55,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
           lastName: user.lastName || "",
           phone: user.phone || "",
           birthDate: user.birthDate || "",
+          gender: user.gender || "",
           address: user.address || "",
           city: user.city || "",
           state: user.state || "",
@@ -72,7 +75,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -328,7 +331,32 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
               value={formData.birthDate}
               onChange={handleChange}
               disabled={loading}
+              max={new Date().toISOString().split("T")[0]}
+              min={`${new Date().getFullYear() - 120}-01-01`}
+              className={fieldErrors.birthDate ? "border-red-500" : ""}
             />
+            {fieldErrors.birthDate && (
+              <p className="text-red-600 text-xs mt-1">{fieldErrors.birthDate.join(", ")}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">Used to show your age to property owners. Must be at least 16 years ago.</p>
+          </div>
+          <div>
+            <Label htmlFor="gender">Gender</Label>
+            <select
+              id="gender"
+              name="gender"
+              value={formData.gender || ""}
+              onChange={handleChange}
+              disabled={loading}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Select gender</option>
+              {GENDER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

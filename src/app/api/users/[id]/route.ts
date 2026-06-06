@@ -132,6 +132,9 @@ export const PATCH = withAuth<{ id: string }>(
           ...(body.birthDate !== undefined && {
             birthDate: body.birthDate || null,
           }),
+          ...(body.gender !== undefined && {
+            gender: body.gender || null,
+          }),
           // Address Information
           ...(body.address !== undefined && { address: body.address || null }),
           ...(body.city !== undefined && { city: body.city || null }),

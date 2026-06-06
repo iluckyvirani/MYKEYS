@@ -6,13 +6,27 @@ import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   ArrowLeft, Send, Home, Tag, X, CheckCircle,
-  Bell, ChevronDown, StickyNote, User, Mail, Phone, ChevronRight
+  Bell, ChevronDown, StickyNote, User, Mail, Phone, ChevronRight,
+  MapPin, PoundSterling, Circle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import UserAvatar from "@/components/common/UserAvatar";
+import {
+  ChatMessageBubble,
+  InquiryEntryCard,
+  TenantProfileGrid,
+} from "@/components/owner/inquiries/InquiryChatParts";
+import type { GuestProfile } from "@/lib/user/profileFields";
+import {
+  formatAgeDisplay,
+  formatGender,
+  formatLastActive,
+  formatMemberSinceFull,
+} from "@/lib/inquiries/inquiryDisplay";
 
 const LABELS = [
   "No Label",
@@ -44,14 +58,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   CLOSED:    { label: "Closed",    color: "text-gray-500 bg-gray-100 border-gray-200" },
 };
 
-function formatTime(dateStr: string) {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const isToday = d.toDateString() === now.toDateString();
-  if (isToday) return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-}
-
 interface Message {
   id: string;
   content: string;
@@ -78,12 +84,15 @@ interface InquiryDetail {
   propertyTitle: string;
   status: string;
   type: string;
+  budget?: number | null;
   ownerLabel: string | null;
   unreadByOwner: number;
   createdAt: string;
   guestName: string;
   guestEmail: string;
   guestPhone?: string;
+  guestAvatar?: string | null;
+  guestProfile: GuestProfile | null;
   message: string;
 }
 
@@ -116,10 +125,30 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
   const [note, setNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [showTenantPanel, setShowTenantPanel] = useState(false);
+  const [ownerAvatar, setOwnerAvatar] = useState<string | null>(null);
+  const [ownerName, setOwnerName] = useState("You");
+  const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
+  const [hasNewActivity, setHasNewActivity] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const lastMsgIdRef = useRef<string>("");
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const noteDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const isNearBottomRef = useRef(true);
+
+  const markMessagesAsNew = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setNewMessageIds((prev) => new Set([...prev, ...ids]));
+    setHasNewActivity(true);
+    setTimeout(() => {
+      setNewMessageIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+    }, 4000);
+    setTimeout(() => setHasNewActivity(false), 3000);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -127,7 +156,12 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
 
   useEffect(() => {
     api.get("/auth/me").then((r) => {
-      if (r.data?.data?.id) setCurrentUserId(r.data.data.id);
+      const user = r.data?.data;
+      if (user?.id) setCurrentUserId(user.id);
+      if (user?.avatar) setOwnerAvatar(user.avatar);
+      if (user?.firstName) {
+        setOwnerName(`${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`);
+      }
     }).catch(() => {});
   }, []);
 
@@ -146,12 +180,15 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
           propertyTitle: d.propertyTitle,
           status: d.status,
           type: d.type,
+          budget: d.budget,
           ownerLabel: d.ownerLabel || null,
           unreadByOwner: d.unreadByOwner || 0,
           createdAt: d.createdAt,
           guestName: d.guestName,
           guestEmail: d.guestEmail || d.email,
           guestPhone: d.guestPhone || d.phone,
+          guestAvatar: d.guestAvatar || d.guestProfile?.avatar || null,
+          guestProfile: d.guestProfile || null,
           message: d.message,
         });
       }
@@ -175,28 +212,34 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
   }, [loadInquiry]);
 
   useEffect(() => {
-    scrollToBottom();
+    if (isNearBottomRef.current) scrollToBottom();
   }, [messages]);
+
+  const handleMessagesScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
 
   const pollMessages = useCallback(async () => {
     try {
-      const url = lastMsgIdRef.current
-        ? `/inquiries/${inquiryId}/messages?after=${lastMsgIdRef.current}`
-        : `/inquiries/${inquiryId}/messages`;
-      const res = await api.get(url);
+      if (!lastMsgIdRef.current) return;
+      const res = await api.get(`/inquiries/${inquiryId}/messages?after=${lastMsgIdRef.current}`);
       if (res.data?.success && res.data.data?.length > 0) {
         const newMsgs = res.data.data as Message[];
         setMessages((prev) => [...prev, ...newMsgs]);
         lastMsgIdRef.current = newMsgs[newMsgs.length - 1].id;
+        markMessagesAsNew(newMsgs.map((m) => m.id));
         await api.patch(`/inquiries/${inquiryId}/read`);
+        if (isNearBottomRef.current) scrollToBottom();
       }
     } catch {
       // silent
     }
-  }, [inquiryId]);
+  }, [inquiryId, markMessagesAsNew]);
 
   useEffect(() => {
-    pollRef.current = setInterval(pollMessages, 10000);
+    pollRef.current = setInterval(pollMessages, 5000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
@@ -227,6 +270,7 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
         setMessages((prev) => [...prev, newMsg]);
         lastMsgIdRef.current = newMsg.id;
         setText("");
+        scrollToBottom();
       }
     } catch {
       toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
@@ -343,6 +387,15 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
 
   const statusCfg = STATUS_CONFIG[inquiry.status] || STATUS_CONFIG.NEW;
   const currentLabel = inquiry.ownerLabel || "No Label";
+  const tenantProfile = {
+    guestName: inquiry.guestName,
+    guestProfile: inquiry.guestProfile,
+    budget: inquiry.budget,
+    type: inquiry.type,
+  };
+  const profile = inquiry.guestProfile;
+  const tenantAgeLabel = formatAgeDisplay(profile?.birthDate);
+  const tenantLocation = [profile?.city, profile?.country].filter(Boolean).join(", ");
 
   return (
     <DashboardLayout defaultRole="owner">
@@ -451,24 +504,47 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
         </div>
         {/* Tenant Details Slide-over */}
         {showTenantPanel && (
-          <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowTenantPanel(false)}>
+          <div className="fixed inset-0 z-50 flex justify-end bg-black/20" onClick={() => setShowTenantPanel(false)}>
             <div className="bg-white w-full max-w-sm h-full shadow-xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between px-4 py-3 border-b">
                 <h3 className="font-semibold text-gray-900">Tenant Details</h3>
                 <button onClick={() => setShowTenantPanel(false)}><X className="w-4 h-4 text-gray-500" /></button>
               </div>
               <div className="p-5 space-y-5">
-                {/* Avatar + Name */}
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0 text-lg font-bold text-green-700">
-                    {inquiry.guestName.charAt(0).toUpperCase()}
-                  </div>
+                  <UserAvatar name={inquiry.guestName} src={inquiry.guestAvatar || profile?.avatar} size="lg" />
                   <div>
                     <p className="font-semibold text-gray-900">{inquiry.guestName}</p>
                     <p className="text-xs text-gray-500">Prospective Tenant</p>
+                    <p className="text-xs text-green-600 mt-0.5">
+                      Last active: {formatLastActive(profile?.lastLoginAt)}
+                    </p>
                   </div>
                 </div>
-                {/* Contact info */}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-gray-50 rounded-[5px] border">
+                    <p className="text-[11px] text-gray-500 uppercase tracking-wide">Age</p>
+                    <p className="text-sm font-semibold text-gray-900">{tenantAgeLabel}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-[5px] border">
+                    <p className="text-[11px] text-gray-500 uppercase tracking-wide">Gender</p>
+                    <p className="text-sm font-semibold text-gray-900">{formatGender(profile?.gender)}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-[5px] border">
+                    <p className="text-[11px] text-gray-500 uppercase tracking-wide">Member since</p>
+                    <p className="text-sm font-semibold text-gray-900">{formatMemberSinceFull(profile?.createdAt)}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-[5px] border">
+                    <p className="text-[11px] text-gray-500 uppercase tracking-wide">Last active</p>
+                    <p className="text-sm font-semibold text-gray-900">{formatLastActive(profile?.lastLoginAt)}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-[5px] border col-span-2">
+                    <p className="text-[11px] text-gray-500 uppercase tracking-wide">Inquiry type</p>
+                    <p className="text-sm font-semibold text-gray-900 capitalize">{inquiry.type?.replace(/_/g, " ") || "—"}</p>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-[5px] border">
                     <Mail className="w-4 h-4 text-gray-400 shrink-0" />
@@ -477,30 +553,44 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
                       <a href={`mailto:${inquiry.guestEmail}`} className="text-sm text-green-600 hover:underline truncate block">{inquiry.guestEmail}</a>
                     </div>
                   </div>
-                  {inquiry.guestPhone ? (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-[5px] border">
-                      <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                      <div>
-                        <p className="text-xs text-gray-500 mb-0.5">Phone</p>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-[5px] border">
+                    <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Phone</p>
+                      {inquiry.guestPhone ? (
                         <a href={`tel:${inquiry.guestPhone}`} className="text-sm text-green-600 hover:underline">{inquiry.guestPhone}</a>
+                      ) : (
+                        <p className="text-sm text-gray-400">Not provided</p>
+                      )}
+                    </div>
+                  </div>
+                  {tenantLocation && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-[5px] border">
+                      <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-500 mb-0.5">Location</p>
+                        <p className="text-sm text-gray-800">{tenantLocation}</p>
                       </div>
                     </div>
-                  ) : (
+                  )}
+                  {inquiry.budget != null && inquiry.budget > 0 && (
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-[5px] border">
-                      <Phone className="w-4 h-4 text-gray-300 shrink-0" />
+                      <PoundSterling className="w-4 h-4 text-gray-400 shrink-0" />
                       <div>
-                        <p className="text-xs text-gray-500 mb-0.5">Phone</p>
-                        <p className="text-sm text-gray-400">Not provided</p>
+                        <p className="text-xs text-gray-500 mb-0.5">Budget</p>
+                        <p className="text-sm text-gray-800">£{inquiry.budget.toLocaleString()}</p>
                       </div>
                     </div>
                   )}
                 </div>
-                {/* Inquiry info */}
+
                 <div className="pt-3 border-t">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Inquiry Info</p>
                   <p className="text-xs text-gray-500">Property: <span className="font-medium text-gray-700">{inquiry.propertyTitle}</span></p>
                   <p className="text-xs text-gray-500 mt-1">Started: <span className="font-medium text-gray-700">{new Date(inquiry.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span></p>
                 </div>
+
+                <TenantProfileGrid tenant={tenantProfile} />
               </div>
             </div>
           </div>
@@ -602,22 +692,52 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
 
         {/* Chat area */}
         <div className="bg-white rounded-[5px] border flex flex-col" style={{ height: "calc(100vh - 260px)", minHeight: "460px" }}>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Original inquiry as first bubble from USER */}
-            <div className="flex justify-start">
-              <div className="max-w-[75%]">
-                <div className="bg-gray-100 text-gray-900 rounded-[5px] rounded-bl-none px-4 py-3">
-                  <p className="text-sm whitespace-pre-wrap">{inquiry.message}</p>
-                </div>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-xs text-gray-400">{inquiry.guestName} · {formatTime(inquiry.createdAt)}</span>
-                </div>
+          {/* Chat header — tenant summary */}
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50/80">
+            <button
+              type="button"
+              onClick={() => setShowTenantPanel(true)}
+              className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity text-left"
+            >
+              <UserAvatar name={inquiry.guestName} src={inquiry.guestAvatar || profile?.avatar} size="sm" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">{inquiry.guestName}</p>
+                <p className="text-xs text-gray-500 truncate">
+                  {tenantAgeLabel !== "—" && `${tenantAgeLabel} · `}
+                  {formatGender(profile?.gender)} · {formatLastActive(profile?.lastLoginAt)}
+                  {tenantLocation && ` · ${tenantLocation}`}
+                </p>
               </div>
+            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {hasNewActivity && (
+                <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full animate-pulse">
+                  <Circle className="w-2 h-2 fill-green-600 text-green-600" />
+                  New message
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Circle className="w-2 h-2 fill-green-500 text-green-500" />
+                Live
+              </span>
             </div>
+          </div>
+
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleMessagesScroll}
+            className="flex-1 overflow-y-auto p-4 space-y-5 bg-gradient-to-b from-gray-50/50 to-white"
+          >
+            <InquiryEntryCard
+              tenant={tenantProfile}
+              message={inquiry.message}
+              timestamp={inquiry.createdAt}
+            />
 
             {messages.map((msg) => {
               const isMe = msg.senderRole === "OWNER";
               const isSystem = msg.senderRole === "SYSTEM" || msg.messageType === "STATUS_CHANGE";
+              const isNew = newMessageIds.has(msg.id);
 
               if (isSystem) {
                 return (
@@ -628,18 +748,15 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
               }
 
               return (
-                <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                  <div className="max-w-[75%]">
-                    <div className={`rounded-[5px] px-4 py-3 ${isMe ? "bg-green-600 text-white rounded-br-none" : "bg-gray-100 text-gray-900 rounded-bl-none"}`}>
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    </div>
-                    <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
-                      <span className="text-xs text-gray-400">
-                        {isMe ? "You" : msg.senderName} · {formatTime(msg.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <ChatMessageBubble
+                  key={msg.id}
+                  content={msg.content}
+                  senderName={isMe ? ownerName : msg.senderName}
+                  senderAvatar={isMe ? ownerAvatar : (msg.senderAvatar || inquiry.guestAvatar || profile?.avatar)}
+                  timestamp={msg.createdAt}
+                  isMe={isMe}
+                  isNew={isNew}
+                />
               );
             })}
 

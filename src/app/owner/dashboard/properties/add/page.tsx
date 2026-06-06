@@ -34,6 +34,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/lib/api";
 import LocationPickerMap, { LocationResult } from "@/components/common/LocationPickerMap";
+import {
+  formatCommissionPercent,
+  useShortRentCommission,
+} from "@/hooks/useShortRentCommission";
 
 const propertyTypes = [
   { value: "APARTMENT", label: "Apartment", icon: Home },
@@ -70,6 +74,7 @@ export default function AddPropertyPage() {
   const [listingType, setListingType] = useState<"rent" | "buy">("rent");
   const [rentalType, setRentalType] = useState<"short" | "long">("short");
   const [amenities, setAmenities] = useState<AmenityOption[]>([]);
+  const shortRentCommission = useShortRentCommission();
   
   const [formData, setFormData] = useState({
     // Basic Info
@@ -434,6 +439,11 @@ export default function AddPropertyPage() {
             </div>
             <h4 className="font-semibold text-gray-900 mb-2">Short Stay</h4>
             <p className="text-sm text-gray-600">Airbnb-style, per night bookings</p>
+            {shortRentCommission !== null && (
+              <p className="mt-3 pt-3 border-t border-green-200 text-sm font-medium text-green-700">
+                Platform commission: {formatCommissionPercent(shortRentCommission)}%
+              </p>
+            )}
           </button>
 
           <button
@@ -855,6 +865,22 @@ export default function AddPropertyPage() {
 
             {rentalType === "short" && (
               <>
+                {shortRentCommission !== null && (
+                  <div className="md:col-span-2 p-3 bg-amber-50 border border-amber-200 rounded-[5px] text-sm text-amber-900">
+                    <p>
+                      <strong>Platform commission:</strong>{" "}
+                      {formatCommissionPercent(shortRentCommission)}% of each booking total.
+                    </p>
+                    {formData.price && Number(formData.price) > 0 && (
+                      <p className="text-xs mt-1 text-amber-800">
+                        Example: {formatCommissionPercent(shortRentCommission)}% on a £
+                        {formData.price} booking → you receive approx. £
+                        {(Number(formData.price) * (1 - shortRentCommission / 100)).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <Label htmlFor="cleaningFee">Cleaning Fee</Label>
                   <Input

@@ -76,7 +76,41 @@ export const updateProfileSchema = z.object({
   phone: phoneSchema,
   avatar: z.string().url("Invalid avatar URL").optional().or(z.literal("")),
   // Personal Information
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)").optional(),
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const [y, m, d] = val.split("-").map(Number);
+        const born = new Date(y, m - 1, d);
+        if (Number.isNaN(born.getTime())) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        born.setHours(0, 0, 0, 0);
+        return born <= today;
+      },
+      { message: "Date of birth cannot be in the future" }
+    )
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const age = (() => {
+          const [y, m, d] = val.split("-").map(Number);
+          const born = new Date(y, m - 1, d);
+          const today = new Date();
+          let a = today.getFullYear() - born.getFullYear();
+          const md = today.getMonth() - born.getMonth();
+          if (md < 0 || (md === 0 && today.getDate() < born.getDate())) a -= 1;
+          return a;
+        })();
+        return age >= 16;
+      },
+      { message: "You must be at least 16 years old" }
+    ),
+  gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional().or(z.literal("")),
   // Address Information
   address: z.string().max(255).optional(),
   city: z.string().max(100).optional(),

@@ -29,6 +29,7 @@ export async function toUserDTO(user: User): Promise<UserDTO> {
     roles: roles,
     status: user.status as UserStatus,
     birthDate: user.birthDate,
+    gender: user.gender,
     address: user.address,
     city: user.city,
     state: user.state,

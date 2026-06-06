@@ -35,6 +35,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/lib/api";
 import LocationPickerMap, { LocationResult } from "@/components/common/LocationPickerMap";
+import {
+  formatCommissionPercent,
+  useShortRentCommission,
+} from "@/hooks/useShortRentCommission";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -92,6 +96,7 @@ export default function AdminAddPropertyPage() {
   const [listingType, setListingType] = useState<"rent" | "buy">("rent");
   const [rentalType, setRentalType] = useState<"short" | "long">("short");
   const [amenities, setAmenities] = useState<AmenityOption[]>([]);
+  const shortRentCommission = useShortRentCommission();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -466,7 +471,11 @@ export default function AdminAddPropertyPage() {
             </div>
             <h4 className="font-semibold text-gray-900 mb-2">Short Stay</h4>
             <p className="text-sm text-gray-600">Airbnb-style, per night bookings</p>
-            <div className="mt-4 text-sm text-green-600 font-medium">Commission: 10-15%</div>
+            {shortRentCommission !== null && (
+              <p className="mt-3 pt-3 border-t border-green-200 text-sm font-medium text-green-700">
+                Platform commission: {formatCommissionPercent(shortRentCommission)}%
+              </p>
+            )}
           </button>
 
           <button
@@ -671,6 +680,22 @@ export default function AdminAddPropertyPage() {
             </div>
             {rentalType === "short" && (
               <>
+                {shortRentCommission !== null && (
+                  <div className="md:col-span-2 p-3 bg-amber-50 border border-amber-200 rounded-[5px] text-sm text-amber-900">
+                    <p>
+                      <strong>Platform commission:</strong>{" "}
+                      {formatCommissionPercent(shortRentCommission)}% of each booking total.
+                    </p>
+                    {formData.price && Number(formData.price) > 0 && (
+                      <p className="text-xs mt-1 text-amber-800">
+                        Example: {formatCommissionPercent(shortRentCommission)}% on a £
+                        {formData.price} booking → owner receives approx. £
+                        {(Number(formData.price) * (1 - shortRentCommission / 100)).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <Label htmlFor="cleaningFee">Cleaning Fee</Label>
                   <Input id="cleaningFee" name="cleaningFee" type="number" value={formData.cleaningFee} onChange={handleInputChange} />

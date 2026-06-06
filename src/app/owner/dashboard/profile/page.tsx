@@ -11,6 +11,7 @@ import DocumentUploadModal from "@/components/dashboard/UserDashboard/DocumentUp
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { MeResponse, UserDTO } from "@/types/auth";
+import { formatBirthDate, formatGender, formatMemberSinceFull } from "@/lib/inquiries/inquiryDisplay";
 
 export default function OwnerProfilePage() {
   const [user, setUser] = useState<UserDTO | null>(null);
@@ -169,15 +170,25 @@ export default function OwnerProfilePage() {
               {user ? `${user.firstName} ${user.lastName}` : "Loading..."}
             </h3>
             <p className="text-gray-600">{user?.email}</p>
-            <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-4 mt-2 flex-wrap">
               <div className="text-sm">
                 <span className="font-medium">Member since:</span>{" "}
-                {formatDate(user?.createdAt?.toString())}
+                {formatMemberSinceFull(user?.createdAt?.toString())}
               </div>
               <div className="text-sm">
                 <span className="font-medium">Last login:</span>{" "}
                 {user?.lastLoginAt ? formatDate(user.lastLoginAt?.toString()) : "Never"}
               </div>
+              {user?.birthDate && (
+                <div className="text-sm">
+                  <span className="font-medium">Date of birth:</span> {formatBirthDate(user.birthDate)}
+                </div>
+              )}
+              {user?.gender && (
+                <div className="text-sm">
+                  <span className="font-medium">Gender:</span> {formatGender(user.gender)}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-col gap-2">

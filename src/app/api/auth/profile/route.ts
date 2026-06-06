@@ -60,6 +60,9 @@ export async function PATCH(request: NextRequest) {
         ...(validatedData.birthDate !== undefined && {
           birthDate: validatedData.birthDate || null,
         }),
+        ...(validatedData.gender !== undefined && {
+          gender: validatedData.gender || null,
+        }),
         // Address Information
         ...(validatedData.address !== undefined && {
           address: validatedData.address || null,

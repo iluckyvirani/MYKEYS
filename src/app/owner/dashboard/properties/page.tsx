@@ -167,8 +167,17 @@ const normalizeProperty = (item: any): OwnerProperty => {
     country: String(full.country ?? ""),
     listingType: listingTypeRaw === "BUY" ? "buy" : "rent",
     rentalType: listingTypeRaw === "BUY" ? null : rentalTypeRaw === "SHORT_TERM" ? "short" : rentalTypeRaw === "LONG_TERM" ? "long" : null,
-    price: Number(full.propertyPrice ?? full.price ?? 0),
-    priceType: listingTypeRaw === "BUY" ? "total" : priceTypeRaw === "NIGHTLY" ? "nightly" : "monthly",
+    price: Number(
+      listingTypeRaw === "BUY"
+        ? full.propertyPrice ?? full.price ?? item?.price ?? 0
+        : full.price ?? item?.price ?? 0
+    ),
+    priceType:
+      listingTypeRaw === "BUY"
+        ? "total"
+        : rentalTypeRaw === "LONG_TERM" || priceTypeRaw === "MONTHLY"
+        ? "monthly"
+        : "nightly",
     status: (statusRaw as any) || "draft",
     rating: Number(item?.rating ?? full.averageRating ?? 0),
     reviews: Number(item?.reviews ?? full.reviewCount ?? 0),

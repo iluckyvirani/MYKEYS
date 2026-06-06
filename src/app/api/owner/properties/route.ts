@@ -136,7 +136,10 @@ export const GET = withAuth(
             : null,
           price: property.price,
           priceType: property.priceType,
-          occupancy: Math.max(0, Math.min(100, occupancyRate)), // Ensure 0-100 range
+          listingType: property.listingType,
+          rentalType: property.rentalType,
+          propertyPrice: property.propertyPrice,
+          occupancy: Math.max(0, Math.min(100, occupancyRate)),
           rating: Math.round(avgRating * 10) / 10,
           reviews: property.reviews.length,
           bookings: totalBookings,

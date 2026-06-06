@@ -221,6 +221,7 @@ model User {
 
   // Personal Information (for USER role)
   birthDate String?
+  gender    String? // MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
   // Address Information (for USER role)
   address String?

@@ -19,7 +19,7 @@ const globalForPrisma = global as unknown as {
 };
 
 /** Bump when Prisma schema changes so dev server picks up regenerated client */
-const PRISMA_CLIENT_VERSION = "20260531-stripe-bid-columns";
+const PRISMA_CLIENT_VERSION = "20260531-user-gender";
 
 function createPrismaClient() {
   return new PrismaClient({

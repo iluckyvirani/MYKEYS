@@ -30,6 +30,7 @@ export interface UserDTO {
 
   // Personal Information
   birthDate: string | null;
+  gender: string | null;
 
   // Address Information
   address: string | null;
@@ -161,6 +162,7 @@ export interface UpdateProfileRequest {
   phone?: string;
   avatar?: string;
   birthDate?: string;
+  gender?: string;
   address?: string;
   city?: string;
   state?: string;

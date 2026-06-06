@@ -7,6 +7,7 @@ import { JWTPayload } from '@/lib/auth/jwt';
 import { CreateShortBookingRequest, ShortBookingDTO, BookingStatus, PaymentStatus, BookingType, PaymentMethod } from '@/types/bookings';
 import { notificationService } from '@/lib/notifications/notificationService';
 import { emailService } from '@/lib/email/emailService';
+import { hasDateConflict } from '@/lib/bookings/bookingAvailabilityQueries';
 
 /**
  * GET /api/bookings
@@ -239,23 +240,10 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
     const serviceFee = property.serviceFee || 0;
     const totalAmount = subtotal + cleaningFee + serviceFee;
 
-    // Check property availability (no overlapping bookings)
-    const overlappingBookings = await prisma.booking.count({
-      where: {
-        propertyId: body.propertyId,
-        status: {
-          in: [BookingStatus.CONFIRMED],
-        },
-        OR: [
-          {
-            checkIn: { lt: checkOut },
-            checkOut: { gt: checkIn },
-          },
-        ],
-      },
-    });
+    // Check property availability (paid bookings block the calendar)
+    const datesTaken = await hasDateConflict(body.propertyId, checkIn, checkOut);
 
-    if (overlappingBookings > 0) {
+    if (datesTaken) {
       return errorResponse(
         'Property is not available for the selected dates',
         400,

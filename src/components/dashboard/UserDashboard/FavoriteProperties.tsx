@@ -22,6 +22,19 @@ const getListingTypeBadge = (listingType: string, rentalType?: string | null) =>
   return { text: "Rental", color: "bg-gray-100 text-gray-800" };
 };
 
+const getBrowseHref = (filter: string): string => {
+  switch (filter) {
+    case "short":
+      return "/rent/short-rent";
+    case "long":
+      return "/rent/long-rent";
+    case "buy":
+      return "/buy";
+    default:
+      return "/";
+  }
+};
+
 export default function FavoriteProperties() {
   const [favorites, setFavorites] = useState<FavoriteWithProperty[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +148,7 @@ export default function FavoriteProperties() {
           <h4 className="text-lg font-medium text-gray-900 mb-2">No favorite properties yet</h4>
           <p className="text-gray-500 max-w-md mx-auto mb-6">Save properties you like by clicking the heart icon</p>
           <Button asChild className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
-            <Link href="/rent/short-rent">Browse Properties</Link>
+            <Link href={getBrowseHref(filter)}>Browse Properties</Link>
           </Button>
         </div>
       ) : (

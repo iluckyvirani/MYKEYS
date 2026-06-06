@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { MessageSquare, Search, MailOpen, User, Tag, SortAsc, Trash2, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { MessageSquare, Search, MailOpen, Tag, SortAsc, Trash2, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import UserAvatar from "@/components/common/UserAvatar";
+import { timeAgoShort } from "@/lib/inquiries/inquiryDisplay";
 
 interface InquiryThread {
   id: string;
@@ -14,6 +15,7 @@ interface InquiryThread {
   propertyTitle: string;
   guestName: string;
   guestEmail: string;
+  guestAvatar?: string | null;
   lastMessage: string;
   lastMessageAt: string | null;
   lastMessageRole: string;
@@ -47,17 +49,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 function timeAgo(dateStr: string | null) {
-  if (!dateStr) return "";
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return timeAgoShort(dateStr);
 }
 
 type Tab = "all" | "unread" | "not-replied" | "deleted";
@@ -81,6 +73,7 @@ export default function OwnerInquiriesPage() {
     propertyTitle: inq.propertyTitle || "Property",
     guestName: inq.guestName || "Guest",
     guestEmail: inq.guestEmail || "",
+    guestAvatar: inq.guestAvatar || null,
     lastMessage: inq.lastMessage || inq.message || "",
     lastMessageAt: inq.lastMessageAt || inq.updatedAt || inq.createdAt,
     lastMessageRole: inq.lastMessageRole || "USER",
@@ -309,11 +302,15 @@ export default function OwnerInquiriesPage() {
               return (
                 <li key={thread.id} className="relative group">
                   <Link href={`/owner/dashboard/inquiries/${thread.id}`}
-                    className={`flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${hasUnread ? "bg-green-50/30" : ""}`}
+                    className={`flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${hasUnread ? "bg-green-50/40 border-l-4 border-l-green-500" : ""}`}
                   >
-                    <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 mt-0.5 font-semibold text-white ${hasUnread ? "bg-green-600" : "bg-gray-300"}`}>
-                      {thread.guestName.charAt(0).toUpperCase()}
-                    </div>
+                    <UserAvatar
+                      name={thread.guestName}
+                      src={thread.guestAvatar}
+                      size="md"
+                      ring={hasUnread}
+                      className="mt-0.5"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`text-sm font-semibold truncate ${hasUnread ? "text-gray-900" : "text-gray-700"}`}>{thread.guestName}</span>
@@ -329,7 +326,9 @@ export default function OwnerInquiriesPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="text-xs text-gray-400 whitespace-nowrap">{timeAgo(thread.lastMessageAt || thread.createdAt)}</span>
+                      <span className={`text-xs whitespace-nowrap ${hasUnread ? "text-green-700 font-semibold" : "text-gray-400"}`}>
+                        {timeAgo(thread.lastMessageAt || thread.createdAt)}
+                      </span>
                       <div className="flex items-center gap-1 mt-auto">
                         {tab !== "deleted" && (
                           <button onClick={(e) => handleDelete(thread.id, e)} className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all" title="Delete">

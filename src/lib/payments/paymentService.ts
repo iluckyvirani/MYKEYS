@@ -14,6 +14,7 @@ import {
   ProcessRefundRequest,
 } from '@/types/payment';
 import { PaymentStatus, BookingStatus } from '@prisma/client';
+import { confirmPaidBooking } from '@/lib/bookings/bookingAvailabilityQueries';
 
 /**
  * Payment Service
@@ -211,15 +212,13 @@ export const paymentService = {
       });
 
       if (updatedPayment.bookingId) {
-        await prisma.booking.update({
-          where: { id: updatedPayment.bookingId },
-          data: {
-            paymentStatus: PaymentStatus.PAID,
-            paidAmount: updatedPayment.amount,
-            balanceAmount: 0,
-            status: BookingStatus.CONFIRMED,
-          },
-        });
+        const result = await confirmPaidBooking(
+          updatedPayment.bookingId,
+          updatedPayment.amount
+        );
+        if (!result.ok) {
+          throw new Error(result.reason);
+        }
       }
 
       // Activate the OwnerPackage if this payment is for a package subscription
@@ -309,7 +308,12 @@ export const paymentService = {
       if (updatedPayment.bookingId) {
         await prisma.booking.update({
           where: { id: updatedPayment.bookingId },
-          data: { paymentStatus: PaymentStatus.REFUNDED, paidAmount: 0 },
+          data: {
+            paymentStatus: PaymentStatus.REFUNDED,
+            paidAmount: 0,
+            status: BookingStatus.CANCELLED,
+            cancelledAt: new Date(),
+          },
         });
       }
 

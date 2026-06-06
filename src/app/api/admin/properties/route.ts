@@ -4,6 +4,9 @@ import { successResponse, errorResponse, paginatedResponse } from "@/lib/respons
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import {
+  getDocumentVerificationStatesForProperties,
+} from "@/lib/documents/documentService";
 
 /**
  * GET /api/admin/properties
@@ -33,12 +36,16 @@ export const GET = withAuth(
       const minPrice = searchParams.get("minPrice");
       const maxPrice = searchParams.get("maxPrice");
       const search = searchParams.get("search");
+      const listingType = searchParams.get("listingType");
+      const rentalType = searchParams.get("rentalType");
 
       // Build where clause
       const where: any = {};
 
       if (status && status !== "ALL") where.status = status;
       if (propertyType && propertyType !== "ALL") where.propertyType = propertyType;
+      if (listingType && listingType !== "ALL") where.listingType = listingType;
+      if (rentalType && rentalType !== "ALL") where.rentalType = rentalType;
       if (city) where.city = { contains: city, mode: "insensitive" };
       if (ownerId) where.ownerId = ownerId;
 
@@ -106,33 +113,102 @@ export const GET = withAuth(
         prisma.property.count({ where }),
       ]);
 
+      const verificationByProperty = await getDocumentVerificationStatesForProperties(
+        properties.map((p) => ({
+          id: p.id,
+          listingType: p.listingType,
+          rentalType: p.rentalType,
+        }))
+      );
+
       // Transform data to DTO format
-      const propertyDTOs = properties.map((p: any) => ({
-        id: p.id,
-        title: p.title,
-        address: p.address,
-        city: p.city,
-        state: p.state,
-        zipCode: p.zipCode,
-        propertyType: p.propertyType,
-        listingType: p.listingType,
-        status: p.status,
-        price: p.price,
-        bedrooms: p.bedrooms,
-        bathrooms: p.bathrooms,
-        area: p.area,
-        amenities: p.amenities,
-        description: p.description,
-        ownerId: p.ownerId,
-        ownerName: `${p.owner?.firstName} ${p.owner?.lastName}`,
-        ownerEmail: p.owner?.email,
-        images: p.images,
-        avgRating: p.avgRating || 0,
-        reviewsCount: p._count.reviews,
-        bookingsCount: p._count.bookings,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-      }));
+      const propertyDTOs = properties.map((p: any) => {
+        const docVerification = verificationByProperty.get(p.id);
+        const documentsVerified = docVerification?.allVerified ?? true;
+        const documentsPendingVerification =
+          Boolean(docVerification?.hasRequiredDocuments) && !documentsVerified;
+
+        const fullData = {
+          id: p.id,
+          title: p.title,
+          slug: p.slug,
+          description: p.description,
+          address: p.address,
+          city: p.city,
+          state: p.state,
+          country: p.country,
+          zipCode: p.zipCode,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          propertyType: p.propertyType,
+          listingType: p.listingType,
+          rentalType: p.rentalType,
+          price: p.price,
+          priceType: p.priceType,
+          propertyPrice: p.propertyPrice,
+          originalPrice: p.originalPrice,
+          cleaningFee: p.cleaningFee,
+          serviceFee: p.serviceFee,
+          securityDeposit: p.securityDeposit,
+          bedrooms: p.bedrooms,
+          bathrooms: p.bathrooms,
+          sqft: p.sqft,
+          guests: p.guests,
+          minStay: p.minStay,
+          maxStay: p.maxStay,
+          minTerm: p.minTerm,
+          maxTerm: p.maxTerm,
+          status: p.status,
+          isFeatured: p.isFeatured,
+          isVerified: p.isVerified,
+          ownerId: p.ownerId,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+          images: p.images,
+          reviewsCount: p._count.reviews,
+          bookingsCount: p._count.bookings,
+        };
+
+        return {
+          id: p.id,
+          title: p.title,
+          address: p.address,
+          city: p.city,
+          state: p.state,
+          zipCode: p.zipCode,
+          propertyType: p.propertyType,
+          listingType: p.listingType,
+          rentalType: p.rentalType,
+          priceType: p.priceType,
+          price: p.price,
+          propertyPrice: p.propertyPrice,
+          bedrooms: p.bedrooms,
+          bathrooms: p.bathrooms,
+          sqft: p.sqft,
+          guests: p.guests,
+          description: p.description,
+          ownerId: p.ownerId,
+          ownerName: `${p.owner?.firstName || ""} ${p.owner?.lastName || ""}`.trim(),
+          ownerEmail: p.owner?.email,
+          images: p.images,
+          avgRating: p.avgRating || 0,
+          reviewsCount: p._count.reviews,
+          bookingsCount: p._count.bookings,
+          status: p.status,
+          documentsVerified,
+          documentsPendingVerification,
+          documentVerification: docVerification
+            ? {
+                pendingReview: docVerification.pendingReview,
+                missingUpload: docVerification.missingUpload,
+                hasRejected: docVerification.hasRejected,
+              }
+            : null,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+          fullData,
+        };
+      });
 
       return paginatedResponse(
         propertyDTOs,

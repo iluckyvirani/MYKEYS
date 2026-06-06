@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import { PaymentStatus, BookingStatus } from '@prisma/client';
+import { confirmPaidBooking } from '@/lib/bookings/bookingAvailabilityQueries';
 
 /**
  * POST /api/payments/webhook
@@ -58,15 +59,12 @@ export async function POST(request: NextRequest) {
           });
 
           if (payment.bookingId) {
-            await prisma.booking.update({
-              where: { id: payment.bookingId },
-              data: {
-                paymentStatus: PaymentStatus.PAID,
-                paidAmount: payment.amount,
-                balanceAmount: 0,
-                status: BookingStatus.CONFIRMED,
-              },
-            });
+            const result = await confirmPaidBooking(payment.bookingId, payment.amount);
+            if (!result.ok) {
+              console.warn(
+                `Booking ${payment.bookingId} not confirmed after payment: ${result.reason}`
+              );
+            }
           }
         }
         break;
@@ -115,7 +113,12 @@ export async function POST(request: NextRequest) {
           if (payment.bookingId) {
             await prisma.booking.update({
               where: { id: payment.bookingId },
-              data: { paymentStatus: PaymentStatus.REFUNDED, paidAmount: 0 },
+              data: {
+                paymentStatus: PaymentStatus.REFUNDED,
+                paidAmount: 0,
+                status: BookingStatus.CANCELLED,
+                cancelledAt: new Date(),
+              },
             });
           }
         }

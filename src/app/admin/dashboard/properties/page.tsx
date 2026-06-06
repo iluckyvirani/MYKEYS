@@ -34,6 +34,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { getPropertyPriceDisplay } from "@/lib/properties/propertyDisplay";
 
 interface Property {
   id: string;
@@ -49,7 +50,8 @@ interface Property {
   listingType: string;
   rentalType?: string;
   price: number;
-  priceType?: string;
+  priceType?: string | null;
+  propertyPrice?: number | null;
   status: string;
   bookings: number;
   bedrooms: number;
@@ -114,31 +116,35 @@ export default function AdminPropertiesPage() {
 
       const response = await api.get(`/admin/properties?${params}`);
       if (response.data?.success && response.data?.data?.items) {
-        const items: Property[] = response.data.data.items.map((p: any) => ({
+        const items: Property[] = response.data.data.items.map((p: any) => {
+          const full = p.fullData ?? p;
+          return {
           id: p.id,
           title: p.title,
           owner: p.ownerName || "Unknown",
           ownerId: p.ownerId || "",
           ownerEmail: p.ownerEmail || "",
-          address: p.address || "",
-          city: p.city || "",
-          state: p.state || "",
-          zipCode: p.zipCode || "",
-          propertyType: p.propertyType || "Property",
-          listingType: p.listingType || "RENT",
-          rentalType: p.rentalType || "",
-          price: p.price || 0,
-          priceType: p.priceType || "NIGHTLY",
-          status: (p.status || "DRAFT").toLowerCase(),
-          bookings: p.bookingsCount || 0,
-          bedrooms: p.bedrooms || 0,
-          bathrooms: p.bathrooms || 0,
-          sqft: p.area || p.sqft || 0,
-          images: p.images || [],
+          address: p.address || full.address || "",
+          city: p.city || full.city || "",
+          state: p.state || full.state || "",
+          zipCode: p.zipCode || full.zipCode || "",
+          propertyType: p.propertyType || full.propertyType || "Property",
+          listingType: p.listingType || full.listingType || "RENT",
+          rentalType: p.rentalType ?? full.rentalType ?? null,
+          price: p.price ?? full.price ?? 0,
+          priceType: p.priceType ?? full.priceType ?? null,
+          propertyPrice: p.propertyPrice ?? full.propertyPrice ?? null,
+          status: (p.status || full.status || "DRAFT").toLowerCase(),
+          bookings: p.bookingsCount || full.bookingsCount || 0,
+          bedrooms: p.bedrooms ?? full.bedrooms ?? 0,
+          bathrooms: p.bathrooms ?? full.bathrooms ?? 0,
+          sqft: p.sqft ?? full.sqft ?? 0,
+          images: p.images || full.images || [],
           rating: p.avgRating || 0,
           reviewCount: p.reviewsCount || 0,
-          createdAt: p.createdAt || "",
-        }));
+          createdAt: p.createdAt || full.createdAt || "",
+        };
+        });
         setProperties(items);
         const active = items.filter((p) => p.status === "active").length;
         const inactive = items.filter((p) => p.status === "inactive").length;
@@ -198,12 +204,7 @@ export default function AdminPropertiesPage() {
     const listing = getListingBadge(property.listingType, property.rentalType);
     const ListingIcon = listing.Icon;
     const image = getPrimaryImage(property.images);
-    const priceLabel =
-      property.listingType.toUpperCase() === "BUY"
-        ? " total"
-        : (property.priceType || "NIGHTLY").toUpperCase() === "MONTHLY"
-        ? "/mo"
-        : "/night";
+    const { amount, suffix } = getPropertyPriceDisplay(property);
 
     return (
       <div
@@ -268,8 +269,8 @@ export default function AdminPropertiesPage() {
           {/* Price + bookings */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <span className="text-lg font-bold text-gray-900">{formatCurrency(property.price)}</span>
-              <span className="text-sm text-gray-500 ml-1">{priceLabel}</span>
+              <span className="text-lg font-bold text-gray-900">{formatCurrency(amount)}</span>
+              <span className="text-sm text-gray-500 ml-1">{suffix}</span>
             </div>
             <div className="text-xs text-gray-500">{property.bookings} bookings</div>
           </div>
@@ -305,8 +306,9 @@ export default function AdminPropertiesPage() {
 
   const renderListRow = (property: Property) => {
     const status = getStatusConfig(property.status);
-    const listing = getListingBadge(property.listingType, property.rentalType);
+    const listing = getListingBadge(property.listingType, property.rentalType ?? undefined);
     const image = getPrimaryImage(property.images);
+    const { amount, suffix } = getPropertyPriceDisplay(property);
     return (
       <tr key={property.id} className="border-b hover:bg-gray-50">
         <td className="py-3 px-4">
@@ -336,7 +338,10 @@ export default function AdminPropertiesPage() {
         <td className="py-3 px-4">
           <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${status.color}`}>{status.label}</span>
         </td>
-        <td className="py-3 px-4 font-medium text-gray-900">{formatCurrency(property.price)}</td>
+        <td className="py-3 px-4 font-medium text-gray-900">
+          {formatCurrency(amount)}
+          <span className="text-xs text-gray-500 font-normal">{suffix}</span>
+        </td>
         <td className="py-3 px-4">
           <div className="flex items-center gap-1">
             <Link href={`/admin/dashboard/properties/${property.id}`}>

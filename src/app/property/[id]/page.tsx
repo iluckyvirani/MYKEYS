@@ -46,6 +46,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StripePaymentModal } from "@/components/StripePaymentModal";
 import { DatePickerInput } from "@/components/property/DatePickerInput";
+import { BlockedDateRange, isRangeAvailable } from "@/lib/bookings/bookingAvailability";
 import { api } from "@/lib/api";
 import { CreateShortBookingRequest, PaymentMethod } from "@/types/bookings";
 import { formatDateToReadable } from "@/utils/utils";
@@ -160,7 +161,6 @@ export default function PropertyDetailsPage() {
         phone: "",
         message: "",
         budget: "",
-        duration: "",
         type: ""
     });
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -173,6 +173,7 @@ export default function PropertyDetailsPage() {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentData, setPaymentData] = useState<{ bookingId: string, amount: number, propertyTitle: string } | null>(null);
     const [showConfirmationPopup, setShowConfirmationPopup] = useState(false);
+    const [blockedDateRanges, setBlockedDateRanges] = useState<BlockedDateRange[]>([]);
     const [confirmedBookingInfo, setConfirmedBookingInfo] = useState<{
         amount: number;
         propertyTitle: string;
@@ -237,6 +238,17 @@ export default function PropertyDetailsPage() {
             setTotalAmount(0);
         }
     }, [checkInDate, checkOutDate, property]);
+
+    const refreshBlockedDates = async (propertyId: string) => {
+        try {
+            const response = await api.get(`/properties/${propertyId}/availability`);
+            if (response.data?.success && response.data.data?.blockedDateRanges) {
+                setBlockedDateRanges(response.data.data.blockedDateRanges);
+            }
+        } catch (error) {
+            console.error("Error loading availability:", error);
+        }
+    };
 
     // Fetch property data from API
     useEffect(() => {
@@ -312,6 +324,7 @@ export default function PropertyDetailsPage() {
                     };
 
                     setProperty(mappedData);
+                    setBlockedDateRanges(apiData.blockedDateRanges || []);
                 }
             } catch (error) {
                 console.error("Error fetching property:", error);
@@ -399,21 +412,12 @@ export default function PropertyDetailsPage() {
                 budget: inquiryForm.budget ? parseFloat(inquiryForm.budget) : undefined,
             };
 
-            // Add duration for long-term rental
-            if (inquiryType === "long_term") {
-                if (!inquiryForm.duration) {
-                    alert("Please enter desired rental duration");
-                    return;
-                }
-                inquiryData.duration = inquiryForm.duration;
-            }
-
             const response = await api.post("/inquiries", inquiryData);
 
             if (response.data?.success) {
                 const newInquiryId = response.data.data?.id;
                 setShowInquiryModal(false);
-                setInquiryForm({ name: "", phone: "", message: "", email: "", budget: "", duration: "", type: "" });
+                setInquiryForm({ name: "", phone: "", message: "", email: "", budget: "", type: "" });
                 // Redirect to chat window
                 if (newInquiryId) {
                     router.push(`/dashboard/inquiries/${newInquiryId}`);
@@ -471,6 +475,11 @@ export default function PropertyDetailsPage() {
 
         if (property.maxStay && numberOfNights > property.maxStay) {
             setBookingError(`Maximum stay is ${property.maxStay} night${property.maxStay !== 1 ? 's' : ''}`);
+            return;
+        }
+
+        if (!isRangeAvailable(checkInDate, checkOutDate, blockedDateRanges)) {
+            setBookingError("These dates are not available. Please choose different dates.");
             return;
         }
 
@@ -1301,6 +1310,8 @@ export default function PropertyDetailsPage() {
                                                     align="auto"
                                                     rangeStart={checkInDate}
                                                     rangeEnd={checkOutDate}
+                                                    blockedRanges={blockedDateRanges}
+                                                    pickerMode="check-in"
                                                 />
                                                 <DatePickerInput
                                                     label="Check-out"
@@ -1313,6 +1324,8 @@ export default function PropertyDetailsPage() {
                                                         : undefined}
                                                     rangeStart={checkInDate}
                                                     rangeEnd={checkOutDate}
+                                                    blockedRanges={blockedDateRanges}
+                                                    pickerMode="check-out"
                                                 />
                                             </div>
 
@@ -1570,24 +1583,6 @@ export default function PropertyDetailsPage() {
                                         </div>
                                     )}
 
-                                    {/* Duration Field - Only for Long-term Rental */}
-                                    {property.listingType === "rent" && property.rentalType === "long" && (
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Desired Duration (Months) (Required)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={inquiryForm.duration}
-                                                onChange={(e) => setInquiryForm({ ...inquiryForm, duration: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-[5px]"
-                                                placeholder="Enter number of months"
-                                                min="1"
-                                                required
-                                            />
-                                        </div>
-                                    )}
-
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Message {isLoggedIn && "(Required)"}
@@ -1693,6 +1688,7 @@ export default function PropertyDetailsPage() {
                                     nights,
                                     guests,
                                 });
+                                void refreshBlockedDates(property.id);
                                 setShowPaymentModal(false);
                                 setPaymentData(null);
                                 setCheckInDate("");

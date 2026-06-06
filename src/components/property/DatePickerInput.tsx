@@ -3,6 +3,12 @@
 import { useState, useRef, useEffect, useCallback, useId } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import {
+  BlockedDateRange,
+  canSelectCheckIn,
+  canSelectCheckOut,
+  isDateBlocked,
+} from "@/lib/bookings/bookingAvailability";
 
 interface DatePickerInputProps {
   value: string; // YYYY-MM-DD
@@ -15,6 +21,10 @@ interface DatePickerInputProps {
   rangeStart?: string;
   /** Prefer calendar anchor: auto flips to stay in viewport */
   align?: "start" | "end" | "auto";
+  /** Paid booking ranges that block the calendar */
+  blockedRanges?: BlockedDateRange[];
+  /** check-in disables occupied nights; check-out validates the full stay */
+  pickerMode?: "check-in" | "check-out";
 }
 
 const MONTHS = [
@@ -91,6 +101,8 @@ export function DatePickerInput({
   rangeStart,
   rangeEnd,
   align = "auto",
+  blockedRanges = [],
+  pickerMode = "check-in",
 }: DatePickerInputProps) {
   const effectiveMin = minDate || getTomorrow();
   const inputId = useId();
@@ -199,7 +211,21 @@ export function DatePickerInput({
   const makeDayStr = (day: number) =>
     `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-  const isDisabled = (day: number) => makeDayStr(day) < effectiveMin;
+  const isDisabled = (day: number) => {
+    const dStr = makeDayStr(day);
+    if (dStr < effectiveMin) return true;
+
+    if (blockedRanges.length === 0) return false;
+
+    if (pickerMode === "check-out" && rangeStart) {
+      return !canSelectCheckOut(rangeStart, dStr, blockedRanges);
+    }
+
+    return !canSelectCheckIn(dStr, blockedRanges);
+  };
+
+  const isBlockedDay = (day: number) =>
+    blockedRanges.length > 0 && isDateBlocked(makeDayStr(day), blockedRanges);
   const isSelected = (day: number) => makeDayStr(day) === value;
   const isToday = (day: number) => makeDayStr(day) === toYMD(new Date());
 
@@ -232,6 +258,17 @@ export function DatePickerInput({
     if (ymd < effectiveMin) {
       setInputError(`Date must be on or after ${formatInputHint(effectiveMin)}`);
       return;
+    }
+    if (blockedRanges.length > 0) {
+      if (pickerMode === "check-out" && rangeStart) {
+        if (!canSelectCheckOut(rangeStart, ymd, blockedRanges)) {
+          setInputError("Selected dates overlap an existing booking");
+          return;
+        }
+      } else if (!canSelectCheckIn(ymd, blockedRanges)) {
+        setInputError("This date is not available");
+        return;
+      }
     }
     setInputError("");
     onChange(ymd);
@@ -321,6 +358,7 @@ export function DatePickerInput({
           if (day === null) return <div key={`e-${idx}`} />;
 
           const disabled = isDisabled(day);
+          const blocked = isBlockedDay(day);
           const selected = isSelected(day);
           const inRange = isInRange(day);
           const rangeEdge = isRangeEdge(day);
@@ -332,6 +370,7 @@ export function DatePickerInput({
               type="button"
               disabled={disabled}
               onClick={() => handleDayClick(day)}
+              title={blocked && disabled ? "Booked" : undefined}
               className={[
                 "relative h-9 w-9 mx-auto text-[13px] rounded-full font-medium transition-all",
                 selected
@@ -340,6 +379,8 @@ export function DatePickerInput({
                   ? "bg-green-500 text-white"
                   : inRange
                   ? "bg-green-50 text-green-800 rounded-none w-full"
+                  : blocked && disabled
+                  ? "bg-red-50 text-red-300 line-through cursor-not-allowed"
                   : !disabled
                   ? "hover:bg-green-50 hover:text-green-700 text-gray-800 cursor-pointer"
                   : "text-gray-300 cursor-not-allowed",

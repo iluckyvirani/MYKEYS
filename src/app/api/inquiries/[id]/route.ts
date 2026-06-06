@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/auth/middleware';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { UpdateInquiryStatusRequest, InquiryResponse, InquiryType, LongRentInquiry, InquiryStatus } from '@/types/inquiry';
+import { mapUserToGuestProfile } from '@/lib/user/profileFields';
 import { notificationService } from '@/lib/notifications/notificationService';
 import { emailService } from '@/lib/email/emailService';
 
@@ -49,6 +50,16 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
             lastName: true,
             email: true,
             phone: true,
+            avatar: true,
+            birthDate: true,
+            gender: true,
+            avatar: true,
+            city: true,
+            state: true,
+            country: true,
+            address: true,
+            createdAt: true,
+            lastLoginAt: true,
           },
         },
       },
@@ -91,6 +102,8 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
       guestName: inquiry.name || (inquiry.user ? `${inquiry.user.firstName} ${inquiry.user.lastName}` : ''),
       guestEmail: inquiry.email,
       guestPhone: inquiry.phone || inquiry.user?.phone || '',
+      guestAvatar: inquiry.user?.avatar || null,
+      guestProfile: mapUserToGuestProfile(inquiry.user),
       message: inquiry.message,
       ownerResponse: (inquiry as any).response,
       status: inquiry.status as InquiryStatus,

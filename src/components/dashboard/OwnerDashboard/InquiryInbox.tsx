@@ -5,11 +5,14 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { MessageSquare, Search, Inbox, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
+import UserAvatar from "@/components/common/UserAvatar";
+import { timeAgoShort } from "@/lib/inquiries/inquiryDisplay";
 
 interface InquiryThread {
   id: string;
   propertyTitle: string;
   guestName: string;
+  guestAvatar?: string | null;
   lastMessage: string;
   lastMessageAt: string | null;
   lastMessageRole: string;
@@ -37,17 +40,7 @@ const LABEL_COLORS: Record<string, string> = {
 };
 
 function timeAgo(dateStr: string | null) {
-  if (!dateStr) return "";
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return timeAgoShort(dateStr);
 }
 
 export default function InquiryInbox() {
@@ -65,6 +58,7 @@ export default function InquiryInbox() {
             id: inq.id,
             propertyTitle: inq.propertyTitle || "Property",
             guestName: inq.guestName || "Guest",
+            guestAvatar: inq.guestAvatar || null,
             lastMessage: inq.lastMessage || inq.message || "",
             lastMessageAt: inq.lastMessageAt || inq.updatedAt || inq.createdAt,
             lastMessageRole: inq.lastMessageRole || "USER",
@@ -148,11 +142,14 @@ export default function InquiryInbox() {
             const statusCfg = STATUS_CONFIG[thread.status] || STATUS_CONFIG.NEW;
             const hasUnread = thread.unreadByOwner > 0;
             return (
-              <div key={thread.id} className={`flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ${hasUnread ? "bg-green-50/30" : ""}`}>
-                {/* Avatar */}
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-white text-sm ${hasUnread ? "bg-green-600" : "bg-gray-300"}`}>
-                  {thread.guestName.charAt(0).toUpperCase()}
-                </div>
+              <div key={thread.id} className={`flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ${hasUnread ? "bg-green-50/40 border-l-4 border-l-green-500" : ""}`}>
+                <UserAvatar
+                  name={thread.guestName}
+                  src={thread.guestAvatar}
+                  size="sm"
+                  ring={hasUnread}
+                  className="mt-0.5"
+                />
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
@@ -176,7 +173,9 @@ export default function InquiryInbox() {
 
                 {/* Right side */}
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">{timeAgo(thread.lastMessageAt || thread.createdAt)}</span>
+                  <span className={`text-xs whitespace-nowrap ${hasUnread ? "text-green-700 font-semibold" : "text-gray-400"}`}>
+                    {timeAgo(thread.lastMessageAt || thread.createdAt)}
+                  </span>
                   <Link
                     href={`/owner/dashboard/inquiries/${thread.id}?from=dashboard`}
                     className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium border border-green-200 hover:border-green-400 rounded px-2 py-1 transition-colors"

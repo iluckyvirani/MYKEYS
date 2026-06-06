@@ -9,6 +9,7 @@ import {
   getPropertyDocumentVerificationState,
   documentVerificationBlockMessage,
 } from "@/lib/documents/documentService";
+import { getBlockedDateRanges } from "@/lib/bookings/bookingAvailabilityQueries";
 
 /**
  * GET /api/properties/[id]
@@ -58,17 +59,6 @@ export async function GET(
           },
           orderBy: {
             createdAt: "desc",
-          },
-        },
-        bookings: {
-          where: {
-            status: {
-              in: ["CONFIRMED", "CHECKED_IN"],
-            },
-          },
-          select: {
-            checkIn: true,
-            checkOut: true,
           },
         },
       },
@@ -122,12 +112,15 @@ export async function GET(
           property.reviews.length
         : 0;
 
+    const blockedDateRanges = await getBlockedDateRanges(id);
+
     const propertyWithRating = {
       ...property,
       owner: maskedOwner,
       ownerVisibility,
       averageRating: Math.round(avgRating * 10) / 10,
       reviewCount: property.reviews.length,
+      blockedDateRanges,
     };
 
     return successResponse(propertyWithRating, "Property retrieved successfully");
