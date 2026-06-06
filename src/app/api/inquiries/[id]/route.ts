@@ -53,7 +53,6 @@ export const GET = withAuth<{ id: string }>(async (req: NextRequest, user: JWTPa
             avatar: true,
             birthDate: true,
             gender: true,
-            avatar: true,
             city: true,
             state: true,
             country: true,

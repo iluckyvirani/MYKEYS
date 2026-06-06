@@ -352,7 +352,6 @@ export default function PropertyDetailsPage() {
                         phone: userData.phone || "",
                         message: "",
                         budget: "",
-                        duration: "",
                         type: ""
                     });
                 }
