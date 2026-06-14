@@ -67,6 +67,159 @@ export default function AddPropertyPage() {
   const [loadingAmenities, setLoadingAmenities] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+
+  type RequiredField =
+    | "title"
+    | "propertyType"
+    | "address"
+    | "city"
+    | "state"
+    | "zipCode"
+    | "description"
+    | "beds"
+    | "baths"
+    | "price"
+    | "propertyPrice";
+
+  const STEP1_FIELDS: RequiredField[] = [
+    "title",
+    "propertyType",
+    "address",
+    "city",
+    "state",
+    "zipCode",
+    "description",
+  ];
+
+  const getStep2Fields = (): RequiredField[] => {
+    const fields: RequiredField[] = ["beds", "baths"];
+    if (listingType === "buy") fields.push("propertyPrice");
+    else fields.push("price");
+    return fields;
+  };
+
+  const getFieldsForStep = (stepNum: number): RequiredField[] => {
+    if (stepNum === 1) return STEP1_FIELDS;
+    if (stepNum === 2) return getStep2Fields();
+    return [];
+  };
+
+  const getFieldValue = (name: RequiredField): string => {
+    return String(formData[name as keyof typeof formData] ?? "");
+  };
+
+  const getFieldErrorMessage = (name: RequiredField, value: string): string | undefined => {
+    switch (name) {
+      case "title":
+        return value.trim() ? undefined : "Property title is required";
+      case "propertyType":
+        return value ? undefined : "Property type is required";
+      case "address":
+        return value.trim() ? undefined : "Complete address is required";
+      case "city":
+        return value.trim() ? undefined : "City is required";
+      case "state":
+        return value.trim() ? undefined : "State is required";
+      case "zipCode":
+        return value.trim() ? undefined : "Postal code is required";
+      case "description":
+        return value.trim() ? undefined : "Property description is required";
+      case "beds":
+        return value.trim() !== "" && !Number.isNaN(Number(value))
+          ? undefined
+          : "Bedrooms is required";
+      case "baths":
+        return value.trim() !== "" && !Number.isNaN(Number(value))
+          ? undefined
+          : "Bathrooms is required";
+      case "price":
+        if (listingType !== "rent") return undefined;
+        return value.trim() !== "" && Number(value) > 0
+          ? undefined
+          : rentalType === "short"
+          ? "Price per night is required"
+          : "Monthly rent is required";
+      case "propertyPrice":
+        if (listingType !== "buy") return undefined;
+        return value.trim() !== "" && Number(value) > 0
+          ? undefined
+          : "Property price is required";
+      default:
+        return undefined;
+    }
+  };
+
+  const clearFieldError = (name: RequiredField) => {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const validateField = (name: RequiredField, value?: string): boolean => {
+    const fieldValue = value ?? getFieldValue(name);
+    const message = getFieldErrorMessage(name, fieldValue);
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (message) next[name] = message;
+      else delete next[name];
+      return next;
+    });
+    return !message;
+  };
+
+  const validateStep = (stepNum: number, markTouched = false): boolean => {
+    const fields = getFieldsForStep(stepNum);
+    if (markTouched) {
+      setTouchedFields((prev) => {
+        const next = { ...prev };
+        fields.forEach((field) => {
+          next[field] = true;
+        });
+        return next;
+      });
+    }
+
+    let valid = true;
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      fields.forEach((field) => {
+        const message = getFieldErrorMessage(field, getFieldValue(field));
+        if (message) {
+          next[field] = message;
+          valid = false;
+        } else {
+          delete next[field];
+        }
+      });
+      return next;
+    });
+    return valid;
+  };
+
+  const isStepInvalid = (stepNum: number): boolean => {
+    return getFieldsForStep(stepNum).some(
+      (field) => Boolean(getFieldErrorMessage(field, getFieldValue(field)))
+    );
+  };
+
+  const fieldErrorClass = (name: RequiredField) =>
+    fieldErrors[name] ? "border-red-500 focus-visible:ring-red-500" : "";
+
+  const renderFieldError = (name: RequiredField) =>
+    fieldErrors[name] ? (
+      <p id={`${name}-error`} className="mt-1.5 text-sm text-red-600">
+        {fieldErrors[name]}
+      </p>
+    ) : null;
+
+  const handleFieldBlur = (name: RequiredField) => {
+    setTouchedFields((prev) => ({ ...prev, [name]: true }));
+    validateField(name);
+  };
 
   // Step 4 — Documents: holds the created property ID after step 3 saves
   const [savedPropertyId, setSavedPropertyId] = useState<string | null>(null);
@@ -152,6 +305,15 @@ export default function AddPropertyPage() {
     fetchAmenities();
   }, []);
 
+  useEffect(() => {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (listingType === "buy") delete next.price;
+      else delete next.propertyPrice;
+      return next;
+    });
+  }, [listingType, rentalType]);
+
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -169,8 +331,22 @@ export default function AddPropertyPage() {
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
+      if (touchedFields[name]) {
+        validateField(name as RequiredField, value);
+      }
     }
   };
+
+  const handleNextStep = () => {
+    if (!validateStep(step, true)) {
+      return;
+    }
+    setStep(step + 1);
+    setError(null);
+    setImageError(null);
+  };
+
+  const isCurrentStepInvalid = step < 3 && isStepInvalid(step);
 
   const toggleAmenity = (amenityId: string) => {
     setFormData(prev => ({
@@ -494,9 +670,14 @@ export default function AddPropertyPage() {
               name="title"
               value={formData.title}
               onChange={handleInputChange}
+              onBlur={() => handleFieldBlur("title")}
+              className={fieldErrorClass("title")}
               placeholder="e.g., Modern 3BHK Apartment with Pool"
               required
+              aria-invalid={Boolean(fieldErrors.title)}
+              aria-describedby={fieldErrors.title ? "title-error" : undefined}
             />
+            {renderFieldError("title")}
           </div>
 
           <div>
@@ -506,14 +687,22 @@ export default function AddPropertyPage() {
               name="propertyType"
               value={formData.propertyType}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-[5px] focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+              onBlur={() => handleFieldBlur("propertyType")}
+              className={`w-full px-3 py-2 border rounded-[5px] focus:ring-2 focus:border-transparent outline-none ${
+                fieldErrors.propertyType
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-gray-300 focus:ring-green-500"
+              }`}
               required
+              aria-invalid={Boolean(fieldErrors.propertyType)}
+              aria-describedby={fieldErrors.propertyType ? "propertyType-error" : undefined}
             >
               <option value="">Select type</option>
               {propertyTypes.map((type) => (
                 <option key={type.value} value={type.value}>{type.label}</option>
               ))}
             </select>
+            {renderFieldError("propertyType")}
           </div>
 
           <div className="md:col-span-2">
@@ -531,6 +720,10 @@ export default function AddPropertyPage() {
                   ...(loc.state ? { state: loc.state } : {}),
                   ...(loc.zipCode ? { zipCode: loc.zipCode } : {}),
                 }));
+                if (loc.address?.trim()) clearFieldError("address");
+                if (loc.city?.trim()) clearFieldError("city");
+                if (loc.state?.trim()) clearFieldError("state");
+                if (loc.zipCode?.trim()) clearFieldError("zipCode");
               }}
             />
           </div>
@@ -550,11 +743,15 @@ export default function AddPropertyPage() {
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
-                className="pl-10"
+                onBlur={() => handleFieldBlur("address")}
+                className={`pl-10 ${fieldErrorClass("address")}`}
                 placeholder="Auto-filled from map, or type manually"
                 required
+                aria-invalid={Boolean(fieldErrors.address)}
+                aria-describedby={fieldErrors.address ? "address-error" : undefined}
               />
             </div>
+            {renderFieldError("address")}
           </div>
 
           <div>
@@ -564,9 +761,14 @@ export default function AddPropertyPage() {
               name="city"
               value={formData.city}
               onChange={handleInputChange}
+              onBlur={() => handleFieldBlur("city")}
+              className={fieldErrorClass("city")}
               placeholder="e.g., London"
               required
+              aria-invalid={Boolean(fieldErrors.city)}
+              aria-describedby={fieldErrors.city ? "city-error" : undefined}
             />
+            {renderFieldError("city")}
           </div>
 
           <div>
@@ -576,20 +778,31 @@ export default function AddPropertyPage() {
               name="state"
               value={formData.state}
               onChange={handleInputChange}
+              onBlur={() => handleFieldBlur("state")}
+              className={fieldErrorClass("state")}
               placeholder="e.g., Greater London"
               required
+              aria-invalid={Boolean(fieldErrors.state)}
+              aria-describedby={fieldErrors.state ? "state-error" : undefined}
             />
+            {renderFieldError("state")}
           </div>
 
           <div>
-            <Label htmlFor="zipCode">Postal Code</Label>
+            <Label htmlFor="zipCode">Postal Code *</Label>
             <Input
               id="zipCode"
               name="zipCode"
               value={formData.zipCode}
               onChange={handleInputChange}
+              onBlur={() => handleFieldBlur("zipCode")}
+              className={fieldErrorClass("zipCode")}
               placeholder="e.g., E14"
+              required
+              aria-invalid={Boolean(fieldErrors.zipCode)}
+              aria-describedby={fieldErrors.zipCode ? "zipCode-error" : undefined}
             />
+            {renderFieldError("zipCode")}
           </div>
 
           <div>
@@ -625,10 +838,15 @@ export default function AddPropertyPage() {
               name="description"
               value={formData.description}
               onChange={handleInputChange}
+              onBlur={() => handleFieldBlur("description")}
+              className={fieldErrorClass("description")}
               rows={4}
               placeholder="Describe your property's features, amenities, and what makes it special..."
               required
+              aria-invalid={Boolean(fieldErrors.description)}
+              aria-describedby={fieldErrors.description ? "description-error" : undefined}
             />
+            {renderFieldError("description")}
           </div>
         </div>
       </div>
@@ -651,11 +869,15 @@ export default function AddPropertyPage() {
                 type="number"
                 value={formData.beds}
                 onChange={handleInputChange}
-                className="pl-10"
+                onBlur={() => handleFieldBlur("beds")}
+                className={`pl-10 ${fieldErrorClass("beds")}`}
                 min="0"
                 required
+                aria-invalid={Boolean(fieldErrors.beds)}
+                aria-describedby={fieldErrors.beds ? "beds-error" : undefined}
               />
             </div>
+            {renderFieldError("beds")}
           </div>
 
           <div>
@@ -668,11 +890,15 @@ export default function AddPropertyPage() {
                 type="number"
                 value={formData.baths}
                 onChange={handleInputChange}
-                className="pl-10"
+                onBlur={() => handleFieldBlur("baths")}
+                className={`pl-10 ${fieldErrorClass("baths")}`}
                 min="0"
                 required
+                aria-invalid={Boolean(fieldErrors.baths)}
+                aria-describedby={fieldErrors.baths ? "baths-error" : undefined}
               />
             </div>
+            {renderFieldError("baths")}
           </div>
 
           <div>
@@ -725,12 +951,16 @@ export default function AddPropertyPage() {
                   type="number"
                   value={formData.propertyPrice}
                   onChange={handleInputChange}
-                  className="pl-10"
+                  onBlur={() => handleFieldBlur("propertyPrice")}
+                  className={`pl-10 ${fieldErrorClass("propertyPrice")}`}
                   placeholder="Total sale price"
                   min="0"
                   required
+                  aria-invalid={Boolean(fieldErrors.propertyPrice)}
+                  aria-describedby={fieldErrors.propertyPrice ? "propertyPrice-error" : undefined}
                 />
               </div>
+              {renderFieldError("propertyPrice")}
             </div>
 
             <div>
@@ -856,11 +1086,15 @@ export default function AddPropertyPage() {
                   type="number"
                   value={formData.price}
                   onChange={handleInputChange}
-                  className="pl-10"
+                  onBlur={() => handleFieldBlur("price")}
+                  className={`pl-10 ${fieldErrorClass("price")}`}
                   min="0"
                   required
+                  aria-invalid={Boolean(fieldErrors.price)}
+                  aria-describedby={fieldErrors.price ? "price-error" : undefined}
                 />
               </div>
+              {renderFieldError("price")}
             </div>
 
             {rentalType === "short" && (
@@ -1438,8 +1672,9 @@ export default function AddPropertyPage() {
             {step < 3 ? (
               <Button
                 type="button"
-                onClick={() => { setStep(step + 1); setError(null); setImageError(null); }}
-                className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 cursor-pointer"
+                onClick={handleNextStep}
+                disabled={isCurrentStepInvalid}
+                className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next Step
                 <Plus className="w-4 h-4 ml-2" />
