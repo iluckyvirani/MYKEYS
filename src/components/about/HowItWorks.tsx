@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { 
   Search, 
@@ -76,7 +77,8 @@ export default function HowItWorks() {
       steps: "Search → Book → Pay → Stay → Review",
       color: "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200",
       textColor: "text-green-700",
-      buttonColor: "bg-gradient-to-r from-green-600 to-emerald-600"
+      buttonColor: "bg-gradient-to-r from-green-600 to-emerald-600",
+      href: "/rent/short-rent",
     },
     {
       type: "Long Term Rent",
@@ -85,7 +87,8 @@ export default function HowItWorks() {
       steps: "Search → Inquiry → Chat → View → Rent",
       color: "bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200",
       textColor: "text-blue-700",
-      buttonColor: "bg-gradient-to-r from-blue-600 to-cyan-600"
+      buttonColor: "bg-gradient-to-r from-blue-600 to-cyan-600",
+      href: "/rent/long-rent",
     },
     {
       type: "Property Purchase",
@@ -94,7 +97,8 @@ export default function HowItWorks() {
       steps: "Search → Inquiry → View → Negotiate → Buy",
       color: "bg-gradient-to-r from-purple-50 to-violet-50 border-purple-200",
       textColor: "text-purple-700",
-      buttonColor: "bg-gradient-to-r from-purple-600 to-violet-600"
+      buttonColor: "bg-gradient-to-r from-purple-600 to-violet-600",
+      href: "/buy",
     },
   ];
 
@@ -251,8 +255,10 @@ export default function HowItWorks() {
                 </div>
               </div>
 
-              <Button className={`w-full ${transaction.buttonColor} hover:opacity-90 text-white`}>
-                Explore {transaction.type}
+              <Button asChild className={`w-full ${transaction.buttonColor} hover:opacity-90 text-white`}>
+                <Link href={transaction.href}>
+                  Explore {transaction.type}
+                </Link>
               </Button>
             </motion.div>
           ))}
@@ -272,19 +278,23 @@ export default function HowItWorks() {
             Join thousands of satisfied users and property owners on our platform
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
+            <Button
+              asChild
+              size="lg"
               className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 cursor-pointer rounded-[5px]"
             >
-              <Users className="w-5 h-5 mr-2" />
-              Sign Up Free
+              <Link href="/signup">
+                <Users className="w-5 h-5 mr-2" />
+                Sign Up Free
+              </Link>
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="bg-white/10 rounded-[5px] border-white text-white hover:bg-white cursor-pointer px-8"
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="bg-white/10 rounded-[5px] border-white text-white hover:bg-white hover:text-gray-900 cursor-pointer px-8"
             >
-              Schedule Demo
+              <Link href="/contact">Schedule Demo</Link>
             </Button>
           </div>
         </motion.div>

@@ -8,6 +8,7 @@ import ShortRentHero from "@/components/rent/ShortRentHero";
 import PropertyGrid from "@/components/property/PropertyGrid";
 import HowShortRentWorks from "@/components/rent/HowShortRentWorks";
 import ShortRentFilters from "@/components/search/ShortRentFilters";
+import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
 
 export interface ShortRentFiltersState {
   priceRange: [number, number];
@@ -42,12 +43,16 @@ function ShortRentPageContent() {
   useEffect(() => {
     const city = searchParams.get("city");
     const zipCode = searchParams.get("zipCode");
-    
+    const propertyType = searchParams.get("propertyType");
+
     const searchLocation = zipCode || city || "";
-    
+
     setFilters(prev => ({
       ...prev,
       searchLocation: searchLocation,
+      ...(propertyType
+        ? { selectedTypes: [propertyType.toUpperCase()] }
+        : {}),
     }));
   }, [searchParams]);
 
@@ -98,6 +103,16 @@ function ShortRentPageContent() {
         </div>
 
         <HowShortRentWorks />
+
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <DynamicFAQSection
+            categories={["SHORT_RENT"]}
+            showViewAll
+            viewAllHref="/faq?category=SHORT_RENT"
+            title="Short Rent FAQs"
+            subtitle="Common questions about booking short stays"
+          />
+        </section>
       </main>
       <Footer />
     </>

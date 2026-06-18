@@ -295,7 +295,12 @@ export const packageService = {
     });
   },
 
-  async updateAdminSettings(data: { shortRentCommissionPercent: number }) {
+  async updateAdminSettings(data: {
+    shortRentCommissionPercent?: number;
+    contactSupportEmail?: string;
+    contactSupportPhone?: string;
+    contactSupportDescription?: string;
+  }) {
     return prisma.adminSettings.upsert({
       where: { id: 'singleton' },
       create: { id: 'singleton', ...data },

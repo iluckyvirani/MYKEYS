@@ -28,6 +28,12 @@ export const GET = withAuth(
 export const PATCH = withAuth(
   async (req: NextRequest) => {
     const data = await req.json();
+    const adminSettingsUpdate: {
+      shortRentCommissionPercent?: number;
+      contactSupportEmail?: string;
+      contactSupportPhone?: string;
+      contactSupportDescription?: string;
+    } = {};
 
     if (data.shortRentCommissionPercent !== undefined) {
       const val = Number(data.shortRentCommissionPercent);
@@ -38,9 +44,35 @@ export const PATCH = withAuth(
           ErrorCode.VALIDATION_ERROR
         );
       }
-      await packageService.updateAdminSettings({
-        shortRentCommissionPercent: val,
-      });
+      adminSettingsUpdate.shortRentCommissionPercent = val;
+    }
+
+    if (data.contactSupportEmail !== undefined) {
+      const email = String(data.contactSupportEmail).trim();
+      if (!email || !email.includes("@")) {
+        return errorResponse("contactSupportEmail must be a valid email", 400, ErrorCode.VALIDATION_ERROR);
+      }
+      adminSettingsUpdate.contactSupportEmail = email;
+    }
+
+    if (data.contactSupportPhone !== undefined) {
+      const phone = String(data.contactSupportPhone).trim();
+      if (!phone) {
+        return errorResponse("contactSupportPhone is required", 400, ErrorCode.VALIDATION_ERROR);
+      }
+      adminSettingsUpdate.contactSupportPhone = phone;
+    }
+
+    if (data.contactSupportDescription !== undefined) {
+      const description = String(data.contactSupportDescription).trim();
+      if (!description) {
+        return errorResponse("contactSupportDescription is required", 400, ErrorCode.VALIDATION_ERROR);
+      }
+      adminSettingsUpdate.contactSupportDescription = description;
+    }
+
+    if (Object.keys(adminSettingsUpdate).length > 0) {
+      await packageService.updateAdminSettings(adminSettingsUpdate);
     }
 
     // Bid config fields
@@ -64,8 +96,11 @@ export const PATCH = withAuth(
       await updateAdminBidSettings(bidUpdate);
     }
 
-    const settings = await getAdminSettings();
-    return successResponse(settings, 'Settings updated successfully', 200);
+    const [base, bidSettings] = await Promise.all([
+      packageService.getAdminSettings(),
+      getAdminSettings(),
+    ]);
+    return successResponse({ ...base, ...bidSettings }, 'Settings updated successfully', 200);
   },
   { roles: [UserRole.ADMIN] }
 );

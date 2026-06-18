@@ -17,15 +17,25 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function ContactCards() {
+interface ContactCardsProps {
+  supportPhone: string;
+  supportEmail: string;
+  supportDescription: string;
+}
+
+export default function ContactCards({
+  supportPhone,
+  supportEmail,
+  supportDescription,
+}: ContactCardsProps) {
   const contactInfo = [
     {
       icon: <Phone className="w-6 h-6" />,
       title: "General Support",
-      details: "+44 20 1234 5678",
-      description: "Mon-Fri, 9am-6pm GMT",
+      details: supportPhone,
+      description: supportDescription,
       color: "from-blue-500 to-cyan-500",
-      action: "tel:+442012345678",
+      action: `tel:${supportPhone.replace(/\s/g, "")}`,
       buttonText: "Call Now"
     },
     {
@@ -40,10 +50,10 @@ export default function ContactCards() {
     {
       icon: <Mail className="w-6 h-6" />,
       title: "Email Support",
-      details: "support@propertyplatform.com",
+      details: supportEmail,
       description: "Response within 24 hours",
       color: "from-purple-500 to-violet-500",
-      action: "mailto:support@propertyplatform.com",
+      action: `mailto:${supportEmail}`,
       buttonText: "Send Email"
     },
     {

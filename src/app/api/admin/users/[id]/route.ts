@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from "@/lib/response";
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { deleteUserAccount } from "@/lib/users/deleteUserAccount";
 
 /**
  * GET /api/admin/users/[id]
@@ -217,16 +218,18 @@ export const DELETE = withAuth(
       // Check if user exists
       const userToDelete = await prisma.user.findUnique({
         where: { id: userId },
+        include: { roles: true },
       });
 
       if (!userToDelete) {
         return errorResponse("User not found", 404);
       }
 
-      // Delete user and all associated data (cascade delete is handled by Prisma)
-      await prisma.user.delete({
-        where: { id: userId },
-      });
+      if (userToDelete.roles.some((r) => r.role === "ADMIN")) {
+        return errorResponse("Cannot delete admin users", 400);
+      }
+
+      await deleteUserAccount(userId);
 
       return successResponse(
         { id: userId },

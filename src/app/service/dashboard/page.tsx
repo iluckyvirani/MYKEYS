@@ -9,6 +9,7 @@ import EarningsChart from "@/components/dashboard/ServiceDashboard/EarningsChart
 import ReviewsCard from "@/components/dashboard/ServiceDashboard/ReviewsCard";
 import QuickActions from "@/components/dashboard/ServiceDashboard/QuickActions";
 import DashboardGreeting from "@/components/dashboard/DashboardGreeting";
+import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
 
 export default function ServiceDashboardPage() {
   return (
@@ -38,6 +39,15 @@ export default function ServiceDashboardPage() {
 
         {/* Reviews - Full Width */}
         <ReviewsCard />
+
+        <DynamicFAQSection
+          categories={["SERVICE"]}
+          limit={4}
+          compact
+          showViewAll
+          viewAllHref="/faq?category=SERVICE"
+          title="Service Provider FAQs"
+        />
       </div>
     </DashboardLayout>
   );

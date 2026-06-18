@@ -125,13 +125,18 @@ export default function UsersPage() {
   const handleDeleteConfirm = async (userId: string) => {
     setDeletingUser(true);
     try {
-      await api.delete(`/users/${userId}`);
+      const response = await api.delete(`/admin/users/${userId}`);
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to delete user");
+      }
       await fetchUsers();
       setDeleteModalOpen(false);
       setSelectedUser(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting user:", error);
-      throw error;
+      const message =
+        error.response?.data?.message || error.message || "Failed to delete user";
+      throw new Error(message);
     } finally {
       setDeletingUser(false);
     }

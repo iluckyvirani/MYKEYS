@@ -9,6 +9,7 @@ import BuyHero from "@/components/buy/BuyHero";
 import BuyFilters from "@/components/search/BuyFilters";
 import PropertyGrid from "@/components/property/PropertyGrid";
 import HowItWorks from "@/components/buy/HowItWorks";
+import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
 
 export interface BuyFiltersState {
   priceRange: [number, number];
@@ -39,12 +40,16 @@ function BuyPageContent() {
   useEffect(() => {
     const city = searchParams.get("city");
     const zipCode = searchParams.get("zipCode");
+    const propertyType = searchParams.get("propertyType");
     
     const searchLocation = zipCode || city || "";
     
     setFilters(prev => ({
       ...prev,
       searchLocation: searchLocation,
+      ...(propertyType
+        ? { selectedTypes: [propertyType.toUpperCase()] }
+        : {}),
     }));
   }, [searchParams]);
 
@@ -93,6 +98,16 @@ function BuyPageContent() {
         </div>
       
         <HowItWorks />
+
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <DynamicFAQSection
+            categories={["BUY"]}
+            showViewAll
+            viewAllHref="/faq?category=BUY"
+            title="Buying Property FAQs"
+            subtitle="Questions about purchasing through MYKEYS"
+          />
+        </section>
         
       </main>
       <Footer />

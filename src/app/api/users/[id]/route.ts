@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
 import { toUserDTO } from "@/lib/auth/helpers";
+import { deleteUserAccount } from "@/lib/users/deleteUserAccount";
 
 /**
  * GET /api/users/[id]
@@ -225,17 +226,19 @@ export const DELETE = withAuth<{ id: string }>(
         );
       }
 
-      // Delete user
-      await prisma.user.delete({
-        where: { id },
-      });
+      // Delete user and related data
+      await deleteUserAccount(id);
 
       return successResponse(null, "User deleted successfully");
     } catch (error) {
       console.error("Delete user error:", error);
 
+      if (error instanceof Error && error.message.includes("Record to delete does not exist")) {
+        return errorResponse("User not found", 404, ErrorCode.USER_NOT_FOUND);
+      }
+
       return errorResponse(
-        "Failed to delete user",
+        error instanceof Error ? error.message : "Failed to delete user",
         500,
         ErrorCode.INTERNAL_SERVER_ERROR
       );

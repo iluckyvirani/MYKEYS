@@ -11,6 +11,7 @@ import QuickActions from "@/components/dashboard/UserDashboard/QuickActions";
 import Notifications from "@/components/dashboard/UserDashboard/Notifications";
 import BookingTrendChart from "@/components/dashboard/charts/BookingTrendChart";
 import DashboardGreeting from "@/components/dashboard/DashboardGreeting";
+import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
 
 export default function UserDashboardPage() {
   return (
@@ -45,6 +46,15 @@ export default function UserDashboardPage() {
 
         {/* Bottom Row - Chart Full Width */}
         <BookingTrendChart />
+
+        <DynamicFAQSection
+          categories={["USER"]}
+          limit={4}
+          compact
+          showViewAll
+          viewAllHref="/faq?category=USER"
+          title="Help & FAQs"
+        />
       </div>
     </DashboardLayout>
   );

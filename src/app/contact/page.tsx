@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
     Phone,
@@ -12,8 +12,7 @@ import {
     Shield,
     Headphones,
     Globe,
-    TrendingUp,
-    Hotel
+    Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ContactForm from "@/components/contact/ContactForm";
@@ -21,56 +20,48 @@ import ContactCards from "@/components/contact/ContactCards";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import FAQSection from "@/components/contact/FAQSection";
-
-
-const departments = [
-    {
-        name: "Short Rent Support",
-        icon: <Hotel className="w-5 h-5" />,
-        email: "shortstay@propertyplatform.com",
-        phone: "+44 20 1234 5670",
-        description: "Instant bookings, payments, stay issues"
-    },
-    {
-        name: "Long Term Rentals",
-        icon: <Clock className="w-5 h-5" />,
-        email: "longterm@propertyplatform.com",
-        phone: "+44 20 1234 5671",
-        description: "Rental inquiries, agreements, management"
-    },
-    {
-        name: "Property Sales",
-        icon: <TrendingUp className="w-5 h-5" />,
-        email: "sales@propertyplatform.com",
-        phone: "+44 20 1234 5672",
-        description: "Purchase inquiries, viewing, negotiations"
-    },
-    {
-        name: "Owner Support",
-        icon: <Building2 className="w-5 h-5" />,
-        email: "owners@propertyplatform.com",
-        phone: "+44 20 1234 5673",
-        description: "Listing, management, payments"
-    },
-    {
-        name: "Verification & Safety",
-        icon: <Shield className="w-5 h-5" />,
-        email: "safety@propertyplatform.com",
-        phone: "+44 20 1234 5674",
-        description: "Account verification, disputes, security"
-    },
-    {
-        name: "Business Partnerships",
-        icon: <Users className="w-5 h-5" />,
-        email: "partners@propertyplatform.com",
-        phone: "+44 20 1234 5675",
-        description: "Corporate accounts, partnerships"
-    },
-];
+import { api } from "@/lib/api";
+import { getContactDepartmentIcon } from "@/lib/contact/departmentIcons";
+import { ContactDepartmentItem } from "@/types/contactDepartment";
 
 
 export default function ContactPage() {
     const [activeTab, setActiveTab] = useState("general");
+    const [supportPhone, setSupportPhone] = useState("+44 20 1234 5678");
+    const [supportEmail, setSupportEmail] = useState("support@propertyplatform.com");
+    const [supportDescription, setSupportDescription] = useState(
+        "Whether you're looking for a property, listing yours, or need support, our team is ready to assist you with our three-tier platform."
+    );
+    const [departments, setDepartments] = useState<ContactDepartmentItem[]>([]);
+    const [departmentsLoading, setDepartmentsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPlatformSettings = async () => {
+            try {
+                const res = await api.get("/settings/platform");
+                const data = res.data?.data || {};
+                if (data.contactSupportPhone) setSupportPhone(data.contactSupportPhone);
+                if (data.contactSupportEmail) setSupportEmail(data.contactSupportEmail);
+                if (data.contactSupportDescription) setSupportDescription(data.contactSupportDescription);
+            } catch {
+                // Keep defaults if platform settings are unavailable
+            }
+        };
+
+        const fetchDepartments = async () => {
+            try {
+                const res = await api.get("/contact-departments");
+                setDepartments(res.data?.data ?? []);
+            } catch {
+                setDepartments([]);
+            } finally {
+                setDepartmentsLoading(false);
+            }
+        };
+
+        fetchPlatformSettings();
+        fetchDepartments();
+    }, []);
 
     return (
         <>
@@ -100,8 +91,7 @@ export default function ContactPage() {
                             </h1>
 
                             <p className="font-spartan text-lg sm:text-md text-gray-200 max-w-lg mx-auto mb-10 font-light">
-                                Whether you're looking for a property, listing yours, or need support,
-                                our team is ready to assist you with our three-tier platform.
+                                {supportDescription}
                             </p>
 
                             <div className="flex flex-wrap justify-center gap-4">
@@ -118,7 +108,7 @@ export default function ContactPage() {
                                     className="bg-white/10 border-white text-white hover:bg-white/10 px-8 py-6 rounded-[5px] text-lg"
                                 >
                                     <Phone className="w-5 h-5 mr-2" />
-                                    Call Now: +44 20 1234 5678
+                                    Call Now: {supportPhone}
                                 </Button>
                             </div>
                         </motion.div>
@@ -130,7 +120,11 @@ export default function ContactPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column - Contact Cards */}
                         <div className="lg:col-span-1">
-                            <ContactCards />
+                            <ContactCards
+                                supportPhone={supportPhone}
+                                supportEmail={supportEmail}
+                                supportDescription={supportDescription}
+                            />
                         </div>
 
                         {/* Right Column - Contact Form & Tabs */}
@@ -204,7 +198,7 @@ export default function ContactPage() {
                                             <h3 className="text-xl font-bold text-gray-900 mb-4">For Property Owners</h3>
                                             <p className="text-gray-600 mb-6">
                                                 Need help listing your property, managing bookings, or understanding owner packages?
-                                                We're here to support you.
+                                                Contact us at {supportEmail} or {supportPhone}.
                                             </p>
                                         </div>
                                     )}
@@ -217,6 +211,7 @@ export default function ContactPage() {
                     </div>
 
                     {/* Departments Card */}
+                    {(departmentsLoading || departments.length > 0) && (
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -224,13 +219,18 @@ export default function ContactPage() {
                         className="bg-linear-to-br from-gray-900 to-black rounded-[5px] p-6 mt-10"
                     >
                         <h3 className="text-xl font-bold text-white mb-6">Specialized Departments</h3>
-                        <div className="grid grid-cols-3 gap-6">
-                            {departments.map((dept, index) => (
-                                <div key={index} className="bg-white/10 backdrop-blur-sm rounded-[5px] p-4 hover:bg-white/20 transition-colors">
+                        {departmentsLoading ? (
+                            <div className="flex justify-center py-8">
+                                <Loader2 className="w-8 h-8 animate-spin text-white/70" />
+                            </div>
+                        ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {departments.map((dept) => (
+                                <div key={dept.id} className="bg-white/10 backdrop-blur-sm rounded-[5px] p-4 hover:bg-white/20 transition-colors">
                                     <div className="flex items-start gap-3">
                                         <div className="p-2 bg-white/20 rounded-lg">
                                             <div className="text-white">
-                                                {dept.icon}
+                                                {getContactDepartmentIcon(dept.icon)}
                                             </div>
                                         </div>
                                         <div className="flex-1">
@@ -249,7 +249,9 @@ export default function ContactPage() {
                                 </div>
                             ))}
                         </div>
+                        )}
                     </motion.div>
+                    )}
                     {/* FAQ Section */}
                     <div className="mt-10">
                         <FAQSection />

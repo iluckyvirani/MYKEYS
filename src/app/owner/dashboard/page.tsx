@@ -9,6 +9,7 @@ import InquiryInbox from "@/components/dashboard/OwnerDashboard/InquiryInbox";
 import RevenueChart from "@/components/dashboard/OwnerDashboard/RevenueChart";
 import QuickActions from "@/components/dashboard/OwnerDashboard/QuickActions";
 import DashboardGreeting from "@/components/dashboard/DashboardGreeting";
+import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
 
 export default function OwnerDashboardPage() {
   return (
@@ -37,6 +38,15 @@ export default function OwnerDashboardPage() {
 
         {/* Revenue Analytics */}
         <RevenueChart />
+
+        <DynamicFAQSection
+          categories={["OWNER"]}
+          limit={4}
+          compact
+          showViewAll
+          viewAllHref="/faq?category=OWNER"
+          title="Owner Help & FAQs"
+        />
       </div>
     </DashboardLayout>
   );

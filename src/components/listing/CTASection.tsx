@@ -2,6 +2,7 @@
 
 import { ArrowRight, CheckCircle, Star, Users, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
 
 export default function CTASection() {
   return (
@@ -177,38 +178,16 @@ export default function CTASection() {
         </div>
 
         {/* FAQ Preview */}
-        <div className="mt-20 text-center">
-          <h4 className="text-2xl font-bold text-gray-900 mb-8">
-            Frequently Asked Questions
-          </h4>
-          
-          <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="text-left p-6 bg-white rounded-xl shadow-lg">
-              <h5 className="font-bold text-gray-900 mb-2">How much does it cost to list?</h5>
-              <p className="text-gray-600">Listing is completely free. You only pay if you upgrade to Premium or Professional packages.</p>
-            </div>
-            
-            <div className="text-left p-6 bg-white rounded-xl shadow-lg">
-              <h5 className="font-bold text-gray-900 mb-2">How do I get paid?</h5>
-              <p className="text-gray-600">For short rents, we handle payments securely. For long rents and sales, you receive payments directly from tenants/buyers.</p>
-            </div>
-            
-            <div className="text-left p-6 bg-white rounded-xl shadow-lg">
-              <h5 className="font-bold text-gray-900 mb-2">Can I list multiple properties?</h5>
-              <p className="text-gray-600">Yes! Free package includes 1 property, Premium includes 5, and Professional includes unlimited properties.</p>
-            </div>
-            
-            <div className="text-left p-6 bg-white rounded-xl shadow-lg">
-              <h5 className="font-bold text-gray-900 mb-2">How long does verification take?</h5>
-              <p className="text-gray-600">Property verification typically takes 24-48 hours. Owner verification is instant in most cases.</p>
-            </div>
-          </div>
-          
-          <div className="mt-8">
-            <Button variant="outline" className="text-emerald-600 border-emerald-600 hover:bg-emerald-50">
-              View All FAQ
-            </Button>
-          </div>
+        <div className="mt-20">
+          <DynamicFAQSection
+            categories={["LISTING"]}
+            limit={4}
+            featuredOnly
+            variant="cards"
+            title="Frequently Asked Questions"
+            showViewAll
+            viewAllHref="/faq?category=LISTING"
+          />
         </div>
       </div>
     </section>

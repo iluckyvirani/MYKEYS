@@ -109,9 +109,9 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white lg:pt-5 lg:pb-4">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white">
         {/* Logo */}
-        <div className="flex items-center justify-center px-5 mb-5">
+        <div className="shrink-0 flex items-center justify-center px-5 py-5">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-lg bg-linear-to-r from-green-600 to-emerald-500 flex items-center justify-center">
               <Key className="w-6 h-6 text-white" />
@@ -122,8 +122,8 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="mt-5 flex-1 space-y-1.5 px-3">
+        {/* Navigation — scrollable on short laptop screens */}
+        <nav className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 py-2 space-y-1.5">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -145,7 +145,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Bottom Section */}
-        <div className="mt-auto p-4 border-t">
+        <div className="shrink-0 p-4 border-t bg-white">
           <button 
             onClick={handleLogout}
             disabled={isLoggingOut}
@@ -160,11 +160,11 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       {/* Mobile Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 transform bg-white border-r transition-transform duration-300 ease-in-out lg:hidden",
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white border-r transition-transform duration-300 ease-in-out lg:hidden",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="shrink-0 flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-lg bg-linear-to-r from-green-600 to-emerald-500 flex items-center justify-center">
               <Home className="w-6 h-6 text-white" />
@@ -181,7 +181,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="mt-5 px-3 space-y-1.5">
+        <nav className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 py-3 space-y-1.5">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -204,7 +204,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Mobile Logout Button */}
-        <div className="mt-auto p-4 border-t">
+        <div className="shrink-0 p-4 border-t bg-white">
           <button 
             onClick={handleLogout}
             disabled={isLoggingOut}

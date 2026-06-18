@@ -4,13 +4,15 @@ import AuthLayout from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Lock, Mail, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { LoginRequest, LoginResponse } from "@/types/auth";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,8 +45,7 @@ export default function LoginPage() {
         localStorage.setItem("refreshToken", refreshToken);
         localStorage.setItem("user", JSON.stringify(user));
 
-        // Redirect to home page
-        router.push("/");
+        router.push(redirectTo);
       }
     } catch (err: any) {
       const message =
@@ -137,5 +138,20 @@ export default function LoginPage() {
         </p>
       </div>
     </AuthLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthLayout>
+          <h2 className="text-2xl font-spartan font-bold mb-6">Login</h2>
+          <p className="text-gray-500 text-sm">Loading...</p>
+        </AuthLayout>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

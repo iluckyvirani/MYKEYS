@@ -8,6 +8,7 @@ import PropertyGrid from "@/components/property/PropertyGrid";
 import LongRentHero from "@/components/rent/LongRentHero";
 import HowLongRentWorks from "@/components/rent/HowLongRentWorks";
 import LongRentFilters from "@/components/search/LongRentFilters";
+import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
 
 export interface LongRentFiltersState {
   priceRange: [number, number];
@@ -40,12 +41,16 @@ function LongRentPageContent() {
   useEffect(() => {
     const city = searchParams.get("city");
     const zipCode = searchParams.get("zipCode");
-    
+    const propertyType = searchParams.get("propertyType");
+
     const searchLocation = zipCode || city || "";
-    
+
     setFilters(prev => ({
       ...prev,
       searchLocation: searchLocation,
+      ...(propertyType
+        ? { selectedTypes: [propertyType.toUpperCase()] }
+        : {}),
     }));
   }, [searchParams]);
 
@@ -96,6 +101,16 @@ function LongRentPageContent() {
         </div>
 
         <HowLongRentWorks />
+
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <DynamicFAQSection
+            categories={["LONG_RENT"]}
+            showViewAll
+            viewAllHref="/faq?category=LONG_RENT"
+            title="Long Rent FAQs"
+            subtitle="Answers about long-term rentals and leases"
+          />
+        </section>
       </main>
       <Footer />
     </>

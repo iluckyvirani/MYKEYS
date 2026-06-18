@@ -12,12 +12,21 @@ import {
   Key
 } from "lucide-react";
 import Link from "next/link";
+import { api } from "@/lib/api";
+
+const FOOTER_PROPERTY_TYPES = [
+  { value: "APARTMENT", label: "Apartments", icon: Home, href: "/buy?propertyType=APARTMENT" },
+  { value: "VILLA", label: "Villas", icon: Building, href: "/buy?propertyType=VILLA" },
+  { value: "TOWNHOUSE", label: "Townhouses", icon: Castle, href: "/buy?propertyType=TOWNHOUSE" },
+  { value: "HOUSE", label: "Houses", icon: Building2, href: "/buy?propertyType=HOUSE" },
+] as const;
 
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [particles, setParticles] = useState<Array<{ left: string; top: string; duration: number; delay: number }>>([]);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [propertyTypeCounts, setPropertyTypeCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     setParticles(
@@ -38,6 +47,21 @@ export default function Footer() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const loadPropertyTypeCounts = async () => {
+      try {
+        const response = await api.get("/properties/type-counts");
+        if (response.data?.success && response.data.data?.counts) {
+          setPropertyTypeCounts(response.data.data.counts);
+        }
+      } catch (error) {
+        console.error("Failed to load footer property counts:", error);
+      }
+    };
+
+    loadPropertyTypeCounts();
+  }, []);
+
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
@@ -53,13 +77,6 @@ export default function Footer() {
     { label: "Long Rent Properties", href: "/rent/long-rent" },
     { label: "Services", href: "/services" },
     { label: "List property", href: "/how-listing-works" },
-  ];
-
-  const propertyTypes = [
-    { icon: <Home className="w-4 h-4" />, label: "Apartments", count: "254" },
-    { icon: <Building className="w-4 h-4" />, label: "Villas", count: "189" },
-    { icon: <Castle className="w-4 h-4" />, label: "Townhouses", count: "76" },
-    { icon: <Building2 className="w-4 h-4" />, label: "Offices", count: "142" },
   ];
 
   const companyLinks = [
@@ -270,27 +287,45 @@ export default function Footer() {
             <div>
               <h4 className="text-lg font-bold mb-6 pb-2 border-b border-white/10">Property Types</h4>
               <ul className="space-y-3">
-                {propertyTypes.map((type, index) => (
-                  <motion.li
-                    key={index}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 + 0.1 }}
-                  >
-                    <Link
-                      href={`/properties/${type.label.toLowerCase()}`}
-                      className="flex items-center justify-between text-gray-400 hover:text-white transition-colors group"
-                    >
+                {FOOTER_PROPERTY_TYPES.map((type, index) => {
+                  const count = propertyTypeCounts[type.value] ?? 0;
+                  const Icon = type.icon;
+                  const row = (
+                    <>
                       <div className="flex items-center gap-2">
-                        <div className="text-green-400">{type.icon}</div>
+                        <div className="text-green-400">
+                          <Icon className="w-4 h-4" />
+                        </div>
                         {type.label}
                       </div>
                       <span className="text-xs bg-white/10 px-2 py-1 rounded-full">
-                        {type.count}
+                        {count}
                       </span>
-                    </Link>
-                  </motion.li>
-                ))}
+                    </>
+                  );
+
+                  return (
+                    <motion.li
+                      key={type.value}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 + 0.1 }}
+                    >
+                      {count > 0 ? (
+                        <Link
+                          href={type.href}
+                          className="flex items-center justify-between text-gray-400 hover:text-white transition-colors group"
+                        >
+                          {row}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center justify-between text-gray-500 cursor-default">
+                          {row}
+                        </div>
+                      )}
+                    </motion.li>
+                  );
+                })}
               </ul>
             </div>
 

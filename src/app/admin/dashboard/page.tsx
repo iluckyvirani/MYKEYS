@@ -8,6 +8,7 @@ import AdminRecentUsers from "@/components/dashboard/AdminDashboard/AdminRecentU
 import AdminRecentOwners from "@/components/dashboard/AdminDashboard/AdminRecentOwners";
 import AdminRecentBookings from "@/components/dashboard/AdminDashboard/AdminRecentBookings";
 import AdminRecentPayments from "@/components/dashboard/AdminDashboard/AdminRecentPayments";
+import AdminRecentContactQueries from "@/components/dashboard/AdminDashboard/AdminRecentContactQueries";
 import DashboardGreeting from "@/components/dashboard/DashboardGreeting";
 
 export default function AdminDashboard() {
@@ -35,6 +36,8 @@ export default function AdminDashboard() {
           <AdminRecentBookings />
           <AdminRecentPayments />
         </div>
+
+        <AdminRecentContactQueries />
       </div>
     </AdminDashboardLayout>
   );

@@ -6,6 +6,22 @@ datasource db {
   provider = "postgresql"
 }
 
+enum FaqCategory {
+  LISTING
+  OWNER
+  USER
+  SHORT_RENT
+  LONG_RENT
+  BUY
+  SERVICE
+  GENERAL
+}
+
+enum FaqStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum RoleType {
   USER
   OWNER
@@ -783,11 +799,48 @@ model OwnerPackage {
 model AdminSettings {
   id                         String   @id @default("singleton")
   shortRentCommissionPercent Float    @default(0)  // e.g. 10 = 10%; range 0–100
+  contactSupportEmail        String   @default("support@propertyplatform.com")
+  contactSupportPhone        String   @default("+44 20 1234 5678")
+  contactSupportDescription  String   @default("Whether you're looking for a property, listing yours, or need support, our team is ready to assist you.")
   // Bid / Boost configuration (Phase 3)
   minBidAmountPerDay         Float    @default(1)  // min £/day an owner can bid
   maxBidDurationDays         Int      @default(30) // max days a bid can run
   maxBoostedSlotsPerZip      Int      @default(3)  // max boosted listings per zip code page
   updatedAt                  DateTime @updatedAt
+}
+
+model ContactQuery {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  phone           String?
+  subject         String
+  message         String   @db.Text
+  inquiryType     String
+  propertyType    String?
+  urgency         String   @default("normal")
+  status          String   @default("NEW")
+  adminNote       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([inquiryType, createdAt])
+}
+
+model ContactDepartment {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String
+  description String
+  icon        String   @default("help-circle")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
 }
 
 model PropertyBid {
@@ -1268,4 +1321,21 @@ model PropertyDocument {
   @@index([documentTypeId])
   @@index([expiryDate])
   @@index([status])
+}
+
+model Faq {
+  id        String      @id @default(cuid())
+  question  String
+  answer    String      @db.Text
+  category  FaqCategory
+  tags      String[]    @default([])
+  sortOrder Int         @default(0)
+  status    FaqStatus   @default(ACTIVE)
+  featured  Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([category, status])
+  @@index([status])
+  @@index([featured])
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Send, Building2, Clock, Shield, Users, Hotel } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
 
 interface ContactFormProps {
   inquiryType: string;
@@ -23,6 +24,7 @@ export default function ContactForm({ inquiryType }: ContactFormProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const getInquiryIcon = () => {
     switch (inquiryType) {
@@ -52,10 +54,13 @@ export default function ContactForm({ inquiryType }: ContactFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitError("");
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Form submitted:", formData);
+    try {
+      await api.post("/contact-queries", {
+        ...formData,
+        inquiryType,
+      });
       setIsSubmitting(false);
       setIsSubmitted(true);
       
@@ -73,7 +78,10 @@ export default function ContactForm({ inquiryType }: ContactFormProps) {
           urgency: "normal"
         });
       }, 5000);
-    }, 1500);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setSubmitError(err?.response?.data?.message || "Failed to send message. Please try again.");
+    }
   };
 
   if (isSubmitted) {
@@ -124,6 +132,11 @@ export default function ContactForm({ inquiryType }: ContactFormProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {submitError && (
+          <div className="rounded-[5px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {submitError}
+          </div>
+        )}
         {/* Name & Email */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>

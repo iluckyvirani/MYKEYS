@@ -18,6 +18,11 @@ export default function AdminSettingsPage() {
   const [minBid, setMinBid] = useState<number>(1);
   const [maxDuration, setMaxDuration] = useState<number>(30);
   const [maxSlots, setMaxSlots] = useState<number>(3);
+  const [contactSupportEmail, setContactSupportEmail] = useState("support@propertyplatform.com");
+  const [contactSupportPhone, setContactSupportPhone] = useState("+44 20 1234 5678");
+  const [contactSupportDescription, setContactSupportDescription] = useState(
+    "Whether you're looking for a property, listing yours, or need support, our team is ready to assist you."
+  );
 
   useEffect(() => {
     api
@@ -28,6 +33,12 @@ export default function AdminSettingsPage() {
         setMinBid(data?.minBidAmountPerDay ?? 1);
         setMaxDuration(data?.maxBidDurationDays ?? 30);
         setMaxSlots(data?.maxBoostedSlotsPerZip ?? 3);
+        setContactSupportEmail(data?.contactSupportEmail ?? "support@propertyplatform.com");
+        setContactSupportPhone(data?.contactSupportPhone ?? "+44 20 1234 5678");
+        setContactSupportDescription(
+          data?.contactSupportDescription ??
+            "Whether you're looking for a property, listing yours, or need support, our team is ready to assist you."
+        );
       })
       .catch(() => setError("Failed to load settings"))
       .finally(() => setLoading(false));
@@ -44,6 +55,9 @@ export default function AdminSettingsPage() {
         minBidAmountPerDay: minBid,
         maxBidDurationDays: maxDuration,
         maxBoostedSlotsPerZip: maxSlots,
+        contactSupportEmail,
+        contactSupportPhone,
+        contactSupportDescription,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -166,6 +180,44 @@ export default function AdminSettingsPage() {
                   <p className="text-xs text-gray-400">
                     Maximum boosted properties shown at the top of search results for any zip code.
                   </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Contact Page Settings</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                These fields are shown on the public contact page.
+              </p>
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label htmlFor="supportEmail">Support Email</Label>
+                  <Input
+                    id="supportEmail"
+                    type="email"
+                    value={contactSupportEmail}
+                    onChange={(e) => setContactSupportEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="supportPhone">Support Phone</Label>
+                  <Input
+                    id="supportPhone"
+                    value={contactSupportPhone}
+                    onChange={(e) => setContactSupportPhone(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="supportDescription">Support Description</Label>
+                  <textarea
+                    id="supportDescription"
+                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm min-h-[90px]"
+                    value={contactSupportDescription}
+                    onChange={(e) => setContactSupportDescription(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
             </Card>

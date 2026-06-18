@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
 import { Button } from "@/components/ui/button";
 import ServiceRegistrationForm from "@/components/services/ServiceRegistrationForm";
 import { useToast } from "@/hooks/use-toast";
@@ -641,6 +642,16 @@ export default function ServicesPage() {
               </Button>
             </div>
           </div>
+        </section>
+
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <DynamicFAQSection
+            categories={["SERVICE"]}
+            showViewAll
+            viewAllHref="/faq?category=SERVICE"
+            title="Services FAQs"
+            subtitle="Help for customers and service providers"
+          />
         </section>
       </main>
       <Footer />
