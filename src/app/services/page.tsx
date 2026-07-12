@@ -149,25 +149,7 @@ export default function ServicesPage() {
       <Navbar />
       <main className="min-h-screen">
         {/* Hero Section */}
-        <section className="relative h-screen min-h-125 flex items-center justify-center overflow-hidden">
-          {/* Background Image with overlays */}
-          <div className="absolute inset-0 z-0">
-            <div
-              className="absolute inset-0 bg-no-repeat bg-center bg-cover"
-              style={{
-                backgroundImage: "url('https://images.pexels.com/photos/3912519/pexels-photo-3912519.jpeg?auto=compress&cs=tinysrgb&w=1600')",
-              }}
-            />
-
-            {/* Gradient overlays for better text readability */}
-            <div className="absolute inset-0 bg-linear-to-b from-black/80 via-black/50 to-black/80" />
-            <div className="absolute inset-0 bg-linear-to-r from-black/40 to-transparent" />
-
-            {/* Animated background blobs */}
-            <div className="absolute top-20 left-10 w-72 h-72 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-            <div className="absolute bottom-20 right-10 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: "2s" }}></div>
-          </div>
-
+        <section className="relative h-screen min-h-125 flex items-center justify-center overflow-hidden bg-white border-b border-gray-100">
           {/* Content */}
           <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -176,11 +158,11 @@ export default function ServicesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
               >
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4 leading-tight tracking-tight">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-4 leading-tight tracking-tight">
                   Services Made
-                  <span className="block text-green-400 mt-2">Simple</span>
+                  <span className="block text-green-600 mt-2">Simple</span>
                 </h1>
-                <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mx-auto font-light">
+                <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto font-light">
                   Connect with trusted service professionals - whether you need help at home or want to earn money by providing services
                 </p>
               </motion.div>

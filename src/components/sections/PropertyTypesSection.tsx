@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 const propertyTypes = [
   {
     id: "buy",
-    title: "Buy Property",
+    title: "Buy",
     description: "Find your dream home with our extensive collection of properties for sale",
     icon: Home,
     features: [
@@ -23,24 +23,8 @@ const propertyTypes = [
     borderColor: "border-blue-200",
   },
   {
-    id: "short-rent",
-    title: "Short Term Rent",
-    description: "Book furnished apartments and homes for short stays with flexibility",
-    icon: Clock,
-    features: [
-      "Flexible booking periods",
-      "Fully furnished options",
-      "Quick check-in process",
-      "24/7 customer support",
-    ],
-    link: "/rent/short-rent",
-    color: "from-amber-500 to-orange-500",
-    bgColor: "bg-amber-50",
-    borderColor: "border-amber-200",
-  },
-  {
     id: "long-rent",
-    title: "Long Term Rent",
+    title: "Rent",
     description: "Secure your perfect rental home with transparent terms and fair pricing",
     icon: TrendingUp,
     features: [
@@ -54,6 +38,23 @@ const propertyTypes = [
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
   },
+  {
+    id: "short-rent",
+    title: "Short Stay",
+    description: "Book furnished apartments and homes for short stays with flexibility",
+    icon: Clock,
+    features: [
+      "Flexible booking periods",
+      "Fully furnished options",
+      "Quick check-in process",
+      "24/7 customer support",
+    ],
+    link: "/rent/short-rent",
+    color: "from-amber-500 to-orange-500",
+    bgColor: "bg-amber-50",
+    borderColor: "border-amber-200",
+  },
+
 ];
 
 export default function PropertyTypesSection() {

@@ -68,14 +68,7 @@ export default function ContactPage() {
             <Navbar />
             <main className="min-h-screen mb-10">
                 {/* Hero Section */}
-                <section className="relative py-20 md:py-28 overflow-hidden bg-linear-to-br from-gray-900 via-green-900 to-violet-800">
-                    {/* Background Elements */}
-                    <div className="absolute inset-0 overflow-hidden">
-                        <div className="absolute top-10 left-10 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-                        <div className="absolute bottom-10 right-10 w-80 h-80 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                    </div>
-
+                <section className="relative py-20 md:py-28 overflow-hidden bg-white border-b border-gray-100">
                     <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -83,21 +76,21 @@ export default function ContactPage() {
                             transition={{ duration: 0.8 }}
                             className="text-center"
                         >
-                            <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-white mb-1 leading-tight tracking-tight">
+                            <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-gray-900 mb-1 leading-tight tracking-tight">
                                 Get In Touch
-                                <span className="block text-green-400 mt-1">
+                                <span className="block text-green-600 mt-1">
                                     We're Here to Help
                                 </span>
                             </h1>
 
-                            <p className="font-spartan text-lg sm:text-md text-gray-200 max-w-lg mx-auto mb-10 font-light">
+                            <p className="font-spartan text-lg sm:text-md text-gray-600 max-w-lg mx-auto mb-10 font-light">
                                 {supportDescription}
                             </p>
 
                             <div className="flex flex-wrap justify-center gap-4">
                                 <Button
                                     size="lg"
-                                    className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-6 rounded-[5px] text-lg"
+                                    className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-6 rounded-[5px] text-lg cursor-pointer"
                                 >
                                     <Headphones className="w-5 h-5 mr-2" />
                                     Live Chat Support
@@ -105,7 +98,7 @@ export default function ContactPage() {
                                 <Button
                                     size="lg"
                                     variant="outline"
-                                    className="bg-white/10 border-white text-white hover:bg-white/10 px-8 py-6 rounded-[5px] text-lg"
+                                    className="border-gray-200 text-gray-700 hover:bg-gray-50 px-8 py-6 rounded-[5px] text-lg cursor-pointer"
                                 >
                                     <Phone className="w-5 h-5 mr-2" />
                                     Call Now: {supportPhone}
@@ -135,8 +128,8 @@ export default function ContactPage() {
                                     <nav className="flex flex-wrap -mb-px">
                                         {[
                                             { id: "general", label: "General Inquiry", icon: <MessageSquare className="w-4 h-4" /> },
-                                            { id: "short", label: "Short Rent", icon: <Building2 className="w-4 h-4" /> },
-                                            { id: "long", label: "Long Term", icon: <Clock className="w-4 h-4" /> },
+                                            { id: "short", label: "Short Stay", icon: <Building2 className="w-4 h-4" /> },
+                                            { id: "long", label: "Rent", icon: <Clock className="w-4 h-4" /> },
                                             { id: "buy", label: "Property Purchase", icon: <Shield className="w-4 h-4" /> },
                                             { id: "owner", label: "For Owners", icon: <Users className="w-4 h-4" /> },
                                         ].map((tab) => (
@@ -168,18 +161,18 @@ export default function ContactPage() {
                                     )}
                                     {activeTab === "short" && (
                                         <div>
-                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Short rent Support</h3>
+                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Short Stay Support</h3>
                                             <p className="text-gray-600 mb-6">
                                                 Need help with instant bookings, payment issues, or short-term stay questions?
-                                                Our dedicated short rent team can assist you.
+                                                Our dedicated short stay team can assist you.
                                             </p>
                                         </div>
                                     )}
                                     {activeTab === "long" && (
                                         <div>
-                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Long Term Rental Support</h3>
+                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Rental Support</h3>
                                             <p className="text-gray-600 mb-6">
-                                                Questions about long-term rentals, inquiries, or rental agreements?
+                                                Questions about rentals, inquiries, or rental agreements?
                                                 We'll connect you with the right specialist.
                                             </p>
                                         </div>

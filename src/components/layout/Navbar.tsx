@@ -24,6 +24,7 @@ export default function Navbar() {
   const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
   const pathname = usePathname();
+  const isHome = pathname === "/";
 
   // Fixed: Improved scroll detection
   useEffect(() => {
@@ -118,32 +119,30 @@ export default function Navbar() {
   };
 
   // Robust role checking with safety checks
-  const hasOwnerRole = user && user.roles && Array.isArray(user.roles) 
+  const hasOwnerRole = user && user.roles && Array.isArray(user.roles)
     ? user.roles.some(role => role === "OWNER" || role === "OWNER")
     : false;
   const hasServiceRole = user && user.roles && Array.isArray(user.roles)
-    ? user.roles.some(role => role === "SERVICE" || role === "SERVICE") 
+    ? user.roles.some(role => role === "SERVICE" || role === "SERVICE")
     : false;
-  
+
   // Debug logs
   console.log("Navbar: User =", user ? "Loaded" : "null");
   console.log("Navbar: Roles =", user?.roles);
   console.log("Navbar: hasOwnerRole =", hasOwnerRole, "hasServiceRole =", hasServiceRole);
-  
+
   // Check if user is on a dashboard page
-  const isOnDashboard = pathname?.startsWith("/user/dashboard") || 
-                        pathname?.startsWith("/owner/dashboard") || 
-                        pathname?.startsWith("/service/dashboard");
+  const isOnDashboard = pathname?.startsWith("/user/dashboard") ||
+    pathname?.startsWith("/owner/dashboard") ||
+    pathname?.startsWith("/service/dashboard");
 
   const navItems = [
     { href: "/", label: "Home", icon: Home },
     { href: "/buy", label: "Buy" },
-    { href: "/rent/short-rent", label: "Short Rent" },
-    { href: "/rent/long-rent", label: "Long Rent" },
+    { href: "/rent/long-rent", label: "Rent" },
+    { href: "/rent/short-rent", label: "Short Stay" },
     { href: "/services", label: "Services" },
     { href: "/how-listing-works", label: "List Property", icon: HelpCircle },
-    { href: "/about", label: "About" },
-    { href: "/contact", label: "Contact" },
   ];
 
   return (
@@ -164,20 +163,13 @@ export default function Navbar() {
             <Link href="/" className="flex items-center gap-2">
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className="flex items-center gap-2"
+                className="flex items-center"
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300 ${scrolled
-                  ? "bg-linear-to-br from-green-500 to-emerald-600"
-                  : "bg-white/10 backdrop-blur-sm"
-                  }`}>
-                  <Key className={`w-5 h-5 ${scrolled ? 'text-white' : 'text-white'}`} />
-                </div>
-                <span
-                  className={`text-2xl font-bold transition-colors duration-300 ${scrolled ? "text-gray-900" : "text-white"
-                    }`}
-                >
-                  MYKEYS
-                </span>
+                <img
+                  src="/Mykeys LOGO.png"
+                  alt="MYKEYS"
+                  className="h-25 w-auto object-contain"
+                />
               </motion.div>
             </Link>
 
@@ -189,21 +181,15 @@ export default function Navbar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`relative text-sm font-medium transition-colors ${
-                      isActive
-                        ? scrolled
-                          ? "text-green-600"
-                          : "text-green-300"
-                        : scrolled
-                          ? "text-gray-700 hover:text-green-600"
-                          : "text-white/90 hover:text-green-300"
-                    }`}
+                    className={`relative text-sm font-medium transition-colors ${isActive
+                      ? "text-green-600"
+                      : "text-gray-700 hover:text-green-600"
+                      }`}
                   >
                     {item.label}
                     <span
-                      className={`absolute -bottom-1 left-0 h-0.5 bg-green-500 transition-all duration-300 ${
-                        isActive ? "w-full" : "w-0"
-                      }`}
+                      className={`absolute -bottom-1 left-0 h-0.5 bg-green-500 transition-all duration-300 ${isActive ? "w-full" : "w-0"
+                        }`}
                     />
                   </Link>
                 );
@@ -218,11 +204,8 @@ export default function Navbar() {
                   {/* Dashboard Dropdown */}
                   <div className="relative">
                     <Button
-                      variant={scrolled ? "outline" : "ghost"}
-                      className={`flex items-center gap-2 cursor-pointer ${scrolled
-                        ? "text-gray-700 border-gray-300 hover:bg-gray-100"
-                        : "text-white/90 hover:bg-white/30"
-                        }`}
+                      variant="outline"
+                      className="flex items-center gap-2 cursor-pointer text-gray-700 border-gray-300 hover:bg-gray-100"
                       onClick={() => setShowDashboardDropdown(!showDashboardDropdown)}
                     >
                       <LayoutDashboard className="w-4 h-4" />
@@ -320,10 +303,7 @@ export default function Navbar() {
                   <Button
                     onClick={handleLogout}
                     variant="ghost"
-                    className={`hidden sm:flex items-center gap-2 rounded-[5px] cursor-pointer ${scrolled
-                      ? "text-gray-700 hover:bg-gray-50"
-                      : "text-white hover:bg-white"
-                      }`}
+                    className="hidden sm:flex items-center gap-2 rounded-[5px] cursor-pointer text-gray-700 hover:bg-gray-50"
                   >
                     <LogOut className="w-4 h-4" />
                     Logout
@@ -334,11 +314,8 @@ export default function Navbar() {
                   {/* Login and Signup buttons */}
                   <Link href="/login">
                     <Button
-                      variant={scrolled ? "outline" : "ghost"}
-                      className={`hidden sm:flex items-center gap-2 cursor-pointer rounded-[5px] ${scrolled
-                        ? "text-gray-700 border-gray-300 hover:bg-gray-50"
-                        : "text-white/90 hover:bg-white"
-                        }`}
+                      variant="outline"
+                      className="hidden sm:flex items-center gap-2 cursor-pointer rounded-[5px] text-gray-700 border-gray-300 hover:bg-gray-50"
                     >
                       <LogIn className="w-4 h-4" />
                       Login
@@ -361,9 +338,9 @@ export default function Navbar() {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? (
-                  <X className={`w-6 h-6 ${scrolled ? "text-gray-700" : "text-white"}`} />
+                  <X className="w-6 h-6 text-gray-700" />
                 ) : (
-                  <Menu className={`w-6 h-6 ${scrolled ? "text-gray-700" : "text-white"}`} />
+                  <Menu className="w-6 h-6 text-gray-700" />
                 )}
               </Button>
             </div>
@@ -528,11 +505,10 @@ export default function Navbar() {
                         <Link
                           key={item.href}
                           href={item.href}
-                          className={`block py-3 px-4 rounded-lg transition-colors ${
-                            isActive
-                              ? "bg-green-50 text-green-600 font-medium"
-                              : "text-gray-700 hover:bg-green-50 hover:text-green-600"
-                          }`}
+                          className={`block py-3 px-4 rounded-lg transition-colors ${isActive
+                            ? "bg-green-50 text-green-600 font-medium"
+                            : "text-gray-700 hover:bg-green-50 hover:text-green-600"
+                            }`}
                           onClick={() => setMobileMenuOpen(false)}
                         >
                           {item.label}

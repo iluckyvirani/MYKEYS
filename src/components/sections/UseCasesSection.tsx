@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 const useCases = [
   {
     id: "user",
-    role: "As a User/Buyer",
+    role: "Tenant/Buyer",
     description: "Discover and purchase your ideal property or book services with ease",
     icon: Users,
     benefits: [
@@ -30,7 +30,7 @@ const useCases = [
   },
   {
     id: "owner",
-    role: "As a Property Owner",
+    role: "Seller/Landloard",
     description: "List and manage your properties, reach more clients, earn passive income",
     icon: Building2,
     benefits: [
@@ -48,7 +48,7 @@ const useCases = [
   },
   {
     id: "provider",
-    role: "As a Service Provider",
+    role: "Professional/Associates",
     description: "Grow your service business, connect with more clients, increase earnings",
     icon: Wrench,
     benefits: [
@@ -216,27 +216,19 @@ export default function UseCasesSection() {
                   </p>
 
                   {/* Benefits */}
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: isActive ? 1 : 0, height: isActive ? "auto" : 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <ul className={`space-y-3 mb-8 ${isActive ? "block" : "hidden"}`}>
+                  <div className="mb-8">
+                    <ul className="space-y-3">
                       {useCase.benefits.map((benefit, idx) => (
-                        <motion.li
+                        <li
                           key={idx}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.05 }}
                           className="flex items-start gap-3"
                         >
-                          <div className="w-1.5 h-1.5 rounded-full bg-white/60 mt-2 shrink-0" />
-                          <span className="text-white/90">{benefit}</span>
-                        </motion.li>
+                          <div className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${isActive ? "bg-white/60" : "bg-green-600"}`} />
+                          <span className={`${isActive ? "text-white/90" : "text-gray-700"}`}>{benefit}</span>
+                        </li>
                       ))}
                     </ul>
-                  </motion.div>
+                  </div>
 
                   {/* CTA Button */}
                   {useCase.id === "provider" ? (

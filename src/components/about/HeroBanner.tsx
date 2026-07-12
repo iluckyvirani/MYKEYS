@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 
 const featureCards = [
   {
-    title: "Short Rents",
+    title: "Short Stays",
     description: "Book instantly. Pay per night. Full Airbnb-style experience with verified properties.",
     icon: Hotel,
     href: "/rent/short-rent",
@@ -21,7 +21,7 @@ const featureCards = [
     hoverBorder: "hover:border-green-400/50",
   },
   {
-    title: "Long Term Rentals",
+    title: "Rentals",
     description: "Connect directly with owners. 2+ month stays. No agent fees. Better deals.",
     icon: Building2,
     href: "/rent/long-rent",
@@ -40,21 +40,7 @@ const featureCards = [
 
 export default function HeroBanner() {
   return (
-    <section className="relative h-screen min-h-125 flex items-center justify-center overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 z-1">
-        <div
-          className="absolute inset-0 bg-no-repeat bg-center bg-cover"
-          style={{
-            backgroundImage: "url('https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2')",
-          }}
-        />
-
-        {/* Gradient overlays */}
-        <div className="absolute inset-0 bg-linear-to-b from-black/80 via-black/50 to-black/80" />
-        <div className="absolute inset-0 bg-linear-to-r from-black/40 to-transparent" />
-      </div>
-
+    <section className="relative h-screen min-h-125 flex items-center justify-center overflow-hidden bg-white border-b border-gray-100">
       <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-5 mt-10">
           <motion.div
@@ -62,16 +48,16 @@ export default function HeroBanner() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-white mb-1 leading-tight tracking-tight">
+            <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-gray-900 mb-1 leading-tight tracking-tight">
               One Platform,
-              <span className="block text-green-400 mt-1">
+              <span className="block text-green-600 mt-1">
                 Three Ways to Property
               </span>
             </h1>
 
-            <p className="font-spartan text-lg sm:text-md text-gray-200 max-w-lg mx-auto mb-5 font-light">
+            <p className="font-spartan text-lg sm:text-md text-gray-600 max-w-lg mx-auto mb-5 font-light">
               We're revolutionizing property transactions with our unified platform.
-              Whether you need a short rent, long-term rental, or want to buy a home -
+              Whether you need a short stay, long-term rental, or want to buy a home -
               we've got you covered with transparent pricing and direct owner connections.
             </p>
 
@@ -79,7 +65,7 @@ export default function HeroBanner() {
               <Button
                 asChild
                 size="lg"
-                className="rounded-[5px] h-12 bg-green-600 hover:bg-green-700 text-white"
+                className="rounded-[5px] h-12 bg-green-600 hover:bg-green-700 text-white cursor-pointer"
               >
                 <Link href="/how-listing-works">
                   <Building className="w-5 h-5 mr-2" />
@@ -90,7 +76,7 @@ export default function HeroBanner() {
                 asChild
                 size="lg"
                 variant="outline"
-                className="bg-white/10 border-white text-white hover:bg-white hover:text-gray-900 cursor-pointer px-8 py-6 rounded-[5px] text-lg"
+                className="border-gray-200 text-gray-700 hover:bg-gray-50 cursor-pointer px-8 py-6 rounded-[5px] text-lg"
               >
                 <Link href="/buy">
                   <Home className="w-5 h-5 mr-2" />
@@ -114,13 +100,13 @@ export default function HeroBanner() {
               <Link
                 key={card.href}
                 href={card.href}
-                className={`block bg-white/10 backdrop-blur-sm rounded-[5px] p-6 border border-white/20 ${card.hoverBorder} transition-all duration-300 hover:scale-105`}
+                className={`block bg-gray-50 rounded-[5px] p-6 border border-gray-100 ${card.hoverBorder} transition-all duration-300 hover:scale-105`}
               >
                 <div className={`w-12 h-12 bg-linear-to-br ${card.iconClass} rounded-lg flex items-center justify-center mb-4`}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">{card.title}</h3>
-                <p className="text-gray-300">{card.description}</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{card.title}</h3>
+                <p className="text-gray-600">{card.description}</p>
               </Link>
             );
           })}
@@ -133,8 +119,8 @@ export default function HeroBanner() {
         transition={{ repeat: Infinity, duration: 1.5 }}
         className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
       >
-        <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
-          <div className="w-1 h-3 bg-white/50 rounded-full mt-2"></div>
+        <div className="w-6 h-10 border-2 border-gray-300 rounded-full flex justify-center">
+          <div className="w-1 h-3 bg-gray-400 rounded-full mt-2"></div>
         </div>
       </motion.div>
     </section>

@@ -10,8 +10,8 @@ export default function BuySellRentTabs({ selectedTab, onTabChange }: { selected
   const tabs = [
     // { id: "all", label: "All Properties", icon: Home },
     { id: "buy", label: "BUY", icon: Home },
-    { id: "short-rent", label: "Short Rent", icon: Clock },
-    { id: "long-rent", label: "Long Rent", icon: Calendar },
+    { id: "short-rent", label: "Short Stay", icon: Clock },
+    { id: "long-rent", label: "Rent", icon: Calendar },
   ];
 
   const activeTabIndex = tabs.findIndex(tab => tab.id === selectedTab);

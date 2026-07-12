@@ -42,21 +42,7 @@ export default function ServiceHero({ onGetStarted }: ServiceHeroProps) {
   ];
 
   return (
-    <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-linear-to-br from-gray-900 via-green-900 to-gray-900 py-20">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.div
-          className="absolute -top-40 -right-40 w-80 h-80 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
-          animate={{ y: [0, 50, 0] }}
-          transition={{ duration: 4, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute top-1/2 -left-40 w-80 h-80 bg-green-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
-          animate={{ y: [0, -50, 0] }}
-          transition={{ duration: 4, repeat: Infinity, delay: 1 }}
-        />
-      </div>
-
+    <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-white py-20 border-b border-gray-100">
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
@@ -66,14 +52,14 @@ export default function ServiceHero({ onGetStarted }: ServiceHeroProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="text-5xl sm:text-6xl md:text-6xl font-bold text-white mb-4 leading-tight font-spartan">
+            <h1 className="text-5xl sm:text-6xl md:text-6xl font-bold text-gray-900 mb-4 leading-tight font-spartan">
               Professional Home Services
-              <span className="block text-green-400 mt-2">
+              <span className="block text-green-600 mt-2">
                 At Your Doorstep
               </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-gray-200 max-w-3xl mx-auto mb-8 font-light leading-relaxed">
+            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto mb-8 font-light leading-relaxed">
               Discover verified service professionals for plumbing, cleaning, electrical work, AC repair, painting, and much more. Book instantly for immediate service or schedule at your convenience. All professionals are thoroughly verified and background-checked for your safety and peace of mind.
             </p>
           </motion.div>
@@ -88,9 +74,9 @@ export default function ServiceHero({ onGetStarted }: ServiceHeroProps) {
             {features.map((feature, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 justify-center text-gray-200"
+                className="flex items-center gap-2 justify-center text-gray-700"
               >
-                <feature.icon className="w-5 h-5 text-green-400" />
+                <feature.icon className="w-5 h-5 text-green-600" />
                 <span className="text-sm">{feature.text}</span>
               </div>
             ))}
@@ -105,13 +91,13 @@ export default function ServiceHero({ onGetStarted }: ServiceHeroProps) {
           >
             <Button
               onClick={onGetStarted}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg rounded-lg flex items-center gap-2 justify-center h-auto"
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg rounded-lg flex items-center gap-2 justify-center h-auto cursor-pointer"
             >
               Browse Services
             </Button>
             <Button
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10 px-8 py-6 text-lg rounded-lg h-auto"
+              className="border-gray-200 text-gray-700 hover:bg-gray-50 px-8 py-6 text-lg rounded-lg h-auto cursor-pointer"
             >
               Become a Professional
             </Button>
@@ -123,16 +109,16 @@ export default function ServiceHero({ onGetStarted }: ServiceHeroProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            <p className="text-gray-300 mb-6 font-medium">Popular Services</p>
+            <p className="text-gray-700 mb-6 font-medium">Popular Services</p>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4 max-w-4xl mx-auto">
               {categoryIcons.map(({ Icon, label }, idx) => (
                 <motion.div
                   key={idx}
-                  className="flex flex-col items-center gap-3 p-4 rounded-lg border border-white/10 hover:border-green-400/50 hover:bg-white/5 transition-all cursor-pointer group"
+                  className="flex flex-col items-center gap-3 p-4 rounded-lg border border-gray-100 bg-gray-50 hover:border-green-400/50 hover:bg-white transition-all cursor-pointer group"
                   whileHover={{ scale: 1.05, y: -5 }}
                 >
-                  <Icon className="w-8 h-8 text-green-400 group-hover:text-green-300 transition-colors" />
-                  <span className="text-xs text-gray-300 text-center">{label}</span>
+                  <Icon className="w-8 h-8 text-green-600 group-hover:text-green-500 transition-colors" />
+                  <span className="text-xs text-gray-600 text-center">{label}</span>
                 </motion.div>
               ))}
             </div>
@@ -145,9 +131,9 @@ export default function ServiceHero({ onGetStarted }: ServiceHeroProps) {
         <motion.div
           animate={{ y: [0, 10, 0] }}
           transition={{ repeat: Infinity, duration: 2 }}
-          className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center"
+          className="w-6 h-10 border-2 border-gray-300 rounded-full flex justify-center"
         >
-          <div className="w-1 h-3 bg-white/50 rounded-full mt-2" />
+          <div className="w-1 h-3 bg-gray-400 rounded-full mt-2" />
         </motion.div>
       </div>
     </section>

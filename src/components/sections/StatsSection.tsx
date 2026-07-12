@@ -1,23 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Award, Building2, Users, ShieldCheck, Clock, Star, Home, Globe } from "lucide-react";
 
 export default function StatsSection() {
-  const [particles, setParticles] = useState<Array<{ left: string; top: string; duration: number; delay: number }>>([]);
-
-  useEffect(() => {
-    setParticles(
-      Array.from({ length: 20 }, () => ({
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        duration: 2 + Math.random() * 3,
-        delay: Math.random() * 2,
-      }))
-    );
-  }, []);
-
   const stats = [
     {
       id: 1,
@@ -78,27 +64,8 @@ export default function StatsSection() {
 
   return (
     <>
-      {/* Main Stats Section with Parallax */}
-      <section className="relative overflow-hidden py-24 md:py-32">
-        {/* Background with Parallax Effect */}
-        <div className="absolute inset-0 z-0">
-          <div 
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2070')",
-              backgroundAttachment: 'fixed',
-            }}
-          />
-          <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/60 to-black/80" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-transparent via-black/20 to-black/80" />
-        </div>
-
-        {/* Animated Orbs */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        </div>
-
+      {/* Main Stats Section - White Background */}
+      <section className="relative overflow-hidden py-24 md:py-32 bg-white border-t border-b border-gray-100">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <motion.div
@@ -106,19 +73,19 @@ export default function StatsSection() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-16"
           >
-            <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-500/20 to-emerald-500/20 text-green-400 px-4 py-2 rounded-full mb-4 border border-green-500/30">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+            <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-500/10 to-emerald-500/10 text-green-700 px-4 py-2 rounded-full mb-4 border border-green-500/20">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
               <span className="text-sm font-medium">Our Achievements</span>
             </div>
             
-            <h2 className="font-spartan text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
+            <h2 className="font-spartan text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
               Trusted by Thousands
-              <span className="block text-transparent bg-clip-text bg-linear-to-r from-green-400 to-emerald-400">
+              <span className="block text-transparent bg-clip-text bg-linear-to-r from-green-600 to-emerald-600 mt-1">
                 of Happy Clients
               </span>
             </h2>
             
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Years of excellence in delivering premium real estate solutions with unmatched customer satisfaction.
             </p>
           </motion.div>
@@ -135,14 +102,14 @@ export default function StatsSection() {
                 className="group relative"
               >
                 {/* Card */}
-                <div className="relative bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl shadow-black/30 overflow-hidden">
-                  {/* Gradient Background */}
-                  <div className={`absolute inset-0 bg-linear-to-br ${stat.color}/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                <div className="relative bg-gray-50 rounded-3xl p-8 border border-gray-100 shadow-xs overflow-hidden transition-all duration-300 group-hover:shadow-md">
+                  {/* Gradient Background Hover Effect */}
+                  <div className={`absolute inset-0 bg-linear-to-br ${stat.color}/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
                   
                   {/* Content */}
                   <div className="relative z-10 text-center">
                     {/* Icon */}
-                    <div className={`inline-flex p-4 rounded-2xl bg-linear-to-br ${stat.color} mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`inline-flex p-4 rounded-2xl bg-linear-to-br ${stat.color} mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
                       <div className="text-white">
                         {stat.icon}
                       </div>
@@ -151,7 +118,7 @@ export default function StatsSection() {
                     {/* Value */}
                     <div className="mb-2">
                       <motion.span 
-                        className="font-spartan text-5xl md:text-6xl font-bold text-white"
+                        className="font-spartan text-5xl md:text-6xl font-bold text-gray-900"
                         initial={{ scale: 0.5 }}
                         animate={{ scale: 1 }}
                         transition={{ 
@@ -165,15 +132,15 @@ export default function StatsSection() {
                     </div>
                     
                     {/* Label */}
-                    <h4 className="text-xl font-semibold text-white mb-2">{stat.label}</h4>
+                    <h4 className="text-xl font-semibold text-gray-900 mb-2">{stat.label}</h4>
                     
                     {/* Description */}
-                    <p className="text-sm text-gray-300">{stat.description}</p>
+                    <p className="text-sm text-gray-600">{stat.description}</p>
                   </div>
 
                   {/* Decorative Elements */}
-                  <div className="absolute -top-4 -right-4 w-20 h-20 bg-linear-to-br from-white/5 to-transparent rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
-                  <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-linear-to-tr from-white/5 to-transparent rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
+                  <div className="absolute -top-4 -right-4 w-20 h-20 bg-linear-to-br from-gray-200/20 to-transparent rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
+                  <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-linear-to-tr from-gray-200/20 to-transparent rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
                 </div>
               </motion.div>
             ))}
@@ -184,7 +151,7 @@ export default function StatsSection() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-linear-to-r from-white/10 to-white/5 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl"
+            className="bg-gray-50 rounded-3xl p-8 border border-gray-100 shadow-xs"
           >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {additionalStats.map((stat, index) => (
@@ -196,17 +163,17 @@ export default function StatsSection() {
                   whileHover={{ scale: 1.05 }}
                   className="group"
                 >
-                  <div className="text-center p-6 bg-white/5 rounded-2xl hover:bg-white/10 transition-all duration-300">
+                  <div className="text-center p-6 bg-white rounded-2xl border border-gray-100 hover:bg-gray-100/50 hover:shadow-xs transition-all duration-300">
                     {/* Icon */}
-                    <div className="inline-flex p-3 rounded-xl bg-linear-to-br from-green-500/20 to-emerald-500/20 text-green-400 mb-4 group-hover:scale-110 transition-transform">
+                    <div className="inline-flex p-3 rounded-xl bg-linear-to-br from-green-500/10 to-emerald-500/10 text-green-600 mb-4 group-hover:scale-110 transition-transform">
                       {stat.icon}
                     </div>
                     
                     {/* Value */}
-                    <div className="text-3xl font-bold text-white mb-2">{stat.value}</div>
+                    <div className="text-3xl font-bold text-gray-900 mb-2">{stat.value}</div>
                     
                     {/* Label */}
-                    <p className="text-sm text-gray-300">{stat.label}</p>
+                    <p className="text-sm text-gray-600">{stat.label}</p>
                   </div>
                 </motion.div>
               ))}
@@ -227,36 +194,13 @@ export default function StatsSection() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9 + (index * 0.1) }}
                 whileHover={{ y: -4 }}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-gray-400 hover:text-gray-800 transition-colors"
               >
                 <div className="text-sm opacity-60 mb-1">Featured in</div>
                 <div className="text-xl font-semibold">{company}</div>
               </motion.div>
             ))}
           </motion.div>
-        </div>
-
-        {/* Floating Particles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {particles.map((particle, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 bg-white/30 rounded-full"
-              style={{
-                left: particle.left,
-                top: particle.top,
-              }}
-              animate={{
-                y: [0, -20, 0],
-                opacity: [0.3, 0.8, 0.3],
-              }}
-              transition={{
-                duration: particle.duration,
-                repeat: Infinity,
-                delay: particle.delay,
-              }}
-            />
-          ))}
         </div>
       </section>
     </>
