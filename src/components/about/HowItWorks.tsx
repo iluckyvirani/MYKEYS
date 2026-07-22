@@ -88,7 +88,7 @@ export default function HowItWorks() {
       color: "bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200",
       textColor: "text-blue-700",
       buttonColor: "bg-gradient-to-r from-blue-600 to-cyan-600",
-      href: "/rent/long-rent",
+      href: "/rent/whole-property",
     },
     {
       type: "Property Purchase",

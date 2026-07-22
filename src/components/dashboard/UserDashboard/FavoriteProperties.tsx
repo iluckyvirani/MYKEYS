@@ -27,7 +27,7 @@ const getBrowseHref = (filter: string): string => {
     case "short":
       return "/rent/short-rent";
     case "long":
-      return "/rent/long-rent";
+      return "/rent/whole-property";
     case "buy":
       return "/buy";
     default:

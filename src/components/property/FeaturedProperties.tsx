@@ -15,9 +15,9 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
   // UPDATED: Filters for rent and buy
   const filters = [
     { id: "all", label: "All Properties" },
-    { id: "short-rent", label: "Short Stay" },
-    { id: "long-rent", label: "Rent" },
     { id: "buy", label: "For Sale" },
+    { id: "long-rent", label: "Rent" },
+    { id: "short-rent", label: "Short Stay" },
   ];
 
   const fetchProperties = useCallback(async () => {

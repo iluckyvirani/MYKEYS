@@ -1,133 +1,26 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import PropertyGrid from "@/components/property/PropertyGrid";
-import LongRentHero from "@/components/rent/LongRentHero";
-import HowLongRentWorks from "@/components/rent/HowLongRentWorks";
-import LongRentFilters from "@/components/search/LongRentFilters";
-import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
+/** Legacy route — redirects to the new Whole Property rent flow */
+export default async function LongRentRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const qs = new URLSearchParams();
 
-export interface LongRentFiltersState {
-  priceRange: [number, number];
-  selectedTypes: string[];
-  selectedBeds: number | null;
-  selectedBaths: number | null;
-  minRating: number;
-  minTermMonths: number;
-  maxTermMonths: number;
-  propertyPreferences: string[];
-  searchLocation: string;
-}
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string" && value) qs.set(key, value);
+    else if (Array.isArray(value) && value[0]) qs.set(key, value[0]);
+  }
 
-function LongRentPageContent() {
-  const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<LongRentFiltersState>({
-    priceRange: [0, 5000],
-    selectedTypes: [],
-    selectedBeds: null,
-    selectedBaths: null,
-    minRating: 0,
-    minTermMonths: 1,
-    maxTermMonths: 24,
-    propertyPreferences: [],
-    searchLocation: "",
-  });
-  const [totalCount, setTotalCount] = useState(0);
+  // Map old city/zip into location for the new flow
+  const city = typeof params.city === "string" ? params.city : "";
+  const zip = typeof params.zipCode === "string" ? params.zipCode : "";
+  const location =
+    (typeof params.location === "string" ? params.location : "") || zip || city;
+  if (location) qs.set("location", location);
 
-  // Apply URL filters on page load
-  useEffect(() => {
-    const city = searchParams.get("city");
-    const zipCode = searchParams.get("zipCode");
-    const propertyType = searchParams.get("propertyType");
-
-    const searchLocation = zipCode || city || "";
-
-    setFilters(prev => ({
-      ...prev,
-      searchLocation: searchLocation,
-      ...(propertyType
-        ? { selectedTypes: [propertyType.toUpperCase()] }
-        : {}),
-    }));
-  }, [searchParams]);
-
-  // Extract initial values for search bar
-  const initialCity = searchParams.get("city") || "";
-  const initialZipCode = searchParams.get("zipCode") || "";
-
-  const handleFilterChange = (newFilters: Partial<LongRentFiltersState>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-  };
-
-  const handleSearchChange = (city: string, zipCode: string) => {
-    const location = zipCode || city;
-    handleFilterChange({ searchLocation: location });
-  };
-
-  return (
-    <>
-      <Navbar />
-      <main className="min-h-screen">
-        <LongRentHero onSearchChange={handleSearchChange} initialCity={initialCity} initialZipCode={initialZipCode} />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-5 py-5">
-          <div className="flex flex-col lg:flex-row gap-8">
-            <div className="lg:w-1/4">
-              <LongRentFilters filters={filters} onFilterChange={handleFilterChange} />
-            </div>
-
-            <div className="lg:w-3/4" id="property-grid-section">
-              <div className="mb-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                  Long Term Rental Properties
-                </h2>
-                <p className="text-gray-600">
-                  <span className="font-medium">{totalCount}</span> properties available
-                  {filters.searchLocation && ` in ${filters.searchLocation}`}
-                </p>
-              </div>
-
-              <PropertyGrid 
-                filters={filters}
-                listingType="RENT"
-                rentalType="LONG_TERM"
-                onCountChange={setTotalCount}
-              />
-            </div>
-          </div>
-        </div>
-
-        <HowLongRentWorks />
-
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <DynamicFAQSection
-            categories={["LONG_RENT"]}
-            showViewAll
-            viewAllHref="/faq?category=LONG_RENT"
-            title="Long Rent FAQs"
-            subtitle="Answers about long-term rentals and leases"
-          />
-        </section>
-      </main>
-      <Footer />
-    </>
-  );
-}
-
-export default function LongRentPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading properties...</p>
-        </div>
-      </div>
-    }>
-      <LongRentPageContent />
-    </Suspense>
-  );
+  const query = qs.toString();
+  redirect(query ? `/rent/whole-property?${query}` : "/rent/whole-property");
 }

@@ -24,7 +24,7 @@ const featureCards = [
     title: "Rentals",
     description: "Connect directly with owners. 2+ month stays. No agent fees. Better deals.",
     icon: Building2,
-    href: "/rent/long-rent",
+    href: "/rent/whole-property",
     iconClass: "from-blue-500 to-cyan-600",
     hoverBorder: "hover:border-blue-400/50",
   },

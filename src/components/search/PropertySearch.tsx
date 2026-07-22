@@ -27,21 +27,16 @@ export default function PropertySearch({ onSearch, initialCity = "", initialZipC
 
         if (onSearch) {
             onSearch(city, zipCode);
+            setTimeout(() => {
+                const section = document.getElementById("property-grid-section");
+                if (section) {
+                    section.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            }, 300);
         } else {
-            const params = new URLSearchParams();
-            if (city) params.append("city", city);
-            if (zipCode) params.append("zipCode", zipCode);
-            router.push(`/buy?${params.toString()}`);
+            const location = zipCode || city;
+            router.push(`/buy/search?location=${encodeURIComponent(location)}`);
         }
-
-        setTimeout(() => {
-            const section = document.getElementById("property-grid-section");
-            if (section) {
-                section.scrollIntoView({ behavior: "smooth", block: "start" });
-            } else {
-                window.scrollBy({ top: 600, behavior: "smooth" });
-            }
-        }, 300);
     };
 
     return (

@@ -508,7 +508,7 @@ export  function PropertySearchBar({ selectedType }: { selectedType: "all" | "bu
       const routes: Record<string, string> = {
         "buy": "/buy",
         "short-rent": "/rent/short-rent",
-        "long-rent": "/rent/long-rent",
+        "long-rent": "/rent/whole-property",
       };
 
       router.push(`${routes[selectedType as keyof typeof routes]}?${params.toString()}`);

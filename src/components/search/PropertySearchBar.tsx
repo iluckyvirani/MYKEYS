@@ -28,12 +28,21 @@ export default function PropertySearchBar({ selectedType }: { selectedType: "all
     if (zipCode) params.append("zipCode", zipCode);
 
     const routes: Record<string, string> = {
-      "buy": "/buy",
+      "buy": "/buy/search",
       "short-rent": "/rent/short-rent",
-      "long-rent": "/rent/long-rent",
+      "long-rent": "/rent/whole-property",
     };
 
-    router.push(`${routes[selectedType]}?${params.toString()}`);
+    if (selectedType === "buy") {
+      const location = trimmed;
+      router.push(`/buy/search?location=${encodeURIComponent(location)}`);
+    } else if (selectedType === "long-rent") {
+      router.push(
+        `/rent/whole-property/search?location=${encodeURIComponent(trimmed)}`
+      );
+    } else {
+      router.push(`${routes[selectedType]}?${params.toString()}`);
+    }
     setLoading(false);
   };
 

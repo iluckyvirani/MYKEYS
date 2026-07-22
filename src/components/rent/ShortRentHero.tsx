@@ -1,7 +1,20 @@
 "use client";
 
-import { motion } from "framer-motion";
-import PropertySearch from "../search/PropertySearch";
+import { Search } from "lucide-react";
+import { useState } from "react";
+
+const SUGGESTIONS = [
+  "London",
+  "Manchester",
+  "Birmingham",
+  "Leeds",
+  "Bristol",
+  "Edinburgh",
+  "Glasgow",
+  "Cardiff",
+  "Liverpool",
+  "SW1A 1AA",
+];
 
 interface ShortRentHeroProps {
   onSearchChange?: (city: string, zipCode: string) => void;
@@ -9,36 +22,89 @@ interface ShortRentHeroProps {
   initialZipCode?: string;
 }
 
-export default function ShortRentHero({ onSearchChange, initialCity = "", initialZipCode = "" }: ShortRentHeroProps) {
+const looksLikePostcode = (value: string) => /\d/.test(value);
+
+export default function ShortRentHero({
+  onSearchChange,
+  initialCity = "",
+  initialZipCode = "",
+}: ShortRentHeroProps) {
+  const [location, setLocation] = useState(initialZipCode || initialCity);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const filtered = location.trim()
+    ? SUGGESTIONS.filter((s) =>
+        s.toLowerCase().includes(location.trim().toLowerCase())
+      )
+    : SUGGESTIONS.slice(0, 7);
+
+  const goSearch = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed || !onSearchChange) return;
+    const isPostcode = looksLikePostcode(trimmed);
+    onSearchChange(isPostcode ? "" : trimmed, isPostcode ? trimmed : "");
+    setTimeout(() => {
+      document
+        .getElementById("property-grid-section")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+  };
+
   return (
-    <section className="relative h-screen min-h-125 flex items-center justify-center overflow-hidden bg-white">
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-5 mt-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+    <section className="relative min-h-[320px] sm:min-h-[380px] flex items-center justify-center overflow-hidden bg-white pt-24 pb-14 border-b border-gray-100">
+      <div className="relative z-10 w-full max-w-3xl px-4">
+        <h1 className="text-3xl sm:text-4xl font-bold text-[#0f3d36] mb-6">
+          Search short stays
+        </h1>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <div className="flex items-center bg-white rounded-lg border-2 border-green-500 focus-within:border-green-600 overflow-hidden shadow-sm">
+              <Search className="w-5 h-5 text-slate-400 ml-3 shrink-0" />
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                onKeyDown={(e) => e.key === "Enter" && goSearch(location)}
+                placeholder="e.g. London, Manchester or SW1A 1AA"
+                className="w-full px-3 py-3.5 text-slate-900 outline-none text-base"
+              />
+            </div>
+
+            {showSuggestions && filtered.length > 0 && (
+              <ul className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20">
+                {filtered.map((item) => (
+                  <li key={item}>
+                    <button
+                      type="button"
+                      className="w-full text-left px-4 py-3 text-slate-800 hover:bg-gray-50 cursor-pointer font-medium"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setLocation(item);
+                        goSearch(item);
+                      }}
+                    >
+                      {item}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => goSearch(location)}
+            className="cursor-pointer shrink-0 px-8 py-3.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-base transition-colors"
           >
-
-            <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-gray-900 mb-1 leading-tight tracking-tight">
-              Perfect Short Rents
-              <span className="block text-green-600 mt-1">For Every Occasion</span>
-            </h1>
-
-            <p className="font-spartan text-lg sm:text-md text-gray-600 max-w-lg mx-auto mb-10 font-light">
-              Book beautiful properties for nights, weekends, or short getaways.
-              Secure payments, verified hosts, and flexible cancellation.
-            </p>
-          </motion.div>
+            Search
+          </button>
         </div>
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <PropertySearch onSearch={onSearchChange} initialCity={initialCity} initialZipCode={initialZipCode} />
-        </motion.div>
       </div>
     </section>
   );

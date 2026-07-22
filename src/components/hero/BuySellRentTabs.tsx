@@ -4,14 +4,14 @@ import { Home, TrendingUp, Key, Calendar, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRef } from "react";
 
-export default function BuySellRentTabs({ selectedTab, onTabChange }: { selectedTab: "all" | "buy" | "short-rent" | "long-rent" | "" ; onTabChange: (tab: "all" | "buy" | "short-rent" | "long-rent") => void }) {
+export default function BuySellRentTabs({ selectedTab, onTabChange }: { selectedTab: "all" | "buy" | "short-rent" | "long-rent" | ""; onTabChange: (tab: "all" | "buy" | "short-rent" | "long-rent") => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const tabs = [
     // { id: "all", label: "All Properties", icon: Home },
     { id: "buy", label: "BUY", icon: Home },
-    { id: "short-rent", label: "Short Stay", icon: Clock },
     { id: "long-rent", label: "Rent", icon: Calendar },
+    { id: "short-rent", label: "Short Stay", icon: Clock },
   ];
 
   const activeTabIndex = tabs.findIndex(tab => tab.id === selectedTab);

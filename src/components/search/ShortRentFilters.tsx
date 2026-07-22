@@ -3,7 +3,19 @@
 import { Filter, Star, Home, Bath, Bed, PoundSterling, Users, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { ShortRentFiltersState } from "@/app/rent/short-rent/page";
+
+export interface ShortRentFiltersState {
+  priceRange: [number, number];
+  selectedTypes: string[];
+  selectedBeds: number | null;
+  selectedBaths: number | null;
+  minRating: number;
+  guestCapacity: number | null;
+  minStayNights: number;
+  maxStayNights: number;
+  propertyPreferences: string[];
+  searchLocation: string;
+}
 
 interface ShortRentFiltersProps {
   filters: ShortRentFiltersState;

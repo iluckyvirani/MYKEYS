@@ -390,7 +390,7 @@ export default function FavoriteGrid({ onStatsChange, searchQuery = '', filter =
               asChild
               className="px-8 py-3"
             >
-              <Link href="/rent/long-rent">
+              <Link href="/rent/whole-property">
                 <Calendar className="w-5 h-5 mr-2" />
                 Browse Long Rentals
               </Link>

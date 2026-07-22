@@ -626,14 +626,24 @@ export default function ServicesPage() {
           </div>
         </section>
 
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <DynamicFAQSection
-            categories={["SERVICE"]}
-            showViewAll
-            viewAllHref="/faq?category=SERVICE"
-            title="Services FAQs"
-            subtitle="Help for customers and service providers"
+        <section className="relative py-16 md:py-20 overflow-hidden bg-[#f3f8f7]">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.35]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 12% 20%, rgba(84,201,196,0.35), transparent 42%), radial-gradient(circle at 88% 70%, rgba(182,119,42,0.18), transparent 40%)",
+            }}
           />
+          <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12">
+            <DynamicFAQSection
+              variant="spotlight"
+              categories={["SERVICE"]}
+              showViewAll
+              viewAllHref="/faq?category=SERVICE"
+              title="Services FAQs"
+              subtitle="Help for customers and service providers on MYKEYS."
+            />
+          </div>
         </section>
       </main>
       <Footer />

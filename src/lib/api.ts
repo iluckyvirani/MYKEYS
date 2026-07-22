@@ -1,7 +1,12 @@
 import axios from "axios";
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const apiBaseURL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  `${appUrl.replace(/\/$/, "")}/api`;
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000/api",
+  baseURL: apiBaseURL,
 });
 
 let isRefreshing = false;
@@ -73,7 +78,7 @@ api.interceptors.response.use(
 
       // Call refresh endpoint
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000/api'}/auth/refresh`,
+        `${apiBaseURL}/auth/refresh`,
         { refreshToken }
       );
 

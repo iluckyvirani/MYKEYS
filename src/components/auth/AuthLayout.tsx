@@ -1,15 +1,13 @@
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="min-h-screen bg-cover bg-center flex items-center justify-center"
-      style={{
-        backgroundImage:
-          "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c')",
-      }}
-    >
-      <div className="absolute inset-0 bg-black/60" />
-
-      <div className="relative bg-white rounded-[5px] shadow-2xl w-full max-w-md p-5">
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-10 bg-white">
+      <div
+        className="relative z-10 w-full max-w-md rounded-xl bg-white p-8 border border-gray-200"
+        style={{
+          boxShadow:
+            "0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 12px 24px -8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04)",
+        }}
+      >
         {children}
       </div>
     </div>

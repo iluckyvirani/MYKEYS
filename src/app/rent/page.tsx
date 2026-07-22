@@ -1,3 +1,5 @@
-export default function Page() {
-  return <div className="p-10 text-xl">Listings coming here</div>;
+import { redirect } from "next/navigation";
+
+export default function RentIndexPage() {
+  redirect("/rent/whole-property");
 }

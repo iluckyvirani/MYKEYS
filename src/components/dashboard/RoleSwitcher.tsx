@@ -68,11 +68,11 @@ export default function RoleSwitcher({
   const getRoleLabel = (role: "user" | "owner" | "service") => {
     switch (role) {
       case "owner":
-        return "Owner Dashboard";
+        return "Seller/Landlord";
       case "service":
-        return "Service Dashboard";
+        return "Professional/Associates";
       default:
-        return "User Dashboard";
+        return "Tenant";
     }
   };
 
@@ -121,7 +121,7 @@ export default function RoleSwitcher({
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  User
+                  Tenant
                 </button>
               )}
               {hasOwnerRole && (
@@ -133,7 +133,7 @@ export default function RoleSwitcher({
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  Owner
+                  Seller/Landlord
                 </button>
               )}
               {hasServiceRole && (
@@ -145,7 +145,7 @@ export default function RoleSwitcher({
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  Service
+                  Professional
                 </button>
               )}
             </div>

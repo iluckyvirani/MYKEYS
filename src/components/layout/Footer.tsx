@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { openCookieSettings } from "@/lib/cookieConsent";
 
 const FOOTER_PROPERTY_TYPES = [
   { value: "APARTMENT", label: "Apartments", icon: Home, href: "/buy?propertyType=APARTMENT" },
@@ -63,7 +64,7 @@ export default function Footer() {
 
   const quickLinks = [
     { label: "Buy", href: "/buy" },
-    { label: "Rent", href: "/rent/long-rent" },
+    { label: "Rent", href: "/rent/whole-property" },
     { label: "Short Stay", href: "/rent/short-rent" },
     { label: "Services", href: "/services" },
     { label: "List property", href: "/how-listing-works" },
@@ -75,6 +76,7 @@ export default function Footer() {
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms of Service", href: "/terms" },
     { label: "Cookie Policy", href: "/cookies" },
+    { label: "Cookie settings", href: "#cookie-settings", action: "cookie-settings" as const },
   ];
 
 
@@ -97,7 +99,7 @@ export default function Footer() {
     <footer className="relative bg-white border-t border-gray-100 text-gray-900 overflow-hidden">
       <div className="relative z-10">
         {/* Top Section - Main Footer */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-16 lg:py-20">
           {/* Main Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 mb-16">
             {/* Left Column - Brand & Newsletter */}
@@ -106,9 +108,9 @@ export default function Footer() {
               <div className="space-y-4">
                 <Link href="/" className="inline-flex items-center gap-3 group">
                   <img
-                    src="/Mykeys LOGO.png"
+                    src="/mykeys-logo-nav.png"
                     alt="MYKEYS"
-                    className="h-12 w-auto object-contain group-hover:scale-105 transition-transform"
+                    className="h-16 w-auto object-contain group-hover:scale-105 transition-transform"
                   />
                 </Link>
                 <p className="text-gray-600 max-w-md">
@@ -233,12 +235,22 @@ export default function Footer() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 + 0.2 }}
                   >
-                    <Link
-                      href={link.href}
-                      className="text-gray-600 hover:text-gray-900 hover:translate-x-2 transition-all block"
-                    >
-                      {link.label}
-                    </Link>
+                    {"action" in link && link.action === "cookie-settings" ? (
+                      <button
+                        type="button"
+                        onClick={() => openCookieSettings()}
+                        className="text-gray-600 hover:text-gray-900 hover:translate-x-2 transition-all block text-left w-full"
+                      >
+                        {link.label}
+                      </button>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-gray-600 hover:text-gray-900 hover:translate-x-2 transition-all block"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </motion.li>
                 ))}
               </ul>

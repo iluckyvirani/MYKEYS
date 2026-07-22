@@ -150,16 +150,15 @@ export async function GET(request: NextRequest) {
     );
 
     const publiclyVisible = properties.filter((property) => {
-      if (property.status !== "ACTIVE") return true;
-      const docState = verificationByProperty.get(property.id);
-      if (!docState?.hasRequiredDocuments) return true;
-      return docState.allVerified;
+      if (property.status === "ACTIVE") {
+        const docState = verificationByProperty.get(property.id);
+        if (docState?.hasRejected) return false;
+        return true;
+      }
+      return true;
     });
 
-    const visibleTotal =
-      status === "ACTIVE"
-        ? publiclyVisible.length
-        : total;
+    const visibleTotal = publiclyVisible.length;
 
     // Calculate average rating for each property
     const propertiesWithRating = publiclyVisible.map((property: any) => {

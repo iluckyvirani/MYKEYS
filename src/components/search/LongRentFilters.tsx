@@ -3,7 +3,7 @@
 import { Filter, Star, Home, Bath, Bed, PoundSterling } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { LongRentFiltersState } from "@/app/rent/long-rent/page";
+import { LongRentFiltersState } from "@/types/longRent";
 
 interface LongRentFiltersProps {
   filters: LongRentFiltersState;

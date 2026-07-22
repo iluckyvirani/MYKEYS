@@ -33,7 +33,7 @@ const propertyTypes = [
       "Verified landlords",
       "Maintenance support included",
     ],
-    link: "/rent/long-rent",
+    link: "/rent/whole-property",
     color: "from-green-500 to-emerald-500",
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
