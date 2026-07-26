@@ -18,11 +18,12 @@ import Footer from "@/components/layout/Footer";
 import {
   MORTGAGE_NAV_LINKS,
   MORTGAGE_QUICK_LINKS,
-  MORTGAGE_SECTIONS,
-  MORTGAGE_SPOTLIGHT,
   type MortgageGuide,
   type MortgageGuideSection,
 } from "@/lib/mortgageGuides";
+import { useInspirePageContent } from "@/hooks/useInspirePageContent";
+import { useInspireItems } from "@/hooks/useInspireItems";
+import type { MortgageItemsContent } from "@/lib/content/inspireItems";
 
 function QuickIcon({ type }: { type: "home" | "calculator" | "bolt" }) {
   if (type === "home") return <Home className="w-4 h-4 text-[#0f3d36]" />;
@@ -147,21 +148,26 @@ function GuideSectionBlock({
 }
 
 export default function MortgageGuidesPage() {
+  const content = useInspirePageContent("mortgage-guides");
+  const { sections, spotlight } =
+    useInspireItems<MortgageItemsContent>("mortgage-guides");
   const [exploreOpen, setExploreOpen] = useState(true);
   const [guidesOpen, setGuidesOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
   const [query, setQuery] = useState("");
 
   const filteredSections = useMemo(() => {
-    if (!query.trim()) return MORTGAGE_SECTIONS;
+    if (!query.trim()) return sections;
     const q = query.trim().toLowerCase();
-    return MORTGAGE_SECTIONS.map((section) => ({
-      ...section,
-      guides: section.guides.filter((g) =>
-        g.title.toLowerCase().includes(q)
-      ),
-    })).filter((s) => s.guides.length > 0);
-  }, [query]);
+    return sections
+      .map((section) => ({
+        ...section,
+        guides: section.guides.filter((g) =>
+          g.title.toLowerCase().includes(q)
+        ),
+      }))
+      .filter((s) => s.guides.length > 0);
+  }, [query, sections]);
 
   return (
     <>
@@ -179,18 +185,25 @@ export default function MortgageGuidesPage() {
 
             <div className="relative z-10 max-w-[440px] m-4 sm:m-6 md:m-8 bg-[#0f3d36] text-white rounded-2xl p-6 sm:p-8 shadow-xl">
               <h1 className="text-[2rem] sm:text-[2.35rem] font-bold leading-tight tracking-tight">
-                <span className="text-green-400">Mortgage</span>{" "}
-                <span className="text-white">guides</span>
+                {content.hero.titleHighlight ? (
+                  <>
+                    <span className="text-green-400">
+                      {content.hero.titleHighlight}
+                    </span>{" "}
+                    <span className="text-white">{content.hero.title}</span>
+                  </>
+                ) : (
+                  content.hero.title
+                )}
               </h1>
               <p className="mt-4 text-[15px] text-white/90 leading-relaxed">
-                Take one step closer to buying a home — from working out how
-                much you could borrow, to finding and choosing a mortgage.
+                {content.hero.subtitle}
               </p>
               <Link
                 href="/inspire/mortgages"
                 className="mt-8 inline-flex items-center gap-1 text-sm font-semibold text-green-300 hover:text-green-200 cursor-pointer"
               >
-                ← Back to Mortgages
+                {content.hero.ctaLabel || "← Back to Mortgages"}
               </Link>
             </div>
           </div>
@@ -205,7 +218,7 @@ export default function MortgageGuidesPage() {
                 className="w-full flex items-center justify-between gap-3 cursor-pointer text-left"
               >
                 <h2 className="text-lg sm:text-xl font-bold text-[#1a1a2e]">
-                  Explore mortgage guides
+                  {content.hero.sectionTitle || "Explore mortgage guides"}
                 </h2>
                 <ChevronDown
                   className={`w-5 h-5 text-slate-600 shrink-0 transition-transform ${
@@ -372,7 +385,7 @@ export default function MortgageGuidesPage() {
               Getting a mortgage
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {MORTGAGE_SPOTLIGHT.map((item) => (
+              {spotlight.map((item) => (
                 <Link
                   key={item.slug}
                   href={`/inspire/mortgage-guides/${item.slug}`}

@@ -7,9 +7,11 @@ import Footer from "@/components/layout/Footer";
 import RentLocationSearch from "@/components/rent/RentLocationSearch";
 import HowShortRentWorks from "@/components/rent/HowShortRentWorks";
 import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
+import { useListingPageContent } from "@/hooks/useListingPageContent";
 
 function ShortRentPageContent() {
   const searchParams = useSearchParams();
+  const content = useListingPageContent("short-stay");
   const initialLocation =
     searchParams.get("location") ||
     searchParams.get("city") ||
@@ -23,8 +25,14 @@ function ShortRentPageContent() {
         <RentLocationSearch
           initialLocation={initialLocation}
           kind="short-rent"
+          title={content.hero.title}
+          placeholder={content.hero.placeholder}
+          buttonLabel={content.hero.buttonLabel}
         />
-        <HowShortRentWorks />
+        <HowShortRentWorks
+          title={content.howItWorks.title}
+          subtitle={content.howItWorks.subtitle}
+        />
         <section className="relative py-16 md:py-20 overflow-hidden bg-[#f3f8f7]">
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.35]"
@@ -39,8 +47,8 @@ function ShortRentPageContent() {
               categories={["SHORT_RENT"]}
               showViewAll
               viewAllHref="/faq?category=SHORT_RENT"
-              title="Short Rent FAQs"
-              subtitle="Common questions about booking short stays on MYKEYS."
+              title={content.faq.title}
+              subtitle={content.faq.subtitle}
             />
           </div>
         </section>

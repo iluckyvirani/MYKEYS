@@ -5,6 +5,7 @@ import { User, Shield, FileText, Upload, CheckCircle, Clock, AlertCircle, Camera
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileForm from "@/components/dashboard/UserDashboard/ProfileForm";
+import OwnerListingProfileForm from "@/components/dashboard/OwnerListingProfileForm";
 import SecuritySettings from "@/components/dashboard/UserDashboard/SecuritySettings";
 import DocumentList from "@/components/dashboard/UserDashboard/DocumentList";
 import DocumentUploadModal from "@/components/dashboard/UserDashboard/DocumentUploadModal";
@@ -240,6 +241,7 @@ export default function OwnerProfilePage() {
 
           <div className="p-6">
             <TabsContent value="profile" className="m-0">
+              <OwnerListingProfileForm onSuccess={handleProfileUpdate} />
               <ProfileForm onSuccess={handleProfileUpdate} />
             </TabsContent>
 

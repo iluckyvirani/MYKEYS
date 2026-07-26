@@ -4,14 +4,18 @@ import { ChevronLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { ENERGY_SECTIONS } from "@/lib/energyEfficiency";
+import { getInspireItemsServer } from "@/lib/content/getInspireItemsServer";
+import type { EnergyItemsContent } from "@/lib/content/inspireItems";
 
-const ALL_GUIDES = ENERGY_SECTIONS.flatMap((s) =>
+const DEFAULT_ALL = ENERGY_SECTIONS.flatMap((s) =>
   s.guides.map((g) => ({ ...g, sectionTitle: s.title }))
 );
 
 export function generateStaticParams() {
-  return ALL_GUIDES.map((g) => ({ slug: g.slug }));
+  return DEFAULT_ALL.map((g) => ({ slug: g.slug }));
 }
+
+export const dynamicParams = true;
 
 export default async function EnergyGuideArticlePage({
   params,
@@ -19,14 +23,19 @@ export default async function EnergyGuideArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const guide = ALL_GUIDES.find((g) => g.slug === slug);
+  const { sections } =
+    await getInspireItemsServer<EnergyItemsContent>("energy-efficiency");
+  const allGuides = sections.flatMap((s) =>
+    s.guides.map((g) => ({ ...g, sectionTitle: s.title }))
+  );
+  const guide = allGuides.find((g) => g.slug === slug);
   if (!guide) notFound();
 
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-white pt-[72px] md:pt-[80px]">
-        <article className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+        <article className="max-w-[88rem] mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
           <Link
             href="/inspire/energy-efficiency"
             className="inline-flex items-center gap-1 text-sm font-semibold text-green-700 hover:text-green-800 mb-6 cursor-pointer"

@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { COUNTRY_GUIDES, type CountryGuide } from "@/lib/countryGuides";
+import { type CountryGuide } from "@/lib/countryGuides";
+import { useInspirePageContent } from "@/hooks/useInspirePageContent";
+import { useInspireItems } from "@/hooks/useInspireItems";
+import type { CountryGuidesItemsContent } from "@/lib/content/inspireItems";
 
 function CountryCard({ guide }: { guide: CountryGuide }) {
   return (
@@ -59,17 +64,26 @@ function CountryCard({ guide }: { guide: CountryGuide }) {
 }
 
 export default function CountryGuidesPage() {
+  const content = useInspirePageContent("country-guides");
+  const { items: guides } =
+    useInspireItems<CountryGuidesItemsContent>("country-guides");
+
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-[#f7f7f7] pt-[72px] md:pt-[80px]">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-10 md:py-14">
           <h1 className="text-2xl sm:text-[1.85rem] font-bold text-[#0f3d36]">
-            Country Guides - Guides to Top Destinations
+            {content.hero.title}
           </h1>
+          {content.hero.subtitle ? (
+            <p className="mt-2 text-slate-600 max-w-3xl">
+              {content.hero.subtitle}
+            </p>
+          ) : null}
 
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {COUNTRY_GUIDES.map((guide) => (
+            {guides.map((guide) => (
               <CountryCard key={guide.id} guide={guide} />
             ))}
           </div>

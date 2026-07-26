@@ -52,7 +52,9 @@ export async function PATCH(request: NextRequest) {
       data: {
         ...(validatedData.firstName && { firstName: validatedData.firstName }),
         ...(validatedData.lastName && { lastName: validatedData.lastName }),
-        ...(validatedData.phone !== undefined && { phone: validatedData.phone }),
+        ...(validatedData.phone !== undefined && {
+          phone: validatedData.phone || null,
+        }),
         ...(validatedData.avatar !== undefined && {
           avatar: validatedData.avatar || null,
         }),
@@ -95,6 +97,12 @@ export async function PATCH(request: NextRequest) {
         }),
         ...(validatedData.taxId !== undefined && {
           taxId: validatedData.taxId || null,
+        }),
+        ...(validatedData.listingSellerType !== undefined && {
+          listingSellerType: validatedData.listingSellerType || null,
+        }),
+        ...(validatedData.agentLogo !== undefined && {
+          agentLogo: validatedData.agentLogo || null,
         }),
       },
     });

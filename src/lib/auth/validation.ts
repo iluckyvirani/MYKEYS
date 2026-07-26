@@ -68,12 +68,22 @@ export const loginSchema = z.object({
 });
 
 /**
+ * Phone validation for profile updates (UK + international flexible)
+ */
+export const profilePhoneSchema = z
+  .string()
+  .max(20, "Phone must not exceed 20 characters")
+  .regex(/^[\d\s+()-]*$/, "Invalid phone number format")
+  .optional()
+  .or(z.literal(""));
+
+/**
  * Update Profile Validation
  */
 export const updateProfileSchema = z.object({
   firstName: nameSchema.optional(),
   lastName: nameSchema.optional(),
-  phone: phoneSchema,
+  phone: profilePhoneSchema,
   avatar: z.string().url("Invalid avatar URL").optional().or(z.literal("")),
   // Personal Information
   birthDate: z
@@ -119,11 +129,37 @@ export const updateProfileSchema = z.object({
   zipCode: z.string().max(20).optional(),
   // Emergency Contact
   emergencyName: nameSchema.optional(),
-  emergencyContact: phoneSchema.optional(),
+  emergencyContact: profilePhoneSchema,
   // Owner-specific fields
   website: z.string().url("Invalid website URL").optional().or(z.literal("")),
-  companyName: z.string().min(2).max(100).optional(),
-  taxId: z.string().max(50).optional(),
+  companyName: z.string().min(2).max(100).optional().or(z.literal("")),
+  taxId: z.string().max(50).optional().or(z.literal("")),
+  listingSellerType: z.enum(["AGENT", "PROPERTY_OWNER"]).optional().or(z.literal("")),
+  agentLogo: z.string().url("Invalid agent logo URL").optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  if (data.listingSellerType === "AGENT") {
+    if (!data.phone || !String(data.phone).trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Phone number is required for estate agents",
+        path: ["phone"],
+      });
+    }
+    if (!data.agentLogo || !String(data.agentLogo).trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Agent logo is required for estate agents",
+        path: ["agentLogo"],
+      });
+    }
+    if (!data.companyName || !String(data.companyName).trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Agency / company name is required for estate agents",
+        path: ["companyName"],
+      });
+    }
+  }
 });
 
 /**

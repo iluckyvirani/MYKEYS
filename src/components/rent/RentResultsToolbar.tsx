@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ChevronDown, ChevronRight, MapPin, Star } from "lucide-react";
+import { ChevronDown, ChevronRight, MapPin } from "lucide-react";
 import {
   RentKind,
   rentBasePath,
   rentResultsTitle,
+  type RentSearchFilters,
 } from "@/lib/rentSearch";
+import { RESULTS_SORT_OPTIONS } from "@/lib/resultsSort";
+import SaveSearchAlertActions from "@/components/search/SaveSearchAlertActions";
 
 interface RentResultsToolbarProps {
   location: string;
@@ -22,9 +25,11 @@ interface RentResultsToolbarProps {
 export function RentResultsBreadcrumbBar({
   location,
   kind,
+  filters,
 }: {
   location: string;
   kind: RentKind;
+  filters: RentSearchFilters;
 }) {
   const label = rentResultsTitle(kind, location);
   const searchHref = `${rentBasePath(kind)}/search?location=${encodeURIComponent(location || "")}`;
@@ -40,23 +45,12 @@ export function RentResultsBreadcrumbBar({
             {label}
             <ChevronRight className="w-4 h-4" />
           </Link>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 hover:text-[#0f172a] cursor-pointer"
-          >
-            <Star className="w-[15px] h-[15px]" strokeWidth={1.75} />
-            Save Search
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 hover:text-[#0f172a] cursor-pointer"
-          >
-            <span className="relative inline-flex">
-              <Bell className="w-[15px] h-[15px]" strokeWidth={1.75} />
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#e87722] border border-white" />
-            </span>
-            Create Alert
-          </button>
+          <SaveSearchAlertActions
+            location={location}
+            listingType="RENT"
+            rentalType={kind === "short-rent" ? "SHORT_TERM" : "LONG_TERM"}
+            filters={{ ...filters, kind }}
+          />
         </div>
       </div>
     </div>
@@ -90,9 +84,11 @@ export default function RentResultsToolbar({
               onChange={(e) => onSortChange(e.target.value)}
               className="appearance-none bg-transparent pr-5 text-[#0f172a] font-bold cursor-pointer outline-none"
             >
-              <option value="highest">Highest Price</option>
-              <option value="lowest">Lowest Price</option>
-              <option value="newest">Newest</option>
+              {RESULTS_SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
             <ChevronDown className="w-3.5 h-3.5 text-[#0f172a] absolute right-0 pointer-events-none" />
           </div>

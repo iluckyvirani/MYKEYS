@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import PropertyDocumentsTab from "@/components/owner/PropertyDocumentsTab";
+import PropertyUkExtraFields, {
+  DEFAULT_UK_EXTRA,
+  type PropertyUkExtraValues,
+} from "@/components/property/PropertyUkExtraFields";
 import { 
   Building, 
   MapPin, 
@@ -29,6 +33,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/lib/api";
+import type { PropertyUtilities } from "@/lib/propertyDetails";
 
 const propertyTypes = [
   { value: "APARTMENT", label: "Apartment", icon: Home },
@@ -90,6 +95,17 @@ interface PropertyData {
   billsIncluded?: boolean;
   councilTaxBand?: string;
   epcRating?: string;
+  occupancyType?: "WHOLE_PROPERTY" | "ROOM" | null;
+  furnishType?: string | null;
+  garden?: string | null;
+  parkingType?: string | null;
+  accessibility?: string | null;
+  epcCurrentScore?: number | null;
+  epcPotentialScore?: number | null;
+  keyFeatures?: string[];
+  broadbandSpeed?: string | null;
+  floodRisk?: string | null;
+  utilities?: PropertyUtilities | null;
   images?: PropertyImage[];
   amenities?: any[];
   status?: string;
@@ -154,11 +170,17 @@ export default function EditPropertyPage() {
     billsIncluded: false,
     councilTaxBand: "",
     epcRating: "",
+    occupancyType: "WHOLE_PROPERTY",
     
     // Features
     amenities: [] as string[],
     images: [] as (File | PropertyImage)[],
     imageUrls: [] as PropertyImage[],
+  });
+
+  const [ukExtra, setUkExtra] = useState<PropertyUkExtraValues>({
+    ...DEFAULT_UK_EXTRA,
+    utilities: { ...DEFAULT_UK_EXTRA.utilities },
   });
 
   // Fetch property data and amenities on component mount
@@ -221,10 +243,35 @@ export default function EditPropertyPage() {
             billsIncluded: property.billsIncluded || false,
             councilTaxBand: property.councilTaxBand || "",
             epcRating: property.epcRating || "",
+            occupancyType: property.occupancyType || "WHOLE_PROPERTY",
             
             amenities: property.amenities?.map((a: any) => a.amenityId || a.id) || [],
             imageUrls: property.images || [],
           }));
+
+          setUkExtra({
+            furnishType: property.furnishType || "",
+            garden: property.garden || "",
+            parkingType: property.parkingType || "",
+            accessibility: property.accessibility || "",
+            epcCurrentScore:
+              property.epcCurrentScore != null
+                ? String(property.epcCurrentScore)
+                : "",
+            epcPotentialScore:
+              property.epcPotentialScore != null
+                ? String(property.epcPotentialScore)
+                : "",
+            keyFeaturesText: Array.isArray(property.keyFeatures)
+              ? property.keyFeatures.join("\n")
+              : "",
+            broadbandSpeed: property.broadbandSpeed || "",
+            floodRisk: property.floodRisk || "",
+            utilities: {
+              ...DEFAULT_UK_EXTRA.utilities,
+              ...(property.utilities || {}),
+            },
+          });
         }
 
         // Fetch amenities
@@ -369,6 +416,8 @@ export default function EditPropertyPage() {
           payload.billsIncluded = formData.billsIncluded;
           payload.councilTaxBand = formData.councilTaxBand || null;
           payload.epcRating = formData.epcRating || null;
+          payload.occupancyType =
+            formData.occupancyType === "ROOM" ? "ROOM" : "WHOLE_PROPERTY";
         }
       } else {
         // BUY listing
@@ -381,6 +430,24 @@ export default function EditPropertyPage() {
         payload.price = parseInt(formData.propertyPrice);
         payload.priceType = "TOTAL";
       }
+
+      payload.furnishType = ukExtra.furnishType || null;
+      payload.garden = ukExtra.garden || null;
+      payload.parkingType = ukExtra.parkingType || null;
+      payload.accessibility = ukExtra.accessibility || null;
+      payload.epcCurrentScore = ukExtra.epcCurrentScore
+        ? parseInt(ukExtra.epcCurrentScore, 10)
+        : null;
+      payload.epcPotentialScore = ukExtra.epcPotentialScore
+        ? parseInt(ukExtra.epcPotentialScore, 10)
+        : null;
+      payload.keyFeatures = ukExtra.keyFeaturesText
+        .split(/\n|,/)
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+      payload.broadbandSpeed = ukExtra.broadbandSpeed || null;
+      payload.floodRisk = ukExtra.floodRisk || null;
+      payload.utilities = ukExtra.utilities;
 
       const response = await api.patch(`/properties/${id}`, payload);
       
@@ -810,6 +877,34 @@ export default function EditPropertyPage() {
             {rentalType === "long" && (
               <>
                 <div>
+                  <Label>Let type *</Label>
+                  <div className="mt-2 flex flex-wrap gap-4">
+                    <label className="flex items-center cursor-pointer gap-2">
+                      <input
+                        type="radio"
+                        name="occupancyType"
+                        value="WHOLE_PROPERTY"
+                        checked={formData.occupancyType === "WHOLE_PROPERTY"}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-gray-700">Whole property</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer gap-2">
+                      <input
+                        type="radio"
+                        name="occupancyType"
+                        value="ROOM"
+                        checked={formData.occupancyType === "ROOM"}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-gray-700">Room to rent</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
                   <Label htmlFor="securityDeposit">Security Deposit</Label>
                   <Input
                     id="securityDeposit"
@@ -909,6 +1004,26 @@ export default function EditPropertyPage() {
 
   const renderStep3 = () => (
     <div className="space-y-6">
+      <PropertyUkExtraFields
+        values={ukExtra}
+        onChange={(patch) =>
+          setUkExtra((prev) => ({
+            ...prev,
+            ...patch,
+            utilities: patch.utilities
+              ? { ...prev.utilities, ...patch.utilities }
+              : prev.utilities,
+          }))
+        }
+        onUtilityChange={(key, value) =>
+          setUkExtra((prev) => ({
+            ...prev,
+            utilities: { ...prev.utilities, [key]: value },
+          }))
+        }
+        showLettingFields
+      />
+
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Amenities</h3>
         <p className="text-sm text-gray-600 mb-6">Select amenities available in your property</p>

@@ -7,9 +7,11 @@ import Footer from "@/components/layout/Footer";
 import RentLocationSearch from "@/components/rent/RentLocationSearch";
 import HowLongRentWorks from "@/components/rent/HowLongRentWorks";
 import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
+import { useListingPageContent } from "@/hooks/useListingPageContent";
 
 function WholePropertyPageContent() {
   const searchParams = useSearchParams();
+  const content = useListingPageContent("rent");
   const initialLocation =
     searchParams.get("location") ||
     searchParams.get("city") ||
@@ -23,8 +25,14 @@ function WholePropertyPageContent() {
         <RentLocationSearch
           initialLocation={initialLocation}
           kind="whole-property"
+          title={content.hero.title}
+          placeholder={content.hero.placeholder}
+          buttonLabel={content.hero.buttonLabel}
         />
-        <HowLongRentWorks />
+        <HowLongRentWorks
+          title={content.howItWorks.title}
+          subtitle={content.howItWorks.subtitle}
+        />
         <section className="relative py-16 md:py-20 overflow-hidden bg-[#f3f8f7]">
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.35]"
@@ -39,8 +47,8 @@ function WholePropertyPageContent() {
               categories={["LONG_RENT"]}
               showViewAll
               viewAllHref="/faq?category=LONG_RENT"
-              title="Rent FAQs"
-              subtitle="Answers about long-term rentals, leases, and finding the right home."
+              title={content.faq.title}
+              subtitle={content.faq.subtitle}
             />
           </div>
         </section>

@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { openCookieSettings } from "@/lib/cookieConsent";
 
 const FOOTER_PROPERTY_TYPES = [
   { value: "APARTMENT", label: "Apartments", icon: Home, href: "/buy?propertyType=APARTMENT" },
@@ -76,7 +75,6 @@ export default function Footer() {
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms of Service", href: "/terms" },
     { label: "Cookie Policy", href: "/cookies" },
-    { label: "Cookie settings", href: "#cookie-settings", action: "cookie-settings" as const },
   ];
 
 
@@ -235,22 +233,12 @@ export default function Footer() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 + 0.2 }}
                   >
-                    {"action" in link && link.action === "cookie-settings" ? (
-                      <button
-                        type="button"
-                        onClick={() => openCookieSettings()}
-                        className="text-gray-600 hover:text-gray-900 hover:translate-x-2 transition-all block text-left w-full"
-                      >
-                        {link.label}
-                      </button>
-                    ) : (
-                      <Link
-                        href={link.href}
-                        className="text-gray-600 hover:text-gray-900 hover:translate-x-2 transition-all block"
-                      >
-                        {link.label}
-                      </Link>
-                    )}
+                    <Link
+                      href={link.href}
+                      className="text-gray-600 hover:text-gray-900 hover:translate-x-2 transition-all block"
+                    >
+                      {link.label}
+                    </Link>
                   </motion.li>
                 ))}
               </ul>

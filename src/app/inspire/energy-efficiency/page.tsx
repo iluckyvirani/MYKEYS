@@ -12,10 +12,12 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import {
   ENERGY_NAV_LINKS,
-  ENERGY_SECTIONS,
   type EnergyGuide,
   type EnergyGuideSection,
 } from "@/lib/energyEfficiency";
+import { useInspirePageContent } from "@/hooks/useInspirePageContent";
+import { useInspireItems } from "@/hooks/useInspireItems";
+import type { EnergyItemsContent } from "@/lib/content/inspireItems";
 
 function ElectricHomeIllustration() {
   return (
@@ -135,21 +137,26 @@ function GuideSectionBlock({ section }: { section: EnergyGuideSection }) {
 }
 
 export default function EnergyEfficiencyPage() {
+  const content = useInspirePageContent("energy-efficiency");
+  const { sections } =
+    useInspireItems<EnergyItemsContent>("energy-efficiency");
   const [exploreOpen, setExploreOpen] = useState(true);
   const [guidesOpen, setGuidesOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
   const [query, setQuery] = useState("");
 
   const filteredSections = useMemo(() => {
-    if (!query.trim()) return ENERGY_SECTIONS;
+    if (!query.trim()) return sections;
     const q = query.trim().toLowerCase();
-    return ENERGY_SECTIONS.map((section) => ({
-      ...section,
-      guides: section.guides.filter((g) =>
-        g.title.toLowerCase().includes(q)
-      ),
-    })).filter((s) => s.guides.length > 0);
-  }, [query]);
+    return sections
+      .map((section) => ({
+        ...section,
+        guides: section.guides.filter((g) =>
+          g.title.toLowerCase().includes(q)
+        ),
+      }))
+      .filter((s) => s.guides.length > 0);
+  }, [query, sections]);
 
   return (
     <>
@@ -166,20 +173,31 @@ export default function EnergyEfficiencyPage() {
             <div className="absolute inset-0 bg-black/10" />
 
             <div className="relative z-10 max-w-[420px] m-4 sm:m-6 md:m-8 bg-[#0f3d36] text-white rounded-2xl p-6 sm:p-8 shadow-xl">
-              <p className="text-sm font-medium text-white/85 mb-2">Guides</p>
+              {content.hero.eyebrow ? (
+                <p className="text-sm font-medium text-white/85 mb-2">
+                  {content.hero.eyebrow}
+                </p>
+              ) : null}
               <h1 className="text-[2rem] sm:text-[2.35rem] font-bold leading-tight tracking-tight">
-                <span className="text-green-400">Greener</span>{" "}
-                <span className="text-white">Homes</span>
+                {content.hero.titleHighlight ? (
+                  <>
+                    <span className="text-green-400">
+                      {content.hero.titleHighlight}
+                    </span>{" "}
+                    <span className="text-white">{content.hero.title}</span>
+                  </>
+                ) : (
+                  content.hero.title
+                )}
               </h1>
               <p className="mt-4 text-[15px] text-white/90 leading-relaxed">
-                Learn about going greener at home, tips for reducing your energy
-                bill, and the latest energy news.
+                {content.hero.subtitle}
               </p>
               <Link
                 href="/inspire/property-guides"
                 className="mt-8 inline-flex items-center gap-1 text-sm font-semibold text-white/95 hover:text-green-300 cursor-pointer"
               >
-                ← Back to Guides
+                {content.hero.ctaLabel || "← Back to Guides"}
               </Link>
             </div>
           </div>
@@ -194,7 +212,8 @@ export default function EnergyEfficiencyPage() {
               className="w-full flex items-center justify-between gap-3 cursor-pointer text-left"
             >
               <h2 className="text-lg sm:text-xl font-bold text-[#1a1a2e]">
-                Explore energy efficiency guides
+                {content.hero.sectionTitle ||
+                  "Explore energy efficiency guides"}
               </h2>
               <ChevronDown
                 className={`w-5 h-5 text-slate-600 shrink-0 transition-transform ${

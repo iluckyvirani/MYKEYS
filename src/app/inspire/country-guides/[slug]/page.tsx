@@ -3,14 +3,15 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import {
-  COUNTRY_GUIDES,
-  getCountryGuide,
-} from "@/lib/countryGuides";
+import { COUNTRY_GUIDES } from "@/lib/countryGuides";
+import { getInspireItemsServer } from "@/lib/content/getInspireItemsServer";
+import type { CountryGuidesItemsContent } from "@/lib/content/inspireItems";
 
 export function generateStaticParams() {
   return COUNTRY_GUIDES.map((c) => ({ slug: c.slug }));
 }
+
+export const dynamicParams = true;
 
 export default async function CountryGuidePage({
   params,
@@ -18,10 +19,12 @@ export default async function CountryGuidePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const guide = getCountryGuide(slug);
+  const { items } =
+    await getInspireItemsServer<CountryGuidesItemsContent>("country-guides");
+  const guide = items.find((c) => c.slug === slug);
   if (!guide) notFound();
 
-  const others = COUNTRY_GUIDES.filter((c) => c.slug !== slug).slice(0, 3);
+  const others = items.filter((c) => c.slug !== slug).slice(0, 3);
 
   return (
     <>

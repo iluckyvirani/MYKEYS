@@ -5,12 +5,15 @@ import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
+import { useHomeContent } from "@/hooks/useHomeContent";
 
 export default function FeaturedProperties({ selectedTab = "all" }: { selectedTab?: string }) {
   const [activeFilter, setActiveFilter] = useState<string>(selectedTab || "all");
   const [visibleCount, setVisibleCount] = useState(3);
   const [properties, setProperties] = useState<PropertyCardProps[]>([]);
   const [loading, setLoading] = useState(false);
+  const { content } = useHomeContent();
+  const featured = content.featured;
 
   // UPDATED: Filters for rent and buy
   const filters = [
@@ -110,15 +113,15 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
       >
         <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-50 to-emerald-50 text-green-700 px-4 py-2 rounded-full mb-4">
           <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-          <span className="text-sm font-medium">Featured Properties</span>
+          <span className="text-sm font-medium">{featured.badge}</span>
         </div>
         
         <h2 className="font-spartan text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-          Properties For Every Need
+          {featured.title}
         </h2>
         
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Choose from short rents or long term rentals. Find exactly what fits your requirements.
+          {featured.subtitle}
         </p>
       </motion.div>
 

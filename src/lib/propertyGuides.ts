@@ -16,8 +16,11 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
     links: [
       { label: "Mortgage guides", href: "/inspire/mortgage-guides" },
       { label: "Buying a property", href: "/buy" },
-      { label: "Ways to buy property", href: "/buy" },
-      { label: "Once you’ve had an offer accepted", href: "/inspire/property-guides" },
+      { label: "Ways to buy property", href: "/buy/search" },
+      {
+        label: "Once you’ve had an offer accepted",
+        href: "/inspire/mortgage-guides/getting-a-mortgage-in-principle",
+      },
     ],
   },
   {
@@ -26,18 +29,21 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
     links: [
       { label: "Preparing to sell", href: "/how-listing-works" },
       { label: "Once it’s on the market", href: "/how-listing-works" },
-      { label: "Other things to consider", href: "/inspire/property-guides" },
+      { label: "Other things to consider", href: "/inspire/find-agent" },
     ],
   },
   {
     id: "renter",
     title: "Renter guides",
     links: [
-      { label: "Renters’ Rights Act", href: "/inspire/property-guides" },
+      { label: "Renters’ Rights Act", href: "/inspire/property-news" },
       { label: "Preparing to rent", href: "/rent/whole-property" },
       { label: "Finding property to rent", href: "/rent/whole-property" },
       { label: "When you’ve found a property", href: "/rent/whole-property" },
-      { label: "Moving in and managing your tenancy", href: "/rent/whole-property" },
+      {
+        label: "Moving in and managing your tenancy",
+        href: "/rent/whole-property",
+      },
       { label: "Student property", href: "/rent/room-to-rent" },
     ],
   },
@@ -45,8 +51,14 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
     id: "greener",
     title: "Greener homes",
     links: [
-      { label: "Energy at home", href: "/inspire/energy-efficiency#energy-at-home" },
-      { label: "Energy bills", href: "/inspire/energy-efficiency#energy-bills" },
+      {
+        label: "Energy at home",
+        href: "/inspire/energy-efficiency#energy-at-home",
+      },
+      {
+        label: "Energy bills",
+        href: "/inspire/energy-efficiency#energy-bills",
+      },
       {
         label: "Energy Performance Certificates (EPCs)",
         href: "/inspire/energy-efficiency#energy-performance-certificates",
@@ -55,13 +67,19 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
         label: "Energy grants and schemes",
         href: "/inspire/energy-efficiency#energy-grants-and-schemes",
       },
-      { label: "Energy news", href: "/inspire/energy-efficiency#energy-news" },
+      {
+        label: "Energy news",
+        href: "/inspire/energy-efficiency#energy-news",
+      },
     ],
   },
   {
     id: "area",
     title: "Area guides",
-    links: [{ label: "View all area guides", href: "/inspire/country-guides" }],
+    links: [
+      { label: "View all area guides", href: "/inspire/country-guides" },
+      { label: "Overseas blog", href: "/inspire/overseas-blog" },
+    ],
   },
   {
     id: "landlord",
@@ -110,8 +128,9 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
     links: [
       {
         label: "Ensure your online experience stays a happy one",
-        href: "/inspire/property-guides",
+        href: "/inspire/property-news",
       },
+      { label: "Contact support", href: "/contact" },
     ],
   },
   {
@@ -121,6 +140,10 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
       {
         label: "Finding accessible homes to rent",
         href: "/rent/whole-property",
+      },
+      {
+        label: "Finding accessible homes to buy",
+        href: "/buy",
       },
     ],
   },
@@ -138,20 +161,26 @@ export const GUIDE_SIDEBAR_ACCORDIONS: SidebarAccordion[] = [
     title: "Calculators & Tools",
     links: [
       { label: "Mortgage Calculator", href: "/inspire/mortgages" },
-      { label: "Mortgage in Principle", href: "/inspire/mortgages" },
-      { label: "Stamp Duty Calculator", href: "/inspire/mortgage-guides" },
+      {
+        label: "Mortgage in Principle",
+        href: "/inspire/mortgage-guides/getting-a-mortgage-in-principle",
+      },
+      {
+        label: "Stamp Duty Calculator",
+        href: "/inspire/mortgage-guides",
+      },
       { label: "Remortgage Calculator", href: "/inspire/mortgages" },
-      { label: "Your moving toolkit", href: "/inspire/property-guides" },
+      { label: "Buyer guides", href: "/inspire/property-guides#buyer" },
     ],
   },
   {
     id: "resources",
     title: "Helpful Resources",
     links: [
-      { label: "Jargon Buster", href: "/inspire/property-guides" },
       { label: "Property news", href: "/inspire/property-news" },
+      { label: "Moving stories", href: "/inspire/moving-stories" },
       { label: "Current UK mortgage rates", href: "/inspire/mortgage-guides" },
-      { label: "Property Details Glossary", href: "/inspire/property-guides" },
+      { label: "Energy efficiency", href: "/inspire/energy-efficiency" },
     ],
   },
   {
@@ -165,3 +194,12 @@ export const GUIDE_SIDEBAR_ACCORDIONS: SidebarAccordion[] = [
     ],
   },
 ];
+
+export const PROPERTY_GUIDES_HERO_IMAGE =
+  "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80";
+
+export type PropertyGuidesItemsContent = {
+  heroImage: string;
+  categories: GuideCategory[];
+  sidebar: SidebarAccordion[];
+};

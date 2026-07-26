@@ -5,131 +5,88 @@ import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import {
-  BedDouble,
-  Bath,
-  Maximize2,
-  MapPin,
   Heart,
   Share2,
   Phone,
   Mail,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  Sparkles,
-  Home,
-  Building,
-  Info,
-  Tag,
-  BarChart3,
-  Package,
-  Wifi,
-  PiggyBank,
-  Plus,
-  Building2,
   X,
   Camera,
-  Layers,
-  FileText,
-  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { formatDateToReadable } from "@/utils/utils";
-import dynamic from "next/dynamic";
-import img from "../../../assets/user.png";
-
-// Dynamically import Leaflet map components with SSR false
-const MapContainer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.MapContainer),
-  { ssr: false }
-) as any;
-const TileLayer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.TileLayer),
-  { ssr: false }
-) as any;
-const Marker = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Marker),
-  { ssr: false }
-) as any;
-const Popup = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Popup),
-  { ssr: false }
-) as any;
-
-// Leaflet default icon fix for browser
-if (typeof window !== "undefined") {
-  const L = require("leaflet");
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl:
-      "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-    iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-    shadowUrl:
-      "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-  });
-}
-
-// Custom Floorplan SVG Icon matching Rightmove
-function FloorplanIcon() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M3 9h18" />
-      <path d="M9 21V9" />
-      <path d="M15 9v12" />
-    </svg>
-  );
-}
+import PropertyShortStayBooking from "@/components/property/PropertyShortStayBooking";
+import PropertyListingDetails from "@/components/property/PropertyListingDetails";
+import PropertyLocationMap from "@/components/property/PropertyLocationMap";
+import {
+  formatListingActivity,
+  formatListingAgentName,
+  resolveListingAgentLogo,
+} from "@/lib/listingCard";
 
 // Default property data structure
 const emptyPropertyData = {
   id: "",
   title: "",
   address: "",
-  city: "London",
-  state: "N19",
+  city: "",
+  state: "",
   description: "",
-  listingType: "buy",
-  rentalType: "long" as const,
-  price: "£550,000",
-  propertyPrice: "£550,000",
-  beds: 2,
-  baths: 1,
-  sqft: 679,
-  propertyType: "Apartment",
-  tenure: "Share of Freehold",
-  councilTaxBand: "D",
-  parking: "Permit",
-  garden: "Ask agent",
-  accessibility: "Ask agent",
-  reducedDate: "09/05/2026",
-  images: [
-    "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=800&q=80",
-  ],
+  listingType: "BUY" as string,
+  rentalType: null as string | null,
+  occupancyType: null as string | null,
+  price: "",
+  propertyPrice: "",
+  priceLabel: "",
+  pricePerNight: 0,
+  cleaningFee: 0,
+  serviceFee: 0,
+  maxGuests: 2,
+  minStay: 1,
+  maxStay: null as number | null,
+  checkInTime: "14:00",
+  checkOutTime: "11:00",
+  selfCheckIn: false,
+  beds: 0,
+  baths: 0,
+  sqft: 0,
+  propertyType: "Property",
+  tenure: "",
+  councilTaxBand: "",
+  parking: false,
+  parkingType: null as string | null,
+  garden: null as string | null,
+  accessibility: null as string | null,
+  furnishType: null as string | null,
+  availableFrom: null as string | null,
+  securityDeposit: null as number | null,
+  billsIncluded: null as boolean | null,
+  minTerm: null as number | null,
+  maxTerm: null as number | null,
+  epcRating: null as string | null,
+  epcCurrentScore: null as number | null,
+  epcPotentialScore: null as number | null,
+  keyFeatures: [] as string[],
+  utilities: null as Record<string, string> | null,
+  broadbandSpeed: null as string | null,
+  floodRisk: null as string | null,
+  pricePerMonth: undefined as number | undefined,
+  listingActivity: "",
+  isNewHome: false,
+  amenities: [] as string[],
+  blockedDateRanges: [] as { checkIn: string; checkOut: string }[],
+  images: [] as string[],
   agent: {
-    name: "JTM Homes, North London",
-    address: "695 Holloway Road London N19 5SE",
-    phone: "020 3907 2747",
+    name: "Private Owner",
+    address: "",
+    phone: "",
     logoUrl: "",
-    description:
-      "JTM Homes are an independent firm of estate agents with over 40 years combined experience selling, renting and managing properties. We specialise in the N19, N7, N6, NW5 & N4 areas of London.",
+    description: "",
+    sellerType: "" as string,
   },
-  latitude: 51.564,
-  longitude: -0.132,
+  latitude: null as number | null,
+  longitude: null as number | null,
 };
 
 export default function PropertyDetailsPage() {
@@ -145,26 +102,40 @@ export default function PropertyDetailsPage() {
   const [inquiryLoading, setInquiryLoading] = useState(false);
   const [inquirySuccess, setInquirySuccess] = useState<string | null>(null);
 
-  // Accordion toggle states
-  const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({
-    freehold: true,
-    epc: false,
-    utilities: false,
-    broadband: false,
-    history: false,
-    sold: false,
-  });
-
-  const toggleAccordion = (key: string) => {
-    setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const [inquiryForm, setInquiryForm] = useState({
     name: "",
     email: "",
     phone: "",
     message: "",
   });
+
+  useEffect(() => {
+    if (!isGalleryOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsGalleryOpen(false);
+      if (e.key === "ArrowLeft") {
+        setSelectedImgIdx((prev) => {
+          const total = (property.images?.length || 0);
+          if (total < 2) return prev;
+          return prev === 0 ? total - 1 : prev - 1;
+        });
+      }
+      if (e.key === "ArrowRight") {
+        setSelectedImgIdx((prev) => {
+          const total = (property.images?.length || 0);
+          if (total < 2) return prev;
+          return prev === total - 1 ? 0 : prev + 1;
+        });
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isGalleryOpen, property.images?.length]);
 
   // Fetch property data from API
   useEffect(() => {
@@ -177,48 +148,120 @@ export default function PropertyDetailsPage() {
 
         if (response.data?.success && response.data.data) {
           const apiData = response.data.data;
-          const displayPrice = apiData.propertyPrice
-            ? `£${apiData.propertyPrice.toLocaleString()}`
-            : apiData.price
-            ? `£${apiData.price.toLocaleString()}`
-            : "£550,000";
+          const isShortStay =
+            apiData.listingType === "RENT" && apiData.rentalType === "SHORT_TERM";
+          const isLongRent =
+            apiData.listingType === "RENT" && apiData.rentalType === "LONG_TERM";
+          const saleOrRent = apiData.propertyPrice || apiData.price || 0;
+          const displayPrice = isShortStay
+            ? `£${(apiData.price || 0).toLocaleString()} / night`
+            : isLongRent
+            ? `£${(apiData.price || 0).toLocaleString()} pcm`
+            : `£${saleOrRent.toLocaleString()}`;
+
+          const activity = formatListingActivity({
+            createdAt: apiData.createdAt,
+            updatedAt: apiData.updatedAt,
+            price: saleOrRent,
+            originalPrice: apiData.originalPrice,
+          });
+
+          const owner = apiData.owner;
+          const agentName = formatListingAgentName(owner);
+          const agentAddress = [owner?.address, owner?.city]
+            .filter(Boolean)
+            .join(", ");
+          const amenities = (apiData.amenities || [])
+            .map((a: any) => a.amenity?.name || a.name)
+            .filter(Boolean);
 
           setProperty({
             ...emptyPropertyData,
             id: apiData.id,
-            title: apiData.title || apiData.address || "Hatchard Road, N19",
-            address: apiData.address || "Hatchard Road, N19",
-            city: apiData.city || "London",
-            state: apiData.zipCode || "N19",
-            description:
-              apiData.description ||
-              "Set on a quiet residential street in the heart of N19, this well-presented split-level apartment offers a perfect blend of charm, practicality, and modern living. Arranged over the first and second floors, the property boasts a bright and spacious reception room, ideal for both entertaining and everyday relaxation.",
+            title: apiData.title || apiData.address || "Property",
+            address: apiData.address || "",
+            city: apiData.city || "",
+            state: apiData.zipCode || "",
+            description: apiData.description || "",
+            listingType: apiData.listingType || "BUY",
+            rentalType: apiData.rentalType || null,
+            occupancyType: apiData.occupancyType || null,
             price: displayPrice,
             propertyPrice: displayPrice,
-            beds: apiData.bedrooms || 2,
-            baths: apiData.bathrooms || 1,
-            sqft: apiData.sqft || 679,
-            propertyType: apiData.propertyType || "Apartment",
+            priceLabel: displayPrice,
+            pricePerNight: apiData.price || 0,
+            cleaningFee: apiData.cleaningFee || 0,
+            serviceFee: apiData.serviceFee || 0,
+            maxGuests: apiData.guests || 2,
+            minStay: apiData.minStay || 1,
+            maxStay: apiData.maxStay ?? null,
+            checkInTime: apiData.checkInTime || "14:00",
+            checkOutTime: apiData.checkOutTime || "11:00",
+            selfCheckIn: !!apiData.selfCheckIn,
+            beds: apiData.bedrooms || 0,
+            baths: apiData.bathrooms || 0,
+            sqft: apiData.sqft || 0,
+            propertyType: (apiData.propertyType || "Property")
+              .toString()
+              .replace(/_/g, " "),
+            tenure: apiData.leasehold === true
+              ? "Leasehold"
+              : apiData.leasehold === false
+              ? "Freehold"
+              : "",
+            listingActivity: activity.phrase,
+            isNewHome: activity.isNewHome,
+            availableFrom: apiData.availableFrom || null,
+            securityDeposit: apiData.securityDeposit ?? null,
+            billsIncluded:
+              typeof apiData.billsIncluded === "boolean"
+                ? apiData.billsIncluded
+                : null,
+            minTerm: apiData.minTerm ?? null,
+            maxTerm: apiData.maxTerm ?? null,
+            furnishType: apiData.furnishType || null,
+            councilTaxBand: apiData.councilTaxBand || "",
+            parkingType: apiData.parkingType || null,
+            parking: !!apiData.parking,
+            garden: apiData.garden || null,
+            accessibility: apiData.accessibility || null,
+            epcRating: apiData.epcRating || null,
+            epcCurrentScore: apiData.epcCurrentScore ?? null,
+            epcPotentialScore: apiData.epcPotentialScore ?? null,
+            keyFeatures: Array.isArray(apiData.keyFeatures) ? apiData.keyFeatures : [],
+            utilities: apiData.utilities || null,
+            broadbandSpeed: apiData.broadbandSpeed || null,
+            floodRisk: apiData.floodRisk || null,
+            pricePerMonth:
+              apiData.listingType === "RENT" && apiData.rentalType === "LONG_TERM"
+                ? apiData.price || 0
+                : undefined,
+            amenities,
+            blockedDateRanges: apiData.blockedDateRanges || [],
             images:
               apiData.images?.length > 0
-                ? apiData.images.map((img: any) => img.url)
-                : emptyPropertyData.images,
-            latitude: apiData.latitude || 51.564,
-            longitude: apiData.longitude || -0.132,
-            agent: apiData.owner
-              ? {
-                  name:
-                    apiData.owner.companyName ||
-                    `${apiData.owner.firstName || ""} ${apiData.owner.lastName || ""}`.trim() ||
-                    "JTM Homes, North London",
-                  address: "695 Holloway Road London N19 5SE",
-                  phone: apiData.owner.phone || "020 3907 2747",
-                  logoUrl: apiData.owner.avatar || "",
-                  description:
-                    "JTM Homes are an independent firm of estate agents with over 40 years combined experience selling, renting and managing properties. We specialise in the N19, N7, N6, NW5 & N4 areas of London.",
-                }
-              : emptyPropertyData.agent,
+                ? apiData.images.map((img: any) => img.url).filter(Boolean)
+                : [],
+            latitude: apiData.latitude ?? null,
+            longitude: apiData.longitude ?? null,
+            agent: {
+              name: agentName,
+              address: agentAddress,
+              phone: owner?.phone || "",
+              logoUrl: resolveListingAgentLogo(owner) || "",
+              description: owner?.website
+                ? `Visit ${owner.website}`
+                : owner?.listingSellerType === "AGENT"
+                ? `${agentName} is marketing this property on MYKEYS.`
+                : "Listed by the property owner on MYKEYS.",
+              sellerType: owner?.listingSellerType || "",
+            },
           });
+
+          setInquiryForm((prev) => ({
+            ...prev,
+            message: `Hi, I'm interested in ${apiData.title || "this property"}. Please send more details.`,
+          }));
         }
       } catch (error) {
         console.error("Error fetching property details:", error);
@@ -227,6 +270,30 @@ export default function PropertyDetailsPage() {
       }
     };
     fetchProperty();
+  }, [params?.id]);
+
+  useEffect(() => {
+    const propertyId = params?.id;
+    if (!propertyId) return;
+    if (typeof window !== "undefined" && !localStorage.getItem("accessToken")) {
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await api.get(`/favorites/check/${propertyId}`);
+        if (!cancelled && response.data?.success && response.data.data) {
+          setIsLiked(!!response.data.data.isFavorite);
+        }
+      } catch {
+        if (!cancelled) setIsLiked(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [params?.id]);
 
   const handleToggleFavorite = async () => {
@@ -265,8 +332,44 @@ export default function PropertyDetailsPage() {
     }
   };
 
+  const openInquiryModal = async () => {
+    if (!localStorage.getItem("accessToken")) {
+      router.push(
+        `/login?redirect=${encodeURIComponent(window.location.pathname)}`
+      );
+      return;
+    }
+    try {
+      const me = await api.get("/auth/me");
+      const user = me.data?.data;
+      if (user) {
+        setInquiryForm((prev) => ({
+          ...prev,
+          name:
+            prev.name ||
+            `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+          email: prev.email || user.email || "",
+          phone: prev.phone || user.phone || "",
+          message:
+            prev.message ||
+            `Hi, I'm interested in ${property.title || "this property"}. Please send more details.`,
+        }));
+      }
+    } catch {
+      /* still allow modal */
+    }
+    setShowInquiryModal(true);
+  };
+
   const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (inquiryLoading) return;
+    if (!localStorage.getItem("accessToken")) {
+      router.push(
+        `/login?redirect=${encodeURIComponent(window.location.pathname)}`
+      );
+      return;
+    }
     setInquiryLoading(true);
     try {
       const res = await api.post("/inquiries", {
@@ -277,18 +380,50 @@ export default function PropertyDetailsPage() {
         message: inquiryForm.message,
       });
       if (res.data?.success) {
-        setInquirySuccess("Inquiry sent successfully!");
         setShowInquiryModal(false);
-        setTimeout(() => setInquirySuccess(null), 4000);
+        setInquirySuccess("Inquiry sent — opening your messages…");
+        const inquiryId = res.data.data?.id;
+        setTimeout(() => {
+          if (inquiryId) router.push(`/dashboard/inquiries/${inquiryId}`);
+          else router.push("/user/dashboard/inquiries");
+        }, 600);
       }
-    } catch {
-      alert("Failed to send inquiry. Please try again.");
+    } catch (err: any) {
+      const msg =
+        err.response?.data?.message ||
+        "Failed to send inquiry. Please try again.";
+      if (err.response?.status === 401) {
+        router.push(
+          `/login?redirect=${encodeURIComponent(window.location.pathname)}`
+        );
+        return;
+      }
+      alert(msg);
     } finally {
       setInquiryLoading(false);
     }
   };
 
-  const images = property.images?.length ? property.images : emptyPropertyData.images;
+  const images = (property.images?.length ? property.images : []).filter(Boolean);
+  const safeImage = (idx: number) => {
+    if (!images.length) return null;
+    return images[((idx % images.length) + images.length) % images.length];
+  };
+  const openGalleryAt = (idx: number) => {
+    if (!images.length) return;
+    const normalized = ((idx % images.length) + images.length) % images.length;
+    setSelectedImgIdx(normalized);
+    setIsGalleryOpen(true);
+  };
+  const isShortStay =
+    property.listingType === "RENT" && property.rentalType === "SHORT_TERM";
+  const isBuy = property.listingType === "BUY";
+  const agentInitials = (property.agent?.name || "PO")
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w: string) => w[0]?.toUpperCase() || "")
+    .join("");
 
   return (
     <>
@@ -316,14 +451,20 @@ export default function PropertyDetailsPage() {
           <div className="relative grid grid-cols-3 gap-2 mb-6">
             {/* Left Main Image (~65% width) */}
             <div
-              className="col-span-2 relative h-[380px] lg:h-[440px] cursor-pointer rounded-[4px] overflow-hidden group"
-              onClick={() => setIsGalleryOpen(true)}
+              className="col-span-2 relative h-[380px] lg:h-[440px] cursor-pointer rounded-[4px] overflow-hidden group bg-gray-100"
+              onClick={() => openGalleryAt(selectedImgIdx)}
             >
-              <img
-                src={images[selectedImgIdx] || images[0]}
-                alt={property.title}
-                className="w-full h-full object-cover"
-              />
+              {safeImage(selectedImgIdx) ? (
+                <img
+                  src={safeImage(selectedImgIdx)!}
+                  alt={property.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
+                  No photos available
+                </div>
+              )}
               {/* Clean White Chevron Left (No dark circular background) */}
               {images.length > 1 && (
                 <button
@@ -346,14 +487,18 @@ export default function PropertyDetailsPage() {
             <div className="col-span-1 flex flex-col gap-2 h-[380px] lg:h-[440px]">
               {/* Top Right Sub-Image */}
               <div
-                className="relative flex-1 cursor-pointer rounded-[4px] overflow-hidden"
-                onClick={() => setIsGalleryOpen(true)}
+                className="relative flex-1 cursor-pointer rounded-[4px] overflow-hidden bg-gray-100"
+                onClick={() => openGalleryAt(selectedImgIdx + 1)}
               >
-                <img
-                  src={images[(selectedImgIdx + 1) % images.length] || images[0]}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+                {safeImage(selectedImgIdx + 1) ? (
+                  <img
+                    src={safeImage(selectedImgIdx + 1)!}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100" />
+                )}
                 {/* Clean White Chevron Right on Right Edge of Top-Right Image */}
                 {images.length > 1 && (
                   <button
@@ -374,19 +519,32 @@ export default function PropertyDetailsPage() {
 
               {/* Bottom Right Sub-Image */}
               <div
-                className="relative flex-1 cursor-pointer rounded-[4px] overflow-hidden"
-                onClick={() => setIsGalleryOpen(true)}
+                className="relative flex-1 cursor-pointer rounded-[4px] overflow-hidden bg-gray-100"
+                onClick={() => openGalleryAt(selectedImgIdx + 2)}
               >
-                <img
-                  src={images[(selectedImgIdx + 2) % images.length] || images[0]}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+                {safeImage(selectedImgIdx + 2) ? (
+                  <img
+                    src={safeImage(selectedImgIdx + 2)!}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100" />
+                )}
                 {/* Rightmove Signature Photo Counter Badge (White Pill, Bottom Right) */}
-                <div className="absolute bottom-3 right-3 bg-white text-[#0f172a] text-[13px] font-bold px-3 py-1 rounded-[4px] shadow flex items-center gap-1.5 z-10">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openGalleryAt(selectedImgIdx);
+                  }}
+                  className="absolute bottom-3 right-3 bg-white text-[#0f172a] text-[13px] font-bold px-3 py-1 rounded-[4px] shadow flex items-center gap-1.5 z-10 cursor-pointer hover:bg-gray-50"
+                >
                   <Camera className="w-4 h-4 stroke-[2]" />
-                  1/13
-                </div>
+                  {images.length
+                    ? `${selectedImgIdx + 1}/${images.length}`
+                    : "0/0"}
+                </button>
               </div>
             </div>
           </div>
@@ -395,506 +553,107 @@ export default function PropertyDetailsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {/* ── LEFT COLUMN: Property Info Details (~68% width) ── */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Title, Share/Save, Price Header Card */}
-              <div className="bg-white rounded-[4px] p-5 shadow-sm border border-gray-200">
-                <div className="flex items-start justify-between gap-4 mb-2">
-                  <h1 className="text-[22px] font-bold text-[#0f172a] leading-snug">
-                    {property.title}
-                  </h1>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <button
-                      type="button"
-                      onClick={handleShare}
-                      aria-label="Share property"
-                      className="p-2 text-gray-700 hover:text-[#339390] cursor-pointer"
-                    >
-                      <Share2 className="w-5 h-5 stroke-[2]" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleToggleFavorite}
-                      aria-label="Save property"
-                      className="p-2 text-gray-700 hover:text-red-500 cursor-pointer"
-                    >
-                      <Heart
-                        className={`w-6 h-6 stroke-[2] ${
-                          isLiked ? "fill-red-500 text-red-500" : ""
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Price Display */}
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[26px] font-extrabold text-[#0f172a] leading-none">
-                    {property.price}
-                  </span>
-                  <Info className="w-4 h-4 text-gray-400 cursor-pointer" />
-                </div>
-
-                {/* Affordability Link & Reduced Date */}
-                <div className="flex items-center justify-between text-[13.5px] border-b border-gray-100 pb-4 mb-4">
-                  <a
-                    href="#affordability"
-                    className="inline-flex items-center gap-1.5 font-semibold text-[#339390] hover:underline"
-                  >
-                    <PiggyBank className="w-4 h-4" />
-                    Can you afford it?
-                  </a>
-                  {/* STATIC FALLBACK: reduced date */}
-                  <span className="text-gray-500 text-[13px]">
-                    Reduced on {property.reducedDate || "09/05/2026"}
-                  </span>
-                </div>
-
-                {/* Property Key Specifications Bar (5 Columns) */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-1">
-                  <div>
-                    <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase block mb-1">
-                      PROPERTY TYPE
-                    </span>
-                    <span className="text-[14px] font-bold text-[#0f172a] flex items-center gap-1.5">
-                      <Home className="w-4 h-4 text-gray-600" />
-                      {property.propertyType}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase block mb-1">
-                      BEDROOMS
-                    </span>
-                    <span className="text-[14px] font-bold text-[#0f172a] flex items-center gap-1.5">
-                      <BedDouble className="w-4 h-4 text-gray-600 stroke-[2]" />
-                      {property.beds}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase block mb-1">
-                      BATHROOMS
-                    </span>
-                    <span className="text-[14px] font-bold text-[#0f172a] flex items-center gap-1.5">
-                      <Bath className="w-4 h-4 text-gray-600 stroke-[2]" />
-                      {property.baths}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase block mb-1">
-                      SIZE
-                    </span>
-                    <span className="text-[14px] font-bold text-[#0f172a] flex items-center gap-1.5">
-                      <Maximize2 className="w-4 h-4 text-gray-600" />
-                      {property.sqft} sq ft
-                    </span>
-                    <span className="text-[11px] text-gray-500 block">63 sq m</span>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase block mb-1 flex items-center gap-1">
-                      TENURE <Info className="w-3 h-3 text-gray-400" />
-                    </span>
-                    {/* STATIC FALLBACK: tenure type */}
-                    <span className="text-[14px] font-semibold text-[#339390] hover:underline cursor-pointer block">
-                      {property.tenure || "Share of Freehold"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Floorplan Preview & Sub-Gallery Row ── */}
-              {/* STATIC FALLBACK: Floorplan box & sub-photos collage */}
-              <div className="bg-white rounded-[4px] p-4 shadow-sm border border-gray-200 flex flex-col md:flex-row gap-4 items-center">
-                {/* Floorplan Thumbnail */}
-                <div className="relative w-full md:w-[180px] h-[140px] bg-gray-100 border border-gray-200 rounded flex items-center justify-center cursor-pointer overflow-hidden shrink-0">
-                  <div className="text-center p-2">
-                    <FloorplanIcon />
-                    <span className="text-xs font-semibold text-gray-600 mt-1 block">
-                      Hatchard Road, N19
-                    </span>
-                  </div>
-                  <div className="absolute bottom-2 right-2 bg-white border border-gray-200 rounded px-2 py-0.5 text-xs font-bold text-[#0f172a] flex items-center gap-1 shadow-sm">
-                    <FloorplanIcon /> 1
-                  </div>
-                </div>
-
-                {/* Sub-Photos Collage Grid */}
-                <div className="flex-1 grid grid-cols-4 sm:grid-cols-5 gap-2 w-full">
-                  {images.slice(0, 4).map((src: string, idx: number) => (
-                    <div
-                      key={idx}
-                      className="relative h-[65px] rounded overflow-hidden cursor-pointer"
-                      onClick={() => setIsGalleryOpen(true)}
-                    >
-                      <img src={src} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                  <div
-                    className="relative h-[65px] rounded overflow-hidden cursor-pointer bg-gray-100 border border-gray-200 flex items-center justify-center text-[15px] font-bold text-[#0f172a]"
-                    onClick={() => setIsGalleryOpen(true)}
-                  >
-                    +{Math.max(images.length - 4, 7)}
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Key Features Section ── */}
-              {/* STATIC FALLBACK: bullet points list */}
-              <div className="bg-white rounded-[4px] p-5 shadow-sm border border-gray-200">
-                <h2 className="text-[18px] font-bold text-[#0f172a] mb-3">
-                  Key features
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6 text-[14px] font-semibold text-[#0f172a]">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
-                    TWO DOUBLE BEDROOMS
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
-                    CLOSE TO LOCAL TRANSPORT LINKS
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
-                    DOUBLE GLAZED WINDOWS
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
-                    SPLIT LEVEL APARTMENT
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 bg-[#eef2ff] text-[#4f46e5] text-[13.5px] font-semibold px-4 py-2 rounded-lg border border-[#c7d2fe] hover:bg-[#e0e7ff] transition-colors cursor-pointer"
-                  >
-                    <Sparkles className="w-4 h-4 text-[#6366f1]" />
-                    Summarise property details
-                  </button>
-                </div>
-              </div>
-
-              {/* ── Description Section ── */}
-              <div className="bg-white rounded-[4px] p-5 shadow-sm border border-gray-200">
-                <h2 className="text-[18px] font-bold text-[#0f172a] mb-3">
-                  Description
-                </h2>
-                <p className="text-[14px] text-[#334155] leading-relaxed whitespace-pre-line font-normal">
-                  {property.description}
-                </p>
-                <button
-                  type="button"
-                  className="mt-3 text-[14px] font-bold text-[#339390] hover:underline cursor-pointer"
-                >
-                  Show less
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={handleShare} aria-label="Share property" className="p-2 text-gray-700 hover:text-[#339390] cursor-pointer bg-white border border-gray-200 rounded">
+                  <Share2 className="w-5 h-5 stroke-[2]" />
+                </button>
+                <button type="button" onClick={handleToggleFavorite} aria-label="Save property" className="p-2 text-gray-700 hover:text-red-500 cursor-pointer bg-white border border-gray-200 rounded">
+                  <Heart
+                    className={"w-6 h-6 stroke-[2] " + (isLiked ? "fill-red-500 text-red-500" : "")}
+                  />
                 </button>
               </div>
 
-              {/* ── Additional Property Attributes ── */}
-              {/* STATIC FALLBACK: council tax, parking, garden, accessibility, cameras */}
-              <div className="bg-white rounded-[4px] p-5 shadow-sm border border-gray-200">
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-[13.5px]">
-                  <div>
-                    <span className="text-[11px] font-bold text-gray-500 uppercase block mb-1 flex items-center gap-1">
-                      COUNCIL TAX <Info className="w-3 h-3 text-gray-400" />
-                    </span>
-                    <span className="font-bold text-[#0f172a]">
-                      Band: {property.councilTaxBand || "D"}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] font-bold text-gray-500 uppercase block mb-1 flex items-center gap-1">
-                      PARKING <Info className="w-3 h-3 text-gray-400" />
-                    </span>
-                    <span className="font-bold text-[#0f172a]">
-                      {property.parking || "Permit"}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] font-bold text-gray-500 uppercase block mb-1 flex items-center gap-1">
-                      GARDEN <Info className="w-3 h-3 text-gray-400" />
-                    </span>
-                    <span className="font-bold text-[#0f172a]">
-                      {property.garden || "Ask agent"}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] font-bold text-gray-500 uppercase block mb-1 flex items-center gap-1">
-                      ACCESSIBILITY <Info className="w-3 h-3 text-gray-400" />
-                    </span>
-                    <span className="font-bold text-[#0f172a]">
-                      {property.accessibility || "Ask agent"}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] font-bold text-gray-500 uppercase block mb-1 flex items-center gap-1">
-                      CAMERAS <Info className="w-3 h-3 text-gray-400" />
-                    </span>
-                    <span className="font-bold text-[#0f172a]">
-                      {property.cameras || "Installed (CCTV)"}
-                    </span>
+              {images.length > 0 && (
+                <div className="bg-white rounded-[4px] p-4 shadow-sm border border-gray-200">
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 w-full">
+                    {images.slice(0, 4).map((src: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="relative h-[65px] rounded overflow-hidden cursor-pointer"
+                        onClick={() => openGalleryAt(idx)}
+                      >
+                        <img src={src} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                    {images.length > 4 && (
+                      <div
+                        className="relative h-[65px] rounded overflow-hidden cursor-pointer bg-gray-100 border border-gray-200 flex items-center justify-center text-[15px] font-bold text-[#0f172a]"
+                        onClick={() => openGalleryAt(4)}
+                      >
+                        +{images.length - 4}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* ── Expandable Accordion Cards ── */}
-              {/* STATIC FALLBACK: accordions */}
-              <div className="space-y-3">
-                {/* Accordion 1: Share of Freehold */}
-                <div className="bg-white rounded-[4px] border border-gray-200 overflow-hidden shadow-sm">
-                  <button
-                    type="button"
-                    onClick={() => toggleAccordion("freehold")}
-                    className="w-full p-4 flex items-center justify-between text-left cursor-pointer hover:bg-gray-50"
-                  >
-                    <span className="flex items-center gap-3 font-bold text-[#0f172a] text-[15px]">
-                      <Tag className="w-5 h-5 text-gray-700" />
-                      Share of Freehold
-                    </span>
-                    <ChevronDown
-                      className={`w-5 h-5 text-gray-500 transition-transform ${
-                        openAccordions.freehold ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-                  {openAccordions.freehold && (
-                    <div className="px-4 pb-4 text-[13.5px] text-gray-600 border-t border-gray-100 pt-3">
-                      This property comes with a Share of Freehold tenure. Please confirm lease terms and ground rent with your solicitor.
-                    </div>
-                  )}
-                </div>
+              <PropertyListingDetails
+                property={{
+                  title: property.title,
+                  address: property.address,
+                  city: property.city,
+                  state: property.state,
+                  description: property.description,
+                  listingType: property.listingType,
+                  rentalType: property.rentalType,
+                  occupancyType: property.occupancyType,
+                  priceLabel: property.price,
+                  pricePerMonth: property.pricePerMonth,
+                  pricePerNight: property.pricePerNight,
+                  beds: property.beds,
+                  baths: property.baths,
+                  sqft: property.sqft,
+                  propertyType: property.propertyType,
+                  tenure: property.tenure,
+                  listingActivity: property.listingActivity,
+                  isNewHome: property.isNewHome,
+                  availableFrom: property.availableFrom,
+                  securityDeposit: property.securityDeposit,
+                  furnishType: property.furnishType,
+                  councilTaxBand: property.councilTaxBand,
+                  billsIncluded: property.billsIncluded,
+                  minTerm: property.minTerm,
+                  maxTerm: property.maxTerm,
+                  parkingType: property.parkingType,
+                  parking: property.parking,
+                  garden: property.garden,
+                  accessibility: property.accessibility,
+                  epcRating: property.epcRating,
+                  epcCurrentScore: property.epcCurrentScore,
+                  epcPotentialScore: property.epcPotentialScore,
+                  keyFeatures: property.keyFeatures,
+                  amenities: property.amenities,
+                  utilities: property.utilities,
+                  broadbandSpeed: property.broadbandSpeed,
+                  floodRisk: property.floodRisk,
+                  guests: property.maxGuests,
+                  minStay: property.minStay,
+                  maxStay: property.maxStay,
+                  checkInTime: property.checkInTime,
+                  checkOutTime: property.checkOutTime,
+                  selfCheckIn: property.selfCheckIn,
+                  cleaningFee: property.cleaningFee,
+                  serviceFee: property.serviceFee,
+                  agentName: property.agent?.name,
+                  latitude: property.latitude,
+                  longitude: property.longitude,
+                }}
+              />
 
-                {/* Accordion 2: Energy Performance Certificate */}
-                <div className="bg-white rounded-[4px] border border-gray-200 overflow-hidden shadow-sm">
-                  <button
-                    type="button"
-                    onClick={() => toggleAccordion("epc")}
-                    className="w-full p-4 flex items-center justify-between text-left cursor-pointer hover:bg-gray-50"
-                  >
-                    <span className="flex items-center gap-3 font-bold text-[#0f172a] text-[15px]">
-                      <BarChart3 className="w-5 h-5 text-gray-700" />
-                      Energy Performance Certificate
-                    </span>
-                    <ChevronDown
-                      className={`w-5 h-5 text-gray-500 transition-transform ${
-                        openAccordions.epc ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-                  {openAccordions.epc && (
-                    <div className="px-4 pb-4 text-[13.5px] text-gray-600 border-t border-gray-100 pt-3">
-                      Current EPC Rating: Band C. Full EPC documentation available upon request.
-                    </div>
-                  )}
-                </div>
-
-                {/* Accordion 3: Utilities, rights & restrictions */}
-                <div className="bg-white rounded-[4px] border border-gray-200 overflow-hidden shadow-sm">
-                  <button
-                    type="button"
-                    onClick={() => toggleAccordion("utilities")}
-                    className="w-full p-4 flex items-center justify-between text-left cursor-pointer hover:bg-gray-50"
-                  >
-                    <span className="flex items-center gap-3 font-bold text-[#0f172a] text-[15px]">
-                      <Package className="w-5 h-5 text-gray-700" />
-                      Utilities, rights & restrictions
-                    </span>
-                    <ChevronDown
-                      className={`w-5 h-5 text-gray-500 transition-transform ${
-                        openAccordions.utilities ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-                  {openAccordions.utilities && (
-                    <div className="px-4 pb-4 text-[13.5px] text-gray-600 border-t border-gray-100 pt-3">
-                      Mains electricity, gas, water, and broadband connected. No known restrictive covenants.
-                    </div>
-                  )}
-                </div>
-
-                {/* Additional Links */}
-                <div className="bg-white rounded-[4px] border border-gray-200 p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50">
-                  <span className="flex items-center gap-3 font-bold text-[#0f172a] text-[15px]">
-                    <Building className="w-5 h-5 text-gray-700" />
-                    Renovation potential
-                  </span>
-                  <ChevronRight className="w-5 h-5 text-gray-500" />
-                </div>
-
-                <div className="bg-white rounded-[4px] border border-gray-200 p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50">
-                  <span className="flex items-center gap-3 font-bold text-[#0f172a] text-[15px]">
-                    <Wifi className="w-5 h-5 text-gray-700" />
-                    Broadband speed
-                  </span>
-                  <ChevronDown className="w-5 h-5 text-gray-500" />
-                </div>
-
-                <div className="bg-white rounded-[4px] border border-gray-200 p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50">
-                  <span className="flex items-center gap-3 font-bold text-[#0f172a] text-[15px]">
-                    <FileText className="w-5 h-5 text-gray-700" />
-                    Property sale history
-                  </span>
-                  <ChevronDown className="w-5 h-5 text-gray-500" />
-                </div>
-
-                <div className="bg-white rounded-[4px] border border-gray-200 p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50">
-                  <span className="flex items-center gap-3 font-bold text-[#0f172a] text-[15px]">
-                    <Home className="w-5 h-5 text-gray-700" />
-                    Recently sold & under offer
-                  </span>
-                  <span className="text-[13px] font-semibold text-[#339390] flex items-center gap-1">
-                    See similar nearby properties <ChevronRight className="w-4 h-4" />
-                  </span>
-                </div>
-              </div>
-
-              {/* ── Map & Nearby AI Section ── */}
-              <div className="bg-white rounded-[4px] p-5 shadow-sm border border-gray-200 space-y-4">
-                <h2 className="text-[18px] font-bold text-[#0f172a]">
-                  {property.title}
-                </h2>
-
-                {/* AI Query Pills Carousel */}
-                {/* STATIC FALLBACK: AI prompts */}
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                  <button
-                    type="button"
-                    className="bg-[#eef2ff] text-[#4338ca] text-[13px] font-semibold px-3.5 py-1.5 rounded-full border border-[#c7d2fe] whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#6366f1]" />
-                    Where are the closest supermarkets?
-                  </button>
-                  <button
-                    type="button"
-                    className="bg-[#eef2ff] text-[#4338ca] text-[13px] font-semibold px-3.5 py-1.5 rounded-full border border-[#c7d2fe] whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#6366f1]" />
-                    Are there any parks nearby?
-                  </button>
-                  <button
-                    type="button"
-                    className="bg-[#eef2ff] text-[#4338ca] text-[13px] font-semibold px-3.5 py-1.5 rounded-full border border-[#c7d2fe] whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#6366f1]" />
-                    Is there public transport nearby?
-                  </button>
-                </div>
-
-                {/* Map View */}
-                <div className="relative h-[300px] w-full rounded-[4px] overflow-hidden border border-gray-200">
-                  <div className="absolute top-3 left-3 bg-white/95 border border-gray-200 rounded px-3 py-1 text-xs font-bold text-[#0f172a] z-10 shadow-sm">
-                    Approximate location
-                  </div>
-                  <MapContainer
-                    center={[property.latitude, property.longitude]}
-                    zoom={15}
-                    className="w-full h-full"
-                  >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <Marker position={[property.latitude, property.longitude]}>
-                      <Popup>{property.title}</Popup>
-                    </Marker>
-                  </MapContainer>
-                </div>
-
-                {/* Location Tabs */}
-                <div className="border-t border-gray-100 pt-4">
-                  <div className="flex items-center gap-8 border-b border-gray-200 pb-2 text-[14px] font-bold text-gray-600 mb-4">
-                    <span className="text-[#339390] border-b-2 border-[#339390] pb-2 flex items-center gap-1.5 cursor-pointer">
-                      <MapPin className="w-4 h-4" /> My places
-                    </span>
-                    <span className="hover:text-[#339390] flex items-center gap-1.5 cursor-pointer">
-                      <Building2 className="w-4 h-4" /> Stations
-                    </span>
-                    <span className="hover:text-[#339390] flex items-center gap-1.5 cursor-pointer">
-                      <Home className="w-4 h-4" /> Schools
-                    </span>
-                  </div>
-
-                  <p className="text-[13.5px] text-gray-600 mb-3">
-                    Add an important place to see how long it&apos;d take to get there from our property listings.
-                  </p>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[#0f172a]">
-                      __mins driving to your place
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="mt-3 bg-[#0f172a] text-white text-[13.5px] font-bold px-4 py-2 rounded-[4px] inline-flex items-center gap-1.5 hover:bg-slate-800 cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" /> Add a place
-                  </button>
-                </div>
-              </div>
-
-              {/* ── Affordability Calculator Section ── */}
-              {/* STATIC FALLBACK: mortgage calculator */}
-              <div
-                id="affordability"
-                className="bg-white rounded-[4px] p-5 shadow-sm border border-gray-200 space-y-4"
-              >
-                <h2 className="text-[18px] font-bold text-[#0f172a]">
-                  Affordability
-                </h2>
-
-                <div className="flex items-center gap-3">
-                  <Calculator className="w-8 h-8 text-[#0f172a]" />
-                  <div>
-                    <span className="text-[12px] text-gray-500 block">
-                      Monthly repayments
-                    </span>
-                    <span className="text-[24px] font-extrabold text-[#0f172a]">
-                      £2,758
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 text-[13px]">
-                  <span className="bg-gray-100 text-gray-700 font-semibold px-3 py-1 rounded-full border border-gray-200">
-                    Property: {property.price}
-                  </span>
-                  <span className="bg-gray-100 text-gray-700 font-semibold px-3 py-1 rounded-full border border-gray-200">
-                    Deposit: £55,000
-                  </span>
-                  <span className="bg-gray-100 text-gray-700 font-semibold px-3 py-1 rounded-full border border-gray-200">
-                    Interest rate: 5.33%
-                  </span>
-                  <span className="bg-gray-100 text-gray-700 font-semibold px-3 py-1 rounded-full border border-gray-200">
-                    Term: 30 years
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  className="text-[13px] font-bold text-[#339390] underline cursor-pointer block"
-                >
-                  Recalculate
-                </button>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-                  <button
-                    type="button"
-                    className="w-full sm:w-auto bg-[#0f172a] text-white text-[14px] font-bold px-6 py-3 rounded-[4px] hover:bg-slate-800 cursor-pointer"
-                  >
-                    Get a Mortgage in Principle
-                  </button>
-                  <span className="text-xs text-gray-500">
-                    Powered by <strong className="text-[#0f172a]">NatWest</strong>
-                  </span>
-                </div>
-
-                <p className="text-[11px] text-gray-400 leading-relaxed pt-2">
-                  These results are estimates and are only intended as a guide. Make sure you obtain accurate figures from your lender before committing to any mortgage. Your home may be repossessed if you do not keep up repayments on a mortgage.
-                </p>
-              </div>
+              {typeof property.latitude === "number" &&
+                typeof property.longitude === "number" && (
+                <PropertyLocationMap
+                  latitude={property.latitude}
+                  longitude={property.longitude}
+                  title={property.title}
+                  addressLabel={
+                    [property.address, property.city, property.state]
+                      .filter(Boolean)
+                      .join(", ") || property.title
+                  }
+                />
+              )}
 
               {/* ── About Agent Section ── */}
               <div className="bg-white rounded-[4px] p-5 shadow-sm border border-gray-200 space-y-3">
@@ -903,42 +662,47 @@ export default function PropertyDetailsPage() {
                     <h2 className="text-[18px] font-bold text-[#0f172a]">
                       About {property.agent.name}
                     </h2>
-                    <p className="text-[13px] text-gray-500">
-                      {property.agent.address}
-                    </p>
+                    {property.agent.address && (
+                      <p className="text-[13px] text-gray-500">
+                        {property.agent.address}
+                      </p>
+                    )}
                   </div>
-                  <div className="w-12 h-12 bg-[#0f172a] rounded flex items-center justify-center text-green-300 font-bold text-xs shrink-0">
-                    jtm
+                  <div className="w-12 h-12 bg-[#0f172a] rounded flex items-center justify-center text-green-300 font-bold text-xs shrink-0 overflow-hidden">
+                    {property.agent.logoUrl ? (
+                      <img
+                        src={property.agent.logoUrl}
+                        alt=""
+                        className="w-full h-full object-contain bg-white"
+                      />
+                    ) : (
+                      <span>{agentInitials || "PO"}</span>
+                    )}
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="text-xs font-semibold text-gray-500">
-                    Industry affiliations:
-                  </span>
-                  <span className="bg-emerald-700 text-white text-[10px] font-bold px-2 py-0.5 rounded">
-                    propertymark
-                  </span>
-                  <span className="bg-blue-900 text-white text-[10px] font-bold px-2 py-0.5 rounded">
-                    The Property Ombudsman
-                  </span>
                 </div>
 
                 <p className="text-[13.5px] text-[#334155] leading-relaxed font-normal">
                   {property.agent.description}
                 </p>
-
-                <button
-                  type="button"
-                  className="text-[13.5px] font-bold text-[#339390] hover:underline cursor-pointer"
-                >
-                  Read more
-                </button>
               </div>
             </div>
 
-            {/* ── RIGHT COLUMN: Marketed By Sticky Card (~32% width) ── */}
+            {/* ── RIGHT COLUMN: Marketed By / Booking Sticky Card (~32% width) ── */}
             <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-[90px]">
+              {isShortStay ? (
+                <PropertyShortStayBooking
+                  propertyId={property.id}
+                  propertyTitle={property.title}
+                  pricePerNight={property.pricePerNight}
+                  cleaningFee={property.cleaningFee}
+                  serviceFee={property.serviceFee}
+                  maxGuests={property.maxGuests}
+                  minStay={property.minStay}
+                  maxStay={property.maxStay}
+                  blockedRanges={property.blockedDateRanges}
+                />
+              ) : null}
+
               {/* Marketed By Card */}
               <div className="bg-white rounded-[4px] p-5 shadow-sm border border-gray-200 space-y-4">
                 <span className="text-[11px] font-bold tracking-wider text-gray-400 uppercase block">
@@ -950,88 +714,163 @@ export default function PropertyDetailsPage() {
                     <h3 className="text-[16px] font-bold text-[#0f172a] leading-snug">
                       {property.agent.name}
                     </h3>
-                    <p className="text-[12.5px] text-gray-500 mt-1">
-                      {property.agent.address}
-                    </p>
-                    <button
-                      type="button"
-                      className="text-[12px] font-semibold text-[#339390] hover:underline mt-1 cursor-pointer block"
-                    >
-                      More properties from this agent
-                    </button>
+                    {property.agent.address && (
+                      <p className="text-[12.5px] text-gray-500 mt-1">
+                        {property.agent.address}
+                      </p>
+                    )}
+                    {property.agent.sellerType === "AGENT" && (
+                      <a
+                        href={`/buy/results?location=${encodeURIComponent(
+                          property.city || property.state || "London"
+                        )}`}
+                        className="text-[12px] font-semibold text-[#339390] hover:underline mt-1 block"
+                      >
+                        More properties from this agent
+                      </a>
+                    )}
                   </div>
-                  {/* Agent Logo Box */}
                   <div className="w-16 h-16 bg-[#0f172a] rounded flex items-center justify-center text-green-300 font-extrabold text-sm shrink-0 shadow-sm overflow-hidden">
                     {property.agent.logoUrl ? (
                       <img
                         src={property.agent.logoUrl}
                         alt="Agent Logo"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain bg-white"
                       />
                     ) : (
-                      <span>jtm</span>
+                      <span>{agentInitials || "PO"}</span>
                     )}
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="space-y-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (property.agent?.phone) {
-                        window.location.href = `tel:${property.agent.phone}`;
-                      } else {
-                        alert(`Call Agent at 020 3907 2747`);
-                      }
-                    }}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-[15px] py-3 px-4 rounded-[6px] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                  >
-                    <Phone className="w-4 h-4 stroke-[2.5]" />
-                    Call agent
-                  </button>
+                {!isShortStay && (
+                  <div className="space-y-2 pt-2">
+                    {property.agent.phone ? (
+                      <a
+                        href={`tel:${property.agent.phone}`}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-[15px] py-3 px-4 rounded-[6px] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                      >
+                        <Phone className="w-4 h-4 stroke-[2.5]" />
+                        Call agent
+                      </a>
+                    ) : null}
 
-                  <button
-                    type="button"
-                    onClick={() => setShowInquiryModal(true)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-[15px] py-3 px-4 rounded-[6px] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                  >
-                    <Mail className="w-4 h-4 stroke-[2.5]" />
-                    Request details
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={openInquiryModal}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-[15px] py-3 px-4 rounded-[6px] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      <Mail className="w-4 h-4 stroke-[2.5]" />
+                      Request details
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Agent Valuation Ad Banner */}
-              {/* STATIC FALLBACK: valuation ad card */}
-              <div className="bg-[#0f172a] text-white rounded-[4px] p-6 text-center space-y-4 shadow-sm border border-slate-800">
-                <h3 className="text-[20px] font-bold leading-tight">
-                  Request an <span className="text-[#3db2ad]">agent valuation</span> for your home
-                </h3>
-                <div className="w-20 h-20 mx-auto bg-[#3db2ad]/20 border border-[#3db2ad] rounded-lg flex items-center justify-center text-[#3db2ad] text-2xl font-bold">
-                  £??????
+              {inquirySuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-800 text-sm font-medium rounded px-4 py-3">
+                  {inquirySuccess}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Floating Ask MYKEYS AI Assistant Pill (Bottom Left Fixed) ── */}
-      <div className="fixed bottom-4 left-4 z-40">
-        <button
-          type="button"
-          className="bg-green-100 text-green-800 font-bold text-[13px] px-4 py-2.5 rounded-xl shadow-lg border border-green-200 flex items-center gap-2 hover:bg-green-200 transition-colors cursor-pointer"
+      </main>
+
+      {/* ── Full-screen image gallery ── */}
+      {isGalleryOpen && images.length > 0 && (
+        <div
+          className="fixed inset-0 z-[200] bg-black flex flex-col"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Property photos"
         >
-          <Sparkles className="w-4 h-4 text-green-700" />
-          Ask MYKEYS
-          <ChevronRight className="w-4 h-4 rotate-[-90deg]" />
-        </button>
-      </div>
+          <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-4 py-3 pointer-events-none">
+            <span className="text-white text-sm font-semibold bg-black/50 px-3 py-1.5 rounded pointer-events-auto">
+              {selectedImgIdx + 1} / {images.length}
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsGalleryOpen(false)}
+              aria-label="Close gallery"
+              className="p-2 rounded-full bg-black/50 text-white hover:bg-white/20 cursor-pointer pointer-events-auto"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="relative flex-1 flex items-center justify-center min-h-0 w-full">
+            {images.length > 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedImgIdx((prev) =>
+                    prev === 0 ? images.length - 1 : prev - 1
+                  )
+                }
+                aria-label="Previous photo"
+                className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-full bg-white text-black shadow-lg hover:bg-gray-100 cursor-pointer"
+              >
+                <ChevronLeft className="w-8 h-8 stroke-[2.5]" />
+              </button>
+            )}
+
+            <img
+              src={images[selectedImgIdx]}
+              alt={`${property.title} photo ${selectedImgIdx + 1}`}
+              className="max-h-[100vh] max-w-[100vw] w-auto h-auto object-contain select-none px-16 md:px-24"
+              draggable={false}
+            />
+
+            {images.length > 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedImgIdx((prev) =>
+                    prev === images.length - 1 ? 0 : prev + 1
+                  )
+                }
+                aria-label="Next photo"
+                className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-full bg-white text-black shadow-lg hover:bg-gray-100 cursor-pointer"
+              >
+                <ChevronRight className="w-8 h-8 stroke-[2.5]" />
+              </button>
+            )}
+          </div>
+
+          {images.length > 1 && (
+            <div className="absolute bottom-0 inset-x-0 z-20 px-4 pb-5 pt-10 bg-gradient-to-t from-black/80 to-transparent">
+              <div className="flex gap-2 justify-center overflow-x-auto max-w-full">
+                {images.map((src: string, idx: number) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedImgIdx(idx)}
+                    aria-label={`View photo ${idx + 1}`}
+                    className={`w-16 h-12 md:w-20 md:h-14 rounded overflow-hidden shrink-0 border-2 cursor-pointer transition-opacity ${
+                      idx === selectedImgIdx
+                        ? "border-white opacity-100"
+                        : "border-transparent opacity-50 hover:opacity-90"
+                    }`}
+                  >
+                    <img
+                      src={src}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Inquiry Modal ── */}
       {showInquiryModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 z-[180] flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6 relative shadow-xl">
             <button
               type="button"
@@ -1114,7 +953,7 @@ export default function PropertyDetailsPage() {
           </div>
         </div>
       )}
-      </main>
+
       <Footer />
     </>
   );

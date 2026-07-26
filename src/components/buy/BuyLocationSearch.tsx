@@ -19,10 +19,16 @@ const SUGGESTIONS = [
 
 interface BuyLocationSearchProps {
   initialLocation?: string;
+  title?: string;
+  placeholder?: string;
+  buttonLabel?: string;
 }
 
 export default function BuyLocationSearch({
   initialLocation = "",
+  title = "Search properties to buy",
+  placeholder = "e.g. London, Manchester or SW1A 1AA",
+  buttonLabel = "Search",
 }: BuyLocationSearchProps) {
   const router = useRouter();
   const [location, setLocation] = useState(initialLocation);
@@ -44,7 +50,7 @@ export default function BuyLocationSearch({
     <section className="relative min-h-[320px] sm:min-h-[380px] flex items-center justify-center overflow-hidden bg-white pt-24 pb-14 border-b border-gray-100">
       <div className="relative z-10 w-full max-w-3xl px-4">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#0f3d36] mb-6">
-          Search properties to buy
+          {title}
         </h1>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -61,7 +67,7 @@ export default function BuyLocationSearch({
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                 onKeyDown={(e) => e.key === "Enter" && goSearch(location)}
-                placeholder="e.g. London, Manchester or SW1A 1AA"
+                placeholder={placeholder}
                 className="w-full px-3 py-3.5 text-slate-900 outline-none text-base"
               />
             </div>
@@ -92,7 +98,7 @@ export default function BuyLocationSearch({
             onClick={() => goSearch(location)}
             className="cursor-pointer shrink-0 px-8 py-3.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-base transition-colors"
           >
-            Search
+            {buttonLabel}
           </button>
         </div>
       </div>

@@ -456,19 +456,26 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
       <div className="bg-white rounded-[5px] border flex flex-col" style={{ height: "calc(100vh - 220px)", minHeight: "480px" }}>
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Original inquiry message as first bubble */}
-          <div className="flex justify-end">
-            <div className="max-w-[75%]">
-              <div className="bg-green-600 text-white rounded-[5px] rounded-br-none px-4 py-3">
-                <p className="text-sm whitespace-pre-wrap">{inquiry.message}</p>
+          {/* Fallback for older inquiries that never got a seeded chat message */}
+          {inquiry.message &&
+            !messages.some(
+              (m) =>
+                m.senderRole === "USER" &&
+                m.messageType === "TEXT" &&
+                m.content.trim() === inquiry.message.trim()
+            ) && (
+              <div className="flex justify-end">
+                <div className="max-w-[75%]">
+                  <div className="bg-green-600 text-white rounded-[5px] rounded-br-none px-4 py-3">
+                    <p className="text-sm whitespace-pre-wrap">{inquiry.message}</p>
+                  </div>
+                  <div className="flex items-center justify-end gap-1 mt-1">
+                    <span className="text-xs text-gray-400">You · {formatTime(inquiry.createdAt)}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center justify-end gap-1 mt-1">
-                <span className="text-xs text-gray-400">You · {formatTime(inquiry.createdAt)}</span>
-              </div>
-            </div>
-          </div>
+            )}
 
-          {/* Messages */}
           {messages.map((msg) => {
             const isMe = msg.senderId === currentUserId || msg.senderRole === "USER";
             const isSystem = msg.senderRole === "SYSTEM" || msg.messageType === "STATUS_CHANGE";

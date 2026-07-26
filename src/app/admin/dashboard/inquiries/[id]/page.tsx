@@ -737,19 +737,27 @@ export default function AdminInquiryChatPage({ params }: { params: Promise<{ id:
           style={{ height: "calc(100vh - 260px)", minHeight: "460px" }}
         >
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Original inquiry bubble */}
-            <div className="flex justify-start">
-              <div className="max-w-[75%]">
-                <div className="bg-gray-100 text-gray-900 rounded-[5px] rounded-bl-none px-4 py-3">
-                  <p className="text-sm whitespace-pre-wrap">{inquiry.message}</p>
-                </div>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-xs text-gray-400">
-                    {inquiry.guestName} &middot; {formatTime(inquiry.createdAt)}
-                  </span>
+            {/* Fallback only when chat messages do not already include the inquiry text */}
+            {inquiry.message &&
+              !messages.some(
+                (m) =>
+                  m.senderRole === "USER" &&
+                  m.messageType === "TEXT" &&
+                  m.content.trim() === inquiry.message.trim()
+              ) && (
+              <div className="flex justify-start">
+                <div className="max-w-[75%]">
+                  <div className="bg-gray-100 text-gray-900 rounded-[5px] rounded-bl-none px-4 py-3">
+                    <p className="text-sm whitespace-pre-wrap">{inquiry.message}</p>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-xs text-gray-400">
+                      {inquiry.guestName} &middot; {formatTime(inquiry.createdAt)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {messages.map((msg) => {
               const isOwner = msg.senderRole === "OWNER";

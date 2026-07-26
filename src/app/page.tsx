@@ -11,8 +11,22 @@ import ServicesPromotionSection from "@/components/sections/ServicesPromotionSec
 import TestimonialsSection from "@/components/sections/TestimonialsSection";
 import Footer from "@/components/layout/Footer";
 import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
+import {
+  HomeContentProvider,
+  useHomeContent,
+} from "@/components/home/HomeContentProvider";
 
 export default function Home() {
+  return (
+    <HomeContentProvider>
+      <HomeInner />
+    </HomeContentProvider>
+  );
+}
+
+function HomeInner() {
+  const { content } = useHomeContent();
+
   return (
     <>
       <Navbar />
@@ -37,8 +51,8 @@ export default function Home() {
             limit={6}
             showViewAll
             viewAllHref="/faq?category=OWNER"
-            title="Questions from our community"
-            subtitle="Clear answers for guests and property owners using MYKEYS — from fees to bookings."
+            title={content.faq.title}
+            subtitle={content.faq.subtitle}
           />
         </div>
       </section>
@@ -48,7 +62,9 @@ export default function Home() {
 }
 
 function HeroSectionWrapper() {
-  const [selectedTab, setSelectedTab] = useState<"all" | "buy" | "short-rent" | "long-rent">("buy");
+  const [selectedTab, setSelectedTab] = useState<
+    "all" | "buy" | "short-rent" | "long-rent"
+  >("buy");
 
   return (
     <>

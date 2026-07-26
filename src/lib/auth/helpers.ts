@@ -40,6 +40,12 @@ export async function toUserDTO(user: User): Promise<UserDTO> {
     companyName: user.companyName,
     taxId: user.taxId,
     website: user.website,
+    listingSellerType:
+      user.listingSellerType === "AGENT" ||
+      user.listingSellerType === "PROPERTY_OWNER"
+        ? user.listingSellerType
+        : null,
+    agentLogo: user.agentLogo,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     lastLoginAt: user.lastLoginAt,

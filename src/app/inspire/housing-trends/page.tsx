@@ -15,13 +15,14 @@ import Footer from "@/components/layout/Footer";
 import {
   FIVE_YEAR_TREND,
   HPI_CONTENTS,
-  HPI_PAST_REPORTS,
-  HPI_PUBLISHED,
-  HPI_SUMMARY_BULLETS,
   MONTHLY_PCT_CHANGES,
   MONTHLY_PRICE_TREND,
   SECTOR_PRICES,
 } from "@/lib/housingTrends";
+import { useInspirePageContent } from "@/hooks/useInspirePageContent";
+import { useInspireItems } from "@/hooks/useInspireItems";
+import type { HousingTrendsItemsContent } from "@/lib/content/inspireItems";
+import { useRouter } from "next/navigation";
 
 function formatPrice(n: number) {
   return `£${Math.round(n).toLocaleString()}`;
@@ -191,8 +192,13 @@ function ChangeBadge({ value }: { value: number }) {
 }
 
 export default function HousingTrendsPage() {
+  const content = useInspirePageContent("housing-trends");
+  const report = useInspireItems<HousingTrendsItemsContent>("housing-trends");
+  const router = useRouter();
   const [contentsOpen, setContentsOpen] = useState(true);
-  const [pastReport, setPastReport] = useState(HPI_PAST_REPORTS[0]);
+  const [pastReport, setPastReport] = useState(
+    report.pastReports[0]?.label || ""
+  );
 
   const monthlyMin = useMemo(
     () => Math.min(...MONTHLY_PRICE_TREND.map((d) => d.value)) - 5000,
@@ -211,6 +217,22 @@ export default function HousingTrendsPage() {
     []
   );
 
+  const onPastReportChange = (label: string) => {
+    setPastReport(label);
+    const match = report.pastReports.find((r) => r.label === label);
+    if (match?.href) {
+      if (match.href.startsWith("#") || match.href.includes("#")) {
+        const hash = match.href.includes("#")
+          ? match.href.slice(match.href.indexOf("#"))
+          : match.href;
+        const el = document.querySelector(hash);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        router.push(match.href);
+      }
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -218,26 +240,34 @@ export default function HousingTrendsPage() {
         {/* Hero */}
         <section className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 pt-6 md:pt-8">
           <div className="relative rounded-2xl overflow-hidden min-h-[260px] sm:min-h-[320px] md:min-h-[360px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1600&q=80"
+              src={report.heroImage}
               alt="UK terraced houses"
               className="absolute inset-0 w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-black/15" />
             <div className="relative z-10 max-w-[420px] m-4 sm:m-6 md:m-8 bg-[#0f3d36] text-white rounded-2xl p-6 sm:p-8 shadow-xl">
               <p className="text-sm font-semibold text-green-300 mb-3">
-                Date published: {HPI_PUBLISHED}
+                Date published: {report.publishedDate}
               </p>
               <h1 className="text-[2rem] sm:text-[2.4rem] font-bold tracking-tight leading-tight">
-                House Price Index
+                {content.hero.title}
               </h1>
-              <button
-                type="button"
+              {content.hero.subtitle ? (
+                <p className="mt-3 text-sm text-white/85 leading-relaxed">
+                  {content.hero.subtitle}
+                </p>
+              ) : null}
+              <Link
+                href={report.downloadUrl || "#summary"}
                 className="mt-6 inline-flex items-center gap-2 h-11 px-5 rounded-lg bg-green-500 hover:bg-green-600 text-slate-900 font-bold text-sm cursor-pointer transition-colors"
               >
                 <Download className="w-4 h-4" />
-                Download full report
-              </button>
+                {report.downloadLabel ||
+                  content.hero.ctaLabel ||
+                  "Download full report"}
+              </Link>
             </div>
           </div>
         </section>
@@ -278,13 +308,12 @@ export default function HousingTrendsPage() {
                 id="summary"
                 className="scroll-mt-28 text-[26px] sm:text-[32px] font-bold text-[#1a1a2e] leading-tight"
               >
-                Summer buyers distracted by sunshine, football and political
-                change
+                {report.summaryHeadline}
               </h2>
 
               <div className="mt-5 rounded-xl bg-[#f6f6f6] border border-gray-200 p-5 sm:p-6">
                 <ul className="space-y-3 text-[15px] text-slate-700 leading-relaxed list-disc pl-5">
-                  {HPI_SUMMARY_BULLETS.map((b) => (
+                  {report.summaryBullets.map((b) => (
                     <li key={b}>{b}</li>
                   ))}
                 </ul>
@@ -635,13 +664,13 @@ export default function HousingTrendsPage() {
                 </label>
                 <select
                   id="past-reports"
-                  value={pastReport}
-                  onChange={(e) => setPastReport(e.target.value)}
+                  value={pastReport || report.pastReports[0]?.label || ""}
+                  onChange={(e) => onPastReportChange(e.target.value)}
                   className="w-full h-12 appearance-none rounded-xl bg-[#f0f0f0] px-4 pr-10 text-sm font-semibold text-[#1a1a2e] outline-none cursor-pointer"
                 >
-                  {HPI_PAST_REPORTS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
+                  {report.pastReports.map((r) => (
+                    <option key={r.label} value={r.label}>
+                      {r.label}
                     </option>
                   ))}
                 </select>

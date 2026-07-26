@@ -56,7 +56,9 @@ const propertyTypes = [
   "PENTHOUSE",
   "COTTAGE",
   "BUNGALOW",
+  "LAND",
   "COMMERCIAL",
+  "OTHER",
 ];
 
 const initialForm = {

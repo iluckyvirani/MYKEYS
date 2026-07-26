@@ -1,11 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import {
-  OVERSEAS_ARTICLES,
-  OVERSEAS_HERO_IMAGE,
   type OverseasArticle,
 } from "@/lib/overseasBlog";
+import { useInspirePageContent } from "@/hooks/useInspirePageContent";
+import { useInspireItems } from "@/hooks/useInspireItems";
+import type { OverseasBlogItemsContent } from "@/lib/content/inspireItems";
 
 function ArticleCard({ article }: { article: OverseasArticle }) {
   return (
@@ -33,6 +36,10 @@ function ArticleCard({ article }: { article: OverseasArticle }) {
 }
 
 export default function OverseasBlogPage() {
+  const content = useInspirePageContent("overseas-blog");
+  const { items: articles, heroImage } =
+    useInspireItems<OverseasBlogItemsContent>("overseas-blog");
+
   return (
     <>
       <Navbar />
@@ -40,7 +47,7 @@ export default function OverseasBlogPage() {
         {/* Hero */}
         <section className="relative w-full aspect-[2.6/1] min-h-[200px] max-h-[380px] overflow-hidden bg-slate-800">
           <img
-            src={OVERSEAS_HERO_IMAGE}
+            src={heroImage}
             alt="Coastal Mediterranean landscape at sunset"
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -48,7 +55,7 @@ export default function OverseasBlogPage() {
           <div className="absolute inset-0 flex items-center justify-center px-4">
             <div className="bg-black/55 px-6 py-4 sm:px-10 sm:py-5 rounded-sm">
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white tracking-tight text-center">
-                Overseas Property Blog
+                {content.hero.title}
               </h1>
             </div>
           </div>
@@ -57,11 +64,16 @@ export default function OverseasBlogPage() {
         {/* Latest Articles */}
         <section className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-10 md:py-14">
           <h2 className="text-2xl sm:text-[1.75rem] font-bold text-[#1a1a2e]">
-            Latest Articles
+            {content.hero.sectionTitle || "Latest Articles"}
           </h2>
+          {content.hero.subtitle ? (
+            <p className="mt-2 text-slate-600 max-w-3xl">
+              {content.hero.subtitle}
+            </p>
+          ) : null}
 
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
-            {OVERSEAS_ARTICLES.map((article) => (
+            {articles.map((article) => (
               <ArticleCard key={article.id} article={article} />
             ))}
           </div>

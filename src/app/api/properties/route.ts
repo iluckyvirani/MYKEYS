@@ -33,14 +33,21 @@ export async function GET(request: NextRequest) {
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
     const bedrooms = searchParams.get("bedrooms");
+    const maxBedrooms = searchParams.get("maxBedrooms");
     const bathrooms = searchParams.get("bathrooms");
     const rentalType = searchParams.get("rentalType");
+    const occupancyType = searchParams.get("occupancyType");
     const minRating = searchParams.get("minRating");
     const guests = searchParams.get("guests");
     const minStay = searchParams.get("minStay");
     const maxStay = searchParams.get("maxStay");
     const minTerm = searchParams.get("minTerm");
     const maxTerm = searchParams.get("maxTerm");
+    const addedWithinDays = searchParams.get("addedWithinDays");
+    const radiusMiles = parseFloat(searchParams.get("radiusMiles") || "0");
+    let searchLat = parseFloat(searchParams.get("lat") || "");
+    let searchLng = parseFloat(searchParams.get("lng") || "");
+    const wantsRadius = Number.isFinite(radiusMiles) && radiusMiles > 0;
 
     // Build where clause
     const where: any = {};
@@ -62,16 +69,78 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    if (status) where.status = status;
+    if (status) {
+      const statuses = status.split(",").map((s: string) => s.trim()).filter(Boolean);
+      where.status = statuses.length === 1 ? statuses[0] : { in: statuses };
+    }
     if (listingType) where.listingType = listingType;
     if (rentalType) where.rentalType = rentalType;
     if (propertyType) {
-      const types = propertyType.split(",").map((t: string) => t.trim()).filter(Boolean);
-      where.propertyType = types.length === 1 ? types[0] : { in: types };
+      const types = propertyType
+        .split(",")
+        .map((t: string) => t.trim())
+        .filter(Boolean)
+        // Legacy UI value; schema uses APARTMENT
+        .map((t: string) => (t === "FLAT" ? "APARTMENT" : t));
+      const unique = [...new Set(types)];
+      where.propertyType = unique.length === 1 ? unique[0] : { in: unique };
     }
-    if (city) where.city = { contains: city, mode: "insensitive" };
+
+    // Resolve search origin for radius (coords param or Nominatim geocode)
+    if (
+      wantsRadius &&
+      (!Number.isFinite(searchLat) || !Number.isFinite(searchLng))
+    ) {
+      const geoQuery = [zipCode, city].filter(Boolean).join(", ") || null;
+      if (geoQuery) {
+        try {
+          const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            `${geoQuery}, UK`
+          )}&countrycodes=gb&limit=1`;
+          const geoRes = await fetch(geoUrl, {
+            headers: {
+              Accept: "application/json",
+              "User-Agent": "MYKEYS-PropertySearch/1.0",
+            },
+            next: { revalidate: 86400 },
+          });
+          if (geoRes.ok) {
+            const geoJson = await geoRes.json();
+            if (Array.isArray(geoJson) && geoJson[0]) {
+              searchLat = parseFloat(geoJson[0].lat);
+              searchLng = parseFloat(geoJson[0].lon);
+            }
+          }
+        } catch (e) {
+          console.warn("Geocode for radius failed:", e);
+        }
+      }
+    }
+
+    const useGeoRadius =
+      wantsRadius && Number.isFinite(searchLat) && Number.isFinite(searchLng);
+
+    // UK outward-code widen when radius requested but geocode unavailable
+    const outwardFromZip = (value: string) => {
+      const cleaned = value.trim().toUpperCase().replace(/\s+/g, " ");
+      const parts = cleaned.split(" ");
+      if (parts.length >= 2) return parts[0];
+      const m = cleaned.match(/^([A-Z]{1,2}\d{1,2}[A-Z]?)/);
+      return m?.[1] || cleaned;
+    };
+
+    if (useGeoRadius) {
+      where.latitude = { not: null };
+      where.longitude = { not: null };
+    } else {
+      if (city) where.city = { contains: city, mode: "insensitive" };
+      if (zipCode) {
+        const zipFilter =
+          wantsRadius ? outwardFromZip(zipCode) : zipCode;
+        where.zipCode = { contains: zipFilter, mode: "insensitive" };
+      }
+    }
     if (state) where.state = { contains: state, mode: "insensitive" };
-    if (zipCode) where.zipCode = { contains: zipCode, mode: "insensitive" };
     
     if (minPrice || maxPrice) {
       where.price = {};
@@ -79,8 +148,21 @@ export async function GET(request: NextRequest) {
       if (maxPrice) where.price.lte = parseFloat(maxPrice);
     }
 
-    if (bedrooms) where.bedrooms = { gte: parseInt(bedrooms) };
+    if (bedrooms || maxBedrooms) {
+      where.bedrooms = {};
+      if (bedrooms) where.bedrooms.gte = parseInt(bedrooms);
+      if (maxBedrooms) where.bedrooms.lte = parseInt(maxBedrooms);
+    }
     if (bathrooms) where.bathrooms = { gte: parseInt(bathrooms) };
+
+    if (addedWithinDays) {
+      const days = parseInt(addedWithinDays, 10);
+      if (Number.isFinite(days) && days > 0) {
+        const since = new Date();
+        since.setDate(since.getDate() - days);
+        where.createdAt = { gte: since };
+      }
+    }
 
     // Short-term rental filters
     if (rentalType === "SHORT_TERM") {
@@ -93,6 +175,27 @@ export async function GET(request: NextRequest) {
     if (rentalType === "LONG_TERM") {
       if (minTerm) where.minTerm = { gte: parseInt(minTerm) };
       if (maxTerm) where.maxTerm = { lte: parseInt(maxTerm) };
+
+      // Only apply when the generated client knows this field (avoids 500 on stale Turbopack cache)
+      const occupancySupported = (() => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { Prisma } = require("@prisma/client");
+          return !!Prisma.dmmf?.datamodel?.models
+            ?.find((m: { name: string }) => m.name === "Property")
+            ?.fields?.some((f: { name: string }) => f.name === "occupancyType");
+        } catch {
+          return false;
+        }
+      })();
+
+      if (occupancySupported) {
+        if (occupancyType === "ROOM") {
+          where.occupancyType = "ROOM";
+        } else if (occupancyType === "WHOLE_PROPERTY") {
+          where.NOT = { occupancyType: "ROOM" };
+        }
+      }
     }
 
     // Minimum rating filter
@@ -105,41 +208,87 @@ export async function GET(request: NextRequest) {
     }
 
     // Get properties with pagination
-    const [properties, total] = await Promise.all([
-      prisma.property.findMany({
-        where,
-        skip,
-        take: pageSize,
+    const include = {
+      owner: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          companyName: true,
+          avatar: true,
+          city: true,
+          listingSellerType: true,
+          agentLogo: true,
+        },
+      },
+      images: true,
+      amenities: {
         include: {
-          owner: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-              companyName: true,
-              avatar: true,
-            },
-          },
-          images: true,
-          amenities: {
-            include: {
-              amenity: true,
-            },
-          },
-          reviews: {
-            select: {
-              rating: true,
-            },
-          },
+          amenity: true,
         },
-        orderBy: {
-          createdAt: "desc",
+      },
+      reviews: {
+        select: {
+          rating: true,
         },
-      }),
-      prisma.property.count({ where }),
-    ]);
+      },
+    };
+
+    const milesBetween = (
+      lat1: number,
+      lon1: number,
+      lat2: number,
+      lon2: number
+    ) => {
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const R = 3958.8;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) *
+          Math.cos(toRad(lat2)) *
+          Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    let properties: any[];
+    let total: number;
+
+    if (useGeoRadius) {
+      const candidates = await prisma.property.findMany({
+        where,
+        take: 500,
+        include,
+        orderBy: { createdAt: "desc" },
+      });
+      const withinRadius = candidates.filter((p) => {
+        if (typeof p.latitude !== "number" || typeof p.longitude !== "number") {
+          return false;
+        }
+        return (
+          milesBetween(searchLat, searchLng, p.latitude, p.longitude) <=
+          radiusMiles
+        );
+      });
+      total = withinRadius.length;
+      properties = withinRadius.slice(skip, skip + pageSize);
+    } else {
+      const [items, count] = await Promise.all([
+        prisma.property.findMany({
+          where,
+          skip,
+          take: pageSize,
+          include,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.property.count({ where }),
+      ]);
+      properties = items;
+      total = count;
+    }
 
     const verificationByProperty = await getDocumentVerificationStatesForProperties(
       properties.map((p) => ({
@@ -207,13 +356,13 @@ export async function GET(request: NextRequest) {
       pageSize,
       "Properties retrieved successfully"
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Get properties error:", error);
-    return errorResponse(
-      "Failed to retrieve properties",
-      500,
-      ErrorCode.INTERNAL_SERVER_ERROR
-    );
+    const detail =
+      process.env.NODE_ENV === "development"
+        ? error?.message || "Failed to retrieve properties"
+        : "Failed to retrieve properties";
+    return errorResponse(detail, 500, ErrorCode.INTERNAL_SERVER_ERROR);
   }
 }
 
@@ -323,8 +472,26 @@ export const POST = withAuth(
           minTerm: body.minTerm || 1,
           maxTerm: body.maxTerm,
           billsIncluded: body.billsIncluded,
+          occupancyType:
+            body.rentalType === "LONG_TERM"
+              ? body.occupancyType === "ROOM"
+                ? "ROOM"
+                : "WHOLE_PROPERTY"
+              : null,
           councilTaxBand: body.councilTaxBand,
           epcRating: body.epcRating,
+          epcCurrentScore: body.epcCurrentScore != null ? parseInt(body.epcCurrentScore, 10) : undefined,
+          epcPotentialScore: body.epcPotentialScore != null ? parseInt(body.epcPotentialScore, 10) : undefined,
+          furnishType: body.furnishType || null,
+          garden: body.garden || null,
+          parkingType: body.parkingType || null,
+          accessibility: body.accessibility || null,
+          keyFeatures: Array.isArray(body.keyFeatures)
+            ? body.keyFeatures.filter((f: string) => String(f).trim())
+            : [],
+          utilities: body.utilities || undefined,
+          broadbandSpeed: body.broadbandSpeed || null,
+          floodRisk: body.floodRisk || null,
           // Sale specific
           propertyPrice: body.propertyPrice,
           propertyTax: body.propertyTax,

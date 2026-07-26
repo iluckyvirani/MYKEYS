@@ -1,51 +1,88 @@
 "use client";
 
-import { Search, MessageCircle, Home, FileCheck, PoundSterling, Users } from "lucide-react";
+import Link from "next/link";
+import {
+  Search,
+  MessageCircle,
+  Home,
+  FileCheck,
+  PoundSterling,
+  Users,
+} from "lucide-react";
+import type { ListingStatItem } from "@/lib/content/siteDefaults";
 
-export default function HowItWorks() {
+const DEFAULT_STATS: ListingStatItem[] = [
+  { value: "£15,000", label: "Avg. saving vs agents" },
+  { value: "24h", label: "Avg. response time" },
+  { value: "98%", label: "Customer satisfaction" },
+  { value: "£0", label: "Buyer fees" },
+];
+
+export default function HowItWorks({
+  title = "How Buying Works on MYKEYS",
+  subtitle = "A simple, transparent process from search to settlement",
+  ctaTitle = "Ready to find your dream home?",
+  ctaSubtitle = "Start your property search today and connect directly with owners. Save thousands in agent fees and get better deals.",
+  ctaButtonLabel = "Start Searching",
+  stats = DEFAULT_STATS,
+}: {
+  title?: string;
+  subtitle?: string;
+  ctaTitle?: string;
+  ctaSubtitle?: string;
+  ctaButtonLabel?: string;
+  stats?: ListingStatItem[];
+}) {
   const steps = [
     {
       icon: <Search className="w-8 h-8" />,
       title: "Find Properties",
-      description: "Browse thousands of properties for sale. Use advanced filters to find exactly what you want."
+      description:
+        "Browse thousands of properties for sale. Use advanced filters to find exactly what you want.",
     },
     {
       icon: <MessageCircle className="w-8 h-8" />,
       title: "Send Inquiry",
-      description: "Contact owners directly through our platform. No agents, no commissions."
+      description:
+        "Contact owners directly through our platform. No agents, no commissions.",
     },
     {
       icon: <Users className="w-8 h-8" />,
       title: "Schedule Viewing",
-      description: "Arrange property viewings directly with the owner at a time that suits you."
+      description:
+        "Arrange property viewings directly with the owner at a time that suits you.",
     },
     {
       icon: <FileCheck className="w-8 h-8" />,
       title: "Make Offer",
-      description: "Negotiate directly with the owner and make your offer through our secure platform."
+      description:
+        "Negotiate directly with the owner and make your offer through our secure platform.",
     },
     {
       icon: <PoundSterling className="w-8 h-8" />,
       title: "Complete Purchase",
-      description: "We provide all necessary documentation and guide you through the purchase process."
+      description:
+        "We provide all necessary documentation and guide you through the purchase process.",
     },
     {
       icon: <Home className="w-8 h-8" />,
       title: "Move In",
-      description: "Get the keys and move into your new home! Celebrate your successful purchase."
-    }
+      description:
+        "Get the keys and move into your new home! Celebrate your successful purchase.",
+    },
   ];
+
+  const displayStats =
+    Array.isArray(stats) && stats.length > 0 ? stats : DEFAULT_STATS;
 
   return (
     <section className="py-16 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            How Buying Works on Hously
+            {title}
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            A simple, transparent process from search to settlement
-          </p>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">{subtitle}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -58,7 +95,9 @@ export default function HowItWorks() {
                 <div className="absolute top-6 right-6 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                   {index + 1}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  {step.title}
+                </h3>
                 <p className="text-gray-600">{step.description}</p>
               </div>
             </div>
@@ -68,34 +107,27 @@ export default function HowItWorks() {
         <div className="mt-12 bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-8 md:p-12 text-white">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
-              <h3 className="text-2xl md:text-3xl font-bold mb-4">
-                Ready to find your dream home?
-              </h3>
-              <p className="text-green-100 mb-6">
-                Start your property search today and connect directly with owners.
-                Save thousands in agent fees and get better deals.
+              <h3 className="text-2xl md:text-3xl font-bold mb-4">{ctaTitle}</h3>
+              <p className="text-green-100 mb-6 whitespace-pre-line">
+                {ctaSubtitle}
               </p>
-              <button className="bg-white text-green-600 hover:bg-gray-100 font-semibold px-8 py-3 rounded-lg">
-                Start Searching
-              </button>
+              <Link
+                href="/buy"
+                className="inline-flex bg-white text-green-600 hover:bg-gray-100 font-semibold px-8 py-3 rounded-lg cursor-pointer transition-colors"
+              >
+                {ctaButtonLabel}
+              </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-white/10 rounded-lg">
-                <div className="text-3xl font-bold">£15,000</div>
-                <div className="text-sm text-green-200">Avg. saving vs agents</div>
-              </div>
-              <div className="text-center p-4 bg-white/10 rounded-lg">
-                <div className="text-3xl font-bold">24h</div>
-                <div className="text-sm text-green-200">Avg. response time</div>
-              </div>
-              <div className="text-center p-4 bg-white/10 rounded-lg">
-                <div className="text-3xl font-bold">98%</div>
-                <div className="text-sm text-green-200">Customer satisfaction</div>
-              </div>
-              <div className="text-center p-4 bg-white/10 rounded-lg">
-                <div className="text-3xl font-bold">£0</div>
-                <div className="text-sm text-green-200">Buyer fees</div>
-              </div>
+              {displayStats.map((stat, index) => (
+                <div
+                  key={`${stat.label}-${index}`}
+                  className="text-center p-4 bg-white/10 rounded-lg"
+                >
+                  <div className="text-3xl font-bold">{stat.value}</div>
+                  <div className="text-sm text-green-200">{stat.label}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

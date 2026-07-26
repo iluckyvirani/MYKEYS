@@ -21,6 +21,7 @@ import {
   BarChart2,
   LogsIcon,
   UserCog,
+  FileText,
   HelpCircle,
   Building2,
 } from "lucide-react";
@@ -43,6 +44,7 @@ const adminNavigation = [
   { name: "Payments", href: "/admin/dashboard/payments", icon: CreditCard },
   { name: "Packages", href: "/admin/dashboard/packages", icon: Package },
   { name: "Service Categories", href: "/admin/dashboard/categories", icon: Grid3x3 },
+  { name: "Site Content", href: "/admin/dashboard/content/home", icon: FileText },
   { name: "FAQs", href: "/admin/dashboard/faqs", icon: HelpCircle },
   { name: "Contact Departments", href: "/admin/dashboard/contact-departments", icon: Building2 },
   { name: "Amenities", href: "/admin/dashboard/amenities", icon: BarChart3 },
@@ -90,7 +92,10 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         {/* Navigation — scrollable on short laptop screens */}
         <nav className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 py-2 space-y-1.5">
           {adminNavigation.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive =
+              item.href === "/admin/dashboard/content/home"
+                ? pathname.startsWith("/admin/dashboard/content")
+                : pathname === item.href;
             return (
               <Link
                 key={item.name}
@@ -148,7 +153,10 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
         <nav className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 py-3 space-y-1.5">
           {adminNavigation.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive =
+              item.href === "/admin/dashboard/content/home"
+                ? pathname.startsWith("/admin/dashboard/content")
+                : pathname === item.href;
             return (
               <Link
                 key={item.name}

@@ -4,14 +4,18 @@ import { ChevronLeft, Clock } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { MORTGAGE_SECTIONS } from "@/lib/mortgageGuides";
+import { getInspireItemsServer } from "@/lib/content/getInspireItemsServer";
+import type { MortgageItemsContent } from "@/lib/content/inspireItems";
 
-const ALL_GUIDES = MORTGAGE_SECTIONS.flatMap((s) =>
+const DEFAULT_ALL = MORTGAGE_SECTIONS.flatMap((s) =>
   s.guides.map((g) => ({ ...g, sectionTitle: s.title }))
 );
 
 export function generateStaticParams() {
-  return ALL_GUIDES.map((g) => ({ slug: g.slug }));
+  return DEFAULT_ALL.map((g) => ({ slug: g.slug }));
 }
+
+export const dynamicParams = true;
 
 export default async function MortgageGuideArticlePage({
   params,
@@ -19,7 +23,12 @@ export default async function MortgageGuideArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const guide = ALL_GUIDES.find((g) => g.slug === slug);
+  const { sections } =
+    await getInspireItemsServer<MortgageItemsContent>("mortgage-guides");
+  const allGuides = sections.flatMap((s) =>
+    s.guides.map((g) => ({ ...g, sectionTitle: s.title }))
+  );
+  const guide = allGuides.find((g) => g.slug === slug);
   if (!guide) notFound();
 
   return (

@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ChevronDown, ChevronRight, MapPin, Star } from "lucide-react";
+import { ChevronDown, ChevronRight, MapPin } from "lucide-react";
+import { RESULTS_SORT_OPTIONS } from "@/lib/resultsSort";
+import SaveSearchAlertActions from "@/components/search/SaveSearchAlertActions";
+import type { BuySearchFilters } from "@/lib/buySearch";
 
 interface BuyResultsToolbarProps {
   location: string;
@@ -16,7 +19,13 @@ interface BuyResultsToolbarProps {
 }
 
 /** Full-width strip under filters — matches Rightmove */
-export function BuyResultsBreadcrumbBar({ location }: { location: string }) {
+export function BuyResultsBreadcrumbBar({
+  location,
+  filters,
+}: {
+  location: string;
+  filters: BuySearchFilters;
+}) {
   const label = location
     ? `Properties For Sale in ${location}`
     : "Properties For Sale";
@@ -32,23 +41,11 @@ export function BuyResultsBreadcrumbBar({ location }: { location: string }) {
             {label}
             <ChevronRight className="w-4 h-4" />
           </Link>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 hover:text-[#0f172a] cursor-pointer"
-          >
-            <Star className="w-[15px] h-[15px]" strokeWidth={1.75} />
-            Save Search
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 hover:text-[#0f172a] cursor-pointer"
-          >
-            <span className="relative inline-flex">
-              <Bell className="w-[15px] h-[15px]" strokeWidth={1.75} />
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#e87722] border border-white" />
-            </span>
-            Create Alert
-          </button>
+          <SaveSearchAlertActions
+            location={location}
+            listingType="BUY"
+            filters={{ ...filters }}
+          />
         </div>
       </div>
     </div>
@@ -83,9 +80,11 @@ export default function BuyResultsToolbar({
               onChange={(e) => onSortChange(e.target.value)}
               className="appearance-none bg-transparent pr-5 text-[#0f172a] font-bold cursor-pointer outline-none"
             >
-              <option value="highest">Highest Price</option>
-              <option value="lowest">Lowest Price</option>
-              <option value="newest">Newest</option>
+              {RESULTS_SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
             <ChevronDown className="w-3.5 h-3.5 text-[#0f172a] absolute right-0 pointer-events-none" />
           </div>

@@ -8,6 +8,11 @@ export type MovingStory = {
   imageAlt: string;
 };
 
+export type MovingStoriesSectionContent = {
+  items: MovingStory[];
+  featured: MovingStory;
+};
+
 export const MOVING_STORIES: MovingStory[] = [
   {
     id: "1",
@@ -117,4 +122,47 @@ export const SIDEBAR_FEATURED_STORY: MovingStory = {
   imageAlt: "Smiling couple outdoors",
 };
 
+export const DEFAULT_MOVING_STORIES_LIST: MovingStoriesSectionContent = {
+  items: MOVING_STORIES,
+  featured: SIDEBAR_FEATURED_STORY,
+};
+
 export const LIST_PAGE_SIZE = 4;
+
+export function slugifyStoryTitle(title: string): string {
+  return (
+    title
+      .toLowerCase()
+      .replace(/['']/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 80) || `story-${Date.now()}`
+  );
+}
+
+export function mergeMovingStoriesList(
+  stored?: Partial<MovingStoriesSectionContent> | null
+): MovingStoriesSectionContent {
+  const items =
+    Array.isArray(stored?.items) && stored.items.length > 0
+      ? stored.items.map((item, i) => ({
+          ...MOVING_STORIES[Math.min(i, MOVING_STORIES.length - 1)],
+          ...item,
+          id: item.id || `story-${i + 1}`,
+          slug: item.slug || slugifyStoryTitle(item.title || `story-${i + 1}`),
+        }))
+      : DEFAULT_MOVING_STORIES_LIST.items;
+
+  const featured = {
+    ...DEFAULT_MOVING_STORIES_LIST.featured,
+    ...(stored?.featured || {}),
+  };
+
+  return { items, featured };
+}
+
+export function getAllMovingStories(
+  list: MovingStoriesSectionContent = DEFAULT_MOVING_STORIES_LIST
+): MovingStory[] {
+  return [...list.items, list.featured];
+}

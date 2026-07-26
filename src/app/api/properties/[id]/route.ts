@@ -34,6 +34,10 @@ export async function GET(
             companyName: true,
             avatar: true,
             website: true,
+            city: true,
+            address: true,
+            listingSellerType: true,
+            agentLogo: true,
           },
         },
         images: {
@@ -68,15 +72,20 @@ export async function GET(
       return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
     }
 
+    // Align with list API: ACTIVE listings stay publicly viewable unless docs were rejected.
+    // Pending verification should not blank the detail page after a search result click.
     if (property.status === "ACTIVE") {
       const docState = await getPropertyDocumentVerificationState(
         property.id,
         property.listingType,
         property.rentalType
       );
-      if (docState.hasRequiredDocuments && !docState.allVerified) {
+      if (docState.hasRejected) {
         return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
       }
+    } else if (property.status !== "ACTIVE") {
+      // Non-active listings are not publicly viewable
+      return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
     }
 
     // Fetch owner's active package to determine contact visibility
@@ -91,17 +100,26 @@ export async function GET(
     };
 
     // Mask owner fields based on package flags
+    const isAgent = property.owner?.listingSellerType === "AGENT";
     const maskedOwner = property.owner
       ? {
-          id:          property.owner.id,
-          avatar:      property.owner.avatar,
+          id: property.owner.id,
+          avatar: property.owner.avatar,
+          agentLogo: property.owner.agentLogo,
+          listingSellerType: property.owner.listingSellerType,
           companyName: property.owner.companyName,
-          website:     property.owner.website,
-          // Only expose these when package permits
-          firstName:   ownerVisibility.showName  ? property.owner.firstName  : undefined,
-          lastName:    ownerVisibility.showName  ? property.owner.lastName   : undefined,
-          email:       ownerVisibility.showName  ? property.owner.email      : undefined,
-          phone:       ownerVisibility.showPhone ? property.owner.phone      : undefined,
+          website: property.owner.website,
+          city: property.owner.city,
+          address: property.owner.address,
+          // Names when package allows, or always show company for agents
+          firstName: ownerVisibility.showName ? property.owner.firstName : undefined,
+          lastName: ownerVisibility.showName ? property.owner.lastName : undefined,
+          email: ownerVisibility.showName ? property.owner.email : undefined,
+          // Agents always show phone when set; otherwise package gate
+          phone:
+            ownerVisibility.showPhone || isAgent
+              ? property.owner.phone
+              : undefined,
         }
       : null;
 
@@ -244,6 +262,61 @@ export const PATCH = withAuth<{ id: string }>(
           ...(body.minStay !== undefined && { minStay: body.minStay }),
           ...(body.maxStay !== undefined && { maxStay: body.maxStay }),
           ...(body.parking !== undefined && { parking: body.parking }),
+          ...(body.cleaningFee !== undefined && { cleaningFee: body.cleaningFee }),
+          ...(body.serviceFee !== undefined && { serviceFee: body.serviceFee }),
+          ...(body.securityDeposit !== undefined && { securityDeposit: body.securityDeposit }),
+          ...(body.yearBuilt !== undefined && { yearBuilt: body.yearBuilt }),
+          ...(body.checkInTime !== undefined && { checkInTime: body.checkInTime }),
+          ...(body.checkOutTime !== undefined && { checkOutTime: body.checkOutTime }),
+          ...(body.selfCheckIn !== undefined && { selfCheckIn: body.selfCheckIn }),
+          ...(body.availableFrom !== undefined && {
+            availableFrom: body.availableFrom ? new Date(body.availableFrom) : null,
+          }),
+          ...(body.minTerm !== undefined && { minTerm: body.minTerm }),
+          ...(body.maxTerm !== undefined && { maxTerm: body.maxTerm }),
+          ...(body.billsIncluded !== undefined && { billsIncluded: body.billsIncluded }),
+          ...(body.occupancyType !== undefined && {
+            occupancyType:
+              body.occupancyType === "ROOM"
+                ? "ROOM"
+                : body.occupancyType === "WHOLE_PROPERTY"
+                ? "WHOLE_PROPERTY"
+                : null,
+          }),
+          ...(body.councilTaxBand !== undefined && { councilTaxBand: body.councilTaxBand || null }),
+          ...(body.epcRating !== undefined && { epcRating: body.epcRating || null }),
+          ...(body.epcCurrentScore !== undefined && {
+            epcCurrentScore:
+              body.epcCurrentScore === "" || body.epcCurrentScore == null
+                ? null
+                : parseInt(body.epcCurrentScore, 10),
+          }),
+          ...(body.epcPotentialScore !== undefined && {
+            epcPotentialScore:
+              body.epcPotentialScore === "" || body.epcPotentialScore == null
+                ? null
+                : parseInt(body.epcPotentialScore, 10),
+          }),
+          ...(body.furnishType !== undefined && { furnishType: body.furnishType || null }),
+          ...(body.garden !== undefined && { garden: body.garden || null }),
+          ...(body.parkingType !== undefined && { parkingType: body.parkingType || null }),
+          ...(body.accessibility !== undefined && { accessibility: body.accessibility || null }),
+          ...(body.keyFeatures !== undefined && {
+            keyFeatures: Array.isArray(body.keyFeatures)
+              ? body.keyFeatures.filter((f: string) => String(f).trim())
+              : [],
+          }),
+          ...(body.utilities !== undefined && { utilities: body.utilities }),
+          ...(body.broadbandSpeed !== undefined && {
+            broadbandSpeed: body.broadbandSpeed || null,
+          }),
+          ...(body.floodRisk !== undefined && { floodRisk: body.floodRisk || null }),
+          ...(body.propertyPrice !== undefined && { propertyPrice: body.propertyPrice }),
+          ...(body.propertyTax !== undefined && { propertyTax: body.propertyTax }),
+          ...(body.hoaFee !== undefined && { hoaFee: body.hoaFee }),
+          ...(body.leasehold !== undefined && { leasehold: body.leasehold }),
+          ...(body.leaseYears !== undefined && { leaseYears: body.leaseYears }),
+          ...(body.groundRent !== undefined && { groundRent: body.groundRent }),
           ...(body.occupancy !== undefined && { occupancy: body.occupancy }),
           ...(body.revenue !== undefined && { revenue: body.revenue }),
           ...(body.status && { status: body.status }),

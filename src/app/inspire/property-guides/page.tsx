@@ -12,10 +12,9 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import {
-  GUIDE_CATEGORIES,
-  GUIDE_SIDEBAR_ACCORDIONS,
-} from "@/lib/propertyGuides";
+import { useInspirePageContent } from "@/hooks/useInspirePageContent";
+import { useInspireItems } from "@/hooks/useInspireItems";
+import type { PropertyGuidesItemsContent } from "@/lib/content/inspireItems";
 
 const ACCORDION_ICONS = {
   calculators: Calculator,
@@ -24,36 +23,44 @@ const ACCORDION_ICONS = {
 } as const;
 
 export default function PropertyGuidesPage() {
+  const content = useInspirePageContent("property-guides");
+  const { heroImage, categories, sidebar } =
+    useInspireItems<PropertyGuidesItemsContent>("property-guides");
   const [query, setQuery] = useState("");
-  const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+  const [openAccordion, setOpenAccordion] = useState<string | null>(
+    "calculators"
+  );
 
   const filteredCategories = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return GUIDE_CATEGORIES;
-    return GUIDE_CATEGORIES.map((cat) => ({
-      ...cat,
-      links: cat.links.filter((l) => l.label.toLowerCase().includes(q)),
-    })).filter(
-      (cat) =>
-        cat.title.toLowerCase().includes(q) || cat.links.length > 0
-    );
-  }, [query]);
+    if (!q) return categories;
+    return categories
+      .map((cat) => ({
+        ...cat,
+        links: cat.links.filter((l) => l.label.toLowerCase().includes(q)),
+      }))
+      .filter(
+        (cat) =>
+          cat.title.toLowerCase().includes(q) || cat.links.length > 0
+      );
+  }, [query, categories]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const el = document.getElementById("guides-grid");
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById("guides-grid")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-[#f7f7f7] pt-[72px] md:pt-[80px]">
-        {/* Hero */}
         <section className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 pt-6 md:pt-8">
           <div className="relative rounded-2xl overflow-hidden min-h-[320px] sm:min-h-[380px] md:min-h-[420px] flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80"
+              src={heroImage}
               alt="Bright living space with plants"
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -61,22 +68,24 @@ export default function PropertyGuidesPage() {
 
             <div className="relative z-10 w-[min(100%-2rem,520px)] mx-4 bg-[#0f3d36] text-white rounded-2xl p-6 sm:p-8 md:p-9 shadow-xl">
               <h1 className="text-[2rem] sm:text-[2.4rem] font-bold tracking-tight leading-tight">
-                Property guides
+                {content.hero.title}
               </h1>
               <p className="mt-2 text-base sm:text-lg text-white/90">
-                For every step of your moving journey.
+                {content.hero.subtitle}
               </p>
 
               <form onSubmit={handleSearch} className="mt-6">
                 <label className="block text-sm text-white/90 mb-2">
-                  What are you looking for?
+                  {content.hero.searchLabel || "What are you looking for?"}
                 </label>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="e.g. first-time buyers"
+                    placeholder={
+                      content.hero.searchPlaceholder || "e.g. first-time buyers"
+                    }
                     className="flex-1 h-12 px-4 rounded-lg bg-white text-slate-800 text-sm outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-green-400"
                   />
                   <button
@@ -84,7 +93,7 @@ export default function PropertyGuidesPage() {
                     className="h-12 px-5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-sm inline-flex items-center justify-center gap-2 cursor-pointer shrink-0 transition-colors"
                   >
                     <Search className="w-4 h-4" />
-                    Search guides
+                    {content.hero.searchButton || "Search guides"}
                   </button>
                 </div>
               </form>
@@ -92,35 +101,41 @@ export default function PropertyGuidesPage() {
           </div>
         </section>
 
-        {/* Grid + sidebar */}
         <section
           id="guides-grid"
           className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8 md:py-10"
         >
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 lg:gap-8 items-start">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-              {filteredCategories.map((cat) => (
-                <div
-                  key={cat.id}
-                  className="bg-white rounded-xl p-5 sm:p-6 shadow-sm border border-gray-100"
-                >
-                  <h2 className="text-lg sm:text-xl font-bold text-[#1a1a2e] mb-3">
-                    {cat.title}
-                  </h2>
-                  <ul className="space-y-2">
-                    {cat.links.map((link) => (
-                      <li key={link.label}>
-                        <Link
-                          href={link.href}
-                          className="text-[15px] font-semibold text-green-700 hover:text-green-800 cursor-pointer"
-                        >
-                          {link.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+              {filteredCategories.map((cat) => {
+                const firstHref = cat.links[0]?.href || "/inspire/property-guides";
+                return (
+                  <div
+                    key={cat.id}
+                    id={cat.id}
+                    className="scroll-mt-28 bg-white rounded-xl p-5 sm:p-6 shadow-sm border border-gray-100"
+                  >
+                    <Link
+                      href={firstHref}
+                      className="text-lg sm:text-xl font-bold text-[#1a1a2e] mb-3 inline-block hover:text-green-700 cursor-pointer"
+                    >
+                      {cat.title}
+                    </Link>
+                    <ul className="space-y-2 mt-3">
+                      {cat.links.map((link) => (
+                        <li key={`${cat.id}-${link.label}`}>
+                          <Link
+                            href={link.href}
+                            className="text-[15px] font-semibold text-green-700 hover:text-green-800 cursor-pointer"
+                          >
+                            {link.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
               {filteredCategories.length === 0 && (
                 <p className="text-slate-500 sm:col-span-2 py-6">
                   No guides matched “{query}”.
@@ -129,7 +144,7 @@ export default function PropertyGuidesPage() {
             </div>
 
             <aside className="space-y-4 lg:sticky lg:top-[96px]">
-              {GUIDE_SIDEBAR_ACCORDIONS.map((item) => {
+              {sidebar.map((item) => {
                 const Icon =
                   ACCORDION_ICONS[item.id as keyof typeof ACCORDION_ICONS] ||
                   Home;
@@ -162,7 +177,7 @@ export default function PropertyGuidesPage() {
                       <div className="px-4 pb-4 space-y-2">
                         {item.links.map((link) => (
                           <Link
-                            key={link.label}
+                            key={`${item.id}-${link.label}`}
                             href={link.href}
                             className="block text-sm font-semibold text-green-700 hover:text-green-800 cursor-pointer"
                           >

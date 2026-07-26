@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { useInspirePageContent } from "@/hooks/useInspirePageContent";
 
 type AgentType = "both" | "sales" | "lettings";
 
@@ -41,6 +42,7 @@ const RADIUS_OPTIONS = [
 ];
 
 export default function FindAgentPage() {
+  const content = useInspirePageContent("find-agent");
   const [location, setLocation] = useState("");
   const [radius, setRadius] = useState(RADIUS_OPTIONS[0]);
   const [agentName, setAgentName] = useState("");
@@ -59,7 +61,7 @@ export default function FindAgentPage() {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8 md:py-10">
           {/* Search */}
           <h1 className="text-xl sm:text-2xl font-bold text-green-600 mb-4">
-            Search for estate agents and letting agents on MYKEYS
+            {content.hero.title}
           </h1>
 
           <form
@@ -73,7 +75,10 @@ export default function FindAgentPage() {
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. 'York', 'NW3', 'NW3 5TY' or 'Waterloo station'"
+                  placeholder={
+                    content.hero.searchPlaceholder ||
+                    "e.g. 'York', 'NW3', 'NW3 5TY' or 'Waterloo station'"
+                  }
                   className="w-full h-11 pl-10 pr-3 rounded-lg bg-white text-slate-900 text-sm outline-none focus:ring-2 focus:ring-green-400"
                 />
               </div>
@@ -140,7 +145,7 @@ export default function FindAgentPage() {
               type="submit"
               className="w-full h-12 rounded-lg bg-green-500 hover:bg-green-400 text-[#0f3d36] font-bold text-base cursor-pointer transition-colors"
             >
-              Start Search
+              {content.hero.searchButton || "Start Search"}
             </button>
           </form>
 

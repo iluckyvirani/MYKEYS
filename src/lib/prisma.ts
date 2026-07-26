@@ -19,7 +19,7 @@ const globalForPrisma = global as unknown as {
 };
 
 /** Bump when Prisma schema changes so dev server picks up regenerated client */
-const PRISMA_CLIENT_VERSION = "20260531-user-gender";
+const PRISMA_CLIENT_VERSION = "20260726-saved-search-alerts-v1";
 
 function createPrismaClient() {
   return new PrismaClient({
@@ -29,6 +29,15 @@ function createPrismaClient() {
 }
 
 // In dev, discard cached client after `prisma generate` (avoids stale column maps in Turbopack)
+if (
+  process.env.NODE_ENV !== "production" &&
+  globalForPrisma.prisma &&
+  globalForPrisma.prismaVersion !== PRISMA_CLIENT_VERSION
+) {
+  void globalForPrisma.prisma.$disconnect().catch(() => undefined);
+  globalForPrisma.prisma = undefined;
+}
+
 const cached =
   process.env.NODE_ENV !== "production" &&
   globalForPrisma.prismaVersion === PRISMA_CLIENT_VERSION

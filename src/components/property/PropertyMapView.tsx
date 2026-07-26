@@ -8,7 +8,8 @@ import {
   DrawingManager,
   InfoWindow,
 } from "@react-google-maps/api";
-import { ChevronLeft, RotateCcw, Edit2, Save, Eye } from "lucide-react";
+import { ChevronLeft, RotateCcw, Edit2, Save, Eye, MapPin } from "lucide-react";
+import { GOOGLE_MAPS_API_KEY, hasGoogleMapsApiKey } from "@/lib/googleMaps";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,7 +40,6 @@ type ViewState = "map" | "drawn" | "editing";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MAP_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_LIBRARIES: ("drawing" | "geometry")[] = ["drawing", "geometry"];
 
 // Warm earth-tone map style (same as reference)
@@ -113,14 +113,42 @@ function RectIcon() {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function PropertyMapView({
+function NoMapKeyFullView({ onBackToList }: { onBackToList: () => void }) {
+  return (
+    <div className="relative w-full h-full overflow-hidden bg-gray-50 flex flex-col">
+      <div className="absolute top-3 left-3 z-20">
+        <button
+          type="button"
+          onClick={onBackToList}
+          className="flex items-center gap-1.5 bg-white rounded-lg px-3 py-2 shadow-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors border border-gray-200"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          List view
+        </button>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6 text-center">
+        <MapPin className="w-10 h-10 text-gray-400" />
+        <p className="text-lg font-semibold text-[#0f172a]">No map key</p>
+        <p className="text-sm text-gray-500 max-w-md">
+          Google Maps is unavailable. Add{" "}
+          <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+            NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+          </code>{" "}
+          to draw an area and search properties on the map.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PropertyMapViewInner({
   properties,
   searchLocation,
   onBackToList,
 }: PropertyMapViewProps) {
   const { isLoaded, loadError } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: MAP_API_KEY,
+    id: "mykeys-google-maps",
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: MAP_LIBRARIES,
   });
 
@@ -416,8 +444,13 @@ export default function PropertyMapView({
   // ── Loading / error states ─────────────────────────────────────────────
   if (loadError) {
     return (
-      <div style={{ background: "#f5f0eb" }} className="w-full h-150 flex items-center justify-center rounded-lg">
-        <p className="text-red-500 text-sm">Failed to load Google Maps. Check your API key.</p>
+      <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded-lg">
+        <div className="text-center px-6">
+          <p className="text-[15px] font-semibold text-[#0f172a]">No map key</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Failed to load Google Maps. Check your API key.
+          </p>
+        </div>
       </div>
     );
   }
@@ -727,4 +760,11 @@ export default function PropertyMapView({
       )}
     </div>
   );
+}
+
+export default function PropertyMapView(props: PropertyMapViewProps) {
+  if (!hasGoogleMapsApiKey()) {
+    return <NoMapKeyFullView onBackToList={() => props.onBackToList()} />;
+  }
+  return <PropertyMapViewInner {...props} />;
 }

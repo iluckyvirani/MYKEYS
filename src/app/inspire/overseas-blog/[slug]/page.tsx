@@ -3,14 +3,15 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import {
-  OVERSEAS_ARTICLES,
-  getOverseasArticle,
-} from "@/lib/overseasBlog";
+import { OVERSEAS_ARTICLES } from "@/lib/overseasBlog";
+import { getInspireItemsServer } from "@/lib/content/getInspireItemsServer";
+import type { OverseasBlogItemsContent } from "@/lib/content/inspireItems";
 
 export function generateStaticParams() {
   return OVERSEAS_ARTICLES.map((a) => ({ slug: a.slug }));
 }
+
+export const dynamicParams = true;
 
 export default async function OverseasBlogArticlePage({
   params,
@@ -18,10 +19,12 @@ export default async function OverseasBlogArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = getOverseasArticle(slug);
+  const { items } =
+    await getInspireItemsServer<OverseasBlogItemsContent>("overseas-blog");
+  const article = items.find((a) => a.slug === slug);
   if (!article) notFound();
 
-  const related = OVERSEAS_ARTICLES.filter((a) => a.slug !== slug).slice(0, 3);
+  const related = items.filter((a) => a.slug !== slug).slice(0, 3);
 
   return (
     <>

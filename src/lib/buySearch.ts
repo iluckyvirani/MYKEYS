@@ -7,7 +7,6 @@ export interface BuySearchFilters {
   minBeds: string;
   maxBeds: string;
   addedToSite: string;
-  includeUnderOffer: boolean;
 }
 
 export const DEFAULT_BUY_SEARCH_FILTERS: BuySearchFilters = {
@@ -19,7 +18,6 @@ export const DEFAULT_BUY_SEARCH_FILTERS: BuySearchFilters = {
   minBeds: "",
   maxBeds: "",
   addedToSite: "",
-  includeUnderOffer: false,
 };
 
 export const PRICE_OPTIONS = [
@@ -70,12 +68,11 @@ export const RADIUS_OPTIONS = [
 export const PROPERTY_TYPE_OPTIONS = [
   { value: "", label: "Any" },
   { value: "HOUSE", label: "Houses" },
-  { value: "FLAT,APARTMENT", label: "Flats / Apartments" },
+  { value: "APARTMENT", label: "Flats / Apartments" },
   { value: "BUNGALOW", label: "Bungalows" },
-  { value: "STUDIO", label: "Studio" },
-  { value: "TOWNHOUSE", label: "Townhouse" },
-  { value: "VILLA", label: "Villa" },
-  { value: "PENTHOUSE", label: "Penthouse" },
+  { value: "LAND", label: "Land" },
+  { value: "COMMERCIAL", label: "Commercial Property" },
+  { value: "OTHER", label: "Other" },
 ];
 
 export const BED_OPTIONS = [
@@ -87,17 +84,25 @@ export const BED_OPTIONS = [
   { value: "4", label: "4" },
   { value: "5", label: "5" },
   { value: "6", label: "6" },
+  { value: "7", label: "7" },
+  { value: "8", label: "8" },
+  { value: "9", label: "9" },
+  { value: "10", label: "10" },
 ];
 
 export const MAX_BED_OPTIONS = [
   { value: "", label: "No max" },
+  { value: "0", label: "Studio" },
   { value: "1", label: "1" },
   { value: "2", label: "2" },
   { value: "3", label: "3" },
   { value: "4", label: "4" },
   { value: "5", label: "5" },
   { value: "6", label: "6" },
-  { value: "7", label: "7+" },
+  { value: "7", label: "7" },
+  { value: "8", label: "8" },
+  { value: "9", label: "9" },
+  { value: "10", label: "10" },
 ];
 
 export const ADDED_OPTIONS = [
@@ -110,6 +115,16 @@ export const ADDED_OPTIONS = [
 
 export function looksLikePostcode(value: string) {
   return /\d/.test(value);
+}
+
+/** UK outward code e.g. E14 9RZ → E14, SW1A 1AA → SW1A */
+export function ukOutwardPostcode(value: string): string {
+  const cleaned = value.trim().toUpperCase().replace(/\s+/g, " ");
+  const parts = cleaned.split(" ");
+  if (parts.length >= 2) return parts[0];
+  // Compact form E149RZ → E14
+  const m = cleaned.match(/^([A-Z]{1,2}\d{1,2}[A-Z]?)/);
+  return m?.[1] || cleaned;
 }
 
 export function filtersFromSearchParams(
@@ -131,7 +146,6 @@ export function filtersFromSearchParams(
     minBeds: params.get("minBeds") || "",
     maxBeds: params.get("maxBeds") || "",
     addedToSite: params.get("addedToSite") || "",
-    includeUnderOffer: params.get("includeUnderOffer") === "true",
   };
 }
 
@@ -152,7 +166,6 @@ export function filtersToSearchParams(filters: BuySearchFilters): URLSearchParam
   if (filters.minBeds) params.set("minBeds", filters.minBeds);
   if (filters.maxBeds) params.set("maxBeds", filters.maxBeds);
   if (filters.addedToSite) params.set("addedToSite", filters.addedToSite);
-  if (filters.includeUnderOffer) params.set("includeUnderOffer", "true");
   return params;
 }
 

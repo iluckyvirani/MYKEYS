@@ -288,25 +288,6 @@ export default function BuyResultsFilterBar({
                   ))}
                 </select>
               </div>
-
-              <div className="pt-2">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.includeUnderOffer}
-                    onChange={(e) =>
-                      onChange({
-                        ...filters,
-                        includeUnderOffer: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4 rounded border-gray-300 text-[#3db2ad] focus:ring-[#3db2ad] cursor-pointer"
-                  />
-                  <span className="text-sm font-medium text-slate-800">
-                    Include Under Offer, Sold STC
-                  </span>
-                </label>
-              </div>
             </div>
 
             <div className="flex items-center justify-between border-t pt-5 mt-6">

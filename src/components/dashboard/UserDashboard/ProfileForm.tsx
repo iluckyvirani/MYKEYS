@@ -146,10 +146,8 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
   };
 
   const validatePhone = (phone: string): boolean => {
-    if (!phone) return true; // Optional field
-    // Indian phone number: 10 digits starting with 6-9
-    const phoneRegex = /^[6-9]\d{9}$/;
-    return phoneRegex.test(phone.replace(/[\s-]/g, ''));
+    if (!phone) return true;
+    return /^[\d\s+()-]{7,20}$/.test(phone.trim());
   };
 
   const handleSave = async () => {
@@ -162,11 +160,11 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
     const errors: Record<string, string[]> = {};
     
     if (formData.phone && !validatePhone(formData.phone)) {
-      errors.phone = ["Invalid phone number format. Please enter a valid 10-digit Indian phone number starting with 6-9."];
+      errors.phone = ["Invalid phone number format."];
     }
     
     if (formData.emergencyContact && !validatePhone(formData.emergencyContact)) {
-      errors.emergencyContact = ["Invalid phone number format. Please enter a valid 10-digit Indian phone number starting with 6-9."];
+      errors.emergencyContact = ["Invalid phone number format."];
     }
 
     if (Object.keys(errors).length > 0) {

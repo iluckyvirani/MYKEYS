@@ -281,6 +281,19 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
         budget: body.budget || null,
         status: 'NEW',
         userId: user.userId,
+        lastMessageAt: new Date(),
+        lastMessageBy: user.userId,
+        unreadByOwner: 1,
+        unreadByAdmin: 1,
+        messages: {
+          create: {
+            content: body.message,
+            messageType: 'TEXT',
+            senderRole: 'USER',
+            senderId: user.userId,
+            readBy: [user.userId],
+          },
+        },
       },
       include: {
         property: {

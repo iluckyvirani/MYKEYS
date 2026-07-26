@@ -734,7 +734,14 @@ export default function OwnerChatPage({ params }: { params: Promise<{ id: string
               timestamp={inquiry.createdAt}
             />
 
-            {messages.map((msg) => {
+            {messages
+              .filter((msg, index) => {
+                // InquiryEntryCard already shows inquiry.message — skip seeded duplicate
+                if (index !== 0) return true;
+                if (msg.senderRole !== "USER" || msg.messageType !== "TEXT") return true;
+                return msg.content.trim() !== (inquiry.message || "").trim();
+              })
+              .map((msg) => {
               const isMe = msg.senderRole === "OWNER";
               const isSystem = msg.senderRole === "SYSTEM" || msg.messageType === "STATUS_CHANGE";
               const isNew = newMessageIds.has(msg.id);

@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
     Phone,
+    Mail,
     MapPin,
     Clock,
     MessageSquare,
     Building2,
     Users,
     Shield,
-    Headphones,
     Globe,
     Loader2,
 } from "lucide-react";
@@ -23,28 +23,30 @@ import FAQSection from "@/components/contact/FAQSection";
 import { api } from "@/lib/api";
 import { getContactDepartmentIcon } from "@/lib/contact/departmentIcons";
 import { ContactDepartmentItem } from "@/types/contactDepartment";
+import { DEFAULT_CONTACT_CONTENT } from "@/lib/content/siteDefaults";
 
 
 export default function ContactPage() {
     const [activeTab, setActiveTab] = useState("general");
-    const [supportPhone, setSupportPhone] = useState("+44 20 1234 5678");
-    const [supportEmail, setSupportEmail] = useState("support@propertyplatform.com");
-    const [supportDescription, setSupportDescription] = useState(
-        "Whether you're looking for a property, listing yours, or need support, our team is ready to assist you with our three-tier platform."
-    );
+    const [hero, setHero] = useState(DEFAULT_CONTACT_CONTENT.hero);
     const [departments, setDepartments] = useState<ContactDepartmentItem[]>([]);
     const [departmentsLoading, setDepartmentsLoading] = useState(true);
 
+    const supportPhone = hero.supportPhone;
+    const supportEmail = hero.supportEmail;
+    const supportDescription = hero.subtitle;
+
     useEffect(() => {
-        const fetchPlatformSettings = async () => {
+        const load = async () => {
             try {
-                const res = await api.get("/settings/platform");
-                const data = res.data?.data || {};
-                if (data.contactSupportPhone) setSupportPhone(data.contactSupportPhone);
-                if (data.contactSupportEmail) setSupportEmail(data.contactSupportEmail);
-                if (data.contactSupportDescription) setSupportDescription(data.contactSupportDescription);
+                const contentRes = await api.get("/content/contact").catch(() => null);
+                const heroData = contentRes?.data?.data?.hero;
+                setHero({
+                    ...DEFAULT_CONTACT_CONTENT.hero,
+                    ...(heroData || {}),
+                });
             } catch {
-                // Keep defaults if platform settings are unavailable
+                // keep defaults
             }
         };
 
@@ -59,7 +61,7 @@ export default function ContactPage() {
             }
         };
 
-        fetchPlatformSettings();
+        load();
         fetchDepartments();
     }, []);
 
@@ -77,9 +79,9 @@ export default function ContactPage() {
                             className="text-center"
                         >
                             <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-gray-900 mb-1 leading-tight tracking-tight">
-                                Get In Touch
+                                {hero.title}
                                 <span className="block text-green-600 mt-1">
-                                    We're Here to Help
+                                    {hero.titleHighlight}
                                 </span>
                             </h1>
 
@@ -88,21 +90,25 @@ export default function ContactPage() {
                             </p>
 
                             <div className="flex flex-wrap justify-center gap-4">
-                                <Button
-                                    size="lg"
-                                    className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-6 rounded-[5px] text-lg cursor-pointer"
-                                >
-                                    <Headphones className="w-5 h-5 mr-2" />
-                                    Live Chat Support
-                                </Button>
-                                <Button
-                                    size="lg"
-                                    variant="outline"
-                                    className="border-gray-200 text-gray-700 hover:bg-gray-50 px-8 py-6 rounded-[5px] text-lg cursor-pointer"
-                                >
-                                    <Phone className="w-5 h-5 mr-2" />
-                                    Call Now: {supportPhone}
-                                </Button>
+                                <a href={`tel:${supportPhone.replace(/\s/g, "")}`}>
+                                    <Button
+                                        size="lg"
+                                        className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-6 rounded-[5px] text-lg cursor-pointer"
+                                    >
+                                        <Phone className="w-5 h-5 mr-2" />
+                                        Call Now: {supportPhone}
+                                    </Button>
+                                </a>
+                                <a href={`mailto:${supportEmail}`}>
+                                    <Button
+                                        size="lg"
+                                        variant="outline"
+                                        className="border-gray-200 text-gray-700 hover:bg-gray-50 px-8 py-6 rounded-[5px] text-lg cursor-pointer"
+                                    >
+                                        <Mail className="w-5 h-5 mr-2" />
+                                        Email: {supportEmail}
+                                    </Button>
+                                </a>
                             </div>
                         </motion.div>
                     </div>
@@ -117,6 +123,8 @@ export default function ContactPage() {
                                 supportPhone={supportPhone}
                                 supportEmail={supportEmail}
                                 supportDescription={supportDescription}
+                                emergencyPhone={hero.emergencyPhone}
+                                emergencyNote={hero.emergencyNote}
                             />
                         </div>
 

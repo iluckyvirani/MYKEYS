@@ -21,16 +21,30 @@ const SUGGESTIONS = [
 interface RentLocationSearchProps {
   initialLocation?: string;
   kind?: RentKind;
+  title?: string;
+  placeholder?: string;
+  buttonLabel?: string;
 }
 
 export default function RentLocationSearch({
   initialLocation = "",
   kind = "whole-property",
+  title,
+  placeholder = "e.g. London, Manchester or SW1A 1AA",
+  buttonLabel = "Search",
 }: RentLocationSearchProps) {
   const router = useRouter();
   const [location, setLocation] = useState(initialLocation);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const base = rentBasePath(kind);
+
+  const heading =
+    title ||
+    (kind === "room-to-rent"
+      ? "Search rooms to rent"
+      : kind === "short-rent"
+        ? "Search short stays"
+        : "Search properties to rent");
 
   const filtered = location.trim()
     ? SUGGESTIONS.filter((s) =>
@@ -48,11 +62,7 @@ export default function RentLocationSearch({
     <section className="relative min-h-[320px] sm:min-h-[380px] flex items-center justify-center overflow-hidden bg-white pt-24 pb-14 border-b border-gray-100">
       <div className="relative z-10 w-full max-w-3xl px-4">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#0f3d36] mb-6">
-          {kind === "room-to-rent"
-            ? "Search rooms to rent"
-            : kind === "short-rent"
-              ? "Search short stays"
-              : "Search properties to rent"}
+          {heading}
         </h1>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -69,7 +79,7 @@ export default function RentLocationSearch({
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                 onKeyDown={(e) => e.key === "Enter" && goSearch(location)}
-                placeholder="e.g. London, Manchester or SW1A 1AA"
+                placeholder={placeholder}
                 className="w-full px-3 py-3.5 text-slate-900 outline-none text-base"
               />
             </div>
@@ -100,7 +110,7 @@ export default function RentLocationSearch({
             onClick={() => goSearch(location)}
             className="cursor-pointer shrink-0 px-8 py-3.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-base transition-colors"
           >
-            Search
+            {buttonLabel}
           </button>
         </div>
       </div>

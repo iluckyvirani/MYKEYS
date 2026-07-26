@@ -38,6 +38,7 @@ const userNavigation = [
   { name: "Service Bookings", href: "/user/dashboard/service-bookings", icon: Wrench },
   { name: "Inquiries", href: "/user/dashboard/inquiries", icon: MessageSquare },
   { name: "Favorites", href: "/user/dashboard/favorites", icon: Heart },
+  { name: "Saved searches", href: "/user/dashboard/saved-searches", icon: Bell },
   { name: "Services", href: "/user/dashboard/services", icon: Megaphone },
   { name: "Payments", href: "/user/dashboard/payments", icon: CreditCard },
   // { name: "Documents", href: "/user/dashboard/documents", icon: FileText },

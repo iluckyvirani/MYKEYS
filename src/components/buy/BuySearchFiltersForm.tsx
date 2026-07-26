@@ -162,16 +162,7 @@ export default function BuySearchFiltersForm({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <label className="flex items-center gap-2 text-sm text-slate-800 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filters.includeUnderOffer}
-              onChange={(e) => update({ includeUnderOffer: e.target.checked })}
-              className="rounded border-gray-300 cursor-pointer"
-            />
-            Include Under Offer, Sold STC
-          </label>
+        <div className="flex flex-col gap-3 justify-end">
           <button
             type="submit"
             className="cursor-pointer w-full h-12 rounded-md bg-green-600 hover:bg-green-700 text-white font-bold text-base transition-colors"

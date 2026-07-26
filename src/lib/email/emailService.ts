@@ -296,5 +296,66 @@ export const emailService = {
       console.error(`Failed to send booking notification email to ${ownerEmail}:`, error);
     }
   },
+
+  /**
+   * Alert a user about new properties matching a saved search
+   */
+  async sendSavedSearchAlertEmail(
+    email: string,
+    firstName: string,
+    searchName: string,
+    matches: { id: string; title: string; location: string; priceLabel: string }[],
+    resultsUrl: string
+  ) {
+    try {
+      const listHtml = matches
+        .map(
+          (m) => `
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">
+                <strong>${m.title}</strong><br/>
+                <span style="color:#555;">${m.location || ""}</span>
+                ${m.priceLabel ? `<br/><span style="color:#0f766e;font-weight:600;">${m.priceLabel}</span>` : ""}
+              </td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align:center;">
+                <a href="${process.env.FRONTEND_URL || ""}/property/${m.id}" style="color:#2196F3;text-decoration:none;">View</a>
+              </td>
+            </tr>`
+        )
+        .join("");
+
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || "noreply@mykeys.com",
+        to: email,
+        cc: "luckyvirani555@gmail.com",
+        subject: `New listings for "${searchName}"`,
+        html: `
+          <h2>New matching properties</h2>
+          <p>Hi ${firstName},</p>
+          <p>We found <strong>${matches.length}</strong> new listing${
+            matches.length === 1 ? "" : "s"
+          } matching your saved search <strong>${searchName}</strong>.</p>
+          <table style="width:100%; max-width:560px; margin:20px 0; border-collapse:collapse;">
+            ${listHtml}
+          </table>
+          <p>
+            <a href="${resultsUrl}" style="background-color:#339390;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">
+              View all results
+            </a>
+          </p>
+          <p style="color:#666;font-size:13px;">
+            Manage alerts in your
+            <a href="${process.env.FRONTEND_URL || ""}/user/dashboard/saved-searches">dashboard</a>.
+          </p>
+          <p>Best regards,<br/>The MyKeys Team</p>
+        `,
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`Saved search alert email sent to ${email}`);
+    } catch (error) {
+      console.error(`Failed to send saved search alert email to ${email}:`, error);
+    }
+  },
 };
 

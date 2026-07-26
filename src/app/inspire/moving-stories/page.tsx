@@ -14,10 +14,10 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import {
   LIST_PAGE_SIZE,
-  MOVING_STORIES,
-  SIDEBAR_FEATURED_STORY,
   type MovingStory,
 } from "@/lib/movingStories";
+import { useInspirePageContent } from "@/hooks/useInspirePageContent";
+import { useMovingStoriesList } from "@/hooks/useMovingStoriesList";
 
 function OverlayCard({
   story,
@@ -93,21 +93,26 @@ function ListRow({ story }: { story: MovingStory }) {
   );
 }
 
-function ShareSidebarBox() {
+function ShareSidebarBox({
+  title,
+  body,
+  buttonLabel,
+}: {
+  title: string;
+  body: string;
+  buttonLabel: string;
+}) {
   return (
     <div className="bg-[#f6f6f6] rounded-md p-5 sm:p-6">
       <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
-        We&apos;d love to hear your moving story
+        {title}
       </h3>
-      <p className="mt-3 text-sm text-slate-600 leading-relaxed">
-        Everyone has a moving story. Share yours with us for the chance to be
-        featured on MYKEYS.
-      </p>
+      <p className="mt-3 text-sm text-slate-600 leading-relaxed">{body}</p>
       <Link
         href="/contact"
         className="mt-5 flex items-center justify-center w-full h-11 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors cursor-pointer"
       >
-        Share your story
+        {buttonLabel}
       </Link>
     </div>
   );
@@ -171,21 +176,24 @@ function FollowUs() {
 }
 
 export default function MovingStoriesPage() {
-  const hero = MOVING_STORIES[0];
-  const sideA = MOVING_STORIES[1];
-  const sideB = MOVING_STORIES[2];
+  const content = useInspirePageContent("moving-stories");
+  const storyList = useMovingStoriesList();
+  const stories = storyList.items;
+  const hero = stories[0];
+  const sideA = stories[1];
+  const sideB = stories[2];
 
   const [page, setPage] = useState(1);
   const totalPages = Math.max(
     1,
-    Math.ceil((MOVING_STORIES.length - 3) / LIST_PAGE_SIZE)
+    Math.ceil(Math.max(0, stories.length - 3) / LIST_PAGE_SIZE)
   );
 
   const listStories = useMemo(() => {
-    const listAll = MOVING_STORIES.slice(3);
+    const listAll = stories.slice(3);
     const start = (page - 1) * LIST_PAGE_SIZE;
     return listAll.slice(start, start + LIST_PAGE_SIZE);
-  }, [page]);
+  }, [page, stories]);
 
   return (
     <>
@@ -195,11 +203,10 @@ export default function MovingStoriesPage() {
           {/* Title */}
           <header className="mb-8 md:mb-10">
             <h1 className="text-[32px] sm:text-[36px] md:text-[40px] font-bold text-[#1a1a2e] tracking-tight leading-tight">
-              Moving Stories
+              {content.hero.title}
             </h1>
             <p className="mt-2.5 text-[15px] sm:text-base text-[#4a4a5a] max-w-3xl leading-relaxed font-normal">
-              Homemovers share the stories behind their move, including why it
-              ended up being the right move.
+              {content.hero.subtitle}
             </p>
           </header>
 
@@ -262,8 +269,12 @@ export default function MovingStoriesPage() {
             </div>
 
             <aside className="space-y-6 lg:sticky lg:top-[96px]">
-              <ShareSidebarBox />
-              <SidebarFeaturedCard story={SIDEBAR_FEATURED_STORY} />
+              <ShareSidebarBox
+                title={content.sidebar?.title || ""}
+                body={content.sidebar?.body || ""}
+                buttonLabel={content.sidebar?.buttonLabel || ""}
+              />
+              <SidebarFeaturedCard story={storyList.featured} />
               <FollowUs />
             </aside>
           </section>

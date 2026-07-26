@@ -47,6 +47,8 @@ export interface UserDTO {
   companyName: string | null;
   taxId: string | null;
   website: string | null;
+  listingSellerType: "AGENT" | "PROPERTY_OWNER" | null;
+  agentLogo: string | null;
 
   createdAt: Date;
   updatedAt: Date;
@@ -173,6 +175,8 @@ export interface UpdateProfileRequest {
   companyName?: string;
   taxId?: string;
   website?: string;
+  listingSellerType?: "AGENT" | "PROPERTY_OWNER" | "";
+  agentLogo?: string;
 }
 
 /**

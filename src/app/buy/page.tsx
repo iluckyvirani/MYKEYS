@@ -7,6 +7,7 @@ import Footer from "@/components/layout/Footer";
 import BuyLocationSearch from "@/components/buy/BuyLocationSearch";
 import HowItWorks from "@/components/buy/HowItWorks";
 import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
+import { useListingPageContent } from "@/hooks/useListingPageContent";
 
 /** Kept for PropertyGrid / BuyFilters compatibility */
 export interface BuyFiltersState {
@@ -22,6 +23,7 @@ export interface BuyFiltersState {
 
 function BuyPageContent() {
   const searchParams = useSearchParams();
+  const content = useListingPageContent("buy");
   const initialLocation =
     searchParams.get("location") ||
     searchParams.get("city") ||
@@ -32,8 +34,20 @@ function BuyPageContent() {
     <>
       <Navbar />
       <main className="min-h-screen bg-white">
-        <BuyLocationSearch initialLocation={initialLocation} />
-        <HowItWorks />
+        <BuyLocationSearch
+          initialLocation={initialLocation}
+          title={content.hero.title}
+          placeholder={content.hero.placeholder}
+          buttonLabel={content.hero.buttonLabel}
+        />
+        <HowItWorks
+          title={content.howItWorks.title}
+          subtitle={content.howItWorks.subtitle}
+          ctaTitle={content.howItWorks.ctaTitle}
+          ctaSubtitle={content.howItWorks.ctaSubtitle}
+          ctaButtonLabel={content.howItWorks.ctaButtonLabel}
+          stats={content.howItWorks.stats}
+        />
         <section className="relative py-16 md:py-20 overflow-hidden bg-[#f3f8f7]">
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.35]"
@@ -48,8 +62,8 @@ function BuyPageContent() {
               categories={["BUY"]}
               showViewAll
               viewAllHref="/faq?category=BUY"
-              title="Buying Property FAQs"
-              subtitle="Clear answers about purchasing through MYKEYS — from offers to completion."
+              title={content.faq.title}
+              subtitle={content.faq.subtitle}
             />
           </div>
         </section>

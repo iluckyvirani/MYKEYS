@@ -4,10 +4,14 @@ import { ChevronLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { PROPERTY_NEWS } from "@/lib/propertyNews";
+import { getInspireItemsServer } from "@/lib/content/getInspireItemsServer";
+import type { PropertyNewsItemsContent } from "@/lib/content/inspireItems";
 
 export function generateStaticParams() {
   return PROPERTY_NEWS.map((a) => ({ slug: a.slug }));
 }
+
+export const dynamicParams = true;
 
 export default async function PropertyNewsArticlePage({
   params,
@@ -15,7 +19,9 @@ export default async function PropertyNewsArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = PROPERTY_NEWS.find((a) => a.slug === slug);
+  const { items } =
+    await getInspireItemsServer<PropertyNewsItemsContent>("property-news");
+  const article = items.find((a) => a.slug === slug);
   if (!article) notFound();
 
   return (

@@ -56,6 +56,9 @@ enum PropertyType {
   CONDOMINIUM
   TOWNHOUSE
   STUDIO
+  LAND
+  COMMERCIAL
+  OTHER
 }
 
 enum ListingType {
@@ -66,6 +69,12 @@ enum ListingType {
 enum RentalType {
   SHORT_TERM
   LONG_TERM
+}
+
+/// Long-let inventory: whole home vs room in a shared house
+enum OccupancyType {
+  WHOLE_PROPERTY
+  ROOM
 }
 
 enum PriceType {
@@ -107,6 +116,13 @@ enum InquiryStatus {
   REPLIED
   CLOSED
   CONVERTED
+}
+
+enum AlertFrequency {
+  INSTANTLY
+  DAILY
+  EVERY_3_DAYS
+  EVERY_7_DAYS
 }
 
 enum SubscriptionStatus {
@@ -254,6 +270,10 @@ model User {
   companyName String?
   taxId       String?
   website     String?
+  /// AGENT | PROPERTY_OWNER — how this owner lists on the marketplace
+  listingSellerType String?
+  /// Agency / brand logo shown on search result cards (required when AGENT)
+  agentLogo String?
 
   /// Stripe Customer ID for saved payment methods
   stripeCustomerId String? @unique
@@ -270,6 +290,7 @@ model User {
   adCampaigns     AdCampaign[]
   reports         Report[]
   favorites       Favorite[]
+  savedSearches   SavedSearch[]
   documents       Document[]     @relation("UserDocuments")
 
   // Phase 3 — Bids
@@ -356,8 +377,25 @@ model Property {
   minTerm        Int       @default(1) // months (standard in UK)
   maxTerm        Int?
   billsIncluded  Boolean?
+  /// WHOLE_PROPERTY | ROOM — only for LONG_TERM lets
+  occupancyType  OccupancyType?
   councilTaxBand String? // UK specific
-  epcRating      String? // UK Energy Performance Certificate
+  epcRating      String? // UK Energy Performance Certificate letter A–G
+  epcCurrentScore   Int?
+  epcPotentialScore Int?
+  /// UNFURNISHED | PART_FURNISHED | FURNISHED
+  furnishType    String?
+  /// NONE | PRIVATE | SHARED | COMMUNAL | ASK
+  garden         String?
+  /// NONE | ON_STREET | PERMIT | ALLOCATED | GARAGE | DRIVEWAY | ASK
+  parkingType    String?
+  accessibility  String?
+  /// Bullet features shown on details (separate from amenity tags)
+  keyFeatures    String[]  @default([])
+  /// { electricity, water, heating, broadband, sewerage, privateRightOfWay, publicRightOfWay, listedProperty, restrictions, floodedLast5Years, floodDefenses, floodSource }
+  utilities      Json?
+  broadbandSpeed String?
+  floodRisk      String?
 
   // Sale specific
   propertyPrice Float?
@@ -1011,6 +1049,35 @@ model Favorite {
   @@index([propertyId])
 }
 
+model SavedSearch {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Display name e.g. "Properties For Sale in London"
+  name String
+
+  listingType ListingType
+  rentalType  RentalType?
+
+  location String
+  /// Full filter snapshot (minPrice, maxPrice, beds, radius, etc.)
+  filters Json
+
+  /// When true, notify user about matching new listings
+  alertEnabled   Boolean         @default(false)
+  alertFrequency AlertFrequency?
+
+  lastNotifiedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, listingType])
+  @@index([alertEnabled])
+}
+
 // ==================== SERVICE MODELS ====================
 
 model ServiceProvider {
@@ -1338,4 +1405,18 @@ model Faq {
   @@index([category, status])
   @@index([status])
   @@index([featured])
+}
+
+/// CMS blocks for marketing pages (home first, then buy/rent/etc.)
+model PageSection {
+  id        String   @id @default(cuid())
+  page      String   // e.g. "home"
+  section   String   // e.g. "hero" | "categories" | "featured" | "testimonials" | "stats" | "faq"
+  content   Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([page, section])
+  @@index([page, isActive])
 }

@@ -11,15 +11,22 @@ import BuyResultsToolbar, {
 import BuyResultCard, {
   BuyResultCardProperty,
 } from "@/components/buy/BuyResultCard";
-import BuyResultsMap, {
-  ResultsMapProperty,
-} from "@/components/buy/BuyResultsMap";
+import BuyResultsMap from "@/components/buy/BuyResultsMap";
+import PropertyMapView, {
+  MapProperty,
+} from "@/components/property/PropertyMapView";
 import {
   BuySearchFilters,
   filtersFromSearchParams,
   filtersToSearchParams,
   looksLikePostcode,
 } from "@/lib/buySearch";
+import {
+  formatListingActivity,
+  formatListingAgentName,
+  resolveListingAgentLogo,
+} from "@/lib/listingCard";
+import { sortResultListings } from "@/lib/resultsSort";
 import { api } from "@/lib/api";
 
 function BuyResultsContent() {
@@ -29,11 +36,12 @@ function BuyResultsContent() {
     filtersFromSearchParams(searchParams)
   );
   const [properties, setProperties] = useState<BuyResultCardProperty[]>([]);
-  const [mapData, setMapData] = useState<ResultsMapProperty[]>([]);
+  const [mapData, setMapData] = useState<MapProperty[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState("highest");
+  const [sortBy, setSortBy] = useState("newest");
   const [mapView, setMapView] = useState(false);
+  const [drawnAreaIds, setDrawnAreaIds] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     setFilters(filtersFromSearchParams(searchParams));
@@ -61,47 +69,56 @@ function BuyResultsContent() {
       if (filters.minPrice) params.set("minPrice", filters.minPrice);
       if (filters.maxPrice) params.set("maxPrice", filters.maxPrice);
       if (filters.minBeds) params.set("bedrooms", filters.minBeds);
+      if (filters.maxBeds) params.set("maxBedrooms", filters.maxBeds);
       if (filters.propertyType) params.set("propertyType", filters.propertyType);
+      if (filters.addedToSite) params.set("addedWithinDays", filters.addedToSite);
+      if (filters.radius && filters.radius !== "0") {
+        params.set("radiusMiles", filters.radius);
+      }
 
       const response = await api.get(`/properties?${params.toString()}`);
 
       if (response.data?.success && response.data.data?.items) {
         const items = response.data.data.items;
 
-        let mapped: BuyResultCardProperty[] = items.map((property: any) => ({
-          id: property.id,
-          title: property.title,
-          address: [property.address, property.city, property.zipCode]
-            .filter(Boolean)
-            .join(", "),
-          price: `£${property.price?.toLocaleString() || "0"}`,
-          propertyPrice: `£${(property.propertyPrice || property.price)?.toLocaleString() || "0"}`,
-          beds: property.bedrooms || 0,
-          baths: property.bathrooms || 0,
-          propertyType: property.propertyType || "Property",
-          imageUrl: property.images?.[0]?.url || "/api/placeholder/400/300",
-          images: (property.images || [])
-            .slice(0, 3)
-            .map((img: any) => img.url)
-            .filter(Boolean),
-          description: property.description || "",
-          isFeatured: property.isFeatured || property.isBoosted || false,
-          imageCount: property.images?.length || 1,
-        }));
+        let mapped: BuyResultCardProperty[] = items.map((property: any) => {
+          const salePrice = property.propertyPrice || property.price || 0;
+          const activity = formatListingActivity({
+            createdAt: property.createdAt,
+            updatedAt: property.updatedAt,
+            price: salePrice,
+            originalPrice: property.originalPrice,
+          });
+          const owner = property.owner;
 
-        if (sortBy === "highest") {
-          mapped = [...mapped].sort((a, b) => {
-            const pa = parseFloat(a.propertyPrice.replace(/[^0-9.]/g, "")) || 0;
-            const pb = parseFloat(b.propertyPrice.replace(/[^0-9.]/g, "")) || 0;
-            return pb - pa;
-          });
-        } else if (sortBy === "lowest") {
-          mapped = [...mapped].sort((a, b) => {
-            const pa = parseFloat(a.propertyPrice.replace(/[^0-9.]/g, "")) || 0;
-            const pb = parseFloat(b.propertyPrice.replace(/[^0-9.]/g, "")) || 0;
-            return pa - pb;
-          });
-        }
+          return {
+            id: property.id,
+            title: property.title,
+            address: [property.address, property.city, property.zipCode]
+              .filter(Boolean)
+              .join(", "),
+            price: `£${salePrice?.toLocaleString() || "0"}`,
+            propertyPrice: `£${salePrice?.toLocaleString() || "0"}`,
+            beds: property.bedrooms || 0,
+            baths: property.bathrooms || 0,
+            propertyType: property.propertyType || "Property",
+            imageUrl: property.images?.[0]?.url || "/api/placeholder/400/300",
+            images: (property.images || [])
+              .map((img: any) => img.url)
+              .filter(Boolean),
+            description: property.description || "",
+            isFeatured: property.isFeatured || property.isBoosted || false,
+            imageCount: property.images?.length || 1,
+            listingActivity: activity.phrase,
+            isNewHome: activity.isNewHome,
+            createdAt: property.createdAt || undefined,
+            agentName: formatListingAgentName(owner),
+            agentPhone: owner?.phone || undefined,
+            agentLogoUrl: resolveListingAgentLogo(owner),
+          };
+        });
+
+        mapped = sortResultListings(mapped, sortBy);
 
         setProperties(mapped);
         setTotalCount(response.data.data.total || mapped.length);
@@ -121,6 +138,11 @@ function BuyResultsContent() {
               .filter(Boolean)
               .join(", "),
             imageUrl: property.images?.[0]?.url || "",
+            beds: property.bedrooms || 0,
+            baths: property.bathrooms || 0,
+            propertyType: property.propertyType || "Property",
+            listingType: "BUY",
+            priceType: "TOTAL",
           }))
         );
       } else {
@@ -140,6 +162,7 @@ function BuyResultsContent() {
 
   useEffect(() => {
     fetchProperties();
+    setDrawnAreaIds(null);
   }, [fetchProperties]);
 
   const applyFiltersToUrl = (next?: BuySearchFilters) => {
@@ -149,39 +172,71 @@ function BuyResultsContent() {
     router.push(`/buy/results?${params.toString()}`);
   };
 
+  const displayedProperties = drawnAreaIds
+    ? properties.filter((p) => drawnAreaIds.has(String(p.id)))
+    : properties;
+
   const listContent = loading ? (
     <div className="bg-white rounded-lg p-10 text-center text-slate-500 shadow-sm border border-gray-200">
       Loading properties…
     </div>
-  ) : properties.length === 0 ? (
+  ) : displayedProperties.length === 0 ? (
     <div className="bg-white rounded-lg p-10 text-center shadow-sm border border-gray-200">
       <p className="text-[#0f172a] font-semibold text-lg mb-2">
-        No properties found
+        {drawnAreaIds ? "No properties in drawn area" : "No properties found"}
       </p>
       <p className="text-slate-500 text-sm mb-6 max-w-md mx-auto">
-        We couldn&apos;t find any homes for sale
-        {filters.location ? ` in ${filters.location}` : ""}. Try another
-        location, widen your filters, or browse rentals nearby.
+        {drawnAreaIds
+          ? "Try drawing a larger area on the map, or clear the area filter."
+          : `We couldn't find any homes for sale${filters.location ? ` in ${filters.location}` : ""}. Try another location, widen your filters, or browse rentals nearby.`}
       </p>
       <div className="flex flex-wrap justify-center gap-3">
-        <button
-          type="button"
-          onClick={() => router.push("/buy")}
-          className="cursor-pointer px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white font-bold"
-        >
-          New search
-        </button>
-        <a
-          href={`/rent/whole-property/search?location=${encodeURIComponent(filters.location || "London")}`}
-          className="cursor-pointer px-4 py-2 rounded-md border border-green-600 text-green-700 font-bold hover:bg-green-50"
-        >
-          See rentals instead
-        </a>
+        {drawnAreaIds ? (
+          <button
+            type="button"
+            onClick={() => setDrawnAreaIds(null)}
+            className="cursor-pointer px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white font-bold"
+          >
+            Clear area filter
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => router.push("/buy")}
+              className="cursor-pointer px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white font-bold"
+            >
+              New search
+            </button>
+            <a
+              href={`/rent/whole-property/search?location=${encodeURIComponent(filters.location || "London")}`}
+              className="cursor-pointer px-4 py-2 rounded-md border border-green-600 text-green-700 font-bold hover:bg-green-50"
+            >
+              See rentals instead
+            </a>
+          </>
+        )}
       </div>
     </div>
   ) : (
     <div className="space-y-5">
-      {properties.map((property) => (
+      {drawnAreaIds && (
+        <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm text-slate-700 flex items-center justify-between gap-3">
+          <span>
+            <span className="font-semibold">{displayedProperties.length}</span>{" "}
+            {displayedProperties.length === 1 ? "property" : "properties"} in
+            drawn area
+          </span>
+          <button
+            type="button"
+            onClick={() => setDrawnAreaIds(null)}
+            className="text-green-700 font-semibold hover:underline cursor-pointer"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+      {displayedProperties.map((property) => (
         <BuyResultCard key={property.id} property={property} />
       ))}
     </div>
@@ -190,6 +245,20 @@ function BuyResultsContent() {
   return (
     <>
       <Navbar />
+      {mapView && (
+        <div className="fixed inset-0 top-[72px] md:top-[80px] z-40 bg-white">
+          <PropertyMapView
+            properties={mapData}
+            searchLocation={filters.location}
+            onBackToList={(filteredIds) => {
+              setMapView(false);
+              if (filteredIds !== undefined) {
+                setDrawnAreaIds(new Set(filteredIds));
+              }
+            }}
+          />
+        </div>
+      )}
       {/*
         Rightmove ulta-L:
         1) Filters bar = 100% width (dark)
@@ -197,7 +266,7 @@ function BuyResultsContent() {
         3) LEFT = gray + result cards | RIGHT = white + map
            (white top + white right = ulta L)
       */}
-      <main className="min-h-screen bg-white pt-[72px] md:pt-[80px]">
+      <main className={`min-h-screen bg-white pt-[72px] md:pt-[80px] ${mapView ? "hidden" : ""}`}>
         {/* 1) FILTERS — full 100% */}
         <BuyResultsFilterBar
           filters={filters}
@@ -206,7 +275,7 @@ function BuyResultsContent() {
         />
 
         {/* 2) WHITE top of ulta-L */}
-        <BuyResultsBreadcrumbBar location={filters.location} />
+        <BuyResultsBreadcrumbBar location={filters.location} filters={filters} />
 
         {/* 3) LEFT results (gray) + RIGHT map (white) */}
         <div className="flex w-full items-stretch min-h-[75vh]">
@@ -215,7 +284,7 @@ function BuyResultsContent() {
             <div className="bg-white px-4 sm:px-6 py-3.5 border-b border-gray-200">
               <BuyResultsToolbar
                 location={filters.location}
-                totalCount={totalCount}
+                totalCount={drawnAreaIds ? displayedProperties.length : totalCount}
                 loading={loading}
                 sortBy={sortBy}
                 onSortChange={setSortBy}
@@ -234,7 +303,6 @@ function BuyResultsContent() {
               <BuyResultsMap
                 properties={mapData}
                 locationLabel={filters.location}
-                tall={mapView}
                 onShowMapView={() => setMapView(true)}
               />
               <a
@@ -259,7 +327,7 @@ function BuyResultsContent() {
           />
         </div>
       </main>
-      <Footer />
+      {!mapView && <Footer />}
     </>
   );
 }

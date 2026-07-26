@@ -392,6 +392,36 @@ export const POST = withAuth(
           checkOutTime: propertyData.checkOutTime || undefined,
           selfCheckIn: propertyData.selfCheckIn ?? false,
           parking: propertyData.parking ?? false,
+          availableFrom: propertyData.availableFrom
+            ? new Date(propertyData.availableFrom)
+            : undefined,
+          minTerm: propertyData.minTerm ? parseInt(propertyData.minTerm) : undefined,
+          maxTerm: propertyData.maxTerm ? parseInt(propertyData.maxTerm) : undefined,
+          billsIncluded: propertyData.billsIncluded ?? undefined,
+          occupancyType:
+            propertyData.rentalType === "LONG_TERM"
+              ? propertyData.occupancyType === "ROOM"
+                ? "ROOM"
+                : "WHOLE_PROPERTY"
+              : undefined,
+          councilTaxBand: propertyData.councilTaxBand || undefined,
+          epcRating: propertyData.epcRating || undefined,
+          epcCurrentScore: propertyData.epcCurrentScore
+            ? parseInt(propertyData.epcCurrentScore, 10)
+            : undefined,
+          epcPotentialScore: propertyData.epcPotentialScore
+            ? parseInt(propertyData.epcPotentialScore, 10)
+            : undefined,
+          furnishType: propertyData.furnishType || undefined,
+          garden: propertyData.garden || undefined,
+          parkingType: propertyData.parkingType || undefined,
+          accessibility: propertyData.accessibility || undefined,
+          keyFeatures: Array.isArray(propertyData.keyFeatures)
+            ? propertyData.keyFeatures
+            : [],
+          utilities: propertyData.utilities || undefined,
+          broadbandSpeed: propertyData.broadbandSpeed || undefined,
+          floodRisk: propertyData.floodRisk || undefined,
           // Buy-specific
           propertyPrice: propertyData.propertyPrice ? parseFloat(propertyData.propertyPrice) : undefined,
           yearBuilt: propertyData.yearBuilt ? parseInt(propertyData.yearBuilt) : undefined,

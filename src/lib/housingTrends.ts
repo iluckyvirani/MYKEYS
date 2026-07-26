@@ -18,11 +18,41 @@ export const HPI_SUMMARY_BULLETS = [
 ];
 
 export const HPI_PAST_REPORTS = [
-  "July 2026 House Price Index",
-  "June 2026 House Price Index",
-  "May 2026 House Price Index",
-  "April 2026 House Price Index",
-];
+  {
+    label: "July 2026 House Price Index",
+    href: "/inspire/housing-trends#summary",
+  },
+  {
+    label: "June 2026 House Price Index",
+    href: "/inspire/housing-trends#summary",
+  },
+  {
+    label: "May 2026 House Price Index",
+    href: "/inspire/housing-trends#summary",
+  },
+  {
+    label: "April 2026 House Price Index",
+    href: "/inspire/housing-trends#summary",
+  },
+] as const;
+
+export const HOUSING_TRENDS_HERO_IMAGE =
+  "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1600&q=80";
+
+export const HPI_DOWNLOAD_URL = "/inspire/housing-trends#summary";
+
+export const HPI_SUMMARY_HEADLINE =
+  "Summer buyers distracted by sunshine, football and political change";
+
+export type HousingTrendsItemsContent = {
+  heroImage: string;
+  publishedDate: string;
+  downloadUrl: string;
+  downloadLabel: string;
+  summaryHeadline: string;
+  summaryBullets: string[];
+  pastReports: { label: string; href: string }[];
+};
 
 /** Approximate monthly avg asking prices Aug 2025 – Jul 2026 for chart */
 export const MONTHLY_PRICE_TREND = [

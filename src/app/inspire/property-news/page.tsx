@@ -13,11 +13,12 @@ import {
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import {
-  PROPERTY_NEWS,
   PROPERTY_NEWS_CATEGORIES,
-  PROPERTY_NEWS_SIDEBAR_STORY,
   type PropertyNewsArticle,
 } from "@/lib/propertyNews";
+import { useInspirePageContent } from "@/hooks/useInspirePageContent";
+import { useInspireItems } from "@/hooks/useInspireItems";
+import type { PropertyNewsItemsContent } from "@/lib/content/inspireItems";
 
 function HeroOverlayCard({
   article,
@@ -105,17 +106,20 @@ function NewsGridCard({ article }: { article: PropertyNewsArticle }) {
 }
 
 export default function PropertyNewsPage() {
+  const content = useInspirePageContent("property-news");
+  const { items: articles, featured } =
+    useInspireItems<PropertyNewsItemsContent>("property-news");
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  const hero = PROPERTY_NEWS[0];
-  const sideA = PROPERTY_NEWS[1];
-  const sideB = PROPERTY_NEWS[2];
+  const hero = articles[0];
+  const sideA = articles[1];
+  const sideB = articles[2];
 
   const gridArticles = useMemo(() => {
-    let items = PROPERTY_NEWS.slice(3);
+    let items = articles.slice(3);
     if (activeCategory) {
-      items = PROPERTY_NEWS.filter((a) => a.category === activeCategory);
+      items = articles.filter((a) => a.category === activeCategory);
     }
     if (query.trim()) {
       const q = query.trim().toLowerCase();
@@ -126,7 +130,7 @@ export default function PropertyNewsPage() {
       );
     }
     return items;
-  }, [activeCategory, query]);
+  }, [activeCategory, query, articles]);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,11 +143,10 @@ export default function PropertyNewsPage() {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8 md:py-10">
           <header className="mb-8 md:mb-10">
             <h1 className="text-[32px] sm:text-[36px] md:text-[40px] font-bold text-[#1a1a2e] tracking-tight leading-tight">
-              Property news
+              {content.hero.title}
             </h1>
             <p className="mt-2.5 text-[15px] sm:text-base text-[#4a4a5a] max-w-3xl leading-relaxed font-normal">
-              The latest on the housing market, property inspiration and
-              home-moving news.
+              {content.hero.subtitle}
             </p>
           </header>
 
@@ -234,12 +237,12 @@ export default function PropertyNewsPage() {
               </div>
 
               <Link
-                href={`/inspire/moving-stories/${PROPERTY_NEWS_SIDEBAR_STORY.slug}`}
+                href={`/inspire/moving-stories/${featured.slug}`}
                 className="group relative block overflow-hidden rounded-md bg-slate-200 aspect-[4/3] cursor-pointer"
               >
                 <img
-                  src={PROPERTY_NEWS_SIDEBAR_STORY.image}
-                  alt={PROPERTY_NEWS_SIDEBAR_STORY.imageAlt}
+                  src={featured.image}
+                  alt={featured.imageAlt}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
                 <div className="absolute left-3 right-3 bottom-3">
@@ -249,10 +252,10 @@ export default function PropertyNewsPage() {
                       Moving Stories
                     </div>
                     <p className="text-[14px] font-bold text-slate-900 leading-snug">
-                      {PROPERTY_NEWS_SIDEBAR_STORY.title}
+                      {featured.title}
                     </p>
                     <span className="mt-2 inline-flex items-center gap-0.5 text-sm font-bold text-green-600">
-                      {PROPERTY_NEWS_SIDEBAR_STORY.cta}
+                      {featured.cta}
                       <ChevronRight className="w-4 h-4" />
                     </span>
                   </div>

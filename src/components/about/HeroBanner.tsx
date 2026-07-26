@@ -2,43 +2,38 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  Home,
-  Building,
-  TrendingUp,
-  Building2,
-  Hotel
-} from "lucide-react";
+import { Home, Building, TrendingUp, Building2, Hotel } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { AboutPageContent } from "@/lib/content/aboutDefaults";
+import { DEFAULT_ABOUT_CONTENT } from "@/lib/content/aboutDefaults";
 
-const featureCards = [
+const CARD_META = [
   {
-    title: "Short Stays",
-    description: "Book instantly. Pay per night. Full Airbnb-style experience with verified properties.",
     icon: Hotel,
-    href: "/rent/short-rent",
     iconClass: "from-green-500 to-emerald-600",
     hoverBorder: "hover:border-green-400/50",
   },
   {
-    title: "Rentals",
-    description: "Connect directly with owners. 2+ month stays. No agent fees. Better deals.",
     icon: Building2,
-    href: "/rent/whole-property",
     iconClass: "from-blue-500 to-cyan-600",
     hoverBorder: "hover:border-blue-400/50",
   },
   {
-    title: "Property Purchase",
-    description: "Buy directly from owners. Transparent pricing. Complete documentation support.",
     icon: TrendingUp,
-    href: "/buy",
     iconClass: "from-purple-500 to-violet-600",
     hoverBorder: "hover:border-purple-400/50",
   },
 ];
 
-export default function HeroBanner() {
+export default function HeroBanner({
+  content = DEFAULT_ABOUT_CONTENT.hero,
+}: {
+  content?: AboutPageContent["hero"];
+}) {
+  const cards = content.cards?.length
+    ? content.cards
+    : DEFAULT_ABOUT_CONTENT.hero.cards;
+
   return (
     <section className="relative h-screen min-h-125 flex items-center justify-center overflow-hidden bg-white border-b border-gray-100">
       <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -49,16 +44,14 @@ export default function HeroBanner() {
             transition={{ duration: 0.8 }}
           >
             <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-gray-900 mb-1 leading-tight tracking-tight">
-              One Platform,
+              {content.title}
               <span className="block text-green-600 mt-1">
-                Three Ways to Property
+                {content.titleHighlight}
               </span>
             </h1>
 
             <p className="font-spartan text-lg sm:text-md text-gray-600 max-w-lg mx-auto mb-5 font-light">
-              We're revolutionizing property transactions with our unified platform.
-              Whether you need a short stay, long-term rental, or want to buy a home -
-              we've got you covered with transparent pricing and direct owner connections.
+              {content.subtitle}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -69,7 +62,7 @@ export default function HeroBanner() {
               >
                 <Link href="/how-listing-works">
                   <Building className="w-5 h-5 mr-2" />
-                  List Your Property
+                  {content.primaryCta || "List Your Property"}
                 </Link>
               </Button>
               <Button
@@ -80,32 +73,36 @@ export default function HeroBanner() {
               >
                 <Link href="/buy">
                   <Home className="w-5 h-5 mr-2" />
-                  Find Properties
+                  {content.secondaryCta || "Find Properties"}
                 </Link>
               </Button>
             </div>
           </motion.div>
         </div>
 
-        {/* Feature Cards */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mt-10"
         >
-          {featureCards.map((card) => {
-            const Icon = card.icon;
+          {cards.map((card, index) => {
+            const meta = CARD_META[index % CARD_META.length];
+            const Icon = meta.icon;
             return (
               <Link
-                key={card.href}
+                key={`${card.href}-${index}`}
                 href={card.href}
-                className={`block bg-gray-50 rounded-[5px] p-6 border border-gray-100 ${card.hoverBorder} transition-all duration-300 hover:scale-105`}
+                className={`block bg-gray-50 rounded-[5px] p-6 border border-gray-100 ${meta.hoverBorder} transition-all duration-300 hover:scale-105`}
               >
-                <div className={`w-12 h-12 bg-linear-to-br ${card.iconClass} rounded-lg flex items-center justify-center mb-4`}>
+                <div
+                  className={`w-12 h-12 bg-linear-to-br ${meta.iconClass} rounded-lg flex items-center justify-center mb-4`}
+                >
                   <Icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{card.title}</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  {card.title}
+                </h3>
                 <p className="text-gray-600">{card.description}</p>
               </Link>
             );
@@ -113,7 +110,6 @@ export default function HeroBanner() {
         </motion.div>
       </div>
 
-      {/* Scroll Indicator */}
       <motion.div
         animate={{ y: [0, 10, 0] }}
         transition={{ repeat: Infinity, duration: 1.5 }}

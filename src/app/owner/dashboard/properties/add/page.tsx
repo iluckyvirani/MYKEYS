@@ -34,6 +34,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/lib/api";
 import LocationPickerMap, { LocationResult } from "@/components/common/LocationPickerMap";
+import PropertyUkExtraFields, {
+  DEFAULT_UK_EXTRA,
+  type PropertyUkExtraValues,
+} from "@/components/property/PropertyUkExtraFields";
 import {
   formatCommissionPercent,
   useShortRentCommission,
@@ -47,7 +51,9 @@ const propertyTypes = [
   { value: "PENTHOUSE", label: "Penthouse", icon: Building },
   { value: "COTTAGE", label: "Cottage", icon: Home },
   { value: "BUNGALOW", label: "Bungalow", icon: Home },
-  { value: "COMMERCIAL", label: "Commercial", icon: Building },
+  { value: "LAND", label: "Land", icon: Home },
+  { value: "COMMERCIAL", label: "Commercial Property", icon: Building },
+  { value: "OTHER", label: "Other", icon: Building },
 ];
 
 interface AmenityOption {
@@ -277,12 +283,18 @@ export default function AddPropertyPage() {
     maxTerm: "24",
     availableFrom: "",
     billsIncluded: false,
+    occupancyType: "WHOLE_PROPERTY",
     councilTaxBand: "",
     epcRating: "",
     
     // Features
     amenities: [] as string[],
     images: [] as Array<{ url: string; name: string }>,
+  });
+
+  const [ukExtra, setUkExtra] = useState<PropertyUkExtraValues>({
+    ...DEFAULT_UK_EXTRA,
+    utilities: { ...DEFAULT_UK_EXTRA.utilities },
   });
 
   // Fetch amenities on component mount
@@ -553,6 +565,8 @@ export default function AddPropertyPage() {
           payload.maxTerm = formData.maxTerm ? parseInt(formData.maxTerm) : null;
           payload.availableFrom = formData.availableFrom ? new Date(formData.availableFrom).toISOString() : null;
           payload.billsIncluded = formData.billsIncluded;
+          payload.occupancyType =
+            formData.occupancyType === "ROOM" ? "ROOM" : "WHOLE_PROPERTY";
           payload.councilTaxBand = formData.councilTaxBand || null;
           payload.epcRating = formData.epcRating || null;
           payload.yearBuilt = formData.yearBuilt ? parseInt(formData.yearBuilt) : null;
@@ -572,6 +586,24 @@ export default function AddPropertyPage() {
         payload.price = parseInt(formData.propertyPrice);
         payload.priceType = "TOTAL";
       }
+
+      payload.furnishType = ukExtra.furnishType || null;
+      payload.garden = ukExtra.garden || null;
+      payload.parkingType = ukExtra.parkingType || null;
+      payload.accessibility = ukExtra.accessibility || null;
+      payload.epcCurrentScore = ukExtra.epcCurrentScore
+        ? parseInt(ukExtra.epcCurrentScore, 10)
+        : null;
+      payload.epcPotentialScore = ukExtra.epcPotentialScore
+        ? parseInt(ukExtra.epcPotentialScore, 10)
+        : null;
+      payload.keyFeatures = ukExtra.keyFeaturesText
+        .split(/\n|,/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      payload.broadbandSpeed = ukExtra.broadbandSpeed || null;
+      payload.floodRisk = ukExtra.floodRisk || null;
+      payload.utilities = ukExtra.utilities;
 
       const response = await api.post("/properties", payload);
       
@@ -1239,6 +1271,34 @@ export default function AddPropertyPage() {
             {rentalType === "long" && (
               <>
                 <div>
+                  <Label>Let type *</Label>
+                  <div className="mt-2 flex flex-wrap gap-4">
+                    <label className="flex items-center cursor-pointer gap-2">
+                      <input
+                        type="radio"
+                        name="occupancyType"
+                        value="WHOLE_PROPERTY"
+                        checked={formData.occupancyType === "WHOLE_PROPERTY"}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-gray-700">Whole property</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer gap-2">
+                      <input
+                        type="radio"
+                        name="occupancyType"
+                        value="ROOM"
+                        checked={formData.occupancyType === "ROOM"}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-gray-700">Room to rent</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
                   <Label htmlFor="securityDeposit">Security Deposit</Label>
                   <Input
                     id="securityDeposit"
@@ -1365,6 +1425,26 @@ export default function AddPropertyPage() {
 
   const renderStep3 = () => (
     <div className="space-y-6">
+      <PropertyUkExtraFields
+        values={ukExtra}
+        onChange={(patch) =>
+          setUkExtra((prev) => ({
+            ...prev,
+            ...patch,
+            utilities: patch.utilities
+              ? { ...prev.utilities, ...patch.utilities }
+              : prev.utilities,
+          }))
+        }
+        onUtilityChange={(key, value) =>
+          setUkExtra((prev) => ({
+            ...prev,
+            utilities: { ...prev.utilities, [key]: value },
+          }))
+        }
+        showLettingFields
+      />
+
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Amenities</h3>
         <p className="text-sm text-gray-600 mb-6">Select amenities available in your property</p>
