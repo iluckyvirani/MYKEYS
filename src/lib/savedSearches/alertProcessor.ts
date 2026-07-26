@@ -4,7 +4,7 @@ import { savedSearchResultsHref } from "@/lib/savedSearches/resultsUrl";
 import type { AlertFrequency, Prisma } from "@prisma/client";
 
 const FREQUENCY_MS: Record<AlertFrequency, number> = {
-  INSTANTLY: 60 * 60 * 1000, // hourly cron cadence
+  INSTANTLY: 24 * 60 * 60 * 1000, // Hobby cron is daily; treat as next daily run
   DAILY: 24 * 60 * 60 * 1000,
   EVERY_3_DAYS: 3 * 24 * 60 * 60 * 1000,
   EVERY_7_DAYS: 7 * 24 * 60 * 60 * 1000,
