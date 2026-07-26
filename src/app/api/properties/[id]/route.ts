@@ -83,7 +83,7 @@ export async function GET(
       if (docState.hasRejected) {
         return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
       }
-    } else if (property.status !== "ACTIVE") {
+    } else {
       // Non-active listings are not publicly viewable
       return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
     }
