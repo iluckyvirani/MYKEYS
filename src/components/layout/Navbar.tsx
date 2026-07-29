@@ -196,7 +196,7 @@ export default function Navbar() {
             {/* Desktop nav */}
             <div className="hidden lg:flex items-center gap-1 ml-auto mr-4">
               <Link href="/buy" className={`group ${linkClass(pathname === "/buy")}`}>
-                BUY
+                Buy
                 <span className={underlineClass(pathname === "/buy")} />
               </Link>
 
@@ -280,7 +280,7 @@ export default function Navbar() {
                     className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-800 border border-green-500 rounded-full hover:bg-green-50 transition-colors"
                   >
                     <UserIcon className="w-4 h-4" />
-                    MY KEY Dashboard
+                    MYKEYS Dashboard
                     <ChevronDown
                       className={`w-4 h-4 transition-transform ${openMenu === "dashboard" ? "rotate-180" : ""
                         }`}
@@ -611,7 +611,7 @@ export default function Navbar() {
                     className="block py-3 px-4 rounded-lg font-semibold text-slate-800 hover:bg-gray-100"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    BUY
+                    Buy
                   </Link>
 
                   <button
@@ -691,7 +691,7 @@ export default function Navbar() {
                         className="w-full flex items-center justify-between py-3 px-4 rounded-lg font-semibold text-slate-800 bg-green-50 border border-green-200"
                         onClick={() => setMobileDashboardOpen(!mobileDashboardOpen)}
                       >
-                        MY KEY Dashboard
+                        MYKEYS Dashboard
                         <ChevronDown className={`w-4 h-4 transition-transform ${mobileDashboardOpen ? "rotate-180" : ""}`} />
                       </button>
                       {mobileDashboardOpen && (

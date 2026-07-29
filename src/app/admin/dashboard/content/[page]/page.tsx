@@ -143,6 +143,11 @@ export default function AdminSitePageContentPage() {
               content.howItWorks.stats.length > 0
                 ? content.howItWorks.stats
                 : defaults.howItWorks.stats,
+            benefits:
+              Array.isArray(content.howItWorks?.benefits) &&
+              content.howItWorks.benefits.length > 0
+                ? content.howItWorks.benefits
+                : defaults.howItWorks.benefits,
           },
           faq: { ...defaults.faq, ...(content.faq || {}) },
         });
@@ -407,6 +412,7 @@ export default function AdminSitePageContentPage() {
               <ContentField
                 label="Support phone"
                 value={contactHero.supportPhone}
+                hint="Also shown in the site footer"
                 onChange={(v) =>
                   setContactHero((h) => ({ ...h, supportPhone: v }))
                 }
@@ -414,11 +420,20 @@ export default function AdminSitePageContentPage() {
               <ContentField
                 label="Support email"
                 value={contactHero.supportEmail}
+                hint="Also shown in the site footer"
                 onChange={(v) =>
                   setContactHero((h) => ({ ...h, supportEmail: v }))
                 }
               />
             </div>
+            <ContentTextArea
+              label="Office address"
+              value={contactHero.officeAddress || ""}
+              hint="Shown in the site footer Get in Touch column"
+              onChange={(v) =>
+                setContactHero((h) => ({ ...h, officeAddress: v }))
+              }
+            />
             <ContentField
               label="Emergency phone"
               value={contactHero.emergencyPhone}
@@ -551,6 +566,7 @@ export default function AdminSitePageContentPage() {
 }
 
 function ListingEditor({
+  page,
   section,
   listing,
   setListing,
@@ -596,6 +612,9 @@ function ListingEditor({
 
   if (section === "howItWorks") {
     const stats = listing.howItWorks.stats || [];
+    const benefits = listing.howItWorks.benefits || ["", "", "", ""];
+    const isShortStay = page === "short-stay";
+
     return (
       <div className="space-y-6 max-w-2xl">
         <ContentField
@@ -620,11 +639,17 @@ function ListingEditor({
         />
 
         <div className="border-t border-gray-200 pt-5 space-y-5">
-          <h3 className="font-semibold text-gray-900">CTA banner</h3>
+          <h3 className="font-semibold text-gray-900">
+            {isShortStay ? "Why book banner" : "CTA banner"}
+          </h3>
           <ContentField
-            label="CTA title"
+            label={isShortStay ? "Banner title" : "CTA title"}
             value={listing.howItWorks.ctaTitle || ""}
-            hint='e.g. "Ready to find your dream home?"'
+            hint={
+              isShortStay
+                ? 'e.g. "Why Book Short Rents with Hously?"'
+                : 'e.g. "Ready to find your dream home?"'
+            }
             onChange={(v) =>
               setListing((c) => ({
                 ...c,
@@ -632,32 +657,91 @@ function ListingEditor({
               }))
             }
           />
-          <ContentTextArea
-            label="CTA description"
-            value={listing.howItWorks.ctaSubtitle || ""}
-            onChange={(v) =>
-              setListing((c) => ({
-                ...c,
-                howItWorks: { ...c.howItWorks, ctaSubtitle: v },
-              }))
-            }
-          />
-          <ContentField
-            label="CTA button label"
-            value={listing.howItWorks.ctaButtonLabel || ""}
-            onChange={(v) =>
-              setListing((c) => ({
-                ...c,
-                howItWorks: { ...c.howItWorks, ctaButtonLabel: v },
-              }))
-            }
-          />
+          {!isShortStay && (
+            <>
+              <ContentTextArea
+                label="CTA description"
+                value={listing.howItWorks.ctaSubtitle || ""}
+                onChange={(v) =>
+                  setListing((c) => ({
+                    ...c,
+                    howItWorks: { ...c.howItWorks, ctaSubtitle: v },
+                  }))
+                }
+              />
+              <ContentField
+                label="CTA button label"
+                value={listing.howItWorks.ctaButtonLabel || ""}
+                onChange={(v) =>
+                  setListing((c) => ({
+                    ...c,
+                    howItWorks: { ...c.howItWorks, ctaButtonLabel: v },
+                  }))
+                }
+              />
+            </>
+          )}
         </div>
+
+        {isShortStay && (
+          <div className="border-t border-gray-200 pt-5 space-y-4">
+            <h3 className="font-semibold text-gray-900">Benefit bullets</h3>
+            <p className="text-xs text-gray-500">
+              Left-side checklist in the why-book box (up to 6 items).
+            </p>
+            {(benefits.length > 0 ? benefits : ["", "", "", ""])
+              .slice(0, 6)
+              .map((item, idx) => (
+                <ContentField
+                  key={idx}
+                  label={`Benefit ${idx + 1}`}
+                  value={item}
+                  placeholder="Secure payment protection"
+                  onChange={(v) =>
+                    setListing((c) => {
+                      const next = [
+                        ...(c.howItWorks.benefits || ["", "", "", ""]),
+                      ];
+                      while (next.length <= idx) next.push("");
+                      next[idx] = v;
+                      return {
+                        ...c,
+                        howItWorks: {
+                          ...c.howItWorks,
+                          benefits: next,
+                        },
+                      };
+                    })
+                  }
+                />
+              ))}
+            {(listing.howItWorks.benefits || []).length < 6 && (
+              <Button
+                type="button"
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() =>
+                  setListing((c) => ({
+                    ...c,
+                    howItWorks: {
+                      ...c.howItWorks,
+                      benefits: [...(c.howItWorks.benefits || []), ""],
+                    },
+                  }))
+                }
+              >
+                Add benefit
+              </Button>
+            )}
+          </div>
+        )}
 
         <div className="border-t border-gray-200 pt-5 space-y-4">
           <h3 className="font-semibold text-gray-900">Stats cards</h3>
           <p className="text-xs text-gray-500">
-            Four highlight numbers shown next to the CTA (Buy page).
+            {isShortStay
+              ? "Four highlight numbers on the right of the why-book box."
+              : "Four highlight numbers shown next to the CTA (Buy page)."}
           </p>
           {(stats.length > 0
             ? stats
@@ -677,7 +761,7 @@ function ListingEditor({
                 <ContentField
                   label={`Stat ${idx + 1} value`}
                   value={stat.value}
-                  placeholder="£15,000"
+                  placeholder={isShortStay ? "£0" : "£15,000"}
                   onChange={(v) =>
                     setListing((c) => {
                       const next = [
@@ -700,7 +784,9 @@ function ListingEditor({
                 <ContentField
                   label={`Stat ${idx + 1} label`}
                   value={stat.label}
-                  placeholder="Avg. saving vs agents"
+                  placeholder={
+                    isShortStay ? "Booking fees" : "Avg. saving vs agents"
+                  }
                   onChange={(v) =>
                     setListing((c) => {
                       const next = [

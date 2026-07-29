@@ -113,14 +113,18 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white">
         {/* Logo */}
         <div className="shrink-0 flex items-center justify-center px-5 py-5">
-          <div className="flex items-center gap-2.5">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
+            aria-label="MYKEYS home"
+          >
             <div className="w-9 h-9 rounded-lg bg-linear-to-r from-green-600 to-emerald-500 flex items-center justify-center">
               <Key className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold font-spartan text-gray-900">
               MYKEYS
             </span>
-          </div>
+          </Link>
         </div>
 
         {/* Navigation — scrollable on short laptop screens */}
@@ -166,14 +170,19 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         )}
       >
         <div className="shrink-0 flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2.5">
+          <Link
+            href="/"
+            onClick={onClose}
+            className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
+            aria-label="MYKEYS home"
+          >
             <div className="w-9 h-9 rounded-lg bg-linear-to-r from-green-600 to-emerald-500 flex items-center justify-center">
               <Home className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold font-spartan text-gray-900">
               MYKEYS
             </span>
-          </div>
+          </Link>
           <button
             onClick={onClose}
             className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"

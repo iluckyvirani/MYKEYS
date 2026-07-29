@@ -38,7 +38,7 @@ const PAGE_META: Record<
   contact: {
     label: "Contact Us",
     liveHref: "/contact",
-    description: "Hero, phone, email, and emergency contact",
+    description: "Hero, phone, email, office address, and emergency contact",
   },
   privacy: {
     label: "Privacy Policy",
@@ -73,7 +73,7 @@ const PAGE_META: Record<
   "short-stay": {
     label: "Short Stay",
     liveHref: "/rent/short-rent",
-    description: "Short stay search hero, how it works, FAQ titles",
+    description: "Short stay hero, how it works, why-book box, FAQ titles",
   },
   "moving-stories": {
     label: INSPIRE_PAGE_LABELS["moving-stories"],

@@ -29,6 +29,11 @@ export function useListingPageContent(page: ListingPageKey): ListingPageContent 
                 data.howItWorks.stats.length > 0
                   ? data.howItWorks.stats
                   : defaults.howItWorks.stats,
+              benefits:
+                Array.isArray(data.howItWorks?.benefits) &&
+                data.howItWorks.benefits.length > 0
+                  ? data.howItWorks.benefits
+                  : defaults.howItWorks.benefits,
             },
             faq: { ...defaults.faq, ...(data.faq || {}) },
           });

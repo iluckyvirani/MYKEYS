@@ -1,13 +1,34 @@
 "use client";
 
 import { Search, Calendar, CreditCard, Key, Star, Home } from "lucide-react";
+import type { ListingStatItem } from "@/lib/content/siteDefaults";
+
+const DEFAULT_BENEFITS = [
+  "Secure payment protection",
+  "Verified hosts & properties",
+  "Flexible cancellation policies",
+  "24/7 customer support",
+];
+
+const DEFAULT_STATS: ListingStatItem[] = [
+  { value: "£0", label: "Booking fees" },
+  { value: "100%", label: "Payment protection" },
+  { value: "4.8★", label: "Average rating" },
+  { value: "24h", label: "Support response" },
+];
 
 export default function HowShortRentWorks({
   title = "How Short Stays Work",
   subtitle = "Easy booking process from search to check-out",
+  whyTitle = "Why Book Short Rents with Hously?",
+  benefits = DEFAULT_BENEFITS,
+  stats = DEFAULT_STATS,
 }: {
   title?: string;
   subtitle?: string;
+  whyTitle?: string;
+  benefits?: string[];
+  stats?: ListingStatItem[];
 }) {
   const steps = [
     {
@@ -41,6 +62,16 @@ export default function HowShortRentWorks({
       description: "Share your experience and help other travelers."
     }
   ];
+
+  const benefitItems =
+    Array.isArray(benefits) && benefits.filter((b) => b.trim()).length > 0
+      ? benefits.filter((b) => b.trim())
+      : DEFAULT_BENEFITS;
+
+  const statItems =
+    Array.isArray(stats) && stats.some((s) => s.value || s.label)
+      ? stats.filter((s) => s.value || s.label).slice(0, 4)
+      : DEFAULT_STATS;
 
   return (
     <section className="py-16 bg-linear-to-b from-white to-gray-50">
@@ -76,52 +107,28 @@ export default function HowShortRentWorks({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
               <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                Why Book Short Rents with Hously?
+                {whyTitle}
               </h3>
               <ul className="space-y-4">
-                <li className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-green-600 rounded-full" />
-                  </div>
-                  <span className="text-gray-700">Secure payment protection</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-green-600 rounded-full" />
-                  </div>
-                  <span className="text-gray-700">Verified hosts & properties</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-green-600 rounded-full" />
-                  </div>
-                  <span className="text-gray-700">Flexible cancellation policies</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-green-600 rounded-full" />
-                  </div>
-                  <span className="text-gray-700">24/7 customer support</span>
-                </li>
+                {benefitItems.map((item, idx) => (
+                  <li key={idx} className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                      <div className="w-2 h-2 bg-green-600 rounded-full" />
+                    </div>
+                    <span className="text-gray-700">{item}</span>
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-6 bg-white rounded-xl">
-                <div className="text-3xl font-bold text-blue-600">£0</div>
-                <div className="text-gray-700 mt-2">Booking fees</div>
-              </div>
-              <div className="text-center p-6 bg-white rounded-xl">
-                <div className="text-3xl font-bold text-blue-600">100%</div>
-                <div className="text-gray-700 mt-2">Payment protection</div>
-              </div>
-              <div className="text-center p-6 bg-white rounded-xl">
-                <div className="text-3xl font-bold text-blue-600">4.8★</div>
-                <div className="text-gray-700 mt-2">Average rating</div>
-              </div>
-              <div className="text-center p-6 bg-white rounded-xl">
-                <div className="text-3xl font-bold text-blue-600">24h</div>
-                <div className="text-gray-700 mt-2">Support response</div>
-              </div>
+              {statItems.map((stat, idx) => (
+                <div key={idx} className="text-center p-6 bg-white rounded-xl">
+                  <div className="text-3xl font-bold text-blue-600">
+                    {stat.value}
+                  </div>
+                  <div className="text-gray-700 mt-2">{stat.label}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

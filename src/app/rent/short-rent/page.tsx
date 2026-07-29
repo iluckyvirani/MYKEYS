@@ -32,6 +32,9 @@ function ShortRentPageContent() {
         <HowShortRentWorks
           title={content.howItWorks.title}
           subtitle={content.howItWorks.subtitle}
+          whyTitle={content.howItWorks.ctaTitle}
+          benefits={content.howItWorks.benefits}
+          stats={content.howItWorks.stats}
         />
         <section className="relative py-16 md:py-20 overflow-hidden bg-[#f3f8f7]">
           <div

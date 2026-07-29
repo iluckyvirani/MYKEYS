@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { DEFAULT_CONTACT_CONTENT } from "@/lib/content/siteDefaults";
 
 const FOOTER_PROPERTY_TYPES = [
   { value: "APARTMENT", label: "Apartments", icon: Home, href: "/buy?propertyType=APARTMENT" },
@@ -26,6 +27,11 @@ export default function Footer() {
   const [subscribed, setSubscribed] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [propertyTypeCounts, setPropertyTypeCounts] = useState<Record<string, number>>({});
+  const [contactInfo, setContactInfo] = useState({
+    phone: DEFAULT_CONTACT_CONTENT.hero.supportPhone,
+    email: DEFAULT_CONTACT_CONTENT.hero.supportEmail,
+    address: DEFAULT_CONTACT_CONTENT.hero.officeAddress,
+  });
 
   useEffect(() => {
     // Handle scroll to show/hide back to top button
@@ -52,6 +58,29 @@ export default function Footer() {
     loadPropertyTypeCounts();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get("/content/contact");
+        const hero = res.data?.data?.hero;
+        if (!cancelled && hero) {
+          setContactInfo({
+            phone: hero.supportPhone || DEFAULT_CONTACT_CONTENT.hero.supportPhone,
+            email: hero.supportEmail || DEFAULT_CONTACT_CONTENT.hero.supportEmail,
+            address:
+              hero.officeAddress || DEFAULT_CONTACT_CONTENT.hero.officeAddress,
+          });
+        }
+      } catch {
+        // keep defaults
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
@@ -60,6 +89,13 @@ export default function Footer() {
       setEmail("");
     }
   };
+
+  const phoneHref = `tel:${contactInfo.phone.replace(/\s/g, "")}`;
+  const emailHref = `mailto:${contactInfo.email}`;
+  const addressLines = contactInfo.address
+    .split(/\n|,/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   const quickLinks = [
     { label: "Buy", href: "/buy" },
@@ -256,8 +292,8 @@ export default function Footer() {
                   <Phone className="w-5 h-5 text-green-600 mt-1" />
                   <div>
                     <div className="font-semibold text-gray-900">Phone</div>
-                    <a href="tel:+11234567890" className="text-gray-600 hover:text-gray-900 transition-colors">
-                      +1 (123) 456-7890
+                    <a href={phoneHref} className="text-gray-600 hover:text-gray-900 transition-colors">
+                      {contactInfo.phone}
                     </a>
                   </div>
                 </motion.li>
@@ -270,8 +306,8 @@ export default function Footer() {
                   <Mail className="w-5 h-5 text-green-600 mt-1" />
                   <div>
                     <div className="font-semibold text-gray-900">Email</div>
-                    <a href="mailto:info@mykeys.com" className="text-gray-600 hover:text-gray-900 transition-colors">
-                      info@mykeys.com
+                    <a href={emailHref} className="text-gray-600 hover:text-gray-900 transition-colors">
+                      {contactInfo.email}
                     </a>
                   </div>
                 </motion.li>
@@ -281,11 +317,14 @@ export default function Footer() {
                   transition={{ delay: 0.2 }}
                   className="flex items-start gap-3 text-gray-600"
                 >
-                  <MapPin className="w-5 h-5 text-green-600 mt-1" />
+                  <MapPin className="w-5 h-5 text-green-600 mt-1 shrink-0" />
                   <div>
                     <div className="font-semibold text-gray-900">Office</div>
-                    <div>123 Business Street, Suite 100</div>
-                    <div>San Francisco, CA 94107</div>
+                    {addressLines.length > 1 ? (
+                      addressLines.map((line, i) => <div key={i}>{line}</div>)
+                    ) : (
+                      <div>{contactInfo.address}</div>
+                    )}
                   </div>
                 </motion.li>
               </ul>

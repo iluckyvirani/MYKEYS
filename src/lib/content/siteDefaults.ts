@@ -17,6 +17,7 @@ export type ContactPageContent = {
     subtitle: string;
     supportPhone: string;
     supportEmail: string;
+    officeAddress: string;
     emergencyPhone: string;
     emergencyNote: string;
   };
@@ -41,10 +42,12 @@ export type ListingPageContent = {
   howItWorks: {
     title: string;
     subtitle: string;
-    /** CTA banner under the steps (used on Buy) */
+    /** CTA / “why book” banner title (Buy + Short Stay) */
     ctaTitle?: string;
     ctaSubtitle?: string;
     ctaButtonLabel?: string;
+    /** Bullet points under the why-book title (Short Stay) */
+    benefits?: string[];
     stats?: ListingStatItem[];
   };
   faq: {
@@ -89,8 +92,10 @@ export const DEFAULT_CONTACT_CONTENT: ContactPageContent = {
     titleHighlight: "We're Here to Help",
     subtitle:
       "Whether you're looking for a property, listing yours, or need support, our team is ready to assist you.",
-    supportPhone: "+44 77199 89032",
+    supportPhone: "+44 7719989032",
     supportEmail: "support@mykeysuk.com",
+    officeAddress:
+      "Discovery Docks East, South Quay Square, Canary Wharf, London.",
     emergencyPhone: "+44 800 123 456",
     emergencyNote: "Available 24/7 for safety emergencies only",
   },
@@ -257,6 +262,19 @@ export const DEFAULT_SHORT_STAY_CONTENT: ListingPageContent = {
   howItWorks: {
     title: "How Short Stays Work",
     subtitle: "Easy booking process from search to check-out",
+    ctaTitle: "Why Book Short Rents with Hously?",
+    benefits: [
+      "Secure payment protection",
+      "Verified hosts & properties",
+      "Flexible cancellation policies",
+      "24/7 customer support",
+    ],
+    stats: [
+      { value: "£0", label: "Booking fees" },
+      { value: "100%", label: "Payment protection" },
+      { value: "4.8★", label: "Average rating" },
+      { value: "24h", label: "Support response" },
+    ],
   },
   faq: {
     title: "Short Stay FAQs",
