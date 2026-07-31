@@ -1,15 +1,68 @@
-﻿import nodemailer from 'nodemailer';
+﻿import nodemailer from "nodemailer";
 
-// Email configuration
-const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER || 'luckyvirani555@gmail.com',
-    pass: process.env.EMAIL_PASSWORD || 'jbdj zeic oytj mqaq',
-  },
-});
+const SUPPORT_EMAIL = "support@mykeysuk.com";
 
-// Frontend URL — set FRONTEND_URL in .env for production (e.g. https://mykeys-property.vercel.app)
+/**
+ * GoDaddy Workspace Email SMTP (smtpout.secureserver.net).
+ * If the mailbox is Microsoft 365 via GoDaddy, set:
+ *   EMAIL_HOST=smtp.office365.com
+ *   EMAIL_PORT=587
+ *   EMAIL_SECURE=false
+ */
+const emailHost = process.env.EMAIL_HOST || "smtpout.secureserver.net";
+const emailPort = Number(process.env.EMAIL_PORT || 465);
+const emailSecure =
+  process.env.EMAIL_SECURE !== undefined
+    ? process.env.EMAIL_SECURE === "true"
+    : emailPort === 465;
+
+const transporter = nodemailer.createTransport(
+  process.env.EMAIL_SERVICE && !process.env.EMAIL_HOST
+    ? {
+        service: process.env.EMAIL_SERVICE,
+        auth: {
+          user: process.env.EMAIL_USER || SUPPORT_EMAIL,
+          pass: process.env.EMAIL_PASSWORD || "",
+        },
+      }
+    : {
+        host: emailHost,
+        port: emailPort,
+        secure: emailSecure,
+        auth: {
+          user: process.env.EMAIL_USER || SUPPORT_EMAIL,
+          pass: process.env.EMAIL_PASSWORD || "",
+        },
+      }
+);
+
+function mailFrom() {
+  const from = process.env.EMAIL_FROM || SUPPORT_EMAIL;
+  // Nice display name in inboxes
+  if (from.includes("<")) return from;
+  return `MYKEYS <${from}>`;
+}
+
+function mailCc(): string | undefined {
+  const cc = process.env.EMAIL_CC?.trim();
+  return cc || undefined;
+}
+
+function baseMailOptions(to: string) {
+  const options: {
+    from: string;
+    to: string;
+    cc?: string;
+  } = {
+    from: mailFrom(),
+    to,
+  };
+  const cc = mailCc();
+  if (cc) options.cc = cc;
+  return options;
+}
+
+// Frontend URL — set FRONTEND_URL in .env for production
 
 export const emailService = {
   /**
@@ -18,10 +71,8 @@ export const emailService = {
   async sendWelcomeEmail(email: string, firstName: string) {
     try {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@mykeys.com',
-        to: email,
-        cc: 'luckyvirani555@gmail.com',
-        subject: 'Welcome to MyKeys! 🎉',
+        ...baseMailOptions(email),
+        subject: "Welcome to MyKeys! 🎉",
         html: `
           <h2>Welcome to MyKeys, ${firstName}!</h2>
           <p>We're excited to have you on board. Start exploring properties and connecting with owners today.</p>
@@ -30,7 +81,8 @@ export const emailService = {
               Go to Dashboard
             </a>
           </p>
-          <p>Best regards,<br/>The MyKeys Team</p>
+          <p>Best regards,<br/>The MyKeys Team<br/>
+          <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
         `,
       };
 
@@ -44,13 +96,15 @@ export const emailService = {
   /**
    * Send inquiry confirmation email to guest
    */
-  async sendInquiryConfirmationEmail(email: string, name: string, propertyTitle: string) {
+  async sendInquiryConfirmationEmail(
+    email: string,
+    name: string,
+    propertyTitle: string
+  ) {
     try {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@mykeys.com',
-        to: email,
-        cc: 'luckyvirani555@gmail.com',
-        subject: 'Thank You for Your Inquiry! 📝',
+        ...baseMailOptions(email),
+        subject: "Thank You for Your Inquiry! 📝",
         html: `
           <h2>Thank You, ${name}!</h2>
           <p>We've received your inquiry about <strong>${propertyTitle}</strong>.</p>
@@ -65,14 +119,18 @@ export const emailService = {
               View Inquiries
             </a>
           </p>
-          <p>Best regards,<br/>The MyKeys Team</p>
+          <p>Best regards,<br/>The MyKeys Team<br/>
+          <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
         `,
       };
 
       await transporter.sendMail(mailOptions);
       console.log(`Inquiry confirmation email sent to ${email}`);
     } catch (error) {
-      console.error(`Failed to send inquiry confirmation email to ${email}:`, error);
+      console.error(
+        `Failed to send inquiry confirmation email to ${email}:`,
+        error
+      );
     }
   },
 
@@ -88,9 +146,7 @@ export const emailService = {
   ) {
     try {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@mykeys.com',
-        to: ownerEmail,
-        cc: 'luckyvirani555@gmail.com',
+        ...baseMailOptions(ownerEmail),
         subject: `New Inquiry for ${propertyTitle} 🔔`,
         html: `
           <h2>New Inquiry Received!</h2>
@@ -102,14 +158,18 @@ export const emailService = {
               View Inquiry
             </a>
           </p>
-          <p>Best regards,<br/>The MyKeys Team</p>
+          <p>Best regards,<br/>The MyKeys Team<br/>
+          <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
         `,
       };
 
       await transporter.sendMail(mailOptions);
       console.log(`New inquiry notification sent to ${ownerEmail}`);
     } catch (error) {
-      console.error(`Failed to send new inquiry notification to ${ownerEmail}:`, error);
+      console.error(
+        `Failed to send new inquiry notification to ${ownerEmail}:`,
+        error
+      );
     }
   },
 
@@ -126,29 +186,31 @@ export const emailService = {
   ) {
     try {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@mykeys.com',
-        to: guestEmail,
-        cc: 'luckyvirani555@gmail.com',
+        ...baseMailOptions(guestEmail),
         subject: `Response to Your Inquiry about ${propertyTitle} 📮`,
         html: `
           <h2>Response from ${ownerName}!</h2>
           <p>Hi ${guestName},</p>
           <p>Good news! <strong>${ownerName}</strong> has responded to your inquiry about <strong>${propertyTitle}</strong>.</p>
           <p><strong>Message:</strong></p>
-          <p>${ownerResponse.replace(/\n/g, '<br>')}</p>
+          <p>${ownerResponse.replace(/\n/g, "<br>")}</p>
           <p>
             <a href="${process.env.FRONTEND_URL}/user/dashboard/inquiries" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               View in Dashboard
             </a>
           </p>
-          <p>Best regards,<br/>The MyKeys Team</p>
+          <p>Best regards,<br/>The MyKeys Team<br/>
+          <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
         `,
       };
 
       await transporter.sendMail(mailOptions);
       console.log(`Inquiry response email sent to ${guestEmail}`);
     } catch (error) {
-      console.error(`Failed to send inquiry response email to ${guestEmail}:`, error);
+      console.error(
+        `Failed to send inquiry response email to ${guestEmail}:`,
+        error
+      );
     }
   },
 
@@ -166,29 +228,31 @@ export const emailService = {
   ) {
     try {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@mykeys.com',
-        to: ownerEmail,
-        cc: 'luckyvirani555@gmail.com',
+        ...baseMailOptions(ownerEmail),
         subject: `New ${rating}-Star Review for ${propertyTitle} ⭐`,
         html: `
           <h2>You Received a New Review!</h2>
           <p>Hi ${ownerName},</p>
           <p><strong>${reviewerName}</strong> left a <strong>${rating}-star review</strong> for <strong>${propertyTitle}</strong>.</p>
           <p><strong>Review:</strong></p>
-          <p>${reviewText.replace(/\n/g, '<br>')}</p>
+          <p>${reviewText.replace(/\n/g, "<br>")}</p>
           <p>
             <a href="${process.env.FRONTEND_URL}/properties/${propertyId}#reviews" style="background-color: #FF9800; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               View Review
             </a>
           </p>
-          <p>Best regards,<br/>The MyKeys Team</p>
+          <p>Best regards,<br/>The MyKeys Team<br/>
+          <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
         `,
       };
 
       await transporter.sendMail(mailOptions);
       console.log(`New review notification sent to ${ownerEmail}`);
     } catch (error) {
-      console.error(`Failed to send new review notification to ${ownerEmail}:`, error);
+      console.error(
+        `Failed to send new review notification to ${ownerEmail}:`,
+        error
+      );
     }
   },
 
@@ -206,9 +270,7 @@ export const emailService = {
   ) {
     try {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@mykeys.com',
-        to: guestEmail,
-        cc: 'luckyvirani555@gmail.com',
+        ...baseMailOptions(guestEmail),
         subject: `Booking Request Received for ${propertyTitle}`,
         html: `
           <h2>Booking Request Received</h2>
@@ -234,14 +296,18 @@ export const emailService = {
               View Booking Request
             </a>
           </p>
-          <p>Best regards,<br/>The MyKeys Team</p>
+          <p>Best regards,<br/>The MyKeys Team<br/>
+          <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
         `,
       };
 
       await transporter.sendMail(mailOptions);
       console.log(`Booking confirmation email sent to ${guestEmail}`);
     } catch (error) {
-      console.error(`Failed to send booking confirmation email to ${guestEmail}:`, error);
+      console.error(
+        `Failed to send booking confirmation email to ${guestEmail}:`,
+        error
+      );
     }
   },
 
@@ -259,9 +325,7 @@ export const emailService = {
   ) {
     try {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@mykeys.com',
-        to: ownerEmail,
-        cc: 'luckyvirani555@gmail.com',
+        ...baseMailOptions(ownerEmail),
         subject: `New Booking for ${propertyTitle} 📅`,
         html: `
           <h2>You Have a New Booking!</h2>
@@ -286,14 +350,18 @@ export const emailService = {
               View Booking
             </a>
           </p>
-          <p>Best regards,<br/>The MyKeys Team</p>
+          <p>Best regards,<br/>The MyKeys Team<br/>
+          <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
         `,
       };
 
       await transporter.sendMail(mailOptions);
       console.log(`Booking notification email sent to ${ownerEmail}`);
     } catch (error) {
-      console.error(`Failed to send booking notification email to ${ownerEmail}:`, error);
+      console.error(
+        `Failed to send booking notification email to ${ownerEmail}:`,
+        error
+      );
     }
   },
 
@@ -304,7 +372,12 @@ export const emailService = {
     email: string,
     firstName: string,
     searchName: string,
-    matches: { id: string; title: string; location: string; priceLabel: string }[],
+    matches: {
+      id: string;
+      title: string;
+      location: string;
+      priceLabel: string;
+    }[],
     resultsUrl: string
   ) {
     try {
@@ -315,7 +388,11 @@ export const emailService = {
               <td style="padding: 10px; border: 1px solid #ddd;">
                 <strong>${m.title}</strong><br/>
                 <span style="color:#555;">${m.location || ""}</span>
-                ${m.priceLabel ? `<br/><span style="color:#0f766e;font-weight:600;">${m.priceLabel}</span>` : ""}
+                ${
+                  m.priceLabel
+                    ? `<br/><span style="color:#0f766e;font-weight:600;">${m.priceLabel}</span>`
+                    : ""
+                }
               </td>
               <td style="padding: 10px; border: 1px solid #ddd; text-align:center;">
                 <a href="${process.env.FRONTEND_URL || ""}/property/${m.id}" style="color:#2196F3;text-decoration:none;">View</a>
@@ -325,9 +402,7 @@ export const emailService = {
         .join("");
 
       const mailOptions = {
-        from: process.env.EMAIL_FROM || "noreply@mykeys.com",
-        to: email,
-        cc: "luckyvirani555@gmail.com",
+        ...baseMailOptions(email),
         subject: `New listings for "${searchName}"`,
         html: `
           <h2>New matching properties</h2>
@@ -347,15 +422,18 @@ export const emailService = {
             Manage alerts in your
             <a href="${process.env.FRONTEND_URL || ""}/user/dashboard/saved-searches">dashboard</a>.
           </p>
-          <p>Best regards,<br/>The MyKeys Team</p>
+          <p>Best regards,<br/>The MyKeys Team<br/>
+          <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
         `,
       };
 
       await transporter.sendMail(mailOptions);
       console.log(`Saved search alert email sent to ${email}`);
     } catch (error) {
-      console.error(`Failed to send saved search alert email to ${email}:`, error);
+      console.error(
+        `Failed to send saved search alert email to ${email}:`,
+        error
+      );
     }
   },
 };
-
