@@ -30,6 +30,8 @@ export enum ErrorCode {
   PASSWORD_MISMATCH = "PASSWORD_MISMATCH",
   INVALID_RESET_TOKEN = "INVALID_RESET_TOKEN",
   RESET_TOKEN_EXPIRED = "RESET_TOKEN_EXPIRED",
+  INVALID_OTP = "INVALID_OTP",
+  OTP_EXPIRED = "OTP_EXPIRED",
 
   // Server Errors
   INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR",
@@ -90,7 +92,9 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.ACCOUNT_INACTIVE]:
     "Your account is inactive. Please contact support",
   [ErrorCode.ACCOUNT_PENDING]:
-    "Your account is pending approval. Please wait for admin approval",
+    "Please verify your email with the OTP we sent you",
+  [ErrorCode.INVALID_OTP]: "Invalid OTP. Please check and try again",
+  [ErrorCode.OTP_EXPIRED]: "OTP has expired. Please request a new one",
 
   // Password
   [ErrorCode.WEAK_PASSWORD]: "Password is too weak. Please choose a stronger password",
@@ -107,7 +111,7 @@ export const ErrorMessages: Record<ErrorCode, string> = {
 
   // Rate Limiting
   [ErrorCode.RATE_LIMIT_EXCEEDED]:
-    "Too many requests. Please try again later",
+    "Please wait before requesting another OTP",
 };
 
 /**
@@ -133,6 +137,8 @@ export const ErrorStatusCodes: Record<ErrorCode, number> = {
   [ErrorCode.PASSWORD_MISMATCH]: 400,
   [ErrorCode.INVALID_RESET_TOKEN]: 400,
   [ErrorCode.RESET_TOKEN_EXPIRED]: 400,
+  [ErrorCode.INVALID_OTP]: 400,
+  [ErrorCode.OTP_EXPIRED]: 400,
 
   // 404 Not Found
   [ErrorCode.USER_NOT_FOUND]: 404,

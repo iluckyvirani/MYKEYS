@@ -21,6 +21,8 @@ import {
   Wrench,
   Bell,
   Zap,
+  Wallet,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -39,6 +41,7 @@ const userNavigation = [
   { name: "Inquiries", href: "/user/dashboard/inquiries", icon: MessageSquare },
   { name: "Favorites", href: "/user/dashboard/favorites", icon: Heart },
   { name: "Saved searches", href: "/user/dashboard/saved-searches", icon: Bell },
+  { name: "Diary", href: "/user/dashboard/diary", icon: BookOpen },
   { name: "Services", href: "/user/dashboard/services", icon: Megaphone },
   { name: "Payments", href: "/user/dashboard/payments", icon: CreditCard },
   // { name: "Documents", href: "/user/dashboard/documents", icon: FileText },
@@ -48,6 +51,9 @@ const userNavigation = [
 const ownerNavigation = [
   { name: "Dashboard", href: "/owner/dashboard", icon: Home },
   { name: "Properties", href: "/owner/dashboard/properties", icon: Building },
+  { name: "Rent Management", href: "/owner/dashboard/rent", icon: Key },
+  { name: "Expenses", href: "/owner/dashboard/expenses", icon: Wallet },
+  { name: "Diary", href: "/owner/dashboard/diary", icon: BookOpen },
   { name: "Bookings", href: "/owner/dashboard/bookings", icon: Calendar },
   { name: "Service Bookings", href: "/owner/dashboard/service-bookings", icon: Wrench },
   { name: "Inquiries", href: "/owner/dashboard/inquiries", icon: MessageSquare },
@@ -67,6 +73,7 @@ const serviceNavigation = [
   { name: "Services", href: "/service/dashboard/services", icon: Wrench },
   { name: "Earnings", href: "/service/dashboard/earnings", icon: DollarSign },
   { name: "Reviews", href: "/service/dashboard/reviews", icon: Star },
+  { name: "Diary", href: "/service/dashboard/diary", icon: BookOpen },
   { name: "Notifications", href: "/service/dashboard/notifications", icon: Bell },
   { name: "Profile", href: "/service/dashboard/profile", icon: Settings },
 ];

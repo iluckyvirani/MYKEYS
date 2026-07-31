@@ -4,7 +4,7 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import RoleSwitcher from "./RoleSwitcher";
-
+import ProfileCompletionBanner from "./ProfileCompletionBanner";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -20,7 +20,6 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
@@ -28,25 +27,22 @@ export default function DashboardLayout({
         />
       )}
 
-      {/* Sidebar */}
       <Sidebar role={role} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main Content */}
       <div className="lg:pl-64">
-        {/* Header */}
         <Header
           role={role}
           onMenuClick={() => setSidebarOpen(true)}
           onRoleChange={setRole}
         />
 
-        {/* Main Content Area */}
         <main className="py-5">
           <div className="mx-auto max-w-7xl px-4 sm:px-4 lg:px-1">
-            {/* Role Switcher Banner */}
             <RoleSwitcher currentRole={role} onSwitch={setRole} />
 
-            {/* Page Content */}
+            {/* Optional profile % — no access restriction */}
+            <ProfileCompletionBanner role={role} />
+
             {children}
           </div>
         </main>

@@ -48,10 +48,19 @@ function LoginPageContent() {
         router.push(redirectTo);
       }
     } catch (err: any) {
+      const code = err.response?.data?.code;
       const message =
         err.response?.data?.message ||
         err.message ||
         "Login failed. Please try again.";
+
+      if (code === "ACCOUNT_PENDING") {
+        router.push(
+          `/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`
+        );
+        return;
+      }
+
       setError(message);
       console.error("Login error:", err);
     } finally {
@@ -77,7 +86,7 @@ function LoginPageContent() {
         )}
 
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#339390]" />
           <input
             type="email"
             placeholder="Email Address"
@@ -90,7 +99,7 @@ function LoginPageContent() {
         </div>
 
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#339390]" />
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Password"
@@ -116,7 +125,7 @@ function LoginPageContent() {
           </label>
           <Link
             href="/forgot-password"
-            className="hover:text-green-600 cursor-pointer font-semibold"
+            className="hover:text-[#339390] cursor-pointer font-semibold"
           >
             Forgot password?
           </Link>
@@ -125,14 +134,14 @@ function LoginPageContent() {
         <Button
           onClick={handleLogin}
           disabled={loading}
-          className="w-full bg-green-600 hover:bg-green-700 rounded-[5px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-[#339390] hover:bg-[#2a7a78] text-white rounded-[5px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Logging in..." : "Login / Sign in"}
         </Button>
 
         <p className="text-center text-sm mt-2">
           Don't have an account?{" "}
-          <Link href="/signup" className="text-green-600 font-semibold">
+          <Link href="/signup" className="text-[#339390] font-semibold">
             Sign Up
           </Link>
         </p>

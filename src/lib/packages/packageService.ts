@@ -259,10 +259,18 @@ export const packageService = {
 
     const expired = await prisma.ownerPackage.findMany({
       where: { status: 'ACTIVE', endDate: { lte: now } },
-      select: { id: true, ownerId: true },
+      select: {
+        id: true,
+        ownerId: true,
+        endDate: true,
+        package: { select: { name: true } },
+        owner: { select: { email: true, firstName: true } },
+      },
     });
 
-    if (expired.length === 0) return { expiredCount: 0, deactivatedProperties: 0 };
+    if (expired.length === 0) {
+      return { expiredCount: 0, deactivatedProperties: 0, emailsSent: 0 };
+    }
 
     const ownerIds = expired.map((e) => e.ownerId);
     const expiredIds = expired.map((e) => e.id);
@@ -284,7 +292,127 @@ export const packageService = {
       data: { status: 'INACTIVE' },
     });
 
-    return { expiredCount: expired.length, deactivatedProperties: deactivated.count };
+    const { emailService } = await import('@/lib/email/emailService');
+    const { notificationService } = await import(
+      '@/lib/notifications/notificationService'
+    );
+    const {
+      NotificationType,
+      NotificationPriority,
+      NotificationCategory,
+    } = await import('@/types/notification');
+
+    let emailsSent = 0;
+    for (const sub of expired) {
+      try {
+        await emailService.sendPackageExpiredEmail({
+          to: sub.owner.email,
+          firstName: sub.owner.firstName,
+          packageName: sub.package.name,
+        });
+        emailsSent += 1;
+
+        await notificationService.create({
+          userId: sub.ownerId,
+          type: NotificationType.REMINDER,
+          title: 'Package expired',
+          message: `Your ${sub.package.name} package has expired. Long-term and buy listings were taken offline. Renew to restore visibility.`,
+          priority: NotificationPriority.HIGH,
+          category: NotificationCategory.ACTION_REQUIRED,
+          actionUrl: '/owner/dashboard/packages',
+          data: { ownerPackageId: sub.id },
+        });
+      } catch (err) {
+        console.error(`Package expiry email failed for ${sub.id}:`, err);
+      }
+    }
+
+    return {
+      expiredCount: expired.length,
+      deactivatedProperties: deactivated.count,
+      emailsSent,
+    };
+  },
+
+  /**
+   * Daily: remind owners 7 days and 1 day before package endDate.
+   */
+  async processPackageRenewReminders(now = new Date()) {
+    const { emailService } = await import('@/lib/email/emailService');
+    const { notificationService } = await import(
+      '@/lib/notifications/notificationService'
+    );
+    const {
+      NotificationType,
+      NotificationPriority,
+      NotificationCategory,
+    } = await import('@/types/notification');
+
+    const reminderDays = [7, 1];
+    let sent = 0;
+
+    for (const days of reminderDays) {
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() + days);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+
+      const dateKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+      const reminderKey = `${days}d-${dateKey}`;
+
+      const subs = await prisma.ownerPackage.findMany({
+        where: {
+          status: 'ACTIVE',
+          endDate: { gte: start, lt: end },
+          OR: [
+            { lastRenewReminderKey: null },
+            { lastRenewReminderKey: { not: reminderKey } },
+          ],
+        },
+        select: {
+          id: true,
+          ownerId: true,
+          endDate: true,
+          package: { select: { name: true } },
+          owner: { select: { email: true, firstName: true } },
+        },
+      });
+
+      for (const sub of subs) {
+        try {
+          await emailService.sendPackageRenewReminderEmail({
+            to: sub.owner.email,
+            firstName: sub.owner.firstName,
+            packageName: sub.package.name,
+            daysLeft: days,
+            endDate: sub.endDate,
+          });
+
+          await notificationService.create({
+            userId: sub.ownerId,
+            type: NotificationType.REMINDER,
+            title: days === 1 ? 'Package expires tomorrow' : 'Package renew reminder',
+            message: `Your ${sub.package.name} package expires in ${days} day${days === 1 ? '' : 's'}. Renew now to keep listings visible.`,
+            priority: days === 1 ? NotificationPriority.HIGH : NotificationPriority.NORMAL,
+            category: NotificationCategory.ACTION_REQUIRED,
+            actionUrl: '/owner/dashboard/packages',
+            data: { ownerPackageId: sub.id, daysLeft: days },
+          });
+
+          await prisma.ownerPackage.update({
+            where: { id: sub.id },
+            data: { lastRenewReminderKey: reminderKey },
+          });
+
+          sent += 1;
+        } catch (err) {
+          console.error(`Package renew reminder failed for ${sub.id}:`, err);
+        }
+      }
+    }
+
+    return { sent };
   },
 
   async getAdminSettings() {

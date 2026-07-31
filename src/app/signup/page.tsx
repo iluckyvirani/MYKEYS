@@ -7,7 +7,7 @@ import { Lock, Mail, User, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { RegisterRequest, RegisterResponse } from "@/types/auth";
+import { RegisterRequest } from "@/types/auth";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -22,39 +22,40 @@ export default function SignupPage() {
   const [error, setError] = useState("");
 
   const checkPasswordRequirements = (pwd: string) => {
-    const requirements = [
+    return [
       { text: "At least 8 characters", check: (p: string) => p.length >= 8 },
       { text: "Not more than 128 characters", check: (p: string) => p.length <= 128 },
       { text: "At least one lowercase letter", check: (p: string) => /[a-z]/.test(p) },
       { text: "At least one uppercase letter", check: (p: string) => /[A-Z]/.test(p) },
       { text: "At least one number", check: (p: string) => /[0-9]/.test(p) },
-      { text: "At least one special character", check: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
-      { 
-        text: "Not a common password", 
-        check: (p: string) => !["password", "12345678", "qwerty123", "admin123", "letmein"].includes(p.toLowerCase()) 
+      {
+        text: "At least one special character",
+        check: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p),
+      },
+      {
+        text: "Not a common password",
+        check: (p: string) =>
+          !["password", "12345678", "qwerty123", "admin123", "letmein"].includes(
+            p.toLowerCase()
+          ),
       },
     ];
-    return requirements;
   };
 
   const passwordRequirements = checkPasswordRequirements(password);
-  const allRequirementsMet = passwordRequirements.every(req => req.check(password));
-
-  const handlePasswordChange = (value: string) => {
-    setPassword(value);
-  };
+  const allRequirementsMet = passwordRequirements.every((req) =>
+    req.check(password)
+  );
 
   const handleSignup = async () => {
     if (!firstName || !lastName || !email || !password) {
       setError("Please fill in all fields");
       return;
     }
-
     if (!allRequirementsMet) {
       setError("Please meet all password requirements before registering");
       return;
     }
-
     if (!termsAccepted) {
       setError("Please accept terms and conditions");
       return;
@@ -72,27 +73,36 @@ export default function SignupPage() {
         phone: undefined,
       };
 
-      const response = await api.post<RegisterResponse>(
-        "/auth/register",
-        signupData
-      );
+      const response = await api.post("/auth/register", signupData);
 
-      if (response.data) {
-        const { user, accessToken, refreshToken } = response.data.data;
+      if (response.data?.success) {
+        const registeredEmail =
+          response.data.data?.email || email.trim().toLowerCase();
+        router.push(
+          `/verify-otp?email=${encodeURIComponent(registeredEmail)}`
+        );
+        return;
+      }
 
-        // Store tokens
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("user", JSON.stringify(user));
-
-        // Redirect to home page
-        router.push("/");
+      // Even if email send failed after account create, go to OTP screen
+      if (response.data?.data?.email || response.status === 502) {
+        router.push(`/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`);
       }
     } catch (err: any) {
+      const code = err.response?.data?.code;
       const message =
         err.response?.data?.message ||
         err.message ||
         "Registration failed. Please try again.";
+
+      // If OTP email failed but account exists, still go verify
+      if (code === "SERVICE_UNAVAILABLE" || err.response?.status === 502) {
+        router.push(
+          `/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`
+        );
+        return;
+      }
+
       setError(message);
       console.error("Signup error:", err);
     } finally {
@@ -101,14 +111,14 @@ export default function SignupPage() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSignup();
-    }
+    if (e.key === "Enter") handleSignup();
   };
 
   return (
     <AuthLayout>
-      <h2 className="text-2xl font-spartan font-bold mb-6">Signup</h2>
+      <h2 className="text-2xl font-spartan font-bold mb-6 text-[#0f172a]">
+        Signup
+      </h2>
 
       <div className="space-y-4">
         {error && (
@@ -118,7 +128,7 @@ export default function SignupPage() {
         )}
 
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#339390]" />
           <input
             type="text"
             placeholder="First Name"
@@ -131,7 +141,7 @@ export default function SignupPage() {
         </div>
 
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#339390]" />
           <input
             type="text"
             placeholder="Last Name"
@@ -144,7 +154,7 @@ export default function SignupPage() {
         </div>
 
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#339390]" />
           <input
             type="email"
             placeholder="Email Address"
@@ -157,13 +167,13 @@ export default function SignupPage() {
         </div>
 
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#339390]" />
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Password"
             className="input-field bg-gray-50 pl-10 pr-10"
             value={password}
-            onChange={(e) => handlePasswordChange(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             onKeyPress={handleKeyPress}
             disabled={loading}
           />
@@ -173,36 +183,40 @@ export default function SignupPage() {
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             disabled={loading}
           >
-            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showPassword ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
           </button>
         </div>
 
         {password && (
-          <div className={`border rounded-[5px] p-3 ${
-            allRequirementsMet 
-              ? "bg-green-50 border-green-200" 
-              : "bg-yellow-50 border-yellow-200"
-          }`}>
-            <p className={`text-sm font-semibold mb-2 ${
-              allRequirementsMet 
-                ? "text-green-800" 
-                : "text-yellow-800"
-            }`}>
+          <div
+            className={`border rounded-[5px] p-3 ${
+              allRequirementsMet
+                ? "bg-[#f0fafa] border-[#b6e2e0]"
+                : "bg-yellow-50 border-yellow-200"
+            }`}
+          >
+            <p
+              className={`text-sm font-semibold mb-2 ${
+                allRequirementsMet ? "text-[#1f6f6c]" : "text-yellow-800"
+              }`}
+            >
               Password Requirements:
             </p>
             <ul className="space-y-1">
               {passwordRequirements.map((req, index) => {
                 const isMet = req.check(password);
                 return (
-                  <li 
-                    key={index} 
+                  <li
+                    key={index}
                     className={`text-sm flex items-center gap-2 ${
-                      isMet 
-                        ? "text-green-700" 
-                        : "text-yellow-700"
+                      isMet ? "text-[#1f6f6c]" : "text-yellow-700"
                     }`}
                   >
-                    <span className={isMet ? "text-green-600" : "text-red-500"}>
+                    <span className={isMet ? "text-[#339390]" : "text-red-500"}>
                       {isMet ? "✓" : "✕"}
                     </span>
                     {req.text}
@@ -219,24 +233,42 @@ export default function SignupPage() {
             checked={termsAccepted}
             onChange={(e) => setTermsAccepted(e.target.checked)}
             disabled={loading}
+            id="accept-terms"
           />
           <span>
-            I Accept{" "}
-            <span className="text-green-600">Terms and Condition</span>
+            <label htmlFor="accept-terms" className="cursor-pointer">
+              I Accept{" "}
+            </label>
+            <Link
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#339390] font-medium underline underline-offset-2 hover:opacity-80"
+            >
+              Terms and Condition
+            </Link>
           </span>
         </div>
 
         <Button
           onClick={handleSignup}
-          disabled={loading || !firstName || !lastName || !email || !password || !allRequirementsMet || !termsAccepted}
-          className="w-full bg-green-600 hover:bg-green-700 rounded-[5px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={
+            loading ||
+            !firstName ||
+            !lastName ||
+            !email ||
+            !password ||
+            !allRequirementsMet ||
+            !termsAccepted
+          }
+          className="w-full bg-[#339390] hover:bg-[#2a7a78] text-white rounded-[5px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Registering..." : "Register"}
+          {loading ? "Sending OTP…" : "Register"}
         </Button>
 
         <p className="text-center text-sm mt-4">
           Already have an account?{" "}
-          <Link href="/login" className="text-green-600 font-semibold">
+          <Link href="/login" className="text-[#339390] font-semibold">
             Sign in
           </Link>
         </p>

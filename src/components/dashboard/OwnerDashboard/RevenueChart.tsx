@@ -1,6 +1,6 @@
-﻿// components/dashboard/OwnerDashboard/RevenueChart.tsx
-"use client";
+﻿"use client";
 
+import { useCallback, useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -13,42 +13,72 @@ import {
   Pie,
   Cell,
   Legend,
-  LineChart,
-  Line,
 } from "recharts";
 import { DollarSign, TrendingUp, TrendingDown, Percent } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { useState } from "react";
+import { api } from "@/lib/api";
+import { AnalyticsPeriod, OwnerAnalyticsData } from "@/types/ownerAnalytics";
 
-const monthlyRevenueData = [
-  { month: "Aug", revenue: 185000, bookings: 8, inquiries: 25 },
-  { month: "Sep", revenue: 210000, bookings: 10, inquiries: 32 },
-  { month: "Oct", revenue: 195000, bookings: 9, inquiries: 28 },
-  { month: "Nov", revenue: 230000, bookings: 12, inquiries: 35 },
-  { month: "Dec", revenue: 280000, bookings: 15, inquiries: 42 },
-  { month: "Jan", revenue: 245000, bookings: 8, inquiries: 38 },
-];
+const PIE_COLORS = ["#339390", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#64748b"];
 
-const propertyRevenueData = [
-  { name: "Seaside Villa", value: 540000, color: "#10b981" },
-  { name: "Urban Apartment", value: 200000, color: "#3b82f6" },
-  { name: "Mountain Cottage", value: 90000, color: "#8b5cf6" },
-  { name: "Luxury Penthouse", value: 0, color: "#f59e0b" },
-];
+type Timeframe = "monthly" | "quarterly" | "yearly";
 
-const revenueSources = [
-  { name: "Short-rent", value: 65, color: "#10b981" },
-  { name: "Long-rent", value: 30, color: "#3b82f6" },
-  { name: "Purchase", value: 5, color: "#8b5cf6" },
-];
+function timeframeToPeriod(tf: Timeframe): AnalyticsPeriod {
+  if (tf === "quarterly") return "3m";
+  if (tf === "yearly") return "1y";
+  return "6m";
+}
 
 export default function RevenueChart() {
-  const [timeframe, setTimeframe] = useState("monthly");
+  const [timeframe, setTimeframe] = useState<Timeframe>("monthly");
+  const [data, setData] = useState<OwnerAnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const totalRevenue = monthlyRevenueData.reduce((sum, month) => sum + month.revenue, 0);
-  const avgMonthlyRevenue = totalRevenue / monthlyRevenueData.length;
-  const lastMonthRevenue = monthlyRevenueData[monthlyRevenueData.length - 1].revenue;
-  const growth = ((lastMonthRevenue - avgMonthlyRevenue) / avgMonthlyRevenue) * 100;
+  const period = timeframeToPeriod(timeframe);
+
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.get(`/owner/analytics?period=${period}`);
+      if (response.data?.success && response.data.data) {
+        setData(response.data.data);
+      } else {
+        setError("Failed to load revenue analytics");
+      }
+    } catch (err: unknown) {
+      console.error("Error fetching revenue analytics:", err);
+      setError("Failed to load revenue analytics");
+    } finally {
+      setLoading(false);
+    }
+  }, [period]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  const monthlyData =
+    data?.monthlyTrend.map((m) => ({
+      month: m.label,
+      revenue: m.revenue,
+    })) ?? [];
+
+  const propertyData =
+    data?.propertyPerformance
+      .filter((p) => p.revenue > 0)
+      .map((p, i) => ({
+        name: p.title,
+        value: p.revenue,
+        color: PIE_COLORS[i % PIE_COLORS.length],
+      })) ?? [];
+
+  const lastMonthRevenue =
+    monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].revenue : 0;
+  const totalRevenue = monthlyData.reduce((sum, m) => sum + m.revenue, 0);
+  const growth = data?.stats.bookingRevenueChange ?? 0;
+  const occupancy = data?.stats.occupancyRate ?? 0;
 
   return (
     <div className="bg-white rounded-[5px] shadow-sm border p-6">
@@ -60,23 +90,29 @@ export default function RevenueChart() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {["monthly", "quarterly", "yearly"].map((period) => (
+          {(["monthly", "quarterly", "yearly"] as Timeframe[]).map((periodKey) => (
             <button
-              key={period}
+              key={periodKey}
+              type="button"
               className={`
                 px-3 py-1.5 text-sm font-medium rounded-[5px] transition-colors
-                ${timeframe === period
-                  ? "bg-green-100 text-green-700"
-                  : "text-gray-600 hover:bg-gray-100"
+                ${
+                  timeframe === periodKey
+                    ? "bg-green-100 text-green-700"
+                    : "text-gray-600 hover:bg-gray-100"
                 }
               `}
-              onClick={() => setTimeframe(period)}
+              onClick={() => setTimeframe(periodKey)}
             >
-              {period.charAt(0).toUpperCase() + period.slice(1)}
+              {periodKey.charAt(0).toUpperCase() + periodKey.slice(1)}
             </button>
           ))}
         </div>
       </div>
+
+      {error && (
+        <p className="mb-4 text-sm text-red-600">{error}</p>
+      )}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-5">
@@ -85,15 +121,23 @@ export default function RevenueChart() {
             <div className="p-2 bg-green-100 rounded-lg">
               <DollarSign className="w-5 h-5 text-green-600" />
             </div>
-            <div className={`flex items-center gap-1 ${growth >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {growth >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+            <div
+              className={`flex items-center gap-1 ${
+                growth >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {growth >= 0 ? (
+                <TrendingUp className="w-4 h-4" />
+              ) : (
+                <TrendingDown className="w-4 h-4" />
+              )}
               <span className="text-sm font-medium">{Math.abs(growth).toFixed(1)}%</span>
             </div>
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            {formatCurrency(lastMonthRevenue)}
+            {loading ? "—" : formatCurrency(lastMonthRevenue)}
           </div>
-          <div className="text-sm text-gray-600">Current Month Revenue</div>
+          <div className="text-sm text-gray-600">Latest Month Revenue</div>
         </div>
 
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-[5px] p-5 border border-blue-100">
@@ -105,7 +149,9 @@ export default function RevenueChart() {
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-gray-900">85%</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {loading ? "—" : `${occupancy}%`}
+          </div>
           <div className="text-sm text-gray-600">Average Occupancy Rate</div>
         </div>
 
@@ -119,49 +165,62 @@ export default function RevenueChart() {
             </div>
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            {formatCurrency(totalRevenue)}
+            {loading ? "—" : formatCurrency(totalRevenue)}
           </div>
-          <div className="text-sm text-gray-600">Total 6-Month Revenue</div>
+          <div className="text-sm text-gray-600">
+            Total {data?.periodMonths ?? 6}-Month Revenue
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Monthly Revenue Chart */}
+        {/* Monthly Revenue Trend */}
         <div>
           <h4 className="font-medium text-gray-900 mb-4">Monthly Revenue Trend</h4>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#6b7280", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#6b7280", fontSize: 12 }}
-                  tickFormatter={(value) => `£${value / 1000}k`}
-                />
-                <Tooltip
-                  formatter={(value) => [`£${Number(value).toLocaleString()}`, "Revenue"]}
-                  labelFormatter={(label) => `Month: ${label}`}
-                  contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Bar
-                  dataKey="revenue"
-                  fill="#10b981"
-                  radius={[4, 4, 0, 0]}
-                  name="Revenue"
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {loading ? (
+              <div className="h-full animate-pulse rounded-[5px] bg-gray-100" />
+            ) : monthlyData.length === 0 ? (
+              <p className="text-sm text-gray-500 py-16 text-center">
+                No revenue data for this period yet.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                    tickFormatter={(value) => `£${value / 1000}k`}
+                  />
+                  <Tooltip
+                    formatter={(value) => [
+                      `£${Number(value).toLocaleString()}`,
+                      "Revenue",
+                    ]}
+                    labelFormatter={(label) => `Month: ${label}`}
+                    contentStyle={{
+                      backgroundColor: "white",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Bar
+                    dataKey="revenue"
+                    fill="#339390"
+                    radius={[4, 4, 0, 0]}
+                    name="Revenue"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -169,96 +228,41 @@ export default function RevenueChart() {
         <div>
           <h4 className="font-medium text-gray-900 mb-4">Revenue by Property</h4>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={propertyRevenueData.filter(p => p.value > 0)}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${Number((percent ?? 0) * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {propertyRevenueData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) => [`£${Number(value).toLocaleString()}`, "Revenue"]}
-                />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Revenue Sources */}
-        <div>
-          <h4 className="font-medium text-gray-900 mb-4">Revenue Sources</h4>
-          <div className="space-y-4">
-            {revenueSources.map((source) => (
-              <div key={source.name} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: source.color }}
-                    ></div>
-                    <span className="text-sm font-medium">{source.name}</span>
-                  </div>
-                  <span className="font-medium">{source.value}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="h-2 rounded-full"
-                    style={{
-                      width: `${source.value}%`,
-                      backgroundColor: source.color,
-                    }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bookings vs Inquiries */}
-        <div>
-          <h4 className="font-medium text-gray-900 mb-4">Bookings vs Inquiries</h4>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#6b7280", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#6b7280", fontSize: 12 }}
-                />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="bookings"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  name="Bookings"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="inquiries"
-                  stroke="#8b5cf6"
-                  strokeWidth={2}
-                  name="Inquiries"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {loading ? (
+              <div className="h-full animate-pulse rounded-[5px] bg-gray-100" />
+            ) : propertyData.length === 0 ? (
+              <p className="text-sm text-gray-500 py-16 text-center">
+                No property revenue for this period yet.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={propertyData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      `${name}: ${Number((percent ?? 0) * 100).toFixed(0)}%`
+                    }
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {propertyData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value) => [
+                      `£${Number(value).toLocaleString()}`,
+                      "Revenue",
+                    ]}
+                  />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>

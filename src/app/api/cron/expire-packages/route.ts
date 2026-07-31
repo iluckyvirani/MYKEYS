@@ -12,8 +12,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const renewals = await packageService.processPackageRenewReminders();
     const result = await packageService.expirePackages();
-    return successResponse(result, "Package expiry job completed");
+    return successResponse(
+      { renewals, ...result },
+      "Package renew reminders and expiry job completed"
+    );
   } catch (err: any) {
     console.error("[cron/expire-packages]", err);
     return errorResponse("Internal server error", 500);

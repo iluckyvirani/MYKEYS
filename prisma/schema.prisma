@@ -292,6 +292,10 @@ model User {
   favorites       Favorite[]
   savedSearches   SavedSearch[]
   documents       Document[]     @relation("UserDocuments")
+  propertyTenants PropertyTenant[]
+  propertyTenancies PropertyTenancy[]
+  propertyExpenses PropertyExpense[]
+  diaryTasks       DiaryTask[]
 
   // Phase 3 — Bids
   bids            PropertyBid[]
@@ -312,6 +316,20 @@ model User {
   // Authentication
   resetToken       String?
   resetTokenExpiry DateTime?
+
+  /// Email verification (signup OTP)
+  emailVerified      Boolean   @default(false)
+  emailOtpHash       String?
+  emailOtpExpiresAt  DateTime?
+  emailOtpLastSentAt DateTime?
+
+  /// Change-email flow (OTP to old email, then OTP to new email)
+  pendingEmail              String?
+  /// VERIFY_OLD | VERIFY_NEW
+  emailChangeStep           String?
+  emailChangeOtpHash        String?
+  emailChangeOtpExpiresAt   DateTime?
+  emailChangeLastSentAt     DateTime?
 
   // Timestamps
   createdAt   DateTime  @default(now())
@@ -417,6 +435,8 @@ model Property {
   favorites   Favorite[]
   propertyDocuments PropertyDocument[]
   bids         PropertyBid[]
+  tenancies    PropertyTenancy[]
+  expenses     PropertyExpense[]
 
   // Analytics
   views     Int   @default(0)
@@ -808,6 +828,9 @@ model OwnerPackage {
   endDate     DateTime
   nextBilling DateTime?
   cancelledAt DateTime?
+
+  /// e.g. "7d-2026-08-01" — last renew reminder sent (avoids duplicates)
+  lastRenewReminderKey String?
 
   // Usage Tracking
   propertiesUsed      Int     @default(0)
@@ -1405,6 +1428,132 @@ model Faq {
   @@index([category, status])
   @@index([status])
   @@index([featured])
+}
+
+enum RentTenure {
+  SIX_MONTHS
+  TWELVE_MONTHS
+}
+
+enum TenancyStatus {
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+/// Off-platform tenant contact — not linked to the main User table
+model PropertyTenant {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  phone     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenancies PropertyTenancy[]
+
+  @@index([ownerId])
+  @@index([email])
+}
+
+/// Manual long-term rental managed by the owner (no package required)
+model PropertyTenancy {
+  id                 String        @id @default(cuid())
+  propertyId         String
+  property           Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenantId           String
+  tenant             PropertyTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ownerId            String
+  owner              User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  tenure             RentTenure
+  agreementDate      DateTime
+  /// When the tenure ends (agreementDate + 6 or 12 months)
+  endsAt             DateTime
+  /// Day of month rent is due (1–28)
+  rentDueDay         Int
+  monthlyRent        Float?
+  status             TenancyStatus @default(ACTIVE)
+  /// YYYY-MM key of last due-date reminder (avoids duplicate sends)
+  lastDueReminderKey String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  documents PropertyTenantDocument[]
+
+  @@index([propertyId])
+  @@index([ownerId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([rentDueDay, status])
+  @@index([status, endsAt])
+}
+
+model PropertyTenantDocument {
+  id        String          @id @default(cuid())
+  tenancyId String
+  tenancy   PropertyTenancy @relation(fields: [tenancyId], references: [id], onDelete: Cascade)
+  name      String
+  fileUrl   String
+  createdAt DateTime        @default(now())
+
+  @@index([tenancyId])
+}
+
+/// Owner-recorded property expenses (maintenance, bills, etc.)
+model PropertyExpense {
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  amount      Float
+  expenseDate DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([propertyId])
+  @@index([expenseDate])
+  @@index([ownerId, expenseDate])
+  @@index([ownerId, propertyId])
+}
+
+enum DiaryPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum DiaryStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+/// Personal diary / to-do items for user, owner, and service dashboards
+model DiaryTask {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  priority     DiaryPriority @default(MEDIUM)
+  status       DiaryStatus   @default(PENDING)
+  dueDate      DateTime
+  /// Set when due-date email + notification were sent
+  reminderSentAt DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([dueDate, status])
+  @@index([reminderSentAt])
 }
 
 /// CMS blocks for marketing pages (home first, then buy/rent/etc.)
