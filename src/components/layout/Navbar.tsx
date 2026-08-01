@@ -545,14 +545,14 @@ export default function Navbar() {
                 )}
                 {openMenu === "inspire" && (
                   <div
-                    className="py-5 pr-10"
+                    className="py-3 pr-8"
                     style={{ paddingLeft: megaOffsetLeft }}
                   >
-                    <div className="grid grid-cols-3 gap-x-8 xl:gap-x-10 gap-y-4 max-w-2xl">
+                    <div className="grid grid-cols-3 gap-x-6 xl:gap-x-8 gap-y-4 max-w-xl">
                       {inspireColumns.map((column, colIndex) => (
                         <div
                           key={colIndex}
-                          className="flex flex-col gap-8 min-w-0"
+                          className="flex flex-col gap-9 min-w-0"
                         >
                           {column.map((item) => (
                             <Link
