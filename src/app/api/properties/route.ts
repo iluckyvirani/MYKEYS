@@ -6,6 +6,7 @@ import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
 import { getBoostedPropertyIds, getAdminSettings } from "@/lib/bids/bidService";
 import { getDocumentVerificationStatesForProperties } from "@/lib/documents/documentService";
+import { maybeNotifyNewListing } from "@/lib/newsletter/service";
 
 /**
  * GET /api/properties
@@ -527,6 +528,12 @@ export const POST = withAuth(
             },
           },
         },
+      });
+
+      maybeNotifyNewListing({
+        previousStatus: null,
+        nextStatus: property.status,
+        propertyId: property.id,
       });
 
       return successResponse(property, "Property created successfully", 201);

@@ -51,7 +51,13 @@ export default function SavedSearchesPage() {
       setError(null);
       const res = await api.get("/saved-searches");
       if (res.data?.success) {
-        setItems(res.data.data || []);
+        const payload = res.data.data;
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.items)
+            ? payload.items
+            : [];
+        setItems(list);
       } else {
         setError(res.data?.message || "Failed to load saved searches");
       }

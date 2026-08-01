@@ -51,14 +51,14 @@ export default function ShortRentHero({
   };
 
   return (
-    <section className="relative min-h-[320px] sm:min-h-[380px] flex items-center justify-center overflow-hidden bg-white pt-24 pb-14 border-b border-gray-100">
-      <div className="relative z-10 w-full max-w-3xl px-4">
+    <section className="relative min-h-[320px] sm:min-h-[380px] flex items-center justify-center overflow-visible bg-white pt-24 pb-28 border-b border-gray-100 z-20">
+      <div className="relative z-30 w-full max-w-3xl px-4">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#0f3d36] mb-6">
           Search short stays
         </h1>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
+        <div className="flex flex-col sm:flex-row gap-3 items-start">
+          <div className="relative flex-1 w-full">
             <div className="flex items-center bg-white rounded-lg border-2 border-green-500 focus-within:border-green-600 overflow-hidden shadow-sm">
               <Search className="w-5 h-5 text-slate-400 ml-3 shrink-0" />
               <input
@@ -77,7 +77,7 @@ export default function ShortRentHero({
             </div>
 
             {showSuggestions && filtered.length > 0 && (
-              <ul className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20">
+              <ul className="absolute left-0 right-0 top-full mt-2 max-h-64 overflow-y-auto bg-white rounded-xl shadow-xl border border-gray-100 z-50">
                 {filtered.map((item) => (
                   <li key={item}>
                     <button
@@ -100,7 +100,7 @@ export default function ShortRentHero({
           <button
             type="button"
             onClick={() => goSearch(location)}
-            className="cursor-pointer shrink-0 px-8 py-3.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-base transition-colors"
+            className="cursor-pointer shrink-0 w-full sm:w-auto px-8 py-3.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-base transition-colors"
           >
             Search
           </button>

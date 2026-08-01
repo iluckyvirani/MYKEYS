@@ -244,12 +244,18 @@ model User {
   id        String               @id @default(cuid())
   email     String               @unique
   phone     String?              @unique
-  password  String
+  /// Nullable for Google-only accounts
+  password  String?
   firstName String
   lastName  String
   avatar    String?
   roles     UserRoleAssignment[]
   status    UserStatus           @default(ACTIVE)
+
+  /// EMAIL | GOOGLE | BOTH
+  authProvider String @default("EMAIL")
+  /// Google subject (`sub`) — unique when linked
+  googleId     String? @unique
 
   // Personal Information (for USER role)
   birthDate String?
@@ -339,6 +345,7 @@ model User {
   // Indexes
   @@index([email])
   @@index([status])
+  @@index([googleId])
 }
 
 model Property {
@@ -1568,4 +1575,16 @@ model PageSection {
 
   @@unique([page, section])
   @@index([page, isActive])
+}
+
+/// Footer "Stay Updated" newsletter — emailed when a new property goes live
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  isActive       Boolean   @default(true)
+  unsubscribeToken String  @unique @default(cuid())
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  @@index([isActive])
 }

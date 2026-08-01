@@ -25,6 +25,8 @@ const FOOTER_PROPERTY_TYPES = [
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [subscribeError, setSubscribeError] = useState("");
+  const [subscribing, setSubscribing] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [propertyTypeCounts, setPropertyTypeCounts] = useState<Record<string, number>>({});
   const [contactInfo, setContactInfo] = useState({
@@ -81,12 +83,31 @@ export default function Footer() {
     };
   }, []);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setSubscribed(true);
-      setTimeout(() => setSubscribed(false), 3000);
-      setEmail("");
+    const trimmed = email.trim();
+    if (!trimmed || subscribing) return;
+
+    setSubscribing(true);
+    setSubscribeError("");
+    try {
+      const response = await api.post("/newsletter/subscribe", { email: trimmed });
+      if (response.data?.success) {
+        setSubscribed(true);
+        setEmail("");
+        setTimeout(() => setSubscribed(false), 5000);
+      } else {
+        setSubscribeError(
+          response.data?.message || "Could not subscribe. Please try again."
+        );
+      }
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Could not subscribe. Please try again.";
+      setSubscribeError(message);
+    } finally {
+      setSubscribing(false);
     }
   };
 
@@ -196,12 +217,21 @@ export default function Footer() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  className="w-full bg-linear-to-r from-green-600 to-emerald-600 text-white font-medium py-3.5 rounded-[5px] cursor-pointer hover:shadow-lg hover:shadow-emerald-500/30 transition-all flex items-center justify-center gap-2"
+                  disabled={subscribing}
+                  className="w-full bg-linear-to-r from-green-600 to-emerald-600 text-white font-medium py-3.5 rounded-[5px] cursor-pointer hover:shadow-lg hover:shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {subscribed ? "Subscribed! 🎉" : "Subscribe Now"}
-                  {!subscribed && <Send className="w-4 h-4" />}
+                  {subscribed
+                    ? "Subscribed!"
+                    : subscribing
+                      ? "Subscribing…"
+                      : "Subscribe Now"}
+                  {!subscribed && !subscribing && <Send className="w-4 h-4" />}
                 </motion.button>
               </form>
+
+              {subscribeError && (
+                <p className="text-red-600 text-sm font-medium">{subscribeError}</p>
+              )}
 
               {subscribed && (
                 <motion.div
@@ -209,7 +239,7 @@ export default function Footer() {
                   animate={{ opacity: 1, y: 0 }}
                   className="text-green-600 text-sm font-medium"
                 >
-                  Thank you for subscribing! Check your email for confirmation.
+                  Thank you for subscribing! We&apos;ll email you when new properties go live.
                 </motion.div>
               )}
 

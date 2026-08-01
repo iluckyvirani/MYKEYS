@@ -10,6 +10,7 @@ import {
   getPropertyDocumentVerificationState,
   documentVerificationBlockMessage,
 } from "@/lib/documents/documentService";
+import { maybeNotifyNewListing } from "@/lib/newsletter/service";
 
 /**
  * PATCH /api/owner/properties/[id]/status
@@ -95,6 +96,12 @@ export const PATCH = withAuth<{ id: string }>(
         where: { id },
         data: { status: statusRaw as PropertyStatus },
         select: { id: true, status: true, updatedAt: true },
+      });
+
+      maybeNotifyNewListing({
+        previousStatus: existingProperty.status,
+        nextStatus: updated.status,
+        propertyId: updated.id,
       });
 
       return successResponse(updated, "Property status updated successfully");

@@ -64,8 +64,57 @@ export default function Navbar() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const navRef = useRef<HTMLElement>(null);
+  const rentTriggerRef = useRef<HTMLButtonElement>(null);
+  const inspireTriggerRef = useRef<HTMLButtonElement>(null);
+  const navLinksRef = useRef<HTMLDivElement>(null);
+  const megaCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [megaOffsetLeft, setMegaOffsetLeft] = useState(24);
   const router = useRouter();
   const pathname = usePathname();
+
+  const updateMegaOffset = (menu: MegaMenu) => {
+    // Rent: align links under the Rent tab.
+    // Inspire: align columns with the start of the nav links (like the reference).
+    const el =
+      menu === "rent"
+        ? rentTriggerRef.current
+        : menu === "inspire"
+          ? navLinksRef.current
+          : null;
+    if (!el) return;
+    const left = Math.max(16, Math.round(el.getBoundingClientRect().left));
+    setMegaOffsetLeft(left);
+  };
+
+  const openMega = (menu: MegaMenu) => {
+    if (megaCloseTimer.current) {
+      clearTimeout(megaCloseTimer.current);
+      megaCloseTimer.current = null;
+    }
+    if (menu === "rent" || menu === "inspire") {
+      updateMegaOffset(menu);
+    }
+    setOpenMenu(menu);
+  };
+
+  const scheduleCloseMega = () => {
+    if (megaCloseTimer.current) clearTimeout(megaCloseTimer.current);
+    megaCloseTimer.current = setTimeout(() => setOpenMenu(null), 120);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (megaCloseTimer.current) clearTimeout(megaCloseTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (openMenu !== "rent" && openMenu !== "inspire") return;
+    const sync = () => updateMegaOffset(openMenu);
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, [openMenu]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -159,15 +208,36 @@ export default function Navbar() {
     user?.roles?.some((role) => role === "SERVICE")
   );
 
-  const linkClass = (active: boolean) =>
-    `relative px-3 py-2 text-sm font-semibold rounded-md transition-colors ${active
-      ? "bg-gray-100 text-slate-900"
-      : "text-slate-800 hover:bg-gray-100 hover:text-slate-900"
+  const MEGA_BG = "#F2F4F5";
+  const NAV_INK = "#010E28";
+
+  const linkClass = (active: boolean, menuOpen = false) =>
+    `relative px-3.5 py-2.5 text-sm font-bold transition-colors ${
+      menuOpen
+        ? "bg-[#F2F4F5] text-[#010E28] rounded-t-lg"
+        : active
+          ? "bg-gray-100 text-[#010E28] rounded-md"
+          : "text-[#010E28] hover:bg-gray-100 hover:text-[#010E28] rounded-md"
     }`;
 
   const underlineClass = (active: boolean) =>
-    `absolute left-3 right-3 -bottom-0.5 h-0.5 bg-slate-900 transition-opacity ${active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+    `absolute left-3.5 right-3.5 bottom-1.5 h-[3px] bg-[#010E28] transition-opacity ${
+      active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
     }`;
+
+  const MegaCaret = () => (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute left-1/2 top-full z-[60] -mt-px -translate-x-1/2"
+      style={{
+        width: 0,
+        height: 0,
+        borderLeft: "8px solid transparent",
+        borderRight: "8px solid transparent",
+        borderTop: `8px solid ${MEGA_BG}`,
+      }}
+    />
+  );
 
   return (
     <>
@@ -194,26 +264,35 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop nav */}
-            <div className="hidden lg:flex items-center gap-1 ml-auto mr-4">
-              <Link href="/buy" className={`group ${linkClass(pathname === "/buy")}`}>
+            <div
+              ref={navLinksRef}
+              className="hidden lg:flex items-center gap-0.5 ml-auto mr-4 self-stretch"
+            >
+              <Link
+                href="/buy"
+                className={`group self-center ${linkClass(pathname === "/buy")}`}
+              >
                 Buy
                 <span className={underlineClass(pathname === "/buy")} />
               </Link>
 
               <div
-                className="relative"
-                onMouseEnter={() => setOpenMenu("rent")}
-                onMouseLeave={() => setOpenMenu((m) => (m === "rent" ? null : m))}
+                className="relative flex items-end self-stretch"
+                onMouseEnter={() => openMega("rent")}
+                onMouseLeave={scheduleCloseMega}
               >
                 <button
+                  ref={rentTriggerRef}
                   type="button"
-                  className={`group ${linkClass(
+                  className={`group self-center ${linkClass(
                     pathname.startsWith("/rent/whole-property") ||
                       pathname.startsWith("/rent/room-to-rent") ||
-                      pathname.startsWith("/rent/long-rent") ||
-                      openMenu === "rent"
+                      pathname.startsWith("/rent/long-rent"),
+                    openMenu === "rent"
                   )}`}
-                  onClick={() => setOpenMenu(openMenu === "rent" ? null : "rent")}
+                  onClick={() =>
+                    openMenu === "rent" ? setOpenMenu(null) : openMega("rent")
+                  }
                   aria-expanded={openMenu === "rent"}
                 >
                   Rent
@@ -225,45 +304,60 @@ export default function Navbar() {
                         pathname.startsWith("/rent/long-rent")
                     )}
                   />
+                  {openMenu === "rent" && <MegaCaret />}
                 </button>
               </div>
 
               <Link
                 href="/rent/short-rent"
-                className={`group ${linkClass(pathname.startsWith("/rent/short-rent"))}`}
+                className={`group self-center ${linkClass(pathname.startsWith("/rent/short-rent"))}`}
               >
                 Short Stay
                 <span className={underlineClass(pathname.startsWith("/rent/short-rent"))} />
               </Link>
 
-              <Link href="/services" className={`group ${linkClass(pathname.startsWith("/services"))}`}>
+              <Link
+                href="/services"
+                className={`group self-center ${linkClass(pathname.startsWith("/services"))}`}
+              >
                 Services
                 <span className={underlineClass(pathname.startsWith("/services"))} />
               </Link>
 
               <Link
                 href="/how-listing-works"
-                className={`group ${linkClass(pathname.startsWith("/how-listing-works"))}`}
+                className={`group self-center ${linkClass(pathname.startsWith("/how-listing-works"))}`}
               >
                 List Property
                 <span className={underlineClass(pathname.startsWith("/how-listing-works"))} />
               </Link>
 
               <div
-                className="relative"
-                onMouseEnter={() => setOpenMenu("inspire")}
-                onMouseLeave={() => setOpenMenu((m) => (m === "inspire" ? null : m))}
+                className="relative flex items-end self-stretch"
+                onMouseEnter={() => openMega("inspire")}
+                onMouseLeave={scheduleCloseMega}
               >
                 <button
+                  ref={inspireTriggerRef}
                   type="button"
-                  className={`group ${linkClass(
-                    pathname.startsWith("/inspire") || openMenu === "inspire"
+                  className={`group self-center ${linkClass(
+                    pathname.startsWith("/inspire"),
+                    openMenu === "inspire"
                   )}`}
-                  onClick={() => setOpenMenu(openMenu === "inspire" ? null : "inspire")}
+                  onClick={() =>
+                    openMenu === "inspire"
+                      ? setOpenMenu(null)
+                      : openMega("inspire")
+                  }
                   aria-expanded={openMenu === "inspire"}
                 >
                   Inspire
-                  <span className={underlineClass(openMenu === "inspire" || pathname.startsWith("/inspire"))} />
+                  <span
+                    className={underlineClass(
+                      openMenu === "inspire" || pathname.startsWith("/inspire")
+                    )}
+                  />
+                  {openMenu === "inspire" && <MegaCaret />}
                 </button>
               </div>
             </div>
@@ -414,25 +508,34 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Desktop mega menus */}
+        {/* Desktop mega menus — full-width panel matching reference nav */}
         <AnimatePresence>
           {(openMenu === "rent" || openMenu === "inspire") && (
             <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              className="hidden lg:block absolute left-0 right-0 top-full bg-gray-50 border-t border-gray-200 shadow-lg"
-              onMouseEnter={() => setOpenMenu(openMenu)}
-              onMouseLeave={() => setOpenMenu(null)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              className="hidden lg:block absolute left-0 right-0 top-full z-40"
+              style={{
+                backgroundColor: MEGA_BG,
+                boxShadow: "0 10px 24px rgba(1, 14, 40, 0.1)",
+              }}
+              onMouseEnter={() => openMega(openMenu)}
+              onMouseLeave={scheduleCloseMega}
             >
-              <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8">
+              <div className="w-full">
                 {openMenu === "rent" && (
-                  <div className="grid grid-cols-3 gap-8 max-w-3xl">
+                  <div
+                    className="flex flex-col gap-6 py-8 pr-6"
+                    style={{ paddingLeft: megaOffsetLeft }}
+                  >
                     {rentLinks.map((item) => (
                       <Link
                         key={item.label}
                         href={item.href}
-                        className="text-base font-semibold text-slate-800 hover:text-green-600 transition-colors"
+                        className="text-[15px] font-bold hover:underline underline-offset-4 transition-colors cursor-pointer w-fit whitespace-nowrap"
+                        style={{ color: NAV_INK }}
                         onClick={() => setOpenMenu(null)}
                       >
                         {item.label}
@@ -441,21 +544,30 @@ export default function Navbar() {
                   </div>
                 )}
                 {openMenu === "inspire" && (
-                  <div className="grid grid-cols-3 gap-x-12 gap-y-5 max-w-4xl">
-                    {inspireColumns.map((column, colIndex) => (
-                      <div key={colIndex} className="flex flex-col gap-5">
-                        {column.map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className="text-base font-semibold text-slate-800 hover:text-green-600 transition-colors cursor-pointer"
-                            onClick={() => setOpenMenu(null)}
-                          >
-                            {item.label}
-                          </Link>
-                        ))}
-                      </div>
-                    ))}
+                  <div
+                    className="py-5 pr-10"
+                    style={{ paddingLeft: megaOffsetLeft }}
+                  >
+                    <div className="grid grid-cols-3 gap-x-8 xl:gap-x-10 gap-y-4 max-w-2xl">
+                      {inspireColumns.map((column, colIndex) => (
+                        <div
+                          key={colIndex}
+                          className="flex flex-col gap-8 min-w-0"
+                        >
+                          {column.map((item) => (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              className="text-[15px] font-bold hover:underline underline-offset-4 transition-colors cursor-pointer w-fit whitespace-nowrap"
+                              style={{ color: NAV_INK }}
+                              onClick={() => setOpenMenu(null)}
+                            >
+                              {item.label}
+                            </Link>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

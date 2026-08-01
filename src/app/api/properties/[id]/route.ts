@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
-import { withAuth } from "@/lib/auth/middleware";
+import { withAuth, authenticate } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
 import { packageService } from "@/lib/packages/packageService";
@@ -10,10 +10,13 @@ import {
   documentVerificationBlockMessage,
 } from "@/lib/documents/documentService";
 import { getBlockedDateRanges } from "@/lib/bookings/bookingAvailabilityQueries";
+import { maybeNotifyNewListing } from "@/lib/newsletter/service";
 
 /**
  * GET /api/properties/[id]
- * Get property by ID
+ * Get property by ID.
+ * Public: ACTIVE listings only.
+ * Owner/Admin (authenticated): can load their own listing in any status (draft, etc.).
  */
 export async function GET(
   request: NextRequest,
@@ -72,20 +75,27 @@ export async function GET(
       return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
     }
 
+    const authUser = await authenticate(request);
+    const isOwnerOrAdmin =
+      !!authUser &&
+      (authUser.userId === property.ownerId || authUser.role === "ADMIN");
+
     // Align with list API: ACTIVE listings stay publicly viewable unless docs were rejected.
     // Pending verification should not blank the detail page after a search result click.
-    if (property.status === "ACTIVE") {
-      const docState = await getPropertyDocumentVerificationState(
-        property.id,
-        property.listingType,
-        property.rentalType
-      );
-      if (docState.hasRejected) {
+    // Owners/admins can still open draft / inactive listings for edit.
+    if (!isOwnerOrAdmin) {
+      if (property.status === "ACTIVE") {
+        const docState = await getPropertyDocumentVerificationState(
+          property.id,
+          property.listingType,
+          property.rentalType
+        );
+        if (docState.hasRejected) {
+          return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
+        }
+      } else {
         return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
       }
-    } else {
-      // Non-active listings are not publicly viewable
-      return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
     }
 
     // Fetch owner's active package to determine contact visibility
@@ -99,28 +109,28 @@ export async function GET(
       showPhone: ownerSub?.package?.showOwnerPhone ?? false,
     };
 
-    // Mask owner fields based on package flags
+    // Mask owner fields for public viewers; owners/admins get full contact fields
     const isAgent = property.owner?.listingSellerType === "AGENT";
     const maskedOwner = property.owner
-      ? {
-          id: property.owner.id,
-          avatar: property.owner.avatar,
-          agentLogo: property.owner.agentLogo,
-          listingSellerType: property.owner.listingSellerType,
-          companyName: property.owner.companyName,
-          website: property.owner.website,
-          city: property.owner.city,
-          address: property.owner.address,
-          // Names when package allows, or always show company for agents
-          firstName: ownerVisibility.showName ? property.owner.firstName : undefined,
-          lastName: ownerVisibility.showName ? property.owner.lastName : undefined,
-          email: ownerVisibility.showName ? property.owner.email : undefined,
-          // Agents always show phone when set; otherwise package gate
-          phone:
-            ownerVisibility.showPhone || isAgent
-              ? property.owner.phone
-              : undefined,
-        }
+      ? isOwnerOrAdmin
+        ? property.owner
+        : {
+            id: property.owner.id,
+            avatar: property.owner.avatar,
+            agentLogo: property.owner.agentLogo,
+            listingSellerType: property.owner.listingSellerType,
+            companyName: property.owner.companyName,
+            website: property.owner.website,
+            city: property.owner.city,
+            address: property.owner.address,
+            firstName: ownerVisibility.showName ? property.owner.firstName : undefined,
+            lastName: ownerVisibility.showName ? property.owner.lastName : undefined,
+            email: ownerVisibility.showName ? property.owner.email : undefined,
+            phone:
+              ownerVisibility.showPhone || isAgent
+                ? property.owner.phone
+                : undefined,
+          }
       : null;
 
     // Calculate average rating
@@ -329,6 +339,12 @@ export const PATCH = withAuth<{ id: string }>(
             },
           },
         },
+      });
+
+      maybeNotifyNewListing({
+        previousStatus: existingProperty.status,
+        nextStatus: property.status,
+        propertyId: property.id,
       });
 
       return successResponse(property, "Property updated successfully");

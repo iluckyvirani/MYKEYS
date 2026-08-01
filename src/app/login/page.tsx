@@ -1,10 +1,13 @@
 "use client";
 
 import AuthLayout from "@/components/auth/AuthLayout";
+import GoogleAuthButton, {
+  AuthDivider,
+} from "@/components/auth/GoogleAuthButton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Lock, Mail, Eye, EyeOff } from "lucide-react";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { LoginRequest, LoginResponse } from "@/types/auth";
@@ -19,6 +22,11 @@ function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const oauthError = searchParams.get("error");
+    if (oauthError) setError(oauthError);
+  }, [searchParams]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -40,7 +48,6 @@ function LoginPageContent() {
       if (response.data) {
         const { user, accessToken, refreshToken } = response.data.data;
 
-        // Store tokens
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
         localStorage.setItem("user", JSON.stringify(user));
@@ -84,6 +91,9 @@ function LoginPageContent() {
             {error}
           </div>
         )}
+
+        <GoogleAuthButton redirect={redirectTo} label="Continue with Google" />
+        <AuthDivider text="or continue with email" />
 
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#339390]" />
@@ -140,7 +150,7 @@ function LoginPageContent() {
         </Button>
 
         <p className="text-center text-sm mt-2">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/signup" className="text-[#339390] font-semibold">
             Sign Up
           </Link>

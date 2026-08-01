@@ -7,6 +7,7 @@ import { JWTPayload } from "@/lib/auth/jwt";
 import {
   getDocumentVerificationStatesForProperties,
 } from "@/lib/documents/documentService";
+import { maybeNotifyNewListing } from "@/lib/newsletter/service";
 
 /**
  * GET /api/admin/properties
@@ -269,6 +270,11 @@ export const PATCH = withAuth(
         );
       }
 
+      const existing = await prisma.property.findUnique({
+        where: { id: propertyId },
+        select: { status: true },
+      });
+
       const updatedProperty = await prisma.property.update({
         where: { id: propertyId },
         data: updateData,
@@ -276,6 +282,14 @@ export const PATCH = withAuth(
           owner: { select: { firstName: true, lastName: true, email: true } },
         },
       });
+
+      if (status) {
+        maybeNotifyNewListing({
+          previousStatus: existing?.status,
+          nextStatus: updatedProperty.status,
+          propertyId: updatedProperty.id,
+        });
+      }
 
       return successResponse(
         updatedProperty,

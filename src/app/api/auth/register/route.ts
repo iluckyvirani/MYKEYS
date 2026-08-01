@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
           lastName: validatedData.lastName,
           phone: validatedData.phone || null,
           status: "PENDING",
+          authProvider: "EMAIL",
           emailVerified: false,
           emailOtpHash: hashOtp(otp),
           emailOtpExpiresAt: otpExpiresAt(now),

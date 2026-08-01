@@ -19,7 +19,7 @@ const globalForPrisma = global as unknown as {
 };
 
 /** Bump when Prisma schema changes so dev server picks up regenerated client */
-const PRISMA_CLIENT_VERSION = "20260801-email-change-v1";
+const PRISMA_CLIENT_VERSION = "20260801-google-auth-v2";
 
 function createPrismaClient() {
   return new PrismaClient({

@@ -700,4 +700,63 @@ export const emailService = {
     await transporter.sendMail(mailOptions);
     console.log(`Email change OTP (${opts.target}) sent to ${opts.to}`);
   },
+
+  async sendNewsletterNewListingEmail(
+    email: string,
+    listing: {
+      id: string;
+      title: string;
+      location: string;
+      priceLabel: string;
+      listingLabel: string;
+    },
+    unsubscribeToken: string
+  ) {
+    try {
+      const detailHtml = `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;border-collapse:collapse;border:1px solid #d8eceb;border-radius:8px;overflow:hidden;">
+          <tr style="background:#f3fafa;">
+            <td style="padding:16px;">
+              <strong style="color:#0f172a;font-size:16px;">${listing.title}</strong><br/>
+              <span style="color:#64748b;font-size:13px;">${listing.location || ""}</span>
+              ${
+                listing.priceLabel
+                  ? `<br/><span style="color:#339390;font-weight:700;font-size:15px;">${listing.priceLabel}</span>`
+                  : ""
+              }
+              <br/><span style="color:#64748b;font-size:12px;text-transform:capitalize;">Just listed ${listing.listingLabel}</span>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:0;font-size:12px;color:#94a3b8;">
+          You are receiving this because you subscribed to MYKEYS updates.
+          <a href="${siteUrl(`/api/newsletter/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`)}" style="color:#64748b;">Unsubscribe</a>
+        </p>
+      `;
+
+      const mailOptions = {
+        ...baseMailOptions(email),
+        subject: `New listing live: ${listing.title}`,
+        html: renderStandardEmail({
+          title: "New property on MYKEYS",
+          greetingName: "there",
+          paragraphs: [
+            `A new property has just gone live on MYKEYS — take a look before it's gone.`,
+          ],
+          extraHtml: detailHtml,
+          cta: {
+            href: siteUrl(`/property/${listing.id}`),
+            label: "View property",
+          },
+        }),
+      };
+      await transporter.sendMail(mailOptions);
+      console.log(`Newsletter new listing email sent to ${email}`);
+    } catch (error) {
+      console.error(
+        `Failed to send newsletter new listing email to ${email}:`,
+        error
+      );
+    }
+  },
 };

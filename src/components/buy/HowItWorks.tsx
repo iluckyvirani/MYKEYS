@@ -24,6 +24,7 @@ export default function HowItWorks({
   ctaTitle = "Ready to find your dream home?",
   ctaSubtitle = "Start your property search today and connect directly with owners. Save thousands in agent fees and get better deals.",
   ctaButtonLabel = "Start Searching",
+  ctaHref = "/buy#buy-search",
   stats = DEFAULT_STATS,
 }: {
   title?: string;
@@ -31,6 +32,7 @@ export default function HowItWorks({
   ctaTitle?: string;
   ctaSubtitle?: string;
   ctaButtonLabel?: string;
+  ctaHref?: string;
   stats?: ListingStatItem[];
 }) {
   const steps = [
@@ -112,8 +114,18 @@ export default function HowItWorks({
                 {ctaSubtitle}
               </p>
               <Link
-                href="/buy"
+                href={ctaHref}
                 className="inline-flex bg-white text-green-600 hover:bg-gray-100 font-semibold px-8 py-3 rounded-lg cursor-pointer transition-colors"
+                onClick={(e) => {
+                  if (ctaHref.includes("#buy-search")) {
+                    const el = document.getElementById("buy-search");
+                    if (el) {
+                      e.preventDefault();
+                      el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      window.history.replaceState(null, "", "/buy#buy-search");
+                    }
+                  }
+                }}
               >
                 {ctaButtonLabel}
               </Link>

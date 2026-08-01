@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search, MapPin, Loader, Info } from "lucide-react";
+import { Search, MapPin, Loader, Info, AlertTriangle } from "lucide-react";
+import { GOOGLE_MAPS_API_KEY, hasGoogleMapsApiKey } from "@/lib/googleMaps";
 
 export interface LocationResult {
   lat: number;
@@ -19,9 +20,11 @@ interface LocationPickerMapProps {
   height?: string;
 }
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyBU4bIxc3n70tDjXJ5bFTy665UOR1z3DZw";
-
-function extractComponents(components: any[], lat: number, lng: number): LocationResult {
+function extractComponents(
+  components: google.maps.GeocoderAddressComponent[],
+  lat: number,
+  lng: number
+): LocationResult {
   let streetNumber = "",
     route = "",
     city = "",
@@ -31,10 +34,7 @@ function extractComponents(components: any[], lat: number, lng: number): Locatio
   for (const c of components) {
     if (c.types.includes("street_number")) streetNumber = c.long_name;
     if (c.types.includes("route")) route = c.long_name;
-    if (
-      c.types.includes("locality") ||
-      c.types.includes("postal_town")
-    )
+    if (c.types.includes("locality") || c.types.includes("postal_town"))
       city = c.long_name;
     if (c.types.includes("administrative_area_level_1")) state = c.long_name;
     if (c.types.includes("postal_code")) zipCode = c.long_name;
@@ -42,6 +42,12 @@ function extractComponents(components: any[], lat: number, lng: number): Locatio
 
   const address = [streetNumber, route].filter(Boolean).join(" ");
   return { lat, lng, address, city, state, zipCode };
+}
+
+declare global {
+  interface Window {
+    google?: typeof google;
+  }
 }
 
 export default function LocationPickerMap({
@@ -52,51 +58,82 @@ export default function LocationPickerMap({
 }: LocationPickerMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const onSelectRef = useRef(onLocationSelect);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    onSelectRef.current = onLocationSelect;
+  }, [onLocationSelect]);
 
   // Load Google Maps script once
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const g = (window as any).google;
-    if (g?.maps) {
+    if (!hasGoogleMapsApiKey()) {
+      setLoadError(
+        "Google Maps API key is missing or invalid. Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env and restart the server."
+      );
+      return;
+    }
+
+    if (window.google?.maps) {
       setLoaded(true);
       return;
     }
 
     const scriptId = "google-maps-picker-api";
-    if (document.getElementById(scriptId)) {
+    const existing = document.getElementById(scriptId) as HTMLScriptElement | null;
+    if (existing) {
       const poll = setInterval(() => {
-        if ((window as any).google?.maps) {
+        if (window.google?.maps) {
           setLoaded(true);
           clearInterval(poll);
         }
       }, 150);
-      return () => clearInterval(poll);
+      const timeout = setTimeout(() => {
+        clearInterval(poll);
+        if (!window.google?.maps) {
+          setLoadError(
+            "Google Maps failed to load. Check the browser console (ApiNotActivatedMapError, InvalidKeyMapError, or RefererNotAllowedMapError)."
+          );
+        }
+      }, 12000);
+      return () => {
+        clearInterval(poll);
+        clearTimeout(timeout);
+      };
     }
 
     const script = document.createElement("script");
     script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
+      GOOGLE_MAPS_API_KEY
+    )}&libraries=places`;
     script.async = true;
     script.defer = true;
     script.onload = () => setLoaded(true);
+    script.onerror = () =>
+      setLoadError(
+        "Could not load the Google Maps script. Check your API key, billing, and network."
+      );
     document.head.appendChild(script);
   }, []);
 
   // Initialise map once script is loaded
   useEffect(() => {
-    if (!loaded || !mapRef.current) return;
+    if (!loaded || !mapRef.current || !window.google?.maps) return;
 
-    const google = (window as any).google;
-    const hasInitial = typeof initialLat === "number" && typeof initialLng === "number";
+    const g = window.google;
+    const hasInitial =
+      typeof initialLat === "number" && typeof initialLng === "number";
     const center = hasInitial
       ? { lat: initialLat!, lng: initialLng! }
-      : { lat: 51.5074, lng: -0.1278 }; // London default
+      : { lat: 51.5074, lng: -0.1278 };
 
-    const map = new google.maps.Map(mapRef.current, {
+    const map = new g.maps.Map(mapRef.current, {
       center,
       zoom: hasInitial ? 14 : 10,
       mapTypeControl: false,
@@ -105,36 +142,55 @@ export default function LocationPickerMap({
     });
     mapInstanceRef.current = map;
 
-    const marker = new google.maps.Marker({
+    const marker = new g.maps.Marker({
       map,
       position: hasInitial ? center : undefined,
       draggable: true,
     });
     markerRef.current = marker;
 
-    // Click on map
-    map.addListener("click", (e: any) => {
+    const reverseGeocode = (lat: number, lng: number) => {
+      const geocoder = new g.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results?.[0]) {
+          if (inputRef.current) {
+            inputRef.current.value = results[0].formatted_address;
+          }
+          onSelectRef.current(
+            extractComponents(results[0].address_components, lat, lng)
+          );
+        } else {
+          onSelectRef.current({
+            lat,
+            lng,
+            address: "",
+            city: "",
+            state: "",
+            zipCode: "",
+          });
+        }
+      });
+    };
+
+    map.addListener("click", (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return;
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
       marker.setPosition(e.latLng);
-      reverseGeocode(google, lat, lng);
+      reverseGeocode(lat, lng);
     });
 
-    // Drag marker
-    marker.addListener("dragend", (e: any) => {
+    marker.addListener("dragend", (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return;
-      reverseGeocode(google, e.latLng.lat(), e.latLng.lng());
+      reverseGeocode(e.latLng.lat(), e.latLng.lng());
     });
 
-    // Places autocomplete on the search input
-    if (inputRef.current) {
-      const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+    if (inputRef.current && g.maps.places) {
+      const autocomplete = new g.maps.places.Autocomplete(inputRef.current, {
         types: ["geocode"],
         fields: ["address_components", "geometry", "formatted_address", "name"],
       });
 
-      // Prevent map from stealing pointer events while pac-container is open
       autocomplete.addListener("place_changed", () => {
         const place = autocomplete.getPlace();
         if (!place.geometry?.location) return;
@@ -143,33 +199,42 @@ export default function LocationPickerMap({
         map.setCenter({ lat, lng });
         map.setZoom(15);
         marker.setPosition({ lat, lng });
-        const result = extractComponents(place.address_components || [], lat, lng);
-        if (inputRef.current)
+        const result = extractComponents(
+          place.address_components || [],
+          lat,
+          lng
+        );
+        if (inputRef.current) {
           inputRef.current.value = place.formatted_address || "";
-        onLocationSelect(result);
+        }
+        onSelectRef.current(result);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 
-  function reverseGeocode(google: any, lat: number, lng: number) {
-    const geocoder = new google.maps.Geocoder();
-    geocoder.geocode(
-      { location: { lat, lng } },
-      (results: any[], status: string) => {
-        if (status === "OK" && results[0]) {
-          if (inputRef.current)
-            inputRef.current.value = results[0].formatted_address;
-          const result = extractComponents(
-            results[0].address_components,
-            lat,
-            lng
-          );
-          onLocationSelect(result);
-        } else {
-          onLocationSelect({ lat, lng, address: "", city: "", state: "", zipCode: "" });
-        }
-      }
+  if (loadError) {
+    return (
+      <div className="rounded-[5px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
+        <div className="flex gap-3">
+          <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+          <div className="space-y-2">
+            <p className="font-semibold">Map unavailable</p>
+            <p>{loadError}</p>
+            <ul className="list-disc pl-4 text-amber-900 space-y-1">
+              <li>
+                Enable <strong>Maps JavaScript API</strong>,{" "}
+                <strong>Places API</strong>, and <strong>Geocoding API</strong>
+              </li>
+              <li>Attach billing to the Google Cloud project</li>
+              <li>
+                Key restrictions: allow{" "}
+                <code className="text-xs">http://localhost:3000/*</code>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -180,13 +245,14 @@ export default function LocationPickerMap({
         <div>
           <p className="font-medium">Pick your property on the map</p>
           <p className="mt-1 text-green-800 leading-relaxed">
-            Search for an address or postcode, click anywhere on the map, or drag the pin.
-            We&apos;ll auto-fill your street address, city, region, postcode, and coordinates — you can edit any field afterwards.
+            Search for an address or postcode, click anywhere on the map, or
+            drag the pin. We&apos;ll auto-fill your street address, city,
+            region, postcode, and coordinates — you can edit any field
+            afterwards.
           </p>
         </div>
       </div>
 
-      {/* Search input */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         <input
@@ -197,8 +263,10 @@ export default function LocationPickerMap({
         />
       </div>
 
-      {/* Map container */}
-      <div className="relative rounded-[5px] border border-gray-200 overflow-hidden" style={{ height }}>
+      <div
+        className="relative rounded-[5px] border border-gray-200 overflow-hidden"
+        style={{ height }}
+      >
         {!loaded && (
           <div className="absolute inset-0 bg-gray-100 flex flex-col items-center justify-center z-10">
             <Loader className="w-5 h-5 text-green-600 animate-spin mb-2" />
@@ -211,7 +279,8 @@ export default function LocationPickerMap({
       <p className="text-xs text-gray-500 flex items-start gap-1.5">
         <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
         <span>
-          Tip: Use the search box or tap the map — your address details below will update automatically.
+          Tip: Use the search box or tap the map — your address details below
+          will update automatically.
         </span>
       </p>
     </div>

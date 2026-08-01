@@ -1,6 +1,9 @@
 "use client";
 
 import AuthLayout from "@/components/auth/AuthLayout";
+import GoogleAuthButton, {
+  AuthDivider,
+} from "@/components/auth/GoogleAuthButton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Lock, Mail, User, Eye, EyeOff } from "lucide-react";
@@ -126,6 +129,9 @@ export default function SignupPage() {
             {error}
           </div>
         )}
+
+        <GoogleAuthButton label="Sign up with Google" />
+        <AuthDivider text="or sign up with email" />
 
         <div className="relative">
           <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#339390]" />

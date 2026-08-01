@@ -1151,12 +1151,16 @@ export default function EditPropertyPage() {
     <DashboardLayout defaultRole="owner">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <Link href={`/owner/dashboard/properties/${id}`}>
-            <Button variant="outline" size="sm" className="cursor-pointer">
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Go Back
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            className="cursor-pointer"
+            type="button"
+            onClick={() => router.back()}
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Go Back
+          </Button>
           <Link href="/owner/dashboard/properties">
             <Button variant="outline">Properties List</Button>
           </Link>

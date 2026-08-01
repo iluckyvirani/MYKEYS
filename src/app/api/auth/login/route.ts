@@ -49,6 +49,14 @@ export async function POST(request: NextRequest) {
       throw createApiError(ErrorCode.INVALID_CREDENTIALS);
     }
 
+    if (!user.password) {
+      return errorResponse(
+        "This account uses Google Sign-In. Please continue with Google.",
+        400,
+        ErrorCode.INVALID_CREDENTIALS
+      );
+    }
+
     // Verify password
     const isPasswordValid = await verifyPassword(password, user.password);
 
