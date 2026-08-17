@@ -10,7 +10,6 @@ import { successResponse, errorResponse } from "@/lib/response";
  */
 export async function GET(request: NextRequest) {
   try {
-    const categoryId = request.nextUrl.searchParams.get("categoryId") || undefined;
     const catalogServiceId = request.nextUrl.searchParams.get("catalogServiceId");
 
     const [categories, catalog] = await Promise.all([
@@ -18,11 +17,13 @@ export async function GET(request: NextRequest) {
         where: { status: "active" },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       }),
-      catalogService.list({
-        activeOnly: true,
-        categoryId,
-      }),
+      catalogService.list({ activeOnly: true }),
     ]);
+
+    const categoriesWithCounts = categories.map((c) => ({
+      ...c,
+      serviceCount: catalog.filter((s) => s.categoryId === c.id).length,
+    }));
 
     let providers: any[] = [];
     let selectedService = null as any;
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     return successResponse(
       {
-        categories,
+        categories: categoriesWithCounts,
         catalog,
         selectedService,
         providers: providers.map((p) => ({

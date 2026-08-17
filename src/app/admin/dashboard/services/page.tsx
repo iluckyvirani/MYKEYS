@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,26 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
-import { Plus, Pencil, Trash2, Wrench, Loader2, X } from "lucide-react";
+import { ImageUploadField } from "@/components/admin/content/ImageUploadField";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Wrench,
+  Loader2,
+  X,
+  Search,
+  PoundSterling,
+  Percent,
+  Info,
+} from "lucide-react";
 
 type Category = { id: string; name: string };
 type CatalogRow = {
   id: string;
   name: string;
   description?: string | null;
+  image?: string | null;
   price: number;
   commissionPercent: number;
   isActive: boolean;
@@ -34,11 +47,22 @@ type CatalogRow = {
 const emptyForm = {
   name: "",
   description: "",
+  image: "",
   price: "50",
   commissionPercent: "10",
   categoryId: "",
   isActive: true,
 };
+
+const COMMISSION_PRESETS = [5, 10, 15, 20];
+const DESCRIPTION_MAX = 280;
+
+function gbp(n: number) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+  }).format(Number.isFinite(n) ? n : 0);
+}
 
 export default function AdminCatalogServicesPage() {
   const [items, setItems] = useState<CatalogRow[]>([]);
@@ -58,10 +82,15 @@ export default function AdminCatalogServicesPage() {
         api.get("/admin/catalog-services"),
         api.get("/admin/categories"),
       ]);
-      setItems(svcRes.data?.data ?? []);
-      setCategories(catRes.data?.data ?? []);
+      const catalogData = svcRes.data?.data;
+      const categoryData = catRes.data?.data;
+      setItems(Array.isArray(catalogData) ? catalogData : catalogData?.items ?? []);
+      setCategories(
+        Array.isArray(categoryData) ? categoryData : categoryData?.items ?? []
+      );
     } catch {
       setItems([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -86,6 +115,7 @@ export default function AdminCatalogServicesPage() {
     setForm({
       name: row.name,
       description: row.description ?? "",
+      image: row.image ?? "",
       price: String(row.price),
       commissionPercent: String(row.commissionPercent),
       categoryId: row.categoryId,
@@ -95,14 +125,45 @@ export default function AdminCatalogServicesPage() {
     setModalOpen(true);
   }
 
+  const priceNum = Number(form.price);
+  const commissionNum = Number(form.commissionPercent);
+  const split = useMemo(() => {
+    const price = Number.isFinite(priceNum) && priceNum > 0 ? priceNum : 0;
+    const pct =
+      Number.isFinite(commissionNum) && commissionNum >= 0 ? commissionNum : 0;
+    const mykeys = (price * pct) / 100;
+    return {
+      tenantPays: price,
+      mykeys,
+      provider: Math.max(0, price - mykeys),
+      valid: price > 0 && pct >= 0 && pct <= 100,
+    };
+  }, [priceNum, commissionNum]);
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError("");
+
+    const name = form.name.trim();
+    if (name.length < 2) {
+      setError("Give the service a clear name, e.g. Boiler repair.");
+      return;
+    }
+    if (!form.categoryId) {
+      setError("Choose a category so providers can find this service.");
+      return;
+    }
+    if (!split.valid) {
+      setError("Enter a tenant price above £0 and a commission between 0 and 100%.");
+      return;
+    }
+
+    setSaving(true);
     try {
       const payload = {
-        name: form.name.trim(),
+        name,
         description: form.description.trim(),
+        image: form.image.trim() || null,
         price: Number(form.price),
         commissionPercent: Number(form.commissionPercent),
         categoryId: form.categoryId,
@@ -123,7 +184,11 @@ export default function AdminCatalogServicesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Remove this catalog service? If it has bookings it will be deactivated instead.")) {
+    if (
+      !confirm(
+        "Remove this catalog service? If it already has bookings it will be deactivated instead."
+      )
+    ) {
       return;
     }
     try {
@@ -134,9 +199,10 @@ export default function AdminCatalogServicesPage() {
     }
   }
 
-  const filtered = items.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase()) ||
-    (i.category?.name || "").toLowerCase().includes(search.toLowerCase())
+  const filtered = items.filter(
+    (i) =>
+      i.name.toLowerCase().includes(search.toLowerCase()) ||
+      (i.category?.name || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -149,7 +215,8 @@ export default function AdminCatalogServicesPage() {
               Catalog Services
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Define services with fixed tenant price and MYKEYS commission. Providers only mark which they offer.
+              Set the tenant price and MYKEYS cut. Providers only choose which
+              services they offer — they cannot change the price.
             </p>
           </div>
           <Button
@@ -157,22 +224,24 @@ export default function AdminCatalogServicesPage() {
             className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
             disabled={categories.length === 0}
           >
-            <Plus className="w-4 h-4 mr-2" /> Add Service
+            <Plus className="w-4 h-4 mr-2" /> Add service
           </Button>
         </div>
 
         {categories.length === 0 && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            Create a service category first under Admin → Service Categories.
+            Create a service category first under Admin → Service Categories,
+            then come back here to add priced services.
           </div>
         )}
 
         <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            placeholder="Search services…"
+            placeholder="Search by name or category…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-white"
+            className="bg-white pl-9"
           />
         </div>
 
@@ -181,190 +250,381 @@ export default function AdminCatalogServicesPage() {
             <Loader2 className="w-8 h-8 animate-spin text-green-600" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center text-gray-500 border border-dashed rounded-xl bg-white">
-            No catalog services yet. Add your first service.
+          <div className="py-16 text-center border border-dashed rounded-xl bg-white">
+            <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="font-medium text-gray-800">No catalog services yet</p>
+            <p className="text-sm text-gray-500 mt-1 mb-4">
+              Add a service with a fixed price. Tenants pay MYKEYS; you settle
+              providers later.
+            </p>
+            <Button
+              onClick={openCreate}
+              disabled={categories.length === 0}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Add first service
+            </Button>
           </div>
         ) : (
           <div className="bg-white border rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-gray-500 bg-gray-50">
-                  <th className="px-4 py-3 font-medium">Service</th>
-                  <th className="px-4 py-3 font-medium">Category</th>
-                  <th className="px-4 py-3 font-medium">Price</th>
-                  <th className="px-4 py-3 font-medium">Commission</th>
-                  <th className="px-4 py-3 font-medium">Providers</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filtered.map((row) => {
-                  const commissionAmt = (row.price * row.commissionPercent) / 100;
-                  const providerCut = row.price - commissionAmt;
-                  return (
-                    <tr key={row.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{row.name}</p>
-                        {row.description && (
-                          <p className="text-xs text-gray-500 truncate max-w-[220px]">
-                            {row.description}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{row.category?.name ?? "—"}</td>
-                      <td className="px-4 py-3 font-semibold">£{row.price.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {row.commissionPercent}%
-                        <span className="block text-xs text-gray-400">
-                          MYKEYS £{commissionAmt.toFixed(2)} · Pro £{providerCut.toFixed(2)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">{row._count?.offeredBy ?? 0}</td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          className={
-                            row.isActive
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-500"
-                          }
-                        >
-                          {row.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
-                            <Pencil className="w-3 h-3 mr-1" /> Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600"
-                            onClick={() => handleDelete(row.id)}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[720px]">
+                <thead>
+                  <tr className="border-b text-left text-gray-500 bg-gray-50">
+                    <th className="px-4 py-3 font-medium">Service</th>
+                    <th className="px-4 py-3 font-medium">Category</th>
+                    <th className="px-4 py-3 font-medium">Tenant pays</th>
+                    <th className="px-4 py-3 font-medium">Split</th>
+                    <th className="px-4 py-3 font-medium">Providers</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filtered.map((row) => {
+                    const commissionAmt = (row.price * row.commissionPercent) / 100;
+                    const providerCut = row.price - commissionAmt;
+                    return (
+                      <tr key={row.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                              {row.image ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={row.image}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                  <Wrench className="w-4 h-4" />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{row.name}</p>
+                              {row.description && (
+                                <p className="text-xs text-gray-500 truncate max-w-[220px]">
+                                  {row.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {row.category?.name ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 font-semibold">{gbp(row.price)}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          <span className="text-xs text-gray-500">
+                            {row.commissionPercent}% MYKEYS
+                          </span>
+                          <span className="block text-xs text-gray-400">
+                            {gbp(commissionAmt)} platform · {gbp(providerCut)}{" "}
+                            provider
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">{row._count?.offeredBy ?? 0}</td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            className={
+                              row.isActive
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-500"
+                            }
                           >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            {row.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="cursor-pointer"
+                              onClick={() => openEdit(row)}
+                            >
+                              <Pencil className="w-3 h-3 mr-1" /> Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 cursor-pointer"
+                              onClick={() => handleDelete(row.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setModalOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => !saving && setModalOpen(false)}
+          />
           <form
             onSubmit={handleSave}
-            className="relative bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4"
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden"
           >
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                {editingId ? "Edit Service" : "Add Catalog Service"}
-              </h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="p-1">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-
-            {error && (
-              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
-                {error}
+            <div className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-green-50 to-white">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {editingId ? "Edit catalog service" : "Add catalog service"}
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Tenants pay the listed price to MYKEYS. You settle the
+                    provider later from Settle Up.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !saving && setModalOpen(false)}
+                  className="p-2 rounded-full hover:bg-white/80 cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
               </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label>Name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                required
-                placeholder="e.g. Boiler repair"
-              />
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Category *</Label>
-              <Select
-                value={form.categoryId}
-                onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="px-6 py-5 space-y-6 overflow-y-auto">
+              {error && (
+                <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+                  {error}
+                </div>
+              )}
 
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                rows={3}
-              />
-            </div>
+              <section className="space-y-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Service details
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="catalog-name">Service name</Label>
+                  <Input
+                    id="catalog-name"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, name: e.target.value }))
+                    }
+                    required
+                    maxLength={80}
+                    placeholder="e.g. Boiler repair"
+                    className="h-11"
+                  />
+                  <p className="text-xs text-gray-400">
+                    Shown to tenants when they book. Keep it short and specific.
+                  </p>
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Tenant price (£) *</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.price}
-                  onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                  required
+                <div className="space-y-1.5">
+                  <Label>Category</Label>
+                  <Select
+                    value={form.categoryId}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, categoryId: v }))
+                    }
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Choose a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-400">
+                    Providers in this category can offer this service.
+                  </p>
+                </div>
+
+                <ImageUploadField
+                  label="Cover image"
+                  image={form.image}
+                  folder="mykeys/services"
+                  onUploaded={(url) => setForm((f) => ({ ...f, image: url }))}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>MYKEYS commission (%) *</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="0.1"
-                  value={form.commissionPercent}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, commissionPercent: e.target.value }))
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="catalog-desc">Description</Label>
+                    <span className="text-xs text-gray-400">
+                      {form.description.length}/{DESCRIPTION_MAX}
+                    </span>
+                  </div>
+                  <Textarea
+                    id="catalog-desc"
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        description: e.target.value.slice(0, DESCRIPTION_MAX),
+                      }))
+                    }
+                    rows={3}
+                    placeholder="What is included? Any typical duration or notes for tenants."
+                  />
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-xl border bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Pricing
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="catalog-price">Tenant pays</Label>
+                    <div className="relative">
+                      <PoundSterling className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="catalog-price"
+                        type="number"
+                        min={1}
+                        step="0.01"
+                        inputMode="decimal"
+                        value={form.price}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, price: e.target.value }))
+                        }
+                        required
+                        className="h-11 pl-9 bg-white"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Charged in full to the tenant via Stripe.
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="catalog-commission">MYKEYS commission</Label>
+                    <div className="relative">
+                      <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="catalog-commission"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.1"
+                        inputMode="decimal"
+                        value={form.commissionPercent}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            commissionPercent: e.target.value,
+                          }))
+                        }
+                        required
+                        className="h-11 pl-9 bg-white"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {COMMISSION_PRESETS.map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() =>
+                            setForm((f) => ({
+                              ...f,
+                              commissionPercent: String(pct),
+                            }))
+                          }
+                          className={`text-xs px-2.5 py-1 rounded-full border cursor-pointer ${
+                            Number(form.commissionPercent) === pct
+                              ? "bg-green-600 text-white border-green-600"
+                              : "bg-white text-gray-600 hover:border-green-400"
+                          }`}
+                        >
+                          {pct}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-white border p-3">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
+                    <Info className="w-3.5 h-3.5" />
+                    How this booking splits
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-md bg-blue-50 px-2 py-2">
+                      <p className="text-[11px] text-blue-700">Tenant pays</p>
+                      <p className="text-sm font-semibold text-blue-900">
+                        {gbp(split.tenantPays)}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-emerald-50 px-2 py-2">
+                      <p className="text-[11px] text-emerald-700">MYKEYS keeps</p>
+                      <p className="text-sm font-semibold text-emerald-900">
+                        {gbp(split.mykeys)}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-amber-50 px-2 py-2">
+                      <p className="text-[11px] text-amber-800">Provider gets</p>
+                      <p className="text-sm font-semibold text-amber-900">
+                        {gbp(split.provider)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <div className="flex items-center justify-between rounded-xl border px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {form.isActive ? "Active — bookable" : "Inactive — hidden"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Inactive services stay in the catalog but cannot be offered
+                    or booked.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.isActive}
+                  onCheckedChange={(v) =>
+                    setForm((f) => ({ ...f, isActive: v }))
                   }
-                  required
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-              <div>
-                <p className="text-sm font-medium">Active</p>
-                <p className="text-xs text-gray-500">Visible for booking & provider offers</p>
-              </div>
-              <Switch
-                checked={form.isActive}
-                onCheckedChange={(v) => setForm((f) => ({ ...f, isActive: v }))}
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2">
+            <div className="px-6 py-4 border-t bg-white flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="cursor-pointer"
+                disabled={saving}
+                onClick={() => setModalOpen(false)}
+              >
+                Cancel
+              </Button>
               <Button
                 type="submit"
                 disabled={saving}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer min-w-[140px]"
               >
-                {saving ? "Saving…" : editingId ? "Save changes" : "Create service"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving
+                  </>
+                ) : editingId ? (
+                  "Save changes"
+                ) : (
+                  "Create service"
+                )}
               </Button>
             </div>
           </form>
