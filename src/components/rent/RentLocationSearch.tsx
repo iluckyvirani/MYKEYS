@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RentKind, rentBasePath } from "@/lib/rentSearch";
+import { normalizeSearchLocation } from "@/lib/ukPostcode";
 
 const SUGGESTIONS = [
   "London",
@@ -53,7 +54,7 @@ export default function RentLocationSearch({
     : SUGGESTIONS.slice(0, 7);
 
   const goSearch = (value: string) => {
-    const trimmed = value.trim();
+    const trimmed = normalizeSearchLocation(value);
     if (!trimmed) return;
     router.push(`${base}/search?location=${encodeURIComponent(trimmed)}`);
   };

@@ -139,7 +139,7 @@ export default function OwnerBidsPage() {
               My Boosts
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Boost any active property to appear at the top of search results.
+              Boost any active property for today. Raise your bid as often as you like during the day.
             </p>
           </div>
           <Button
@@ -237,7 +237,7 @@ export default function OwnerBidsPage() {
                   <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-gray-700">
                     <p className="font-medium text-gray-900">{bidToCancel.propertyTitle}</p>
                     <p className="mt-1 text-xs text-gray-500">
-                      {bidToCancel.zipCode} · £{bidToCancel.amount.toFixed(2)}/day
+                      {bidToCancel.zipCode} · £{bidToCancel.amount.toFixed(2)} (today)
                     </p>
                   </div>
                 )}
@@ -382,17 +382,17 @@ function BidCard({
           </span>
           <span className="flex items-center gap-1">
             <TrendingUp className="w-3.5 h-3.5" />
-            &pound;{bid.amount.toFixed(2)}/day
+            &pound;{bid.amount.toFixed(2)}
           </span>
           <span className="flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5" />
-            {new Date(bid.startDate).toLocaleDateString("en-GB")} &rarr;{" "}
-            {new Date(bid.endDate).toLocaleDateString("en-GB")}
+            {new Date(bid.startDate).toLocaleDateString("en-GB")}
+            <span className="text-gray-400">(today only)</span>
           </span>
         </div>
         {bid.status === "ACTIVE" && (
           <p className="text-xs text-amber-600 font-medium">
-            {bid.daysRemaining} day{bid.daysRemaining !== 1 ? "s" : ""} remaining
+            Valid until end of today
           </p>
         )}
       </div>

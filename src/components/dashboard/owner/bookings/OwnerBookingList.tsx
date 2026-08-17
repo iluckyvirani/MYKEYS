@@ -12,8 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Eye,
-  CheckCircle,
-  XCircle,
   MoreVertical,
   Home,
   Users,
@@ -42,8 +40,6 @@ interface BookingListProps {
   bookings: Booking[];
   loading?: boolean;
   empty?: boolean;
-  onConfirm?: (booking: Booking) => void;
-  onCancel?: (bookingId: string) => void;
   onCheckIn?: (bookingId: string) => void;
   onCheckOut?: (bookingId: string) => void;
 }
@@ -52,8 +48,6 @@ export function OwnerBookingList({
   bookings,
   loading = false,
   empty = false,
-  onConfirm,
-  onCancel,
   onCheckIn,
   onCheckOut,
 }: BookingListProps) {
@@ -260,17 +254,7 @@ export function OwnerBookingList({
                         </Button>
                       </Link>
 
-                      {upperStatus === "PENDING" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-green-600 hover:text-green-700 border-green-600 cursor-pointer"
-                          onClick={() => onConfirm?.(booking)}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Confirm
-                        </Button>
-                      )}
+                      {/* Short-stay bookings auto-confirm after payment — no Confirm/Cancel for owner */}
 
                       {canCheckIn && (
                         <Button
@@ -293,18 +277,6 @@ export function OwnerBookingList({
                         >
                           <LogOut className="w-4 h-4 mr-1" />
                           Check Out
-                        </Button>
-                      )}
-
-                      {["PENDING", "CONFIRMED"].includes(upperStatus) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 border-red-600 cursor-pointer"
-                          onClick={() => onCancel?.(booking.id)}
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Cancel
                         </Button>
                       )}
                     </div>

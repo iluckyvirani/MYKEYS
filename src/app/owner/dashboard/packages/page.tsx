@@ -8,13 +8,14 @@ import AvailablePackages from "@/components/dashboard/OwnerDashboard/Packages/Av
 import PackageHistory from "@/components/dashboard/OwnerDashboard/Packages/PackageHistory";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OwnerActivePackages, PackageCategory } from "@/types/package";
 
 export default function OwnerPackagesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPackage, setCurrentPackage] = useState<any>(null);
-  const [packageUsage, setPackageUsage] = useState<any>(null);
+  const [packages, setPackages] = useState<OwnerActivePackages>({ SALE: null, RENT: null });
   const [availablePackages, setAvailablePackages] = useState<any[]>([]);
+  const [category, setCategory] = useState<PackageCategory>("RENT");
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -23,15 +24,16 @@ export default function OwnerPackagesPage() {
         setLoading(true);
         setError(null);
 
-        // Fetch all data in parallel
-        const [currentPkgRes, usageRes, availablePkgsRes] = await Promise.all([
+        const [currentPkgRes, availablePkgsRes] = await Promise.all([
           api.get("/owner/packages"),
-          api.get("/owner/packages/usage"),
-          api.get("/packages")
+          api.get("/packages"),
         ]);
 
-        setCurrentPackage(currentPkgRes.data?.data || null);
-        setPackageUsage(usageRes.data?.data || null);
+        const data = currentPkgRes.data?.data;
+        setPackages({
+          SALE: data?.SALE ?? null,
+          RENT: data?.RENT ?? null,
+        });
         setAvailablePackages(availablePkgsRes.data?.data || []);
       } catch (err: any) {
         console.error("Error fetching package data:", err);
@@ -47,6 +49,11 @@ export default function OwnerPackagesPage() {
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1);
   };
+
+  const currentForCategory = packages[category];
+  const filteredAvailable = availablePackages.filter(
+    (p) => (p.category ?? "RENT") === category
+  );
 
   if (loading) {
     return (
@@ -78,37 +85,54 @@ export default function OwnerPackagesPage() {
 
   return (
     <DashboardLayout defaultRole="owner">
-      {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Packages & Pricing</h1>
             <p className="text-gray-600 mt-2">
-              Manage your subscription and explore upgrade options
+              Sale packages for Buy listings · Rent packages for Long Rent. Short stay needs no package.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Current Package */}
+      <div className="mb-6 flex gap-2">
+        {(["SALE", "RENT"] as PackageCategory[]).map((cat) => (
+          <Button
+            key={cat}
+            type="button"
+            variant={category === cat ? "default" : "outline"}
+            className={
+              category === cat
+                ? "bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
+                : "rounded-[5px]"
+            }
+            onClick={() => setCategory(cat)}
+          >
+            {cat === "SALE" ? "Sale packages" : "Rent packages"}
+            {packages[cat] ? " · Active" : ""}
+          </Button>
+        ))}
+      </div>
+
       <div className="mb-6">
-        <CurrentPackage 
-          currentPackage={currentPackage} 
-          packageUsage={packageUsage} 
+        <CurrentPackage
+          currentPackage={currentForCategory}
+          packageUsage={currentForCategory}
           onRefresh={handleRefresh}
+          categoryLabel={category === "SALE" ? "Sale" : "Rent"}
         />
       </div>
 
-      {/* Available Packages */}
       <div className="mb-6">
-        <AvailablePackages 
-          packages={availablePackages} 
-          currentPackageId={currentPackage?.package?.id || null}
+        <AvailablePackages
+          packages={filteredAvailable}
+          currentPackageId={currentForCategory?.packageId || null}
           onSubscribe={handleRefresh}
+          categoryLabel={category === "SALE" ? "Sale" : "Rent"}
         />
       </div>
 
-      {/* Package History */}
       <div>
         <PackageHistory />
       </div>

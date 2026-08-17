@@ -6,6 +6,7 @@ import {
   ADDED_OPTIONS,
   looksLikePostcode,
 } from "@/lib/buySearch";
+import { normalizeSearchLocation } from "@/lib/ukPostcode";
 
 export type RentKind = "whole-property" | "room-to-rent" | "short-rent";
 
@@ -33,29 +34,54 @@ export const DEFAULT_RENT_SEARCH_FILTERS: RentSearchFilters = {
   includeLetAgreed: false,
 };
 
-/** Monthly rent bands (pcm) — long-term rentals */
+/** Monthly rent bands (pcm) — long-term rentals (Rightmove-style) */
 export const RENT_PRICE_OPTIONS = [
   { value: "", label: "No min" },
   { value: "100", label: "£100 pcm" },
+  { value: "150", label: "£150 pcm" },
   { value: "200", label: "£200 pcm" },
+  { value: "250", label: "£250 pcm" },
   { value: "300", label: "£300 pcm" },
+  { value: "350", label: "£350 pcm" },
   { value: "400", label: "£400 pcm" },
+  { value: "450", label: "£450 pcm" },
   { value: "500", label: "£500 pcm" },
   { value: "600", label: "£600 pcm" },
   { value: "700", label: "£700 pcm" },
   { value: "800", label: "£800 pcm" },
   { value: "900", label: "£900 pcm" },
   { value: "1000", label: "£1,000 pcm" },
+  { value: "1100", label: "£1,100 pcm" },
+  { value: "1200", label: "£1,200 pcm" },
   { value: "1250", label: "£1,250 pcm" },
+  { value: "1300", label: "£1,300 pcm" },
+  { value: "1400", label: "£1,400 pcm" },
   { value: "1500", label: "£1,500 pcm" },
   { value: "1750", label: "£1,750 pcm" },
   { value: "2000", label: "£2,000 pcm" },
+  { value: "2250", label: "£2,250 pcm" },
   { value: "2500", label: "£2,500 pcm" },
+  { value: "2750", label: "£2,750 pcm" },
   { value: "3000", label: "£3,000 pcm" },
   { value: "3500", label: "£3,500 pcm" },
   { value: "4000", label: "£4,000 pcm" },
   { value: "4500", label: "£4,500 pcm" },
   { value: "5000", label: "£5,000 pcm" },
+  { value: "5500", label: "£5,500 pcm" },
+  { value: "6000", label: "£6,000 pcm" },
+  { value: "6500", label: "£6,500 pcm" },
+  { value: "7000", label: "£7,000 pcm" },
+  { value: "8000", label: "£8,000 pcm" },
+  { value: "9000", label: "£9,000 pcm" },
+  { value: "10000", label: "£10,000 pcm" },
+  { value: "12500", label: "£12,500 pcm" },
+  { value: "15000", label: "£15,000 pcm" },
+  { value: "17500", label: "£17,500 pcm" },
+  { value: "20000", label: "£20,000 pcm" },
+  { value: "25000", label: "£25,000 pcm" },
+  { value: "30000", label: "£30,000 pcm" },
+  { value: "35000", label: "£35,000 pcm" },
+  { value: "40000", label: "£40,000 pcm" },
 ];
 
 export const RENT_MAX_PRICE_OPTIONS = [
@@ -130,7 +156,7 @@ export function rentResultsTitle(kind: RentKind, location: string) {
 export function filtersFromSearchParams(
   params: URLSearchParams
 ): RentSearchFilters {
-  const location =
+  const raw =
     params.get("location") ||
     params.get("searchLocation") ||
     params.get("city") ||
@@ -138,7 +164,7 @@ export function filtersFromSearchParams(
     "";
 
   return {
-    location,
+    location: normalizeSearchLocation(raw),
     radius: params.get("radius") || "0",
     minPrice: params.get("minPrice") || "",
     maxPrice: params.get("maxPrice") || "",
@@ -154,12 +180,13 @@ export function filtersToSearchParams(
   filters: RentSearchFilters
 ): URLSearchParams {
   const params = new URLSearchParams();
-  if (filters.location.trim()) {
-    params.set("location", filters.location.trim());
-    if (looksLikePostcode(filters.location)) {
-      params.set("zipCode", filters.location.trim());
+  const location = normalizeSearchLocation(filters.location);
+  if (location) {
+    params.set("location", location);
+    if (looksLikePostcode(location)) {
+      params.set("zipCode", location);
     } else {
-      params.set("city", filters.location.trim());
+      params.set("city", location);
     }
   }
   if (filters.radius && filters.radius !== "0") params.set("radius", filters.radius);

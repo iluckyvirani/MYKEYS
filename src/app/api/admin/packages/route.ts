@@ -3,6 +3,18 @@ import { withAuth, UserRole } from '@/lib/auth/middleware';
 import { packageService } from '@/lib/packages/packageService';
 import { successResponse, errorResponse } from '@/lib/response';
 import { ErrorCode } from '@/lib/auth/errors';
+import { STRIPE_MIN_AMOUNT_GBP } from '@/lib/stripe';
+
+function validatePackagePrice(price: number): string | null {
+  if (typeof price !== 'number' || Number.isNaN(price) || price < 0) {
+    return 'Price must be a number of £0 or more';
+  }
+  // Paid packages must meet Stripe's GBP minimum (£0.30)
+  if (price > 0 && price < STRIPE_MIN_AMOUNT_GBP) {
+    return `Paid package price must be at least £${STRIPE_MIN_AMOUNT_GBP.toFixed(2)} (Stripe card payment minimum). Use £0 for a free package.`;
+  }
+  return null;
+}
 
 /**
  * GET /api/admin/packages
@@ -44,6 +56,15 @@ export const POST = withAuth(
 
       if (!['days', 'months', 'years'].includes(data.durationUnit)) {
         return errorResponse('durationUnit must be days, months, or years', 400, ErrorCode.VALIDATION_ERROR);
+      }
+
+      if (data.category && !['SALE', 'RENT'].includes(data.category)) {
+        return errorResponse('category must be SALE or RENT', 400, ErrorCode.VALIDATION_ERROR);
+      }
+
+      const priceError = validatePackagePrice(Number(data.price));
+      if (priceError) {
+        return errorResponse(priceError, 400, ErrorCode.VALIDATION_ERROR);
       }
 
       const pkg = await packageService.create(data);

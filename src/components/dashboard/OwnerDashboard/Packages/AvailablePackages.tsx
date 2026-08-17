@@ -13,6 +13,7 @@ interface AvailablePackagesProps {
   packages: any[];
   currentPackageId: string | null;
   onSubscribe: () => void;
+  categoryLabel?: string;
 }
 
 interface PendingPayment {
@@ -21,7 +22,12 @@ interface PendingPayment {
   price: number;
 }
 
-export default function AvailablePackages({ packages, currentPackageId, onSubscribe }: AvailablePackagesProps) {
+export default function AvailablePackages({
+  packages,
+  currentPackageId,
+  onSubscribe,
+  categoryLabel = "Rent",
+}: AvailablePackagesProps) {
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
 
@@ -61,7 +67,7 @@ export default function AvailablePackages({ packages, currentPackageId, onSubscr
     return (
       <Card className="p-8 text-center">
         <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-600">No packages available at the moment.</p>
+        <p className="text-gray-600">No {categoryLabel.toLowerCase()} packages available at the moment.</p>
       </Card>
     );
   }
@@ -69,8 +75,12 @@ export default function AvailablePackages({ packages, currentPackageId, onSubscr
   return (
     <div>
       <div className="mb-5">
-        <h2 className="text-xl font-bold text-gray-900">Available Plans</h2>
-        <p className="text-gray-600 text-sm mt-1">Choose the plan that best fits your needs</p>
+        <h2 className="text-xl font-bold text-gray-900">Available {categoryLabel} Plans</h2>
+        <p className="text-gray-600 text-sm mt-1">
+          {categoryLabel === "Sale"
+            ? "Required to publish Buy listings"
+            : "Required to publish Long Rent listings"}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

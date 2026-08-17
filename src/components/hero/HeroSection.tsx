@@ -6,6 +6,29 @@ import PropertySearchBar from "../search/PropertySearchBar";
 import { useState } from "react";
 import { useHomeContent } from "@/hooks/useHomeContent";
 
+function HeroSkeleton() {
+  return (
+    <section className="relative h-screen min-h-175 flex items-center justify-center overflow-hidden bg-white">
+      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-9 animate-pulse">
+          <div className="mx-auto h-12 sm:h-14 md:h-16 w-[min(100%,42rem)] rounded-lg bg-gray-200 mb-3" />
+          <div className="mx-auto h-10 sm:h-12 w-[min(90%,28rem)] rounded-lg bg-gray-100 mb-8" />
+          <div className="mx-auto h-5 w-[min(100%,28rem)] rounded bg-gray-100 mb-2" />
+          <div className="mx-auto h-5 w-[min(90%,22rem)] rounded bg-gray-100 mb-10" />
+        </div>
+        <div className="animate-pulse">
+          <div className="mx-auto flex justify-center gap-3 mb-8">
+            <div className="h-12 w-28 rounded-full bg-gray-200" />
+            <div className="h-12 w-28 rounded-full bg-gray-100" />
+            <div className="h-12 w-36 rounded-full bg-gray-100" />
+          </div>
+          <div className="mx-auto max-w-3xl h-16 rounded-2xl bg-gray-100 shadow-sm border border-gray-100" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function HeroSection({
   selectedTab: propSelectedTab,
   onTabChange: propOnTabChange,
@@ -16,13 +39,17 @@ export default function HeroSection({
   const [localSelectedTab, setLocalSelectedTab] = useState<
     "all" | "buy" | "short-rent" | "long-rent"
   >(propSelectedTab);
-  const { content } = useHomeContent();
+  const { content, loading } = useHomeContent();
   const hero = content.hero;
 
   const handleTabChange = (tab: "all" | "buy" | "short-rent" | "long-rent") => {
     setLocalSelectedTab(tab);
     propOnTabChange(tab);
   };
+
+  if (loading) {
+    return <HeroSkeleton />;
+  }
 
   return (
     <section className="relative h-screen min-h-175 flex items-center justify-center overflow-hidden bg-white">

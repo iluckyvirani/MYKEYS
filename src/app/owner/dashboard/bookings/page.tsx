@@ -3,7 +3,6 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { OwnerFilterModal } from "@/components/dashboard/owner/bookings/OwnerFilterModal";
 import { OwnerBookingList } from "@/components/dashboard/owner/bookings/OwnerBookingList";
-import { ConfirmBookingModal } from "@/components/dashboard/owner/bookings/ConfirmBookingModal";
 import BookingCalendar from "@/components/dashboard/OwnerDashboard/BookingCalendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,9 +39,6 @@ export default function OwnerBookingsPage() {
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
-  const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
     fetchBookingsAndProperties();
@@ -85,48 +81,6 @@ export default function OwnerBookingsPage() {
       setError("Failed to fetch bookings. Please try again later.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleConfirmBooking = (booking: any) => {
-    setSelectedBooking(booking);
-    setConfirmModalOpen(true);
-  };
-
-  const handleConfirmSubmit = async () => {
-    if (!selectedBooking) return;
-
-    try {
-      setConfirmLoading(true);
-      await api.patch(`/bookings/${selectedBooking.id}`, { 
-        status: "CONFIRMED"
-      });
-
-      setBookings(bookings.map(b =>
-        b.id === selectedBooking.id ? { ...b, status: "CONFIRMED" } : b
-      ));
-
-      setConfirmModalOpen(false);
-      setSelectedBooking(null);
-    } catch (err) {
-      console.error("Error confirming booking:", err);
-      alert("Failed to confirm booking");
-    } finally {
-      setConfirmLoading(false);
-    }
-  };
-
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
-
-    try {
-      await api.patch(`/bookings/${bookingId}`, { status: "CANCELLED" });
-      setBookings(bookings.map(b =>
-        b.id === bookingId ? { ...b, status: "CANCELLED" } : b
-      ));
-    } catch (err) {
-      console.error("Error cancelling booking:", err);
-      alert("Failed to cancel booking");
     }
   };
 
@@ -402,8 +356,6 @@ export default function OwnerBookingsPage() {
           bookings={bookings}
           loading={loading}
           empty={bookings.length === 0}
-          onConfirm={handleConfirmBooking}
-          onCancel={handleCancelBooking}
           onCheckIn={handleCheckIn}
           onCheckOut={handleCheckOut}
         />
@@ -419,23 +371,6 @@ export default function OwnerBookingsPage() {
         properties={properties}
         appliedFilters={appliedFilters}
       />
-
-      {selectedBooking && (
-        <ConfirmBookingModal
-          isOpen={confirmModalOpen}
-          onClose={() => {
-            setConfirmModalOpen(false);
-            setSelectedBooking(null);
-          }}
-          onConfirm={handleConfirmSubmit}
-          bookingTitle={selectedBooking.propertyTitle}
-          guestName={selectedBooking.guestName}
-          checkInDate={selectedBooking.checkInDate}
-          checkOutDate={selectedBooking.checkOutDate}
-          totalAmount={selectedBooking.totalAmount}
-          loading={confirmLoading}
-        />
-      )}
     </DashboardLayout>
   );
 }

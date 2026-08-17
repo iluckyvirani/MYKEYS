@@ -10,8 +10,10 @@ import { OwnerPackageWithUsage } from "@/types/package";
 import { AlertCircle, Printer, RefreshCw } from "lucide-react";
 
 export default function OwnerReportsPage() {
-  const [activePackage, setActivePackage] =
-    useState<OwnerPackageWithUsage | null>(null);
+  const [activePackages, setActivePackages] = useState<{
+    SALE: OwnerPackageWithUsage | null;
+    RENT: OwnerPackageWithUsage | null;
+  }>({ SALE: null, RENT: null });
   const [period, setPeriod] = useState<AnalyticsPeriod>("6m");
   const [data, setData] = useState<OwnerAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -21,11 +23,14 @@ export default function OwnerReportsPage() {
   const loadPackage = useCallback(async () => {
     try {
       const res = await api.get("/owner/packages");
-      const pkg = res.data?.data ?? null;
-      setActivePackage(pkg?.status === "ACTIVE" ? pkg : null);
+      const pkg = res.data?.data ?? {};
+      setActivePackages({
+        SALE: pkg.SALE?.status === "ACTIVE" ? pkg.SALE : null,
+        RENT: pkg.RENT?.status === "ACTIVE" ? pkg.RENT : null,
+      });
     } catch (err) {
       console.error("Failed to load package:", err);
-      setActivePackage(null);
+      setActivePackages({ SALE: null, RENT: null });
     }
   }, []);
 
@@ -55,8 +60,10 @@ export default function OwnerReportsPage() {
     loadReport();
   }, [loadReport]);
 
+  const hasAnyPackage = Boolean(activePackages.SALE || activePackages.RENT);
+
   const handleDownload = () => {
-    if (!activePackage) {
+    if (!hasAnyPackage) {
       setDownloadMessage(
         "You don't have an active package to download this report."
       );
@@ -120,14 +127,21 @@ export default function OwnerReportsPage() {
       <div className="space-y-6">
         <div className="bg-white border rounded-[5px] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="text-sm text-gray-600">
-            {activePackage ? (
+            {hasAnyPackage ? (
               <>
-                Package:{" "}
+                Packages:{" "}
                 <span className="font-semibold text-gray-900">
-                  {activePackage.packageName}
+                  {[
+                    activePackages.SALE
+                      ? `Sale · ${activePackages.SALE.packageName}`
+                      : null,
+                    activePackages.RENT
+                      ? `Rent · ${activePackages.RENT.packageName}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
-                <span className="mx-2 text-gray-300">·</span>
-                {activePackage.daysRemaining} days left
               </>
             ) : (
               <span>View your property performance below</span>

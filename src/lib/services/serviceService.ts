@@ -28,6 +28,7 @@ export interface ServiceBookingInput {
   clientId: string;
   providerId: string;
   serviceListingId?: string;
+  catalogServiceId?: string;
   service: string;
   category: string;
   subcategory?: string;
@@ -38,6 +39,11 @@ export interface ServiceBookingInput {
   scheduledTime?: string;
   location?: string;
   totalAmount: number;
+  price?: number;
+  commissionPercent?: number;
+  commissionAmount?: number;
+  providerEarnings?: number;
+  stripePaymentIntentId?: string;
 }
 
 export interface ServiceRequestInput {
@@ -404,19 +410,27 @@ export const serviceService = {
         scheduledTime: data.scheduledTime,
         location: data.location,
         totalAmount: data.totalAmount,
+        price: data.price ?? data.totalAmount,
+        commissionPercent: data.commissionPercent,
+        commissionAmount: data.commissionAmount,
+        providerEarnings: data.providerEarnings,
+        stripePaymentIntentId: data.stripePaymentIntentId,
+        catalogServiceId: data.catalogServiceId,
         clientId: data.clientId,
         providerId: data.providerId,
         serviceListingId: data.serviceListingId,
+        settleStatus: 'NOT_APPLICABLE',
       },
       include: {
         client: {
-          select: { id: true, firstName: true, lastName: true, phone: true },
+          select: { id: true, firstName: true, lastName: true, phone: true, email: true },
         },
         provider: {
           include: {
-            user: { select: { firstName: true, lastName: true } },
+            user: { select: { id: true, firstName: true, lastName: true, email: true } },
           },
         },
+        catalogService: true,
       },
     });
   },
@@ -489,10 +503,12 @@ export const serviceService = {
       amount: b.totalAmount,
       description: b.description || '',
       paymentStatus: mapPaymentStatusToFrontend(b.paymentStatus),
-      createdAt: b.createdAt,
+      pendingAction: b.pendingAction,
+      settleStatus: b.settleStatus,
       reviewRating: b.review?.rating ?? null,
       reviewComment: b.review?.comment ?? null,
       reviewResponse: b.review?.response ?? null,
+      createdAt: b.createdAt,
     }));
 
     return { items, total, page, limit };
@@ -545,7 +561,8 @@ export const serviceService = {
   },
 
   /**
-   * Update booking status
+   * Update booking status (non-terminal transitions only).
+   * COMPLETED / CANCELLED must go through OTP verifyAction.
    */
   async updateBookingStatus(id: string, providerId: string, status: string) {
     const booking = await prisma.serviceBooking.findUnique({ where: { id } });
@@ -553,30 +570,226 @@ export const serviceService = {
     if (booking.providerId !== providerId) throw new Error('Unauthorized');
 
     const mappedStatus = mapBookingStatus(status) as any;
-    const updateData: any = { status: mappedStatus };
 
+    // Paid complete/cancel must use OTP. Unpaid decline can cancel directly.
     if (mappedStatus === 'COMPLETED') {
-      updateData.completedAt = new Date();
-      updateData.paymentStatus = 'COMPLETED';
-      updateData.paidAmount = booking.totalAmount;
-
-      // Update provider stats
-      await prisma.serviceProvider.update({
-        where: { id: providerId },
-        data: {
-          completedBookings: { increment: 1 },
-          totalEarnings: { increment: booking.totalAmount },
-        },
-      });
+      throw new Error(
+        'Complete requires tenant OTP confirmation. Use request-action instead.'
+      );
+    }
+    if (mappedStatus === 'CANCELLED' && booking.paymentStatus === 'COMPLETED') {
+      throw new Error(
+        'Cancel after payment requires tenant OTP. Use request-action instead.'
+      );
     }
 
+    const updateData: any = { status: mappedStatus };
     if (mappedStatus === 'CANCELLED') {
       updateData.cancelledAt = new Date();
+      updateData.settleStatus = 'NOT_APPLICABLE';
     }
 
     return prisma.serviceBooking.update({
       where: { id },
       data: updateData,
+    });
+  },
+
+  /**
+   * Provider requests COMPLETE or CANCEL — sends OTP to client email.
+   */
+  async requestBookingAction(
+    id: string,
+    providerId: string,
+    action: 'COMPLETE' | 'CANCEL'
+  ) {
+    const booking = await prisma.serviceBooking.findUnique({
+      where: { id },
+      include: {
+        client: { select: { id: true, email: true, firstName: true } },
+        provider: {
+          include: { user: { select: { firstName: true, lastName: true } } },
+        },
+      },
+    });
+    if (!booking) throw new Error('Booking not found');
+    if (booking.providerId !== providerId) throw new Error('Unauthorized');
+    if (booking.status === 'COMPLETED' || booking.status === 'CANCELLED') {
+      throw new Error('Booking is already finished');
+    }
+    if (action === 'COMPLETE' && booking.paymentStatus !== 'COMPLETED') {
+      throw new Error('Booking must be paid before completion');
+    }
+
+    const { generateServiceActionOtp } = await import('@/lib/services/catalogService');
+    const { otp, hash, expiresAt } = generateServiceActionOtp();
+
+    await prisma.serviceBooking.update({
+      where: { id },
+      data: {
+        pendingAction: action,
+        actionOtpHash: hash,
+        actionOtpExpiresAt: expiresAt,
+      },
+    });
+
+    const { emailService } = await import('@/lib/email/emailService');
+    await emailService.sendServiceActionOtpEmail({
+      to: booking.client.email,
+      firstName: booking.client.firstName,
+      serviceName: booking.service,
+      action,
+      otp,
+      providerName: `${booking.provider.user.firstName} ${booking.provider.user.lastName}`.trim(),
+    });
+
+    return {
+      pendingAction: action,
+      expiresAt: expiresAt.toISOString(),
+      clientEmailMasked: booking.client.email.replace(
+        /(.{2}).+(@.+)/,
+        '$1***$2'
+      ),
+    };
+  },
+
+  /**
+   * Client verifies OTP → apply COMPLETE or CANCEL + settlement.
+   */
+  async verifyBookingActionOtp(id: string, clientId: string, otp: string) {
+    const booking = await prisma.serviceBooking.findUnique({
+      where: { id },
+      include: {
+        provider: { select: { id: true, userId: true } },
+      },
+    });
+    if (!booking) throw new Error('Booking not found');
+    if (booking.clientId !== clientId) throw new Error('Unauthorized');
+    if (!booking.pendingAction || !booking.actionOtpHash || !booking.actionOtpExpiresAt) {
+      throw new Error('No pending action to verify');
+    }
+    if (booking.actionOtpExpiresAt.getTime() < Date.now()) {
+      throw new Error('OTP expired. Ask the provider to request again.');
+    }
+
+    const { verifyServiceActionOtp } = await import('@/lib/services/catalogService');
+    if (!verifyServiceActionOtp(otp, booking.actionOtpHash)) {
+      throw new Error('Invalid OTP');
+    }
+
+    const action = booking.pendingAction;
+
+    if (action === 'COMPLETE') {
+      const earnings = booking.providerEarnings ?? booking.totalAmount;
+      const updated = await prisma.serviceBooking.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          otpVerifiedAt: new Date(),
+          pendingAction: null,
+          actionOtpHash: null,
+          actionOtpExpiresAt: null,
+          settleStatus: 'PENDING',
+          paymentStatus:
+            booking.paymentStatus === 'COMPLETED' ? 'COMPLETED' : booking.paymentStatus,
+          paidAmount:
+            booking.paymentStatus === 'COMPLETED'
+              ? booking.paidAmount || booking.totalAmount
+              : booking.paidAmount,
+        },
+      });
+
+      await prisma.serviceProvider.update({
+        where: { id: booking.providerId },
+        data: {
+          completedBookings: { increment: 1 },
+          totalEarnings: { increment: earnings },
+        },
+      });
+
+      const { settlementService } = await import('@/lib/services/settlementService');
+      await settlementService.ensureServiceSettlement({
+        serviceBookingId: id,
+        beneficiaryUserId: booking.provider.userId,
+        amount: earnings,
+      });
+
+      const { notificationService } = await import(
+        '@/lib/notifications/notificationService'
+      );
+      const {
+        NotificationType,
+        NotificationPriority,
+        NotificationCategory,
+      } = await import('@/types/notification');
+
+      // Notify admins via any ADMIN role users — lightweight: use notification to provider + create admin notes via settle queue
+      await notificationService
+        .create({
+          userId: booking.provider.userId,
+          type: NotificationType.PROPERTY,
+          title: 'Job completed — awaiting settle-up',
+          message: `Client confirmed completion for "${booking.service}". Admin will settle £${earnings.toFixed(2)}.`,
+          priority: NotificationPriority.NORMAL,
+          category: NotificationCategory.INFORMATIONAL,
+          actionUrl: '/service/dashboard/earnings',
+        })
+        .catch(() => undefined);
+
+      // Notify all admins
+      const admins = await prisma.userRoleAssignment.findMany({
+        where: { role: 'ADMIN' },
+        select: { userId: true },
+      });
+      for (const a of admins) {
+        await notificationService
+          .create({
+            userId: a.userId,
+            type: NotificationType.PAYMENT,
+            title: 'Settle-up needed (service)',
+            message: `Service job "${booking.service}" completed. Provider payout £${earnings.toFixed(2)} pending.`,
+            priority: NotificationPriority.HIGH,
+            category: NotificationCategory.ACTION_REQUIRED,
+            actionUrl: '/admin/dashboard/settle-up',
+            data: { serviceBookingId: id },
+          })
+          .catch(() => undefined);
+      }
+
+      return updated;
+    }
+
+    // CANCEL
+    const updated = await prisma.serviceBooking.update({
+      where: { id },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        otpVerifiedAt: new Date(),
+        pendingAction: null,
+        actionOtpHash: null,
+        actionOtpExpiresAt: null,
+        settleStatus: 'NOT_APPLICABLE',
+      },
+    });
+
+    return updated;
+  },
+
+  async markBookingPaid(id: string, clientId: string, stripePaymentIntentId?: string) {
+    const booking = await prisma.serviceBooking.findUnique({ where: { id } });
+    if (!booking) throw new Error('Booking not found');
+    if (booking.clientId !== clientId) throw new Error('Unauthorized');
+
+    return prisma.serviceBooking.update({
+      where: { id },
+      data: {
+        paymentStatus: 'COMPLETED',
+        paidAmount: booking.totalAmount,
+        status: booking.status === 'PENDING' ? 'CONFIRMED' : booking.status,
+        ...(stripePaymentIntentId ? { stripePaymentIntentId } : {}),
+      },
     });
   },
 

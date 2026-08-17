@@ -46,9 +46,13 @@ export default function PackageDashboard({ onUpgrade, onViewDetails }: Props) {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get<PackageUsage>("/owner/packages/usage");
-      if (response.data) {
-        setPackageData(response.data);
+      const response = await api.get("/owner/packages/usage");
+      const payload = (response as any).data?.data ?? (response as any).data;
+      const primary = payload?.RENT || payload?.SALE || null;
+      if (primary) {
+        setPackageData(primary);
+      } else {
+        setPackageData(null);
       }
     } catch (err) {
       setError("Failed to load package information");

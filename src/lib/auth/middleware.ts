@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 export const UserRole = {
   USER: "USER",
   OWNER: "OWNER",
+  SERVICE: "SERVICE",
   ADMIN: "ADMIN"
 } as const;
 

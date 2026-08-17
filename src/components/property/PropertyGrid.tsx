@@ -49,9 +49,9 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
         params.append("minPrice", filters.priceRange[0].toString());
       }
       // Only send maxPrice if it's clearly a user-chosen value:
-      // buy default max is 2000000, long-rent default is 5000, short-rent is 2000
-      // Treat any of those defaults as "no filter"
-      const defaultMaxPrices = [2000000, 5000, 2000];
+      // buy default max is 20000000, long-rent default is 5000, short-rent is 2000
+      // Treat any of those defaults as "no filter" (include legacy buy 2000000)
+      const defaultMaxPrices = [20000000, 2000000, 40000, 5000, 2000];
       if (filters.priceRange[1] > 0 && !defaultMaxPrices.includes(filters.priceRange[1])) {
         params.append("maxPrice", filters.priceRange[1].toString());
       }

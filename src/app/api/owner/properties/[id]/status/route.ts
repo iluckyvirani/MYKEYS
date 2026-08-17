@@ -72,12 +72,23 @@ export const PATCH = withAuth<{ id: string }>(
         }
 
         if (isGated) {
-          const { allowed, reason } = await packageService.canPublish(existingProperty.ownerId);
+          const { allowed, reason } = await packageService.canPublish(
+            existingProperty.ownerId,
+            {
+              listingType: existingProperty.listingType,
+              rentalType: existingProperty.rentalType,
+            }
+          );
           if (!allowed) {
             return errorResponse(reason!, 403, ErrorCode.FORBIDDEN);
           }
           if (existingProperty.status !== "ACTIVE") {
-            await packageService.incrementPropertyUsage(existingProperty.ownerId);
+            const category =
+              existingProperty.listingType === "BUY" ? "SALE" : "RENT";
+            await packageService.incrementPropertyUsage(
+              existingProperty.ownerId,
+              category
+            );
           }
         }
       }
@@ -89,7 +100,10 @@ export const PATCH = withAuth<{ id: string }>(
         isGated &&
         user.role !== "ADMIN"
       ) {
-        await packageService.decrementPropertyUsage(existingProperty.ownerId);
+        await packageService.decrementPropertyUsage(
+          existingProperty.ownerId,
+          existingProperty.listingType === "BUY" ? "SALE" : "RENT"
+        );
       }
 
       const updated = await prisma.property.update({

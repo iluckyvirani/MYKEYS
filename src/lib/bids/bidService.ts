@@ -1,6 +1,9 @@
 /**
  * Phase 3 — Bid / Boost Service
  * Handles all business logic for PropertyBid records.
+ *
+ * Boosts are always same-day only (Europe/London calendar day).
+ * Owners may raise their bid unlimited times during that day.
  */
 
 import { prisma } from "@/lib/prisma";
@@ -11,9 +14,10 @@ export interface PlaceBidInput {
   propertyId: string;
   ownerId: string;
   zipCode: string;
-  amount: number;     // £/day
-  startDate: Date;
-  endDate: Date;
+  amount: number; // £ for today
+  /** Ignored — always forced to today. Kept optional for callers. */
+  startDate?: Date;
+  endDate?: Date;
 }
 
 export interface BidDTO {
@@ -43,11 +47,12 @@ export interface AdminSettings {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function daysBetween(start: Date, end: Date): number {
-  return Math.max(
-    1,
-    Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  );
+/** Start/end of "today" in Europe/London (boosts expire at end of this day). */
+export function getTodayBidWindow(now = new Date()): { startDate: Date; endDate: Date } {
+  const dateStr = now.toLocaleDateString("en-CA", { timeZone: "Europe/London" }); // YYYY-MM-DD
+  const startDate = new Date(`${dateStr}T00:00:00`);
+  const endDate = new Date(`${dateStr}T23:59:59.999`);
+  return { startDate, endDate };
 }
 
 function daysRemaining(end: Date): number {
@@ -122,28 +127,12 @@ export async function validateBidInput(
   input: PlaceBidInput,
   settings: AdminSettings
 ): Promise<string | null> {
-  const { propertyId, ownerId, amount, startDate, endDate } = input;
+  const { propertyId, ownerId, amount } = input;
 
   if (amount < settings.minBidAmountPerDay) {
-    return `Minimum bid amount is £${settings.minBidAmountPerDay}/day`;
+    return `Minimum bid amount is £${settings.minBidAmountPerDay}`;
   }
 
-  const days = daysBetween(startDate, endDate);
-  if (days > settings.maxBidDurationDays) {
-    return `Maximum bid duration is ${settings.maxBidDurationDays} days`;
-  }
-  if (days < 1) {
-    return "End date must be after start date";
-  }
-  const startDay = new Date(startDate);
-  startDay.setUTCHours(0, 0, 0, 0);
-  const todayStart = new Date();
-  todayStart.setUTCHours(0, 0, 0, 0);
-  if (startDay < todayStart) {
-    return "Start date cannot be in the past";
-  }
-
-  // Property must be ACTIVE SHORT_TERM owned by this owner
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
     select: { ownerId: true, status: true },
@@ -157,7 +146,7 @@ export async function validateBidInput(
 
   const now = new Date();
 
-  // Re-boost: new amount must exceed the owner's current active bid for this property + zip
+  // Re-boost today: new amount must exceed the owner's current active bid for this property + zip
   const ownActiveBid = await prisma.propertyBid.findFirst({
     where: {
       propertyId,
@@ -170,7 +159,7 @@ export async function validateBidInput(
   });
 
   if (ownActiveBid && amount <= ownActiveBid.amount) {
-    return `Re-boost amount must be higher than your current bid of £${ownActiveBid.amount.toFixed(2)}/day`;
+    return `Raise your bid above your current £${ownActiveBid.amount.toFixed(2)} (you can increase it unlimited times today)`;
   }
 
   return null;
@@ -179,10 +168,10 @@ export async function validateBidInput(
 // ─── Bid CRUD ─────────────────────────────────────────────────────────────────
 
 export async function createBid(input: PlaceBidInput): Promise<BidDTO> {
-  const days = daysBetween(input.startDate, input.endDate);
-  const totalCost = parseFloat((input.amount * days).toFixed(2));
+  const { startDate, endDate } = getTodayBidWindow();
+  const totalCost = parseFloat(Number(input.amount).toFixed(2));
 
-  // Supersede previous active boosts for the same property + zip (re-boost upgrade)
+  // Supersede previous active boosts for the same property + zip (raise bid today)
   await prisma.propertyBid.updateMany({
     where: {
       propertyId: input.propertyId,
@@ -200,8 +189,8 @@ export async function createBid(input: PlaceBidInput): Promise<BidDTO> {
       zipCode: input.zipCode,
       amount: input.amount,
       totalCost,
-      startDate: input.startDate,
-      endDate: input.endDate,
+      startDate,
+      endDate,
       status: "ACTIVE",
     },
     include: BID_INCLUDE,
@@ -278,7 +267,6 @@ export async function cancelBid(
 
   if (ownerId !== null) {
     if (bid.ownerId !== ownerId) throw new Error("Not your bid");
-    // 1-hour grace window for owner self-cancel
     const gracePeriod = 60 * 60 * 1000;
     if (Date.now() - bid.createdAt.getTime() > gracePeriod) {
       throw new Error("Bids can only be cancelled within 1 hour of placement");
@@ -309,13 +297,11 @@ export interface BidExpiryResult {
 export async function processBidExpiry(): Promise<BidExpiryResult> {
   const now = new Date();
 
-  // 1. Mark past-endDate bids as EXPIRED
   const { count: expiredCount } = await prisma.propertyBid.updateMany({
     where: { status: "ACTIVE", endDate: { lt: now } },
     data: { status: "EXPIRED" },
   });
 
-  // 2. Find bids expiring within 2 days (for notifications)
   const soon = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
   const expiringSoonRaw = await prisma.propertyBid.findMany({
     where: {
@@ -355,7 +341,6 @@ export async function getBoostedPropertyIds(
     select: { propertyId: true },
   });
 
-  // One slot per property — highest bid per property wins
   const seen = new Set<string>();
   const ids: string[] = [];
   for (const bid of bids) {
@@ -366,8 +351,6 @@ export async function getBoostedPropertyIds(
   }
   return ids;
 }
-
-// ─── Current highest bid for a zip code (shown in bid form) ──────────────────
 
 export async function getHighestBidForZip(
   zipCode: string

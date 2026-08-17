@@ -23,25 +23,20 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
 
 /**
  * POST /api/owner/bids
- * Place a new bid. Creates a Razorpay order for the total cost.
- * Body: { propertyId, zipCode, amount, startDate, endDate }
+ * Place a same-day boost bid (valid until end of today).
+ * Owners may raise the amount unlimited times during the day.
+ * Body: { propertyId, zipCode, amount }
  */
 export const POST = withAuth(async (req: NextRequest, user) => {
     const body = await req.json();
-    const { propertyId, zipCode, amount, startDate, endDate } = body;
+    const { propertyId, zipCode, amount } = body;
 
-    if (!propertyId || !zipCode || !amount || !startDate || !endDate) {
+    if (!propertyId || !zipCode || amount === undefined || amount === null) {
       return errorResponse(
-        "propertyId, zipCode, amount, startDate, and endDate are required",
+        "propertyId, zipCode, and amount are required",
         400,
         ErrorCode.VALIDATION_ERROR
       );
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return errorResponse("Invalid date format", 400, ErrorCode.VALIDATION_ERROR);
     }
 
     const settings = await getAdminSettings();
@@ -51,8 +46,6 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       ownerId: user.userId,
       zipCode: String(zipCode).trim(),
       amount: Number(amount),
-      startDate: start,
-      endDate: end,
     };
 
     const validationError = await validateBidInput(input, settings);
@@ -60,12 +53,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       return errorResponse(validationError, 400, ErrorCode.VALIDATION_ERROR);
     }
 
-    // Calculate total cost for Stripe PaymentIntent
-    const days = Math.max(
-      1,
-      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-    );
-    const totalCost = parseFloat((Number(amount) * days).toFixed(2));
+    // Same-day boost: total cost = bid amount for today
+    const totalCost = parseFloat(Number(amount).toFixed(2));
 
     // Create Stripe PaymentIntent
     let stripeClientSecret: string | null = null;
@@ -83,6 +72,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
             zipCode,
             ownerId: user.userId,
             bidType: "property_boost",
+            duration: "same_day",
           },
         })
       );
@@ -92,7 +82,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       // Stripe unavailable in dev — proceed without intent
     }
 
-    // Create bid record
+    // Create bid record (always today only)
     const bid = await createBid(input);
 
     // Store stripe intent id if we got one

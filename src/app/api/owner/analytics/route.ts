@@ -173,9 +173,9 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
         where: { ownerId, createdAt: { gte: currentStart } },
         select: { totalCost: true, status: true },
       }),
-      prisma.ownerPackage.findFirst({
+      prisma.ownerPackage.findMany({
         where: { ownerId, status: "ACTIVE", endDate: { gt: now } },
-        include: { package: { select: { name: true, price: true, propertyLimit: true } } },
+        include: { package: { select: { name: true, price: true, propertyLimit: true, category: true } } },
         orderBy: { endDate: "desc" },
       }),
       prisma.payment.aggregate({
@@ -410,21 +410,33 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
           ),
         })),
       },
-      packageAnalytics: {
-        current: activePackage
-          ? {
-              name: activePackage.package.name,
-              status: activePackage.status,
-              startDate: activePackage.startDate.toISOString(),
-              endDate: activePackage.endDate.toISOString(),
-              propertiesUsed: activePackage.propertiesUsed,
-              propertyLimit: activePackage.package.propertyLimit,
-              price: activePackage.package.price,
-            }
-          : null,
-        totalSpent: packagePayments._sum.amount || 0,
-        historyCount: packageHistoryCount,
-      },
+      packageAnalytics: (() => {
+        const salePkg = activePackage.find((p) => p.package.category === "SALE");
+        const rentPkg = activePackage.find((p) => p.package.category === "RENT");
+        const primary = salePkg || rentPkg || null;
+        const mapPkg = (p: typeof primary) =>
+          p
+            ? {
+                name: p.package.name,
+                status: p.status,
+                startDate: p.startDate.toISOString(),
+                endDate: p.endDate.toISOString(),
+                propertiesUsed: p.propertiesUsed,
+                propertyLimit: p.package.propertyLimit,
+                price: p.package.price,
+                category: p.package.category,
+              }
+            : null;
+        return {
+          current: mapPkg(primary),
+          byCategory: {
+            SALE: mapPkg(salePkg ?? null),
+            RENT: mapPkg(rentPkg ?? null),
+          },
+          totalSpent: packagePayments._sum.amount || 0,
+          historyCount: packageHistoryCount,
+        };
+      })(),
       keyMetrics: {
         avgBookingValue,
         avgLeadTimeDays,

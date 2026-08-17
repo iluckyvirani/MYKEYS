@@ -1,5 +1,5 @@
 import { prisma } from '../prisma';
-import { stripe, toPence } from '../stripe';
+import { stripe, toPence, assertStripeMinAmount } from '../stripe';
 import { withStripeCustomerForPayment } from '../stripe/customer';
 import {
   InitiatePaymentRequest,
@@ -32,6 +32,8 @@ export const paymentService = {
     if (!data.amount || data.amount <= 0) {
       throw new Error('Invalid amount');
     }
+
+    assertStripeMinAmount(data.amount, data.currency || 'GBP');
 
     if (!data.bookingId && !data.packageId) {
       throw new Error('Either bookingId or packageId must be provided');
@@ -218,6 +220,72 @@ export const paymentService = {
         );
         if (!result.ok) {
           throw new Error(result.reason);
+        }
+
+        // Short-stay auto-confirm emails (non-fatal)
+        try {
+          const booking = await prisma.booking.findUnique({
+            where: { id: updatedPayment.bookingId },
+            include: {
+              property: { select: { title: true, ownerId: true, rentalType: true, listingType: true } },
+              guest: { select: { email: true, firstName: true, lastName: true } },
+            },
+          });
+          if (
+            booking &&
+            booking.property.listingType === 'RENT' &&
+            booking.property.rentalType === 'SHORT_TERM'
+          ) {
+            const { emailService } = await import('@/lib/email/emailService');
+            const guestName = `${booking.guest.firstName} ${booking.guest.lastName}`.trim();
+            const checkIn = booking.checkIn.toISOString().split('T')[0];
+            const checkOut = booking.checkOut.toISOString().split('T')[0];
+            await emailService.sendBookingPaidConfirmedEmail(
+              booking.guest.email,
+              guestName || 'there',
+              booking.property.title,
+              checkIn,
+              checkOut,
+              updatedPayment.amount,
+              booking.id
+            );
+            const owner = await prisma.user.findUnique({
+              where: { id: booking.property.ownerId },
+              select: { email: true, firstName: true, lastName: true },
+            });
+            if (owner?.email) {
+              await emailService.sendBookingPaidConfirmedEmailToOwner(
+                owner.email,
+                `${owner.firstName} ${owner.lastName}`.trim() || 'there',
+                guestName || 'Guest',
+                booking.property.title,
+                checkIn,
+                checkOut,
+                booking.id
+              );
+            }
+
+            // Queue short-stay owner settle-up
+            if (
+              updatedPayment.ownerEarnings != null &&
+              updatedPayment.ownerEarnings > 0
+            ) {
+              await prisma.payment.update({
+                where: { id: updatedPayment.id },
+                data: { settleStatus: 'PENDING' },
+              });
+              const { settlementService } = await import(
+                '@/lib/services/settlementService'
+              );
+              await settlementService.ensureShortStaySettlement({
+                paymentId: updatedPayment.id,
+                beneficiaryUserId: booking.property.ownerId,
+                amount: updatedPayment.ownerEarnings,
+              });
+            }
+          }
+        } catch (mailErr) {
+          console.error('Post-payment booking emails failed (non-fatal):', mailErr);
         }
       }
 

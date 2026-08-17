@@ -77,6 +77,13 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
               image: true,
             },
           },
+          catalogService: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
           review: {
             select: {
               id: true,
@@ -95,8 +102,11 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
       
       return {
         id: booking.id,
-        serviceId: booking.serviceListingId || booking.service,
-        serviceName: booking.serviceListing?.name || booking.service,
+        serviceId: booking.catalogServiceId || booking.serviceListingId || booking.service,
+        serviceName:
+          booking.catalogService?.name ||
+          booking.serviceListing?.name ||
+          booking.service,
         category: booking.category,
         providerName,
         providerId: booking.providerId,
@@ -110,6 +120,8 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
         description: booking.description,
         totalAmount: booking.totalAmount,
         paymentStatus: booking.paymentStatus.toLowerCase().replace('_', '-'),
+        pendingAction: booking.pendingAction || null,
+        settleStatus: booking.settleStatus || null,
         createdAt: booking.createdAt.toISOString(),
         completedAt: booking.completedAt ? booking.completedAt.toISOString() : undefined,
         rating: booking.review?.rating || undefined,

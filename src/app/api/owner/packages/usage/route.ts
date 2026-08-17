@@ -6,17 +6,13 @@ import { ErrorCode } from '@/lib/auth/errors';
 
 /**
  * GET /api/owner/packages/usage
- * Get owner's package usage statistics
+ * Get owner's Sale + Rent package usage statistics
  */
 export async function GET(request: NextRequest) {
   try {
     const authUser = await requireAuth(request);
 
     const usage = await packageService.getOwnerPackageUsage(authUser.userId);
-
-    if (!usage) {
-      return successResponse(null, "No active package", 200);
-    }
 
     return successResponse(usage, "Package usage retrieved successfully", 200);
   } catch (error: any) {

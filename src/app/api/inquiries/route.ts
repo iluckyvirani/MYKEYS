@@ -306,14 +306,15 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
       },
     });
 
-    // Check owner's active package: does inquiry go directly to owner or through admin?
+    // Check owner's active package: in-app notification routing
     const ownerActivePkg = await prisma.ownerPackage.findFirst({
       where: { ownerId: property.ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
-      include: { package: { select: { directInquiryToOwner: true, fullAdminSupport: true } } },
+      include: { package: { select: { directInquiryToOwner: true, fullAdminSupport: true, adminCCOnInquiry: true } } },
     });
     const directToOwner = !ownerActivePkg || ownerActivePkg.package.directInquiryToOwner;
+    const adminCcOnInquiry = Boolean(ownerActivePkg?.package.adminCCOnInquiry);
 
-    // Send notification to property owner only when directInquiryToOwner is true
+    // In-app notification to property owner when package allows direct inquiries
     if (directToOwner) {
       try {
         await notificationService.createInquiryNotification(
@@ -331,49 +332,84 @@ export const POST = withAuth(async (req: NextRequest, user: JWTPayload) => {
       }
     }
 
-    // Get owner email and name
     const owner = await prisma.user.findUnique({
       where: { id: property.ownerId },
       select: { firstName: true, lastName: true, email: true },
     });
 
-    // Send thank you email to inquirer (guest)
+    // Confirmation email to tenant/guest (always)
     try {
       await emailService.sendInquiryConfirmationEmail(
         body.email,
         body.name,
-        property.title
+        property.title,
+        {
+          message: body.message,
+          propertyId: property.id,
+          inquiryId: inquiry.id,
+        }
       );
     } catch (emailErr) {
       console.error('Failed to send inquiry confirmation email (non-fatal):', emailErr);
     }
 
-    // Send notification email to property owner only when directInquiryToOwner is true
-    if (directToOwner && owner) {
+    // Alert email to property owner (always — same branded layout)
+    if (owner?.email) {
       try {
         await emailService.sendNewInquiryNotificationEmail(
           owner.email,
-          `${owner.firstName} ${owner.lastName}`,
+          `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || 'there',
           body.name,
           property.title,
-          inquiry.id
+          inquiry.id,
+          {
+            message: body.message,
+            inquirerEmail: body.email,
+            inquirerPhone: body.phone || undefined,
+            propertyId: property.id,
+          }
         );
       } catch (emailErr) {
         console.error('Failed to send owner inquiry notification email (non-fatal):', emailErr);
       }
     }
 
-    // Create system notification for user (guest) - thank you message
-    if (body.userId) {
-      try {
-        await notificationService.createSystemNotification(
-          body.userId,
-          'Thank You for Your Inquiry!',
-          `Your inquiry about "${property.title}" has been received. The owner will respond soon.`
-        );
-      } catch (notifErr) {
-        console.error('Failed to send user system notification (non-fatal):', notifErr);
+    // Optional admin CC when package enables it
+    if (adminCcOnInquiry) {
+      const adminEmail =
+        process.env.EMAIL_CC?.trim() ||
+        process.env.EMAIL_USER?.trim() ||
+        process.env.EMAIL_FROM?.replace(/.*<([^>]+)>.*/, '$1').trim();
+      if (adminEmail && adminEmail !== owner?.email) {
+        try {
+          await emailService.sendNewInquiryNotificationEmail(
+            adminEmail,
+            'Admin',
+            body.name,
+            property.title,
+            inquiry.id,
+            {
+              message: body.message,
+              inquirerEmail: body.email,
+              inquirerPhone: body.phone || undefined,
+              propertyId: property.id,
+            }
+          );
+        } catch (emailErr) {
+          console.error('Failed to send admin CC inquiry email (non-fatal):', emailErr);
+        }
       }
+    }
+
+    // In-app thank-you notification for the tenant
+    try {
+      await notificationService.createSystemNotification(
+        user.userId,
+        'Thank You for Your Inquiry!',
+        `Your inquiry about "${property.title}" has been received. The owner will respond soon.`
+      );
+    } catch (notifErr) {
+      console.error('Failed to send user system notification (non-fatal):', notifErr);
     }
 
     const response: InquiryResponse = {

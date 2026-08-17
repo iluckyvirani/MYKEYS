@@ -105,10 +105,10 @@ export type HomeSectionKey = (typeof HOME_SECTIONS)[number];
 
 export const DEFAULT_HOME_CONTENT: HomeContent = {
   hero: {
-    title: "Find Your Perfect",
-    titleHighlight: "Dream Property",
+    title: "Buy, Rent or Short Stay Property in London",
+    titleHighlight: "All From One Dashboard",
     subtitle:
-      "Discover properties seamlessly. Buy, Short rent (nightly bookings), or Long Term Rent (2+ months minimum). No hidden fees, just transparent real estate solutions.",
+      "Finding a home in London shouldn't mean juggling five different apps. MYKEYS brings buying, renting, short lets and long-term homes together — with clear pricing and one place to manage it all.",
   },
   categories: {
     badge: "Property Categories",

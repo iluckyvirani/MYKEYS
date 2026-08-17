@@ -218,23 +218,26 @@ export default function PackagePaymentModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[min(92vh,720px)] flex flex-col overflow-hidden">
+        {/* Sticky header — close always visible on laptop scroll */}
         {!activated && (
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Activate Package</h2>
-            {!loading && (
-              <button
-                onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 bg-white shrink-0">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+              Activate Package
+            </h2>
+            <button
+              type="button"
+              onClick={handleClose}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5 stroke-[2.5]" />
+            </button>
           </div>
         )}
+
+        <div className="px-5 py-5 overflow-y-auto flex-1 min-h-0">
 
         {/* Success state */}
         {activated && (
@@ -303,6 +306,7 @@ export default function PackagePaymentModal({
             />
           </Elements>
         )}
+        </div>
       </div>
     </div>
   );

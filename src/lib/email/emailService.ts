@@ -2,9 +2,11 @@
 import path from "path";
 import nodemailer from "nodemailer";
 import {
+  ctaButtonMint,
   getAppBaseUrl,
   getSupportEmail,
   LOGO_CID,
+  renderEmailLayout,
   renderOtpEmail,
   renderStandardEmail,
 } from "@/lib/email/emailLayout";
@@ -89,6 +91,15 @@ function siteUrl(path: string) {
   return `${getAppBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+function escapeEmailHtml(value: string) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export const emailService = {
   async sendWelcomeEmail(email: string, firstName: string) {
     try {
@@ -119,22 +130,47 @@ export const emailService = {
   async sendInquiryConfirmationEmail(
     email: string,
     name: string,
-    propertyTitle: string
+    propertyTitle: string,
+    opts?: {
+      message?: string;
+      propertyId?: string;
+      inquiryId?: string;
+    }
   ) {
     try {
+      const messageHtml = opts?.message
+        ? `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;border-collapse:collapse;border:1px solid #d8eceb;border-radius:8px;overflow:hidden;">
+          <tr style="background:#f3fafa;">
+            <td style="padding:14px 16px;">
+              <p style="margin:0 0 6px;font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Your message</p>
+              <p style="margin:0;color:#0f172a;font-size:14px;line-height:1.55;white-space:pre-wrap;">${escapeEmailHtml(
+                opts.message
+              )}</p>
+            </td>
+          </tr>
+        </table>`
+        : "";
+
       const mailOptions = {
         ...baseMailOptions(email),
-        subject: "Thank you for your inquiry",
+        subject: `Inquiry received — ${propertyTitle}`,
         html: renderStandardEmail({
-          title: `Thank you, ${name}!`,
-          greetingName: name,
+          title: "We've got your inquiry",
+          greetingName: name.split(" ")[0] || name,
+          preheader: `Your inquiry about ${propertyTitle} has been received.`,
           paragraphs: [
-            `We've received your inquiry about <strong>${propertyTitle}</strong>.`,
-            "The property owner will review your message and get back to you soon. In the meantime you can explore more listings or check your inquiry dashboard for updates.",
+            `Thanks for contacting the owner about <strong>${escapeEmailHtml(
+              propertyTitle
+            )}</strong>.`,
+            "We've passed your message on. The property owner will review it and respond soon. You can track the conversation anytime in your dashboard.",
           ],
+          extraHtml: messageHtml,
           cta: {
-            href: siteUrl("/user/dashboard/inquiries"),
-            label: "View Inquiries",
+            href: opts?.inquiryId
+              ? siteUrl(`/dashboard/inquiries/${opts.inquiryId}`)
+              : siteUrl("/user/dashboard/inquiries"),
+            label: "View your inquiry",
           },
         }),
       };
@@ -153,22 +189,76 @@ export const emailService = {
     ownerName: string,
     inquirerName: string,
     propertyTitle: string,
-    inquiryId: string
+    inquiryId: string,
+    opts?: {
+      message?: string;
+      inquirerEmail?: string;
+      inquirerPhone?: string;
+      propertyId?: string;
+    }
   ) {
     try {
+      const contactBits = [
+        opts?.inquirerEmail
+          ? `<span style="color:#64748b;">Email:</span> <a href="mailto:${escapeEmailHtml(
+              opts.inquirerEmail
+            )}" style="color:#339390;text-decoration:none;font-weight:600;">${escapeEmailHtml(
+              opts.inquirerEmail
+            )}</a>`
+          : "",
+        opts?.inquirerPhone
+          ? `<span style="color:#64748b;">Phone:</span> <strong style="color:#0f172a;">${escapeEmailHtml(
+              opts.inquirerPhone
+            )}</strong>`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("<br/>");
+
+      const detailHtml = `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;border-collapse:collapse;border:1px solid #d8eceb;border-radius:8px;overflow:hidden;">
+          <tr style="background:#f3fafa;">
+            <td style="padding:14px 16px;">
+              <p style="margin:0 0 8px;font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Inquiry details</p>
+              <p style="margin:0 0 8px;color:#0f172a;font-size:14px;">
+                <strong>${escapeEmailHtml(inquirerName)}</strong> enquired about
+                <strong>${escapeEmailHtml(propertyTitle)}</strong>
+              </p>
+              ${
+                contactBits
+                  ? `<p style="margin:0 0 10px;font-size:13px;line-height:1.6;">${contactBits}</p>`
+                  : ""
+              }
+              ${
+                opts?.message
+                  ? `<p style="margin:0 0 4px;font-size:12px;color:#64748b;font-weight:700;">Message</p>
+                     <p style="margin:0;color:#0f172a;font-size:14px;line-height:1.55;white-space:pre-wrap;">${escapeEmailHtml(
+                       opts.message
+                     )}</p>`
+                  : ""
+              }
+            </td>
+          </tr>
+        </table>
+      `;
+
       const mailOptions = {
         ...baseMailOptions(ownerEmail),
-        subject: `New inquiry for ${propertyTitle}`,
+        subject: `New inquiry: ${propertyTitle}`,
         html: renderStandardEmail({
           title: "New inquiry received",
-          greetingName: ownerName,
+          greetingName: ownerName.split(" ")[0] || ownerName,
+          preheader: `${inquirerName} sent an inquiry about ${propertyTitle}.`,
           paragraphs: [
-            `<strong>${inquirerName}</strong> sent an inquiry about your property <strong>${propertyTitle}</strong>.`,
-            "Please review and respond as soon as possible to increase booking chances.",
+            `You have a new inquiry on MYKEYS for <strong>${escapeEmailHtml(
+              propertyTitle
+            )}</strong>.`,
+            "Reply promptly to improve your chance of converting this lead.",
           ],
+          extraHtml: detailHtml,
           cta: {
             href: siteUrl(`/owner/dashboard/inquiries/${inquiryId}`),
-            label: "View Inquiry",
+            label: "View & reply",
           },
         }),
       };
@@ -286,13 +376,13 @@ export const emailService = {
           title: "Booking request received",
           greetingName: guestName,
           paragraphs: [
-            `Your booking for <strong>${propertyTitle}</strong> has been received and is awaiting owner confirmation.`,
-            "We will notify you as soon as the owner confirms your booking.",
+            `Your booking for <strong>${propertyTitle}</strong> has been received.`,
+            "Complete payment to confirm your stay. Once paid, your booking is confirmed automatically — no owner approval needed.",
           ],
           extraHtml: details,
           cta: {
             href: siteUrl(`/user/dashboard/bookings/${bookingId}`),
-            label: "View Booking Request",
+            label: "View Booking",
           },
         }),
       };
@@ -301,6 +391,58 @@ export const emailService = {
     } catch (error) {
       console.error(
         `Failed to send booking confirmation email to ${guestEmail}:`,
+        error
+      );
+    }
+  },
+
+  async sendBookingPaidConfirmedEmail(
+    guestEmail: string,
+    guestName: string,
+    propertyTitle: string,
+    checkInDate: string,
+    checkOutDate: string,
+    totalAmount: number,
+    bookingId: string
+  ) {
+    try {
+      const details = `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;border-collapse:collapse;border:1px solid #d8eceb;border-radius:8px;overflow:hidden;">
+          <tr style="background:#f3fafa;">
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;"><strong>Check-in</strong></td>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;">${checkInDate}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;"><strong>Check-out</strong></td>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;">${checkOutDate}</td>
+          </tr>
+          <tr style="background:#f3fafa;">
+            <td style="padding:10px 12px;"><strong>Total paid</strong></td>
+            <td style="padding:10px 12px;">£${totalAmount.toFixed(2)}</td>
+          </tr>
+        </table>
+      `;
+      const mailOptions = {
+        ...baseMailOptions(guestEmail),
+        subject: `Booking confirmed — ${propertyTitle}`,
+        html: renderStandardEmail({
+          title: "Your booking is confirmed",
+          greetingName: guestName,
+          paragraphs: [
+            `Payment received. Your short stay at <strong>${propertyTitle}</strong> is now confirmed.`,
+          ],
+          extraHtml: details,
+          cta: {
+            href: siteUrl(`/user/dashboard/bookings/${bookingId}`),
+            label: "View Booking",
+          },
+        }),
+      };
+      await transporter.sendMail(mailOptions);
+      console.log(`Booking paid-confirmed email sent to ${guestEmail}`);
+    } catch (error) {
+      console.error(
+        `Failed to send booking paid-confirmed email to ${guestEmail}:`,
         error
       );
     }
@@ -339,7 +481,8 @@ export const emailService = {
           title: "You have a new booking",
           greetingName: ownerName,
           paragraphs: [
-            `<strong>${guestName}</strong> has booked your property <strong>${propertyTitle}</strong>.`,
+            `<strong>${guestName}</strong> has started a short-stay booking for <strong>${propertyTitle}</strong>.`,
+            "It will confirm automatically once the guest completes payment. You do not need to approve or cancel it.",
           ],
           extraHtml: details,
           cta: {
@@ -353,6 +496,58 @@ export const emailService = {
     } catch (error) {
       console.error(
         `Failed to send booking notification email to ${ownerEmail}:`,
+        error
+      );
+    }
+  },
+
+  async sendBookingPaidConfirmedEmailToOwner(
+    ownerEmail: string,
+    ownerName: string,
+    guestName: string,
+    propertyTitle: string,
+    checkInDate: string,
+    checkOutDate: string,
+    bookingId: string
+  ) {
+    try {
+      const details = `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;border-collapse:collapse;border:1px solid #d8eceb;border-radius:8px;overflow:hidden;">
+          <tr style="background:#f3fafa;">
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;"><strong>Guest</strong></td>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;">${guestName}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;"><strong>Check-in</strong></td>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;">${checkInDate}</td>
+          </tr>
+          <tr style="background:#f3fafa;">
+            <td style="padding:10px 12px;"><strong>Check-out</strong></td>
+            <td style="padding:10px 12px;">${checkOutDate}</td>
+          </tr>
+        </table>
+      `;
+      const mailOptions = {
+        ...baseMailOptions(ownerEmail),
+        subject: `Booking confirmed — ${propertyTitle}`,
+        html: renderStandardEmail({
+          title: "Short stay confirmed",
+          greetingName: ownerName,
+          paragraphs: [
+            `Payment received. <strong>${guestName}</strong>'s booking for <strong>${propertyTitle}</strong> is confirmed automatically.`,
+          ],
+          extraHtml: details,
+          cta: {
+            href: siteUrl(`/owner/dashboard/bookings/${bookingId}`),
+            label: "View Booking",
+          },
+        }),
+      };
+      await transporter.sendMail(mailOptions);
+      console.log(`Booking paid-confirmed email sent to owner ${ownerEmail}`);
+    } catch (error) {
+      console.error(
+        `Failed to send booking paid-confirmed email to owner ${ownerEmail}:`,
         error
       );
     }
@@ -701,6 +896,74 @@ export const emailService = {
     console.log(`Email change OTP (${opts.target}) sent to ${opts.to}`);
   },
 
+  async sendMagicLinkLoginEmail(opts: {
+    to: string;
+    firstName: string;
+    signInUrl: string;
+    expiresInMinutes: number;
+    requestedAt: Date;
+    timeZone: string;
+    device: string;
+  }) {
+    const name = escapeEmailHtml(opts.firstName || "there");
+    const dateLabel = opts.requestedAt.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      timeZone: opts.timeZone || "Europe/London",
+    });
+    const timeLabel = opts.requestedAt.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: opts.timeZone || "Europe/London",
+    });
+    const tz = escapeEmailHtml(opts.timeZone || "Europe/London");
+    const device = escapeEmailHtml(opts.device || "Unknown device");
+    const changePasswordUrl = siteUrl("/forgot-password");
+
+    const bodyHtml = `
+      <p style="margin:0 0 14px;">Hello ${name},</p>
+      <p style="margin:0 0 18px;">
+        It will instantly sign you in to your MYKEYS account, so you can pick up from where you left off.
+      </p>
+      ${ctaButtonMint(opts.signInUrl, "Sign in to MYKEYS")}
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;">
+        This link is valid for <strong>${opts.expiresInMinutes} minutes</strong>.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #d8eceb;border-radius:10px;overflow:hidden;">
+        <tr>
+          <td style="padding:14px 16px;background:#f8fafc;">
+            <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#0f172a;">
+              When and where this was requested
+            </p>
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#475569;">
+              ${escapeEmailHtml(dateLabel)} · ${escapeEmailHtml(timeLabel)} ${tz}<br/>
+              ${device}
+            </p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0;font-size:13px;color:#64748b;">
+        Didn&apos;t request this email?
+        <a href="${changePasswordUrl}" style="color:#339390;font-weight:600;text-decoration:none;">Change your password</a>
+      </p>
+    `;
+
+    const mailOptions = {
+      ...baseMailOptions(opts.to),
+      subject: `Sign in to your MYKEYS account, ${opts.firstName || "there"}`,
+      html: renderEmailLayout({
+        title: "Here's your one time link",
+        bodyHtml,
+        preheader: `Your MYKEYS sign-in link is valid for ${opts.expiresInMinutes} minutes.`,
+      }),
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Magic link login email sent to ${opts.to}`);
+  },
+
   async sendNewsletterNewListingEmail(
     email: string,
     listing: {
@@ -757,6 +1020,38 @@ export const emailService = {
         `Failed to send newsletter new listing email to ${email}:`,
         error
       );
+    }
+  },
+
+  async sendServiceActionOtpEmail(opts: {
+    to: string;
+    firstName: string;
+    serviceName: string;
+    action: "COMPLETE" | "CANCEL";
+    otp: string;
+    providerName: string;
+  }) {
+    const actionLabel = opts.action === "COMPLETE" ? "complete" : "cancel";
+    try {
+      const mailOptions = {
+        ...baseMailOptions(opts.to),
+        subject: `Confirm ${actionLabel} — ${opts.serviceName}`,
+        html: renderOtpEmail({
+          title: `Confirm service ${actionLabel}`,
+          firstName: opts.firstName,
+          intro:
+            opts.action === "COMPLETE"
+              ? `${escapeEmailHtml(opts.providerName)} marked <strong>${escapeEmailHtml(opts.serviceName)}</strong> as done. Enter this code to confirm completion:`
+              : `${escapeEmailHtml(opts.providerName)} requested to cancel <strong>${escapeEmailHtml(opts.serviceName)}</strong>. Enter this code to confirm cancellation:`,
+          otp: opts.otp,
+          note: "This code expires in <strong>10 minutes</strong>. If you did not expect this, contact MYKEYS support.",
+        }),
+      };
+      await transporter.sendMail(mailOptions);
+      console.log(`Service action OTP (${opts.action}) sent to ${opts.to}`);
+    } catch (error) {
+      console.error(`Failed to send service action OTP to ${opts.to}:`, error);
+      throw error;
     }
   },
 };

@@ -61,6 +61,22 @@ export default function PaymentsPage() {
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<any>({});
   const [showAppliedFilters, setShowAppliedFilters] = useState(false);
+  const [stats, setStats] = useState({
+    completedCount: 0,
+    completedAmount: 0,
+    pendingCount: 0,
+    pendingAmount: 0,
+    failedCount: 0,
+    avgTransaction: 0,
+  });
+
+  const formatGbp = (amount: number) =>
+    new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: "GBP",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount || 0);
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -73,22 +89,67 @@ export default function PaymentsPage() {
           completed: "PAID",
           pending: "PENDING",
           failed: "FAILED",
+          paid: "PAID",
         };
-        params.append("status", statusMap[appliedFilters.status] || appliedFilters.status.toUpperCase());
+        params.append(
+          "status",
+          statusMap[String(appliedFilters.status).toLowerCase()] ||
+            appliedFilters.status.toUpperCase()
+        );
       }
       if (appliedFilters.method) params.append("paymentMethod", appliedFilters.method);
-      
+
       const response = await api.get(`/admin/payments?${params.toString()}`);
       if (response.data?.success && response.data?.data?.items) {
-        // The API returns the enriched DTO array directly – pass through as-is
         const raw = response.data.data.items;
-        // Support both response shapes (items is array or items.payments)
         const apiPayments = Array.isArray(raw) ? raw : (raw.payments ?? []);
         setPayments(apiPayments);
+
+        const apiStats = response.data.data.stats;
+        if (apiStats) {
+          setStats({
+            completedCount: apiStats.completedCount ?? 0,
+            completedAmount: apiStats.completedAmount ?? 0,
+            pendingCount: apiStats.pendingCount ?? 0,
+            pendingAmount: apiStats.pendingAmount ?? 0,
+            failedCount: apiStats.failedCount ?? 0,
+            avgTransaction: apiStats.avgTransaction ?? 0,
+          });
+        } else {
+          // Fallback: compute from loaded rows using Prisma status values
+          const isPaid = (s: string) =>
+            ["PAID", "COMPLETED", "completed"].includes(String(s).toUpperCase()) ||
+            String(s).toLowerCase() === "completed";
+          const isPending = (s: string) => String(s).toUpperCase() === "PENDING";
+          const paid = apiPayments.filter((p: Payment) => isPaid(p.status));
+          const pending = apiPayments.filter((p: Payment) => isPending(p.status));
+          const paidTotal = paid.reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
+          setStats({
+            completedCount: paid.length,
+            completedAmount: paidTotal,
+            pendingCount: pending.length,
+            pendingAmount: pending.reduce(
+              (sum: number, p: Payment) => sum + (p.amount || 0),
+              0
+            ),
+            failedCount: apiPayments.filter(
+              (p: Payment) => String(p.status).toUpperCase() === "FAILED"
+            ).length,
+            avgTransaction: paid.length ? paidTotal / paid.length : 0,
+          });
+        }
       }
     } catch (err) {
       console.error("Error fetching payments:", err);
       setPayments([]);
+      setStats({
+        completedCount: 0,
+        completedAmount: 0,
+        pendingCount: 0,
+        pendingAmount: 0,
+        failedCount: 0,
+        avgTransaction: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -130,13 +191,6 @@ export default function PaymentsPage() {
     router.push(`/admin/dashboard/payments/${payment.id}`);
   };
 
-  const completedPayments = payments.filter((p) => p.status === "completed");
-  const pendingPayments = payments.filter((p) => p.status === "pending");
-  const failedPayments = payments.filter((p) => p.status === "failed");
-  const totalRevenue = completedPayments.reduce((sum, p) => sum + p.amount, 0);
-  const pendingAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
-  const avgTransaction = completedPayments.length > 0 ? totalRevenue / completedPayments.length : 0;
-
   return (
     <AdminDashboardLayout>
       <div className="space-y-5">
@@ -161,7 +215,9 @@ export default function PaymentsPage() {
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">£{(totalRevenue / 100000).toFixed(2)}L</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {formatGbp(stats.completedAmount)}
+                </div>
                 <div className="text-sm text-gray-600">Total Revenue</div>
               </div>
               <div className="p-2 bg-green-100 rounded-lg">
@@ -169,14 +225,14 @@ export default function PaymentsPage() {
               </div>
             </div>
             <div className="mt-2 text-sm text-gray-500">
-              Completed payments
+              From {stats.completedCount} paid payment{stats.completedCount === 1 ? "" : "s"}
             </div>
           </div>
 
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">{completedPayments.length}</div>
+                <div className="text-2xl font-bold text-gray-900">{stats.completedCount}</div>
                 <div className="text-sm text-gray-600">Completed</div>
               </div>
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -184,14 +240,16 @@ export default function PaymentsPage() {
               </div>
             </div>
             <div className="mt-2 text-sm text-gray-500">
-              Total transactions
+              Paid transactions
             </div>
           </div>
 
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">£{(pendingAmount / 1000).toFixed(0)}K</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {formatGbp(stats.pendingAmount)}
+                </div>
                 <div className="text-sm text-gray-600">Pending</div>
               </div>
               <div className="p-2 bg-yellow-100 rounded-lg">
@@ -199,14 +257,16 @@ export default function PaymentsPage() {
               </div>
             </div>
             <div className="mt-2 text-sm text-gray-500">
-              Awaiting completion
+              {stats.pendingCount} awaiting completion
             </div>
           </div>
 
           <div className="bg-white rounded-[5px] border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">£{(avgTransaction / 1000).toFixed(0)}K</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {formatGbp(stats.avgTransaction)}
+                </div>
                 <div className="text-sm text-gray-600">Avg Transaction</div>
               </div>
               <div className="p-2 bg-purple-100 rounded-lg">
@@ -214,7 +274,7 @@ export default function PaymentsPage() {
               </div>
             </div>
             <div className="mt-2 text-sm text-gray-500">
-              Average amount
+              Average paid amount
             </div>
           </div>
         </div>

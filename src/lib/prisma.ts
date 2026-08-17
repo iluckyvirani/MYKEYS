@@ -2,7 +2,28 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
-const connectionString = process.env.DATABASE_URL;
+/**
+ * pg warns that sslmode=require currently aliases verify-full and will change.
+ * Prefer explicit libpq-compat + require (Neon-friendly) to silence the warning.
+ */
+function normalizeDatabaseUrl(url: string | undefined): string | undefined {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url);
+    const mode = parsed.searchParams.get("sslmode");
+    if (mode === "prefer" || mode === "require" || mode === "verify-ca") {
+      if (!parsed.searchParams.has("uselibpqcompat")) {
+        parsed.searchParams.set("uselibpqcompat", "true");
+      }
+      parsed.searchParams.set("sslmode", "require");
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+const connectionString = normalizeDatabaseUrl(process.env.DATABASE_URL);
 
 const pool = new Pool({
   connectionString,
@@ -19,7 +40,7 @@ const globalForPrisma = global as unknown as {
 };
 
 /** Bump when Prisma schema changes so dev server picks up regenerated client */
-const PRISMA_CLIENT_VERSION = "20260801-google-auth-v2";
+const PRISMA_CLIENT_VERSION = "20260816-services-marketplace-v1";
 
 function createPrismaClient() {
   return new PrismaClient({

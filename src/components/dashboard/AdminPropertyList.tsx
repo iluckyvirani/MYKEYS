@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Eye, Edit, Trash2, MapPin, Star, DollarSign } from "lucide-react";
+import SharePropertyButton from "@/components/property/SharePropertyButton";
 
 interface Property {
   id: string;
@@ -91,7 +92,12 @@ export default function AdminPropertyList({
                     <span className="text-gray-400">No image</span>
                   </div>
                 )}
-                <div className="absolute top-3 right-3">
+                <div className="absolute top-3 right-3 flex items-center gap-2">
+                  <SharePropertyButton
+                    propertyId={property.id}
+                    title={property.title}
+                    variant="overlay"
+                  />
                   <Badge
                     className={`border capitalize ${getStatusColor(property.status)}`}
                     variant="secondary"
@@ -274,6 +280,11 @@ export default function AdminPropertyList({
 
             {/* Actions */}
             <div className="flex gap-2 shrink-0">
+              <SharePropertyButton
+                propertyId={property.id}
+                title={property.title}
+                variant="icon"
+              />
               <Button
                 variant="outline"
                 size="sm"

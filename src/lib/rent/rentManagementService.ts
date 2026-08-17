@@ -81,7 +81,10 @@ async function finalizeTenancyEnd(opts: {
     "@/lib/documents/documentService"
   );
 
-  const publishCheck = await packageService.canPublish(opts.ownerId);
+  const publishCheck = await packageService.canPublish(opts.ownerId, {
+    listingType: property.listingType,
+    rentalType: property.rentalType,
+  });
   let restored = false;
   let blockReason: "no_package" | "docs" | "limit" | null = null;
 
@@ -103,8 +106,10 @@ async function finalizeTenancyEnd(opts: {
         data: { status: PropertyStatus.ACTIVE },
       });
       if (isGatedListing(property)) {
+        const category =
+          property.listingType === "BUY" ? "SALE" : "RENT";
         await packageService
-          .incrementPropertyUsage(opts.ownerId)
+          .incrementPropertyUsage(opts.ownerId, category)
           .catch(() => undefined);
       }
       restored = true;
@@ -369,7 +374,11 @@ export const rentManagementService = {
     });
 
     if (wasActiveOnWebsite && isGatedListing(property)) {
-      await packageService.decrementPropertyUsage(ownerId).catch(() => undefined);
+      const category =
+        property.listingType === "BUY" ? "SALE" : "RENT";
+      await packageService
+        .decrementPropertyUsage(ownerId, category)
+        .catch(() => undefined);
     }
 
     await notificationService

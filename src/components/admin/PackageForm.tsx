@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
-import { PackageInput, DurationUnit } from "@/types/package";
+import { PackageInput, DurationUnit, PackageCategory } from "@/types/package";
 
 interface PackageFormProps {
   initialData?: Partial<PackageInput & { id: string }>;
@@ -43,6 +43,7 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
     price: initialData?.price ?? 0,
     durationValue: initialData?.durationValue ?? 1,
     durationUnit: (initialData?.durationUnit as DurationUnit) ?? "months",
+    category: (initialData?.category as PackageCategory) ?? "RENT",
     propertyLimit: initialData?.propertyLimit ?? 1,
     featuredLimit: initialData?.featuredLimit ?? 0,
     isActive: initialData?.isActive ?? true,
@@ -101,6 +102,24 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
               className="bg-gray-50 border-gray-200 focus:bg-white"
               required
             />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="category" className="text-sm font-medium text-gray-700">Category *</Label>
+            <Select
+              value={form.category ?? "RENT"}
+              onValueChange={(v) => set("category", v as PackageCategory)}
+            >
+              <SelectTrigger id="category" className="bg-gray-50 border-gray-200">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SALE">Sale — for Buy listings</SelectItem>
+                <SelectItem value="RENT">Rent — for Long Rent listings</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">
+              Owners need a Sale package to go live with Buy properties, and a Rent package for Long Rent. Short stay does not need a package.
+            </p>
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="shortDescription" className="text-sm font-medium text-gray-700">Short Description</Label>

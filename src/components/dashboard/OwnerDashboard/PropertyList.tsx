@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
+import SharePropertyButton from "@/components/property/SharePropertyButton";
 
 
 
@@ -296,6 +297,11 @@ export default function PropertyList() {
                   
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
+                      <SharePropertyButton
+                        propertyId={property.id}
+                        title={property.title}
+                        variant="icon"
+                      />
                       <Link href={`/owner/dashboard/properties/${property.id}`}>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Eye className="w-4 h-4" />

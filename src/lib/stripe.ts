@@ -35,6 +35,18 @@ export function toPence(amount: number): number {
   return Math.round(amount * 100);
 }
 
+/** Stripe's minimum charge for GBP (30 pence). */
+export const STRIPE_MIN_AMOUNT_GBP = 0.3;
+
+export function assertStripeMinAmount(amount: number, currency = "GBP") {
+  const cur = currency.toUpperCase();
+  if (cur === "GBP" && amount > 0 && amount < STRIPE_MIN_AMOUNT_GBP) {
+    throw new Error(
+      `Amount must be at least £${STRIPE_MIN_AMOUNT_GBP.toFixed(2)} GBP (Stripe minimum). This package is priced at £${Number(amount).toFixed(2)} — update the package price in Admin → Packages.`
+    );
+  }
+}
+
 /**
  * Convert pence back to a GBP decimal amount
  */

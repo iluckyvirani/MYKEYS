@@ -49,9 +49,10 @@ export default function AdminLoginPage() {
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
         localStorage.setItem("user", JSON.stringify(user));
+        sessionStorage.setItem("admin_auth_verified", "true");
 
-        // Redirect to admin dashboard
-        router.push("/admin/dashboard");
+        // Full navigation so admin layout re-runs auth for the dashboard
+        router.replace("/admin/dashboard");
       }
     } catch (err: any) {
       const message =

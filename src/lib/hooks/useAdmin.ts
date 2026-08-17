@@ -56,19 +56,17 @@ export function useAdminLogout() {
 
   const logout = async () => {
     try {
-      // Clear localStorage
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
-      
-      // Redirect to admin login
+      sessionStorage.removeItem("admin_auth_verified");
       router.push("/admin/login");
     } catch (error) {
       console.error("Logout error:", error);
-      // Still redirect even if error
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
+      sessionStorage.removeItem("admin_auth_verified");
       router.push("/admin/login");
     }
   };

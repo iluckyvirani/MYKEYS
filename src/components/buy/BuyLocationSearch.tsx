@@ -3,6 +3,7 @@
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { normalizeSearchLocation } from "@/lib/ukPostcode";
 
 const SUGGESTIONS = [
   "London",
@@ -49,7 +50,7 @@ export default function BuyLocationSearch({
     : SUGGESTIONS.slice(0, 7);
 
   const goSearch = (value: string) => {
-    const trimmed = value.trim();
+    const trimmed = normalizeSearchLocation(value);
     if (!trimmed) return;
     router.push(`/buy/search?location=${encodeURIComponent(trimmed)}`);
   };

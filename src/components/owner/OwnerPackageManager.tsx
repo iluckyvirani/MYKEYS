@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Clock, Building2, AlertTriangle, Star } from "lucide-react";
 import { api } from "@/lib/api";
-import { OwnerPackageWithUsage } from "@/types/package";
+import { OwnerActivePackages, OwnerPackageWithUsage, PackageCategory } from "@/types/package";
 import PackageBrowser from "./PackageBrowser";
 import PackagePaymentModal from "./PackagePaymentModal";
 
@@ -23,11 +23,17 @@ function ActivePackageCard({ sub, onRenew }: ActivePackageCardProps) {
       : Math.min(100, (sub.propertiesUsed / sub.propertiesLimit) * 100);
 
   const expiringSoon = sub.daysRemaining <= 7;
+  const isSale = sub.category === "SALE";
 
   return (
     <Card className="p-6 space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Badge className={isSale ? "bg-blue-100 text-blue-700" : "bg-teal-100 text-teal-700"}>
+              {isSale ? "Sale" : "Rent"}
+            </Badge>
+          </div>
           <h2 className="text-xl font-bold text-gray-900">{sub.packageName}</h2>
           {sub.shortDescription && (
             <p className="text-sm text-gray-500 mt-0.5">{sub.shortDescription}</p>
@@ -36,7 +42,6 @@ function ActivePackageCard({ sub, onRenew }: ActivePackageCardProps) {
         <Badge className="bg-green-100 text-green-700 shrink-0">Active</Badge>
       </div>
 
-      {/* Expiry */}
       <div className={`flex items-center gap-2 text-sm ${expiringSoon ? "text-orange-600" : "text-gray-600"}`}>
         {expiringSoon ? <AlertTriangle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
         <span>
@@ -52,7 +57,6 @@ function ActivePackageCard({ sub, onRenew }: ActivePackageCardProps) {
         )}
       </div>
 
-      {/* Listings usage */}
       <div className="space-y-1">
         <div className="flex justify-between text-sm">
           <span className="flex items-center gap-1 text-gray-600">
@@ -67,7 +71,6 @@ function ActivePackageCard({ sub, onRenew }: ActivePackageCardProps) {
         )}
       </div>
 
-      {/* Featured */}
       {sub.featuredLimit > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
           <span className="flex items-center gap-1">
@@ -79,7 +82,6 @@ function ActivePackageCard({ sub, onRenew }: ActivePackageCardProps) {
         </div>
       )}
 
-      {/* Feature flags */}
       <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
         {[
           { flag: sub.showOwnerName,        label: "Name visible" },
@@ -105,9 +107,10 @@ interface PendingPayment {
 }
 
 export default function OwnerPackageManager() {
-  const [currentPkg, setCurrentPkg] = useState<OwnerPackageWithUsage | null>(null);
+  const [packages, setPackages] = useState<OwnerActivePackages>({ SALE: null, RENT: null });
   const [loading, setLoading] = useState(true);
   const [showBrowser, setShowBrowser] = useState(false);
+  const [browserCategory, setBrowserCategory] = useState<PackageCategory>("RENT");
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [subError, setSubError] = useState("");
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
@@ -115,7 +118,11 @@ export default function OwnerPackageManager() {
   const fetchCurrent = async () => {
     try {
       const res = await api.get("/owner/packages");
-      setCurrentPkg(res.data?.data ?? null);
+      const data = res.data?.data;
+      setPackages({
+        SALE: data?.SALE ?? null,
+        RENT: data?.RENT ?? null,
+      });
     } finally {
       setLoading(false);
     }
@@ -123,7 +130,6 @@ export default function OwnerPackageManager() {
 
   useEffect(() => { fetchCurrent(); }, []);
 
-  /** Step 1: Create PENDING OwnerPackage → open payment modal */
   async function handleSelect(packageId: string, price: number, packageName: string) {
     setSubscribing(packageId);
     setSubError("");
@@ -138,7 +144,6 @@ export default function OwnerPackageManager() {
     }
   }
 
-  /** Step 2: Payment succeeded → activate package in UI */
   function handlePaymentSuccess() {
     setPendingPayment(null);
     setShowBrowser(false);
@@ -146,25 +151,65 @@ export default function OwnerPackageManager() {
     fetchCurrent();
   }
 
-  /** Payment modal closed without success */
   function handlePaymentClose() {
     setPendingPayment(null);
   }
+
+  const activeList = [packages.SALE, packages.RENT].filter(Boolean) as OwnerPackageWithUsage[];
+  const hasAny = activeList.length > 0;
 
   if (loading) return <p className="text-gray-400 py-8">Loading package info…</p>;
 
   return (
     <div className="space-y-6">
-      {/* Current package */}
-      {currentPkg ? (
-        <ActivePackageCard sub={currentPkg} onRenew={() => setShowBrowser(true)} />
+      {hasAny ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {packages.SALE && (
+            <ActivePackageCard
+              sub={packages.SALE}
+              onRenew={() => { setBrowserCategory("SALE"); setShowBrowser(true); }}
+            />
+          )}
+          {packages.RENT && (
+            <ActivePackageCard
+              sub={packages.RENT}
+              onRenew={() => { setBrowserCategory("RENT"); setShowBrowser(true); }}
+            />
+          )}
+          {!packages.SALE && (
+            <Card className="p-6 border-dashed text-center space-y-2">
+              <h3 className="font-semibold text-gray-700">No Sale package</h3>
+              <p className="text-sm text-gray-500">Needed to publish Buy listings.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { setBrowserCategory("SALE"); setShowBrowser(true); }}
+              >
+                Browse Sale packages
+              </Button>
+            </Card>
+          )}
+          {!packages.RENT && (
+            <Card className="p-6 border-dashed text-center space-y-2">
+              <h3 className="font-semibold text-gray-700">No Rent package</h3>
+              <p className="text-sm text-gray-500">Needed to publish Long Rent listings.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { setBrowserCategory("RENT"); setShowBrowser(true); }}
+              >
+                Browse Rent packages
+              </Button>
+            </Card>
+          )}
+        </div>
       ) : (
         <Card className="p-6 border-dashed text-center space-y-3">
           <Building2 className="w-10 h-10 text-gray-300 mx-auto" />
-          <h2 className="text-lg font-semibold text-gray-700">No active package</h2>
+          <h2 className="text-lg font-semibold text-gray-700">No active packages</h2>
           <p className="text-sm text-gray-500 max-w-sm mx-auto">
-            You need a package to publish Long Rent or Buy listings. Short Rent listings
-            can be published without a package.
+            Buy a Sale package for Buy listings, or a Rent package for Long Rent.
+            Short stay listings do not need a package.
           </p>
         </Card>
       )}
@@ -173,18 +218,16 @@ export default function OwnerPackageManager() {
         <p className="text-sm text-red-600 bg-red-50 rounded p-3">{subError}</p>
       )}
 
-      {/* Browse button */}
       {!showBrowser && (
         <Button
-          variant={currentPkg ? "outline" : "default"}
-          className={currentPkg ? "" : "bg-green-600 hover:bg-green-700 text-white"}
+          variant={hasAny ? "outline" : "default"}
+          className={hasAny ? "" : "bg-green-600 hover:bg-green-700 text-white"}
           onClick={() => setShowBrowser(true)}
         >
-          {currentPkg ? "Change / Upgrade Package" : "Browse Packages"}
+          {hasAny ? "Browse / Upgrade Packages" : "Browse Packages"}
         </Button>
       )}
 
-      {/* Package browser */}
       {showBrowser && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -194,14 +237,18 @@ export default function OwnerPackageManager() {
             </Button>
           </div>
           <PackageBrowser
-            currentPackageId={currentPkg?.packageId}
+            category={browserCategory}
+            onCategoryChange={setBrowserCategory}
+            currentPackageIds={{
+              SALE: packages.SALE?.packageId,
+              RENT: packages.RENT?.packageId,
+            }}
             onSelect={handleSelect}
             subscribing={subscribing}
           />
         </div>
       )}
 
-      {/* Stripe payment modal — opens after pending subscription is created */}
       {pendingPayment && (
         <PackagePaymentModal
           isOpen={true}
@@ -216,4 +263,3 @@ export default function OwnerPackageManager() {
     </div>
   );
 }
-

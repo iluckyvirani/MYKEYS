@@ -1,8 +1,14 @@
 ﻿import { prisma } from '../prisma';
-import { PackageInput, OwnerPackageWithUsage, DurationUnit } from '@/types/package';
+import {
+  PackageInput,
+  OwnerPackageWithUsage,
+  OwnerActivePackages,
+  DurationUnit,
+  PackageCategory,
+} from '@/types/package';
 import { addDays, addMonths, addYears } from 'date-fns';
 
-// ─── Helper: calculate endDate from duration ────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function calcEndDate(startDate: Date, durationValue: number, durationUnit: DurationUnit): Date {
   switch (durationUnit) {
@@ -16,10 +22,27 @@ function daysRemaining(endDate: Date): number {
   return Math.max(0, Math.ceil((endDate.getTime() - Date.now()) / 86_400_000));
 }
 
+/** Which package category a listing needs, or null if ungated (short stay). */
+export function packageCategoryForListing(
+  listingType: string | null | undefined,
+  rentalType?: string | null
+): PackageCategory | null {
+  const lt = (listingType || '').toUpperCase();
+  const rt = (rentalType || '').toUpperCase();
+  if (lt === 'BUY') return 'SALE';
+  if (lt === 'RENT' && rt !== 'SHORT_TERM') return 'RENT';
+  return null;
+}
+
+function categoryLabel(category: PackageCategory): string {
+  return category === 'SALE' ? 'Sale' : 'Rent';
+}
+
 // ─── Package CRUD (admin) ─────────────────────────────────────────────────────
 
 export const packageService = {
   async create(data: PackageInput) {
+    const category = data.category === 'SALE' ? 'SALE' : 'RENT';
     return prisma.package.create({
       data: {
         name: data.name,
@@ -29,6 +52,7 @@ export const packageService = {
         durationValue: data.durationValue,
         durationUnit: data.durationUnit,
         isActive: data.isActive ?? true,
+        category,
         propertyLimit: data.propertyLimit ?? 1,
         featuredLimit: data.featuredLimit ?? 0,
         showOwnerName: data.showOwnerName ?? false,
@@ -41,10 +65,13 @@ export const packageService = {
     });
   },
 
-  async getAll(activeOnly = false) {
+  async getAll(activeOnly = false, category?: PackageCategory) {
     return prisma.package.findMany({
-      where: activeOnly ? { isActive: true } : undefined,
-      orderBy: { price: 'asc' },
+      where: {
+        ...(activeOnly ? { isActive: true } : {}),
+        ...(category ? { category } : {}),
+      },
+      orderBy: [{ category: 'asc' }, { price: 'asc' }],
     });
   },
 
@@ -53,7 +80,11 @@ export const packageService = {
   },
 
   async update(id: string, data: Partial<PackageInput>) {
-    return prisma.package.update({ where: { id }, data });
+    const payload: Record<string, unknown> = { ...data };
+    if (data.category !== undefined) {
+      payload.category = data.category === 'SALE' ? 'SALE' : 'RENT';
+    }
+    return prisma.package.update({ where: { id }, data: payload });
   },
 
   async delete(id: string) {
@@ -101,7 +132,7 @@ export const packageService = {
 
   /**
    * Activate an OwnerPackage after a successful payment.
-   * Cancels any previously active subscription for the same owner.
+   * Cancels any previously active subscription in the *same category* only.
    */
   async activateSubscription(ownerPackageId: string, paymentId: string): Promise<void> {
     const ownerPkg = await prisma.ownerPackage.findUnique({
@@ -110,11 +141,25 @@ export const packageService = {
     });
     if (!ownerPkg) return;
 
-    // Cancel existing active subscriptions
-    await prisma.ownerPackage.updateMany({
-      where: { ownerId: ownerPkg.ownerId, status: 'ACTIVE', id: { not: ownerPackageId } },
-      data: { status: 'CANCELLED', cancelledAt: new Date() },
+    const category = ownerPkg.package.category as PackageCategory;
+
+    // Cancel other ACTIVE subscriptions in the same category
+    const sameCategoryActive = await prisma.ownerPackage.findMany({
+      where: {
+        ownerId: ownerPkg.ownerId,
+        status: 'ACTIVE',
+        id: { not: ownerPackageId },
+        package: { category },
+      },
+      select: { id: true },
     });
+
+    if (sameCategoryActive.length > 0) {
+      await prisma.ownerPackage.updateMany({
+        where: { id: { in: sameCategoryActive.map((s) => s.id) } },
+        data: { status: 'CANCELLED', cancelledAt: new Date() },
+      });
+    }
 
     const startDate = new Date();
     const endDate = calcEndDate(
@@ -135,10 +180,17 @@ export const packageService = {
     if (!pkg) throw new Error('Package not found');
     if (!pkg.isActive) throw new Error('Package is not available for purchase');
 
-    await prisma.ownerPackage.updateMany({
-      where: { ownerId, status: 'ACTIVE' },
-      data: { status: 'CANCELLED', cancelledAt: new Date() },
+    const category = pkg.category as PackageCategory;
+    const sameCategoryActive = await prisma.ownerPackage.findMany({
+      where: { ownerId, status: 'ACTIVE', package: { category } },
+      select: { id: true },
     });
+    if (sameCategoryActive.length > 0) {
+      await prisma.ownerPackage.updateMany({
+        where: { id: { in: sameCategoryActive.map((s) => s.id) } },
+        data: { status: 'CANCELLED', cancelledAt: new Date() },
+      });
+    }
 
     const startDate = new Date();
     const endDate = calcEndDate(startDate, pkg.durationValue, pkg.durationUnit as DurationUnit);
@@ -151,106 +203,208 @@ export const packageService = {
     return mapOwnerPackage(sub);
   },
 
-  async getOwnerActivePackage(ownerId: string): Promise<OwnerPackageWithUsage | null> {
+  async getOwnerActivePackage(
+    ownerId: string,
+    category: PackageCategory
+  ): Promise<OwnerPackageWithUsage | null> {
     const sub = await prisma.ownerPackage.findFirst({
-      where: { ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+      where: {
+        ownerId,
+        status: 'ACTIVE',
+        endDate: { gt: new Date() },
+        package: { category },
+      },
       include: { package: true },
     });
     return sub ? mapOwnerPackage(sub) : null;
   },
 
-  async incrementPropertyUsage(ownerId: string, count = 1) {
+  async getOwnerActivePackages(ownerId: string): Promise<OwnerActivePackages> {
+    const [sale, rent] = await Promise.all([
+      this.getOwnerActivePackage(ownerId, 'SALE'),
+      this.getOwnerActivePackage(ownerId, 'RENT'),
+    ]);
+    return { SALE: sale, RENT: rent };
+  },
+
+  async incrementPropertyUsage(ownerId: string, category: PackageCategory, count = 1) {
+    const active = await prisma.ownerPackage.findFirst({
+      where: {
+        ownerId,
+        status: 'ACTIVE',
+        endDate: { gt: new Date() },
+        package: { category },
+      },
+      select: { id: true },
+    });
+    if (!active) return { count: 0 };
     return prisma.ownerPackage.updateMany({
-      where: { ownerId, status: 'ACTIVE' },
+      where: { id: active.id },
       data: { propertiesUsed: { increment: count } },
     });
   },
 
-  async decrementPropertyUsage(ownerId: string, count = 1) {
+  async decrementPropertyUsage(ownerId: string, category: PackageCategory, count = 1) {
+    const active = await prisma.ownerPackage.findFirst({
+      where: {
+        ownerId,
+        status: 'ACTIVE',
+        package: { category },
+      },
+      select: { id: true, propertiesUsed: true },
+    });
+    if (!active || active.propertiesUsed <= 0) return { count: 0 };
     return prisma.ownerPackage.updateMany({
-      where: { ownerId, status: 'ACTIVE' },
-      data: { propertiesUsed: { decrement: count } },
+      where: { id: active.id },
+      data: { propertiesUsed: { decrement: Math.min(count, active.propertiesUsed) } },
     });
   },
 
-  async canPublish(ownerId: string): Promise<{ allowed: boolean; reason?: string }> {
+  async canPublish(
+    ownerId: string,
+    opts: { listingType: string; rentalType?: string | null }
+  ): Promise<{ allowed: boolean; reason?: string }> {
+    const category = packageCategoryForListing(opts.listingType, opts.rentalType);
+    if (!category) {
+      return { allowed: true };
+    }
+
     const sub = await prisma.ownerPackage.findFirst({
-      where: { ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+      where: {
+        ownerId,
+        status: 'ACTIVE',
+        endDate: { gt: new Date() },
+        package: { category },
+      },
       include: { package: true },
     });
 
+    const label = categoryLabel(category);
     if (!sub) {
-      return { allowed: false, reason: 'You need an active package to publish Long Rent or Buy listings.' };
+      return {
+        allowed: false,
+        reason:
+          category === 'SALE'
+            ? 'You need an active Sale package to publish Buy listings.'
+            : 'You need an active Rent package to publish Long Rent listings.',
+      };
     }
 
     const limit = sub.package.propertyLimit;
     if (limit > 0 && sub.propertiesUsed >= limit) {
       return {
         allowed: false,
-        reason: `You have reached your package limit of ${limit} live listing${limit === 1 ? '' : 's'}. Upgrade your package to publish more.`,
+        reason: `You have reached your ${label} package limit of ${limit} live listing${limit === 1 ? '' : 's'}. Upgrade your ${label} package to publish more.`,
       };
     }
 
     return { allowed: true };
   },
 
-  async canFeature(ownerId: string): Promise<{ allowed: boolean; reason?: string }> {
+  async canFeature(
+    ownerId: string,
+    opts: { listingType: string; rentalType?: string | null }
+  ): Promise<{ allowed: boolean; reason?: string }> {
+    const category = packageCategoryForListing(opts.listingType, opts.rentalType);
+    if (!category) {
+      return {
+        allowed: false,
+        reason: 'Short stay listings cannot use package featured slots.',
+      };
+    }
+
     const sub = await prisma.ownerPackage.findFirst({
-      where: { ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+      where: {
+        ownerId,
+        status: 'ACTIVE',
+        endDate: { gt: new Date() },
+        package: { category },
+      },
       include: { package: true },
     });
 
+    const label = categoryLabel(category);
     if (!sub) {
-      return { allowed: false, reason: 'You need an active package to feature properties.' };
+      return {
+        allowed: false,
+        reason: `You need an active ${label} package to feature this property.`,
+      };
     }
 
     const limit = sub.package.featuredLimit;
     if (limit <= 0) {
-      return { allowed: false, reason: 'Your current package does not include featured listings. Upgrade to enable this feature.' };
+      return {
+        allowed: false,
+        reason: `Your current ${label} package does not include featured listings. Upgrade to enable this feature.`,
+      };
     }
 
     if (sub.featuredUsed >= limit) {
       return {
         allowed: false,
-        reason: `You have used all ${limit} featured slot${limit === 1 ? '' : 's'} in your package. Unfeature another property first.`,
+        reason: `You have used all ${limit} featured slot${limit === 1 ? '' : 's'} in your ${label} package. Unfeature another property first.`,
       };
     }
 
     return { allowed: true };
   },
 
-  async incrementFeaturedUsage(ownerId: string) {
+  async incrementFeaturedUsage(ownerId: string, category: PackageCategory) {
+    const active = await prisma.ownerPackage.findFirst({
+      where: {
+        ownerId,
+        status: 'ACTIVE',
+        endDate: { gt: new Date() },
+        package: { category },
+      },
+      select: { id: true },
+    });
+    if (!active) return { count: 0 };
     return prisma.ownerPackage.updateMany({
-      where: { ownerId, status: 'ACTIVE' },
+      where: { id: active.id },
       data: { featuredUsed: { increment: 1 } },
     });
   },
 
-  async decrementFeaturedUsage(ownerId: string) {
+  async decrementFeaturedUsage(ownerId: string, category: PackageCategory) {
+    const active = await prisma.ownerPackage.findFirst({
+      where: {
+        ownerId,
+        status: 'ACTIVE',
+        package: { category },
+      },
+      select: { id: true, featuredUsed: true },
+    });
+    if (!active || active.featuredUsed <= 0) return { count: 0 };
     return prisma.ownerPackage.updateMany({
-      where: { ownerId, status: 'ACTIVE' },
+      where: { id: active.id },
       data: { featuredUsed: { decrement: 1 } },
     });
   },
 
-  async getOwnerPackageUsage(ownerId: string): Promise<OwnerPackageWithUsage | null> {
-    return this.getOwnerActivePackage(ownerId);
+  async getOwnerPackageUsage(ownerId: string): Promise<OwnerActivePackages> {
+    return this.getOwnerActivePackages(ownerId);
   },
 
-  async getUpgradeOptions(ownerId: string) {
+  async getUpgradeOptions(ownerId: string, category: PackageCategory) {
     const activeSub = await prisma.ownerPackage.findFirst({
-      where: { ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+      where: {
+        ownerId,
+        status: 'ACTIVE',
+        endDate: { gt: new Date() },
+        package: { category },
+      },
       include: { package: { select: { price: true } } },
     });
     const currentPrice = activeSub?.package?.price ?? -1;
     return prisma.package.findMany({
-      where: { isActive: true, price: { gt: currentPrice } },
+      where: { isActive: true, category, price: { gt: currentPrice } },
       orderBy: { price: 'asc' },
     });
   },
 
-  async canUpgradePackage(ownerId: string): Promise<boolean> {
-    const options = await this.getUpgradeOptions(ownerId);
+  async canUpgradePackage(ownerId: string, category: PackageCategory): Promise<boolean> {
+    const options = await this.getUpgradeOptions(ownerId, category);
     return options.length > 0;
   },
 
@@ -263,7 +417,7 @@ export const packageService = {
         id: true,
         ownerId: true,
         endDate: true,
-        package: { select: { name: true } },
+        package: { select: { name: true, category: true } },
         owner: { select: { email: true, firstName: true } },
       },
     });
@@ -272,7 +426,6 @@ export const packageService = {
       return { expiredCount: 0, deactivatedProperties: 0, emailsSent: 0 };
     }
 
-    const ownerIds = expired.map((e) => e.ownerId);
     const expiredIds = expired.map((e) => e.id);
 
     await prisma.ownerPackage.updateMany({
@@ -280,17 +433,25 @@ export const packageService = {
       data: { status: 'EXPIRED' },
     });
 
-    const deactivated = await prisma.property.updateMany({
-      where: {
-        ownerId: { in: ownerIds },
-        status: 'ACTIVE',
-        OR: [
-          { listingType: 'BUY' },
-          { listingType: 'RENT', rentalType: 'LONG_TERM' },
-        ],
-      },
-      data: { status: 'INACTIVE' },
-    });
+    let deactivatedCount = 0;
+
+    for (const sub of expired) {
+      const category = sub.package.category as PackageCategory;
+      const listingFilter =
+        category === 'SALE'
+          ? { listingType: 'BUY' as const }
+          : { listingType: 'RENT' as const, rentalType: 'LONG_TERM' as const };
+
+      const deactivated = await prisma.property.updateMany({
+        where: {
+          ownerId: sub.ownerId,
+          status: 'ACTIVE',
+          ...listingFilter,
+        },
+        data: { status: 'INACTIVE' },
+      });
+      deactivatedCount += deactivated.count;
+    }
 
     const { emailService } = await import('@/lib/email/emailService');
     const { notificationService } = await import(
@@ -304,6 +465,7 @@ export const packageService = {
 
     let emailsSent = 0;
     for (const sub of expired) {
+      const label = categoryLabel(sub.package.category as PackageCategory);
       try {
         await emailService.sendPackageExpiredEmail({
           to: sub.owner.email,
@@ -315,12 +477,15 @@ export const packageService = {
         await notificationService.create({
           userId: sub.ownerId,
           type: NotificationType.REMINDER,
-          title: 'Package expired',
-          message: `Your ${sub.package.name} package has expired. Long-term and buy listings were taken offline. Renew to restore visibility.`,
+          title: `${label} package expired`,
+          message:
+            sub.package.category === 'SALE'
+              ? `Your ${sub.package.name} Sale package has expired. Buy listings were taken offline. Renew to restore visibility.`
+              : `Your ${sub.package.name} Rent package has expired. Long Rent listings were taken offline. Renew to restore visibility.`,
           priority: NotificationPriority.HIGH,
           category: NotificationCategory.ACTION_REQUIRED,
           actionUrl: '/owner/dashboard/packages',
-          data: { ownerPackageId: sub.id },
+          data: { ownerPackageId: sub.id, packageCategory: sub.package.category },
         });
       } catch (err) {
         console.error(`Package expiry email failed for ${sub.id}:`, err);
@@ -329,7 +494,7 @@ export const packageService = {
 
     return {
       expiredCount: expired.length,
-      deactivatedProperties: deactivated.count,
+      deactivatedProperties: deactivatedCount,
       emailsSent,
     };
   },
@@ -374,12 +539,13 @@ export const packageService = {
           id: true,
           ownerId: true,
           endDate: true,
-          package: { select: { name: true } },
+          package: { select: { name: true, category: true } },
           owner: { select: { email: true, firstName: true } },
         },
       });
 
       for (const sub of subs) {
+        const label = categoryLabel(sub.package.category as PackageCategory);
         try {
           await emailService.sendPackageRenewReminderEmail({
             to: sub.owner.email,
@@ -392,12 +558,12 @@ export const packageService = {
           await notificationService.create({
             userId: sub.ownerId,
             type: NotificationType.REMINDER,
-            title: days === 1 ? 'Package expires tomorrow' : 'Package renew reminder',
-            message: `Your ${sub.package.name} package expires in ${days} day${days === 1 ? '' : 's'}. Renew now to keep listings visible.`,
+            title: days === 1 ? `${label} package expires tomorrow` : `${label} package renew reminder`,
+            message: `Your ${sub.package.name} ${label} package expires in ${days} day${days === 1 ? '' : 's'}. Renew now to keep listings visible.`,
             priority: days === 1 ? NotificationPriority.HIGH : NotificationPriority.NORMAL,
             category: NotificationCategory.ACTION_REQUIRED,
             actionUrl: '/owner/dashboard/packages',
-            data: { ownerPackageId: sub.id, daysLeft: days },
+            data: { ownerPackageId: sub.id, daysLeft: days, packageCategory: sub.package.category },
           });
 
           await prisma.ownerPackage.update({
@@ -461,6 +627,7 @@ function mapOwnerPackage(sub: any): OwnerPackageWithUsage {
     durationValue: pkg.durationValue,
     durationUnit: pkg.durationUnit as DurationUnit,
     shortDescription: pkg.shortDescription ?? undefined,
+    category: (pkg.category as PackageCategory) ?? 'RENT',
 
     showOwnerName: pkg.showOwnerName,
     showOwnerPhone: pkg.showOwnerPhone,

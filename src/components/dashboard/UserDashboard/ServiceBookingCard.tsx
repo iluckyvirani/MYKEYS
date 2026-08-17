@@ -34,6 +34,8 @@ interface ServiceBooking {
   completedAt?: string;
   rating?: number;
   review?: string;
+  pendingAction?: "COMPLETE" | "CANCEL" | null;
+  paymentStatus?: string;
 }
 
 interface ServiceBookingCardProps {
@@ -50,10 +52,15 @@ export default function ServiceBookingCard({
   const [showContactModal, setShowContactModal] = useState(false);
   const [showModifyModal, setShowModifyModal] = useState(false);
   const [modifyLoading, setModifyLoading] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
   const [newScheduledDate, setNewScheduledDate] = useState(booking.scheduledDate || "");
   const [newScheduledTime, setNewScheduledTime] = useState(booking.scheduledTime || "");
   const [newLocation, setNewLocation] = useState((booking as any).location || "");
   const [newDescription, setNewDescription] = useState((booking as any).description || "");
+
+  const pendingAction = booking.pendingAction;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -69,6 +76,35 @@ export default function ServiceBookingCard({
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!/^\d{6}$/.test(otp.trim())) {
+      setOtpError("Enter the 6-digit code from your email");
+      return;
+    }
+    setOtpLoading(true);
+    setOtpError("");
+    try {
+      const response = await api.post(
+        `/user/service-bookings/${booking.id}/verify-otp`,
+        { otp: otp.trim() }
+      );
+      if (response.data?.success) {
+        onBookingUpdated();
+        setOtp("");
+      } else {
+        throw new Error(response.data?.message || "Verification failed");
+      }
+    } catch (error: any) {
+      setOtpError(
+        error.response?.data?.message ||
+          error.message ||
+          "Invalid or expired OTP"
+      );
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -183,6 +219,41 @@ export default function ServiceBookingCard({
             <div className="text-lg font-semibold text-gray-900 mb-4">
               £{booking.totalAmount}
             </div>
+
+            {pendingAction && (
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm font-medium text-amber-900 mb-1">
+                  Provider requested{" "}
+                  {pendingAction === "COMPLETE" ? "completion" : "cancellation"}
+                </p>
+                <p className="text-sm text-amber-800 mb-3">
+                  Enter the 6-digit code we emailed you to confirm.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) =>
+                      setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    placeholder="000000"
+                    className="w-full sm:w-36 px-3 py-2 border border-amber-300 rounded-lg tracking-widest text-center font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <Button
+                    className="bg-amber-600 hover:bg-amber-700 cursor-pointer"
+                    onClick={handleVerifyOtp}
+                    disabled={otpLoading}
+                  >
+                    {otpLoading ? "Verifying..." : "Confirm with OTP"}
+                  </Button>
+                </div>
+                {otpError && (
+                  <p className="text-sm text-red-600 mt-2">{otpError}</p>
+                )}
+              </div>
+            )}
 
             {/* Rating for completed bookings */}
             {booking.status === "completed" && (

@@ -486,8 +486,16 @@ export async function enforcePropertyInactiveUntilDocumentsVerified(
     (property.listingType === "RENT" && property.rentalType !== "SHORT_TERM");
 
   if (isGated) {
-    const { packageService } = await import("@/lib/packages/packageService");
-    await packageService.decrementPropertyUsage(property.ownerId);
+    const { packageService, packageCategoryForListing } = await import(
+      "@/lib/packages/packageService"
+    );
+    const category = packageCategoryForListing(
+      property.listingType,
+      property.rentalType
+    );
+    if (category) {
+      await packageService.decrementPropertyUsage(property.ownerId, category);
+    }
   }
 }
 

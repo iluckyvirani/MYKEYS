@@ -22,6 +22,7 @@ interface ServiceBooking {
   completedAt?: string;
   rating?: number;
   review?: string;
+  pendingAction?: "COMPLETE" | "CANCEL" | null;
 }
 
 interface ServiceBookingTabsProps {

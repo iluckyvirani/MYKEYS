@@ -163,16 +163,49 @@ export const GET = withAuth(
         updatedAt: p.updatedAt,
       }));
 
-      // Calculate summary stats
+      // Stats over the full filtered set (not just the current page).
+      // If a status filter is already applied, only that bucket has values.
+      const whereWithoutStatus = { ...where } as Record<string, unknown>;
+      delete whereWithoutStatus.status;
+      const statusFilter = (where as { status?: string }).status;
+
+      const emptyAgg = {
+        _sum: { amount: 0 },
+        _count: 0,
+        _avg: { amount: 0 },
+      };
+
+      const aggForStatus = async (status: "PAID" | "PENDING" | "FAILED") => {
+        if (statusFilter && statusFilter !== status) return emptyAgg;
+        return prisma.payment.aggregate({
+          where: { ...whereWithoutStatus, status },
+          _sum: { amount: true },
+          _count: true,
+          _avg: { amount: true },
+        });
+      };
+
+      const [paidAgg, pendingAgg, failedAgg, allAgg] = await Promise.all([
+        aggForStatus("PAID"),
+        aggForStatus("PENDING"),
+        aggForStatus("FAILED"),
+        prisma.payment.aggregate({
+          where,
+          _sum: { amount: true },
+          _count: true,
+        }),
+      ]);
+
       const stats = {
-        totalPayments: total,
-        totalAmount: payments.reduce((sum: number, p: any) => sum + p.amount, 0),
-        completedAmount: payments
-          .filter((p: any) => p.status === "PAID")
-          .reduce((sum: number, p: any) => sum + p.amount, 0),
-        pendingAmount: payments
-          .filter((p: any) => p.status === "PENDING")
-          .reduce((sum: number, p: any) => sum + p.amount, 0),
+        totalPayments: allAgg._count || total,
+        totalAmount: allAgg._sum.amount || 0,
+        completedCount: paidAgg._count || 0,
+        completedAmount: paidAgg._sum.amount || 0,
+        pendingCount: pendingAgg._count || 0,
+        pendingAmount: pendingAgg._sum.amount || 0,
+        failedCount: failedAgg._count || 0,
+        failedAmount: failedAgg._sum.amount || 0,
+        avgTransaction: paidAgg._avg.amount || 0,
       };
 
       const totalPages = Math.ceil(total / pageSize);

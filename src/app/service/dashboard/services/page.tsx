@@ -1,258 +1,157 @@
-﻿// app/service/dashboard/services/page.tsx
-"use client";
+﻿"use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { useState, useEffect } from "react";
-import {
-  Plus, Edit2, Trash2, Star, PoundSterling, Wrench, Loader2, AlertTriangle,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import AddServiceDialog from "@/components/services/AddServiceDialog";
-import ServiceReviewsModal from "@/components/services/ServiceReviewsModal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, Wrench, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface ServiceItem {
+type CatalogItem = {
   id: string;
   name: string;
-  category: string;
-  description: string;
-  basePrice: number;
-  rating: number;
-  reviews: number;
-  status: "active" | "inactive";
-  image: string;
-}
+  description?: string | null;
+  price: number;
+  commissionPercent: number;
+  isOffered: boolean;
+  category?: { id: string; name: string };
+};
 
 export default function ServiceManagementPage() {
   const { toast } = useToast();
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [providerName, setProviderName] = useState("");
-  const [providerAvatar, setProviderAvatar] = useState("");
+  const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [editingService, setEditingService] = useState<ServiceItem | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<ServiceItem | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  const fetchServices = async () => {
+  const load = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/service/services");
-      const data = res.data?.data;
-      if (data) {
-        setServices(Array.isArray(data) ? data : []);
-      }
+      const res = await api.get("/service/catalog");
+      setItems(res.data?.data ?? []);
     } catch (err: any) {
-      console.error("Failed to fetch services:", err);
-      toast({ title: "Error", description: err.response?.data?.message || "Failed to fetch services", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || "Failed to load catalog",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchServices();
-    // Pull provider name/avatar from localStorage for the card
-    try {
-      const raw = localStorage.getItem("user");
-      if (raw) {
-        const u = JSON.parse(raw);
-        const d = u?.data ?? u;
-        const first = d?.firstName || "";
-        const last = d?.lastName || "";
-        setProviderName(`${first} ${last}`.trim() || "You");
-        setProviderAvatar(d?.avatar || "");
-      }
-    } catch {}
+    load();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    setDeleting(true);
+  const toggleOffer = async (item: CatalogItem) => {
+    setTogglingId(item.id);
     try {
-      await api.delete(`/service/services/${id}`);
-      setServices((prev) => prev.filter((s) => s.id !== id));
-      setDeleteConfirm(null);
-      toast({ title: "Deleted", description: "Service removed successfully" });
+      await api.post("/service/offers", {
+        catalogServiceId: item.id,
+        offer: !item.isOffered,
+      });
+      setItems((prev) =>
+        prev.map((s) => (s.id === item.id ? { ...s, isOffered: !s.isOffered } : s))
+      );
+      toast({
+        title: item.isOffered ? "Stopped offering" : "Now offering",
+        description: item.name,
+      });
     } catch (err: any) {
-      toast({ title: "Error", description: err.response?.data?.message || "Failed to delete service", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || "Failed to update offer",
+        variant: "destructive",
+      });
     } finally {
-      setDeleting(false);
+      setTogglingId(null);
     }
   };
 
+  const offeredCount = items.filter((i) => i.isOffered).length;
+
   return (
     <DashboardLayout defaultRole="service">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Services</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Manage what you offer, set your prices, and control availability.
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Wrench className="w-6 h-6 text-green-600" />
+            Services I Provide
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Toggle the MYKEYS catalog services you can deliver in your categories.
+            Prices are set by admin — you do not enter pricing.
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Offering {offeredCount} of {items.length} available services
           </p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} className="bg-green-600 hover:bg-green-700 text-white gap-2">
-          <Plus className="w-4 h-4" />
-          Add Service
-        </Button>
-      </div>
 
-      {/* Loading */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-7 h-7 animate-spin text-gray-400" />
-        </div>
-      ) : services.length === 0 ? (
-        /* Empty state */
-        <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
-          <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Wrench className="w-8 h-8 text-green-500" />
+        {loading ? (
+          <div className="py-20 flex justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-green-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">No services added yet</h3>
-          <p className="text-gray-500 text-sm mb-6 max-w-xs mx-auto">
-            Add the services you offer so clients can find and book you.
-          </p>
-          <Button onClick={() => setShowAddDialog(true)} className="bg-green-600 hover:bg-green-700 text-white gap-2">
-            <Plus className="w-4 h-4" />
-            Add Your First Service
+        ) : items.length === 0 ? (
+          <div className="border border-dashed rounded-xl p-10 text-center text-gray-500 bg-white">
+            No catalog services in your registered categories yet. Ask admin to add services,
+            or update your categories in Profile.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {items.map((item) => {
+              const commission = (item.price * item.commissionPercent) / 100;
+              const youEarn = item.price - commission;
+              return (
+                <div
+                  key={item.id}
+                  className={`bg-white border rounded-xl p-5 flex flex-col gap-3 ${
+                    item.isOffered ? "border-green-300 ring-1 ring-green-100" : "border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <Badge className="mb-2 bg-gray-100 text-gray-700">
+                        {item.category?.name ?? "Service"}
+                      </Badge>
+                      <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                      {item.description && (
+                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+                      )}
+                    </div>
+                    <Switch
+                      checked={item.isOffered}
+                      disabled={togglingId === item.id}
+                      onCheckedChange={() => toggleOffer(item)}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-sm text-gray-600 pt-2 border-t">
+                    <span>
+                      Tenant pays <strong>£{item.price.toFixed(2)}</strong>
+                    </span>
+                    <span>
+                      You earn ~<strong>£{youEarn.toFixed(2)}</strong>
+                    </span>
+                    <span className="text-gray-400">{item.commissionPercent}% platform</span>
+                  </div>
+                  {item.isOffered && (
+                    <p className="text-xs text-green-700 flex items-center gap-1">
+                      <Star className="w-3 h-3" /> Visible to customers booking this service
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={load} disabled={loading}>
+            Refresh
           </Button>
         </div>
-      ) : (
-        /* Service Cards */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {services.map((service) => (
-            <div key={service.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-
-              {/* Cover image */}
-              <div className="relative h-44 bg-gray-100 shrink-0">
-                <img
-                  src={service.image && !service.image.includes("/api/placeholder")
-                    ? service.image
-                    : "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80"}
-                  alt={service.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80";
-                  }}
-                />
-                {/* Status badge */}
-                <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                  service.status === "active"
-                    ? "bg-green-500 text-white"
-                    : "bg-gray-500 text-white"
-                }`}>
-                  {service.status === "active" ? "Active" : "Inactive"}
-                </span>
-              </div>
-
-              {/* Provider badge â€” shows who provides this service */}
-              <div className="px-4 pt-3 flex items-center gap-2">
-                {providerAvatar ? (
-                  <img src={providerAvatar} alt={providerName} className="w-7 h-7 rounded-full object-cover border border-gray-200" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-700">
-                    {providerName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="text-xs text-gray-500 font-medium">{providerName}</span>
-              </div>
-
-              {/* Content */}
-              <div className="p-4 flex flex-col flex-1">
-                <h3 className="font-semibold text-gray-900 mb-1 leading-tight">{service.name}</h3>
-                {service.description && (
-                  <p className="text-sm text-gray-500 line-clamp-2 mb-3">{service.description}</p>
-                )}
-
-                {/* Rating + Price */}
-                <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-                  <div className="flex items-center gap-1 text-sm">
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <span className="font-medium text-gray-800">{(service.rating || 0).toFixed(1)}</span>
-                    <span className="text-gray-400">({service.reviews || 0})</span>
-                  </div>
-                  <div className="flex items-center gap-0.5 text-green-600 font-bold text-base">
-                    <PoundSterling className="w-4 h-4" />
-                    {Number(service.basePrice).toLocaleString()}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 mt-3">
-                  <Button size="sm" variant="outline" className="flex-1 gap-1.5"
-                    onClick={() => { setEditingService(service); setShowAddDialog(true); }}>
-                    <Edit2 className="w-3.5 h-3.5" />
-                    Edit
-                  </Button>
-                  <Button size="sm" variant="outline"
-                    className="gap-1.5 text-yellow-600 border-yellow-200 hover:bg-yellow-50"
-                    onClick={() => setShowReviewsModal(true)}
-                    disabled={!service.reviews}>
-                    <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                    {service.reviews || 0}
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-                    onClick={() => setDeleteConfirm(service)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Add / Edit Dialog */}
-      <AddServiceDialog
-        open={showAddDialog}
-        onOpenChange={(open) => { setShowAddDialog(open); if (!open) setEditingService(null); }}
-        onSuccess={fetchServices}
-        serviceToEdit={editingService}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-              </div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">Delete Service</DialogTitle>
-            </div>
-          </DialogHeader>
-          <p className="text-gray-600 text-sm mb-1">
-            Are you sure you want to delete{" "}
-            <span className="font-medium text-gray-900">{deleteConfirm?.name}</span>?
-          </p>
-          <p className="text-gray-500 text-xs">This action cannot be undone.</p>
-          <DialogFooter className="mt-4 flex gap-2">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={deleting} className="flex-1">
-              Cancel
-            </Button>
-            <Button
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm.id)}
-              disabled={deleting}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-            >
-              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reviews Modal — shows all provider reviews */}
-      <ServiceReviewsModal
-        open={showReviewsModal}
-        onClose={() => setShowReviewsModal(false)}
-        title="Customer Reviews"
-        fetchUrl="/service/reviews"
-      />
+      </div>
     </DashboardLayout>
   );
 }
-

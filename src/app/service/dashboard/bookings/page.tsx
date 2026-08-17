@@ -71,13 +71,34 @@ export default function ServiceBookingsPage() {
   const handleStatus = async (id: string, status: string) => {
     setActionLoading(id + status);
     try {
-      await api.patch(`/service/bookings/${id}`, { status });
-      setAllBookings((prev) =>
-        prev.map((b) => b.id === id ? { ...b, status: status as StatusKey } : b)
-      );
-      toast({ title: "Updated", description: `Booking marked as ${status}` });
+      const booking = allBookings.find((b) => b.id === id);
+      const paid =
+        booking?.paymentStatus === "paid" ||
+        booking?.paymentStatus === "completed";
+
+      if (status === "completed" || (status === "cancelled" && paid)) {
+        const action = status === "completed" ? "COMPLETE" : "CANCEL";
+        const res = await api.post(`/service/bookings/${id}/request-action`, { action });
+        const data = res.data?.data;
+        toast({
+          title: "OTP sent to client",
+          description: data?.clientEmailMasked
+            ? `Ask the client to enter the code sent to ${data.clientEmailMasked}`
+            : "Client must confirm with the email OTP",
+        });
+      } else {
+        await api.patch(`/service/bookings/${id}`, { status });
+        setAllBookings((prev) =>
+          prev.map((b) => (b.id === id ? { ...b, status: status as StatusKey } : b))
+        );
+        toast({ title: "Updated", description: `Booking marked as ${status}` });
+      }
     } catch (err: any) {
-      toast({ title: "Error", description: err.response?.data?.message || "Failed to update", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || "Failed to update",
+        variant: "destructive",
+      });
     } finally {
       setActionLoading(null);
     }
@@ -103,7 +124,7 @@ export default function ServiceBookingsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Accept requests, start jobs, and mark them complete — all from here.
+          Accept jobs, start work, then request complete/cancel — the client confirms with an email OTP.
         </p>
       </div>
 
@@ -291,18 +312,34 @@ export default function ServiceBookingsPage() {
                       </>
                     )}
                     {booking.status === "confirmed" && (
-                      <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
-                        disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "in-progress")}>
-                        {isActing("in-progress") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
-                        Start Job
-                      </Button>
+                      <>
+                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
+                          disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "in-progress")}>
+                          {isActing("in-progress") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
+                          Start Job
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
+                          disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "cancelled")}>
+                          {isActing("cancelled") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                          {(booking.paymentStatus === "paid" || booking.paymentStatus === "completed")
+                            ? "Request Cancel (OTP)"
+                            : "Cancel"}
+                        </Button>
+                      </>
                     )}
                     {booking.status === "in-progress" && (
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1.5"
-                        disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "completed")}>
-                        {isActing("completed") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Flag className="w-3.5 h-3.5" />}
-                        Mark Complete
-                      </Button>
+                      <>
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1.5"
+                          disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "completed")}>
+                          {isActing("completed") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Flag className="w-3.5 h-3.5" />}
+                          Request Complete (OTP)
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
+                          disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "cancelled")}>
+                          {isActing("cancelled") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                          Request Cancel (OTP)
+                        </Button>
+                      </>
                     )}
                     {booking.status === "completed" && (
                       <span className="flex items-center gap-1.5 text-green-600 text-sm font-medium">

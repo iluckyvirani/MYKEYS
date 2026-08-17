@@ -62,16 +62,16 @@ export async function POST(request: NextRequest) {
     await serviceService.createProvider({
       userId: user.id,
       bio: body.bio,
-      category: body.category || 'plumbing',
+      category: body.category || body.categoryId || 'plumbing',
       categories: Array.isArray(body.categoryIds) && body.categoryIds.length > 0
         ? body.categoryIds
-        : body.category ? [body.category] : [],
+        : body.category ? [body.category] : body.categoryId ? [body.categoryId] : [],
       subcategories: body.subcategories || [],
       serviceAreas: body.serviceAreas || [],
       specializations: body.specializations || [],
       certifications: body.certifications || [],
-      instantBookingEnabled: body.instantBookingEnabled || false,
-      instantBookingPrice: body.instantBookingPrice,
+      instantBookingEnabled: false,
+      instantBookingPrice: undefined,
     });
 
     // Update user details if provided

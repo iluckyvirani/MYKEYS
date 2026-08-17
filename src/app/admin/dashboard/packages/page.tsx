@@ -19,6 +19,7 @@ interface PackageRow {
   propertyLimit: number;
   featuredLimit: number;
   isActive: boolean;
+  category?: "SALE" | "RENT";
   shortDescription?: string;
   showOwnerName: boolean;
   showOwnerPhone: boolean;
@@ -85,7 +86,7 @@ export default function AdminPackagesPage() {
               <Package className="w-6 h-6 text-green-600" /> Package Management
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              Manage subscription packages for Long Rent &amp; Buy property owners
+              Manage Sale and Rent subscription packages for property owners
             </p>
           </div>
           <Button
@@ -143,6 +144,7 @@ export default function AdminPackagesPage() {
                 <thead>
                   <tr className="border-b text-left text-gray-500">
                     <th className="pb-3 pr-4 font-medium">Name</th>
+                    <th className="pb-3 pr-4 font-medium">Category</th>
                     <th className="pb-3 pr-4 font-medium">Price</th>
                     <th className="pb-3 pr-4 font-medium">Duration</th>
                     <th className="pb-3 pr-4 font-medium">Listings</th>
@@ -164,6 +166,17 @@ export default function AdminPackagesPage() {
                           {pkg.shortDescription && (
                             <p className="text-xs text-gray-500 truncate max-w-[180px]">{pkg.shortDescription}</p>
                           )}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <Badge
+                            className={
+                              pkg.category === "SALE"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-teal-100 text-teal-700"
+                            }
+                          >
+                            {pkg.category === "SALE" ? "Sale" : "Rent"}
+                          </Badge>
                         </td>
                         <td className="py-3 pr-4 font-semibold text-gray-900">
                           £{pkg.price}

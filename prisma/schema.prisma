@@ -132,6 +132,12 @@ enum SubscriptionStatus {
   PENDING
 }
 
+/// Owner listing packages: Sale (BUY) vs Rent (long-let). Short stay needs no package.
+enum PackageCategory {
+  SALE
+  RENT
+}
+
 // ==================== SERVICE ENUMS ====================
 
 enum ServiceCategory {
@@ -162,6 +168,27 @@ enum ServicePaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
+}
+
+enum ServiceSettleStatus {
+  PENDING
+  SETTLED
+  NOT_APPLICABLE
+}
+
+enum ServicePendingAction {
+  COMPLETE
+  CANCEL
+}
+
+enum SettlementType {
+  SERVICE
+  SHORT_STAY
+}
+
+enum SettlementStatus {
+  PENDING
+  SETTLED
 }
 
 enum ServiceRequestStatus {
@@ -315,6 +342,8 @@ model User {
   serviceBookings ServiceBooking[] @relation("ServiceClient")
   serviceRequests ServiceRequest[] @relation("ServiceRequester")
   serviceReviews  ServiceReview[]  @relation("ServiceReviewer")
+  settlementsAsBeneficiary Settlement[] @relation("SettlementBeneficiary")
+  settlementsSettledBy     Settlement[] @relation("SettlementAdmin")
 
   // Admin/Team Relations
   teamMember TeamMember?
@@ -322,6 +351,11 @@ model User {
   // Authentication
   resetToken       String?
   resetTokenExpiry DateTime?
+
+  /// Passwordless magic-link login (hashed token, 10 min expiry)
+  magicLinkTokenHash   String?
+  magicLinkExpiresAt   DateTime?
+  magicLinkLastSentAt  DateTime?
 
   /// Email verification (signup OTP)
   emailVerified      Boolean   @default(false)
@@ -499,6 +533,8 @@ model ServiceCategoryInfo {
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  catalogServices CatalogService[]
 }
 
 model PropertyAmenity {
@@ -580,6 +616,11 @@ model Payment {
   commissionAmount  Float? // Actual GBP amount taken by platform
   ownerEarnings     Float? // Amount owner receives (amount - commissionAmount)
 
+  /// Manual settle-up for short-stay owner payouts
+  settleStatus     ServiceSettleStatus @default(NOT_APPLICABLE)
+  settledAt        DateTime?
+  settledByAdminId String?
+
   // Relations
   bookingId String?       @unique
   booking   Booking?      @relation(fields: [bookingId], references: [id])
@@ -587,6 +628,7 @@ model Payment {
   user      User          @relation(fields: [userId], references: [id])
   packageId String?
   package   OwnerPackage? @relation("PackagePayment", fields: [packageId], references: [id])
+  settlements Settlement[]
 
   // Metadata
   metadata Json?
@@ -601,6 +643,7 @@ model Payment {
   @@index([bookingId])
   @@index([status])
   @@index([createdAt])
+  @@index([settleStatus])
 }
 
 model Review {
@@ -788,6 +831,9 @@ model Package {
   // Pricing
   price    Float
   isActive Boolean @default(true)
+
+  /// SALE = Buy listings · RENT = Long-let rentals (short stay does not require a package)
+  category PackageCategory @default(RENT)
 
   // Duration (dynamic — admin sets freely)
   durationValue Int    @default(1)     // e.g. 10, 1, 6
@@ -1110,6 +1156,47 @@ model SavedSearch {
 
 // ==================== SERVICE MODELS ====================
 
+/// Admin-owned catalog of bookable services (fixed tenant price + MYKEYS commission)
+model CatalogService {
+  id                String  @id @default(cuid())
+  name              String
+  description       String?
+  image             String?
+  price             Float // Amount tenant pays (GBP)
+  commissionPercent Float   @default(10) // MYKEYS cut, e.g. 10 = 10%
+  isActive          Boolean @default(true)
+  sortOrder         Int     @default(0)
+
+  categoryId String
+  category   ServiceCategoryInfo @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  offeredBy ProviderOfferedService[]
+  bookings  ServiceBooking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+/// Provider toggles which catalog services they can provide (no custom pricing)
+model ProviderOfferedService {
+  id               String @id @default(cuid())
+  providerId       String
+  catalogServiceId String
+
+  provider       ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  catalogService CatalogService  @relation(fields: [catalogServiceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([providerId, catalogServiceId])
+  @@index([providerId])
+  @@index([catalogServiceId])
+}
+
 model ServiceProvider {
   id String @id @default(cuid())
 
@@ -1119,14 +1206,14 @@ model ServiceProvider {
 
   // Professional Info
   bio             String?
-  category        String   // ServiceCategoryInfo.id (primary category)
+  category        String // ServiceCategoryInfo.id (primary category)
   categories      String[] @default([]) // All selected ServiceCategoryInfo.ids
   subcategories   Json // Array of subcategory objects [{id, name, category}]
   serviceAreas    Json // Array of service area strings
   specializations Json? // Array of specialization strings
   certifications  Json? // Array of certification strings
 
-  // Pricing
+  // Legacy pricing fields (unused in new catalog flow; kept nullable for compat)
   instantBookingEnabled Boolean @default(false)
   instantBookingPrice   Float?
 
@@ -1145,6 +1232,7 @@ model ServiceProvider {
 
   // Relations
   services        ServiceListing[]
+  offeredServices ProviderOfferedService[]
   bookings        ServiceBooking[]
   serviceRequests ServiceRequest[]
   serviceReviews  ServiceReview[]
@@ -1162,7 +1250,7 @@ model ServiceProvider {
 model ServiceListing {
   id String @id @default(cuid())
 
-  // Service details
+  // Legacy provider-owned listings (deprecated; prefer CatalogService + ProviderOfferedService)
   name        String
   category    String
   description String?
@@ -1212,18 +1300,40 @@ model ServiceBooking {
   status        ServiceBookingStatus @default(PENDING)
   paymentStatus ServicePaymentStatus @default(PENDING)
 
-  // Pricing
-  totalAmount Float
-  paidAmount  Float @default(0)
+  // Pricing (snapshot from catalog at book time)
+  totalAmount         Float
+  paidAmount          Float  @default(0)
+  price               Float? // catalog price snapshot
+  commissionPercent   Float?
+  commissionAmount    Float?
+  providerEarnings    Float?
+
+  // Stripe / payment
+  stripePaymentIntentId String?
+  paymentId             String?
+
+  // OTP for complete / cancel confirmation by tenant
+  actionOtpHash     String?
+  actionOtpExpiresAt DateTime?
+  pendingAction     ServicePendingAction?
+  otpVerifiedAt     DateTime?
+
+  // Manual settle-up for provider payout
+  settleStatus     ServiceSettleStatus @default(NOT_APPLICABLE)
+  settledAt        DateTime?
+  settledByAdminId String?
 
   // Relations
   clientId         String
-  client           User            @relation("ServiceClient", fields: [clientId], references: [id])
+  client           User             @relation("ServiceClient", fields: [clientId], references: [id])
   providerId       String
-  provider         ServiceProvider @relation(fields: [providerId], references: [id])
+  provider         ServiceProvider  @relation(fields: [providerId], references: [id])
   serviceListingId String?
-  serviceListing   ServiceListing? @relation(fields: [serviceListingId], references: [id])
+  serviceListing   ServiceListing?  @relation(fields: [serviceListingId], references: [id])
+  catalogServiceId String?
+  catalogService   CatalogService?  @relation(fields: [catalogServiceId], references: [id])
   review           ServiceReview?
+  settlements      Settlement[]
 
   // Timestamps
   createdAt   DateTime  @default(now())
@@ -1236,6 +1346,39 @@ model ServiceBooking {
   @@index([status])
   @@index([createdAt])
   @@index([scheduledDate])
+  @@index([catalogServiceId])
+  @@index([settleStatus])
+  @@index([paymentStatus])
+}
+
+/// Unified manual settle ledger (service man + short-stay owner)
+model Settlement {
+  id     String           @id @default(cuid())
+  type   SettlementType
+  amount Float
+  status SettlementStatus @default(PENDING)
+  note   String?
+
+  beneficiaryUserId String
+  beneficiary       User   @relation("SettlementBeneficiary", fields: [beneficiaryUserId], references: [id])
+
+  serviceBookingId String?
+  serviceBooking   ServiceBooking? @relation(fields: [serviceBookingId], references: [id])
+  paymentId        String?
+  payment          Payment?        @relation(fields: [paymentId], references: [id])
+
+  settledAt        DateTime?
+  settledByAdminId String?
+  settledByAdmin   User?     @relation("SettlementAdmin", fields: [settledByAdminId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([beneficiaryUserId])
+  @@index([serviceBookingId])
+  @@index([paymentId])
 }
 
 model ServiceRequest {

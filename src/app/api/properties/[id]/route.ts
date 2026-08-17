@@ -11,6 +11,7 @@ import {
 } from "@/lib/documents/documentService";
 import { getBlockedDateRanges } from "@/lib/bookings/bookingAvailabilityQueries";
 import { maybeNotifyNewListing } from "@/lib/newsletter/service";
+import { formatUkPostcode, isLikelyUkPostcode } from "@/lib/ukPostcode";
 
 /**
  * GET /api/properties/[id]
@@ -218,12 +219,23 @@ export const PATCH = withAuth<{ id: string }>(
           (effectiveListingType === 'RENT' && effectiveRentalType !== 'SHORT_TERM');
 
         if (needsPackage) {
-          const { allowed, reason } = await packageService.canPublish(existingProperty.ownerId);
+          const { allowed, reason } = await packageService.canPublish(
+            existingProperty.ownerId,
+            {
+              listingType: effectiveListingType,
+              rentalType: effectiveRentalType,
+            }
+          );
           if (!allowed) {
             return errorResponse(reason!, 403, ErrorCode.FORBIDDEN);
           }
           if (existingProperty.status !== 'ACTIVE') {
-            await packageService.incrementPropertyUsage(existingProperty.ownerId);
+            const category =
+              effectiveListingType === 'BUY' ? 'SALE' : 'RENT';
+            await packageService.incrementPropertyUsage(
+              existingProperty.ownerId,
+              category
+            );
           }
         }
       }
@@ -241,7 +253,12 @@ export const PATCH = withAuth<{ id: string }>(
           effectiveListingType === 'BUY' ||
           (effectiveListingType === 'RENT' && effectiveRentalType !== 'SHORT_TERM');
         if (hadPackageGate) {
-          await packageService.decrementPropertyUsage(existingProperty.ownerId);
+          const category =
+            effectiveListingType === 'BUY' ? 'SALE' : 'RENT';
+          await packageService.decrementPropertyUsage(
+            existingProperty.ownerId,
+            category
+          );
         }
       }
       // ────────────────────────────────────────────────────────────────────
@@ -256,7 +273,11 @@ export const PATCH = withAuth<{ id: string }>(
           ...(body.city && { city: body.city }),
           ...(body.state && { state: body.state }),
           ...(body.country && { country: body.country }),
-          ...(body.zipCode && { zipCode: body.zipCode }),
+          ...(body.zipCode && {
+            zipCode: isLikelyUkPostcode(body.zipCode)
+              ? formatUkPostcode(body.zipCode)
+              : String(body.zipCode).trim(),
+          }),
           ...(body.latitude && { latitude: body.latitude }),
           ...(body.longitude && { longitude: body.longitude }),
           ...(body.price !== undefined && { price: body.price }),

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { looksLikePostcode } from "@/lib/buySearch";
+import { normalizeSearchLocation } from "@/lib/ukPostcode";
 
 export default function PropertySearchBar({
   selectedType,
@@ -19,7 +20,7 @@ export default function PropertySearchBar({
   const handleSearch = () => {
     if (selectedType === "all") return;
 
-    const trimmed = location.trim();
+    const trimmed = normalizeSearchLocation(location);
     if (!trimmed) {
       setError("Enter a city or postcode to search");
       return;
@@ -27,6 +28,7 @@ export default function PropertySearchBar({
 
     setError("");
     setLoading(true);
+    setLocation(trimmed);
 
     const q = encodeURIComponent(trimmed);
 

@@ -33,6 +33,7 @@ import {
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import SharePropertyButton from "@/components/property/SharePropertyButton";
 import { api } from "@/lib/api";
 import { getPropertyPriceDisplay } from "@/lib/properties/propertyDisplay";
 
@@ -233,9 +234,15 @@ export default function AdminPropertiesPage() {
               {listing.text}
             </div>
           </div>
-          {/* Owner badge top-right */}
-          <div className="absolute top-3 right-3 max-w-27.5 truncate bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-            {property.owner}
+          <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
+            <SharePropertyButton
+              propertyId={property.id}
+              title={property.title}
+              variant="overlay"
+            />
+            <div className="max-w-27.5 truncate bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+              {property.owner}
+            </div>
           </div>
         </div>
 
@@ -278,14 +285,14 @@ export default function AdminPropertiesPage() {
           {/* Actions */}
           <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
             <Link href={`/admin/dashboard/properties/${property.id}`}>
-              <Button variant="outline" size="sm" className="w-full rounded-[5px]">
+              <Button variant="outline" size="sm" className="w-full rounded-[5px] cursor-pointer">
                 <Eye className="w-3.5 h-3.5 mr-1" /> View
               </Button>
             </Link>
             <Button
               variant="outline"
               size="sm"
-              className="w-full rounded-[5px]"
+              className="w-full rounded-[5px] cursor-pointer"
               onClick={() => { setEditingProperty(property); setStatusModalOpen(true); }}
             >
               <Edit className="w-3.5 h-3.5 mr-1" /> Edit
@@ -293,7 +300,7 @@ export default function AdminPropertiesPage() {
             <Button
               variant="outline"
               size="sm"
-              className="w-full rounded-[5px] text-red-600 hover:text-red-700 hover:border-red-300"
+              className="w-full rounded-[5px] text-red-600 hover:text-red-700 hover:border-red-300 cursor-pointer"
               onClick={() => setDeleteConfirm(property.id)}
             >
               <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
@@ -344,13 +351,18 @@ export default function AdminPropertiesPage() {
         </td>
         <td className="py-3 px-4">
           <div className="flex items-center gap-1">
+            <SharePropertyButton
+              propertyId={property.id}
+              title={property.title}
+              variant="icon"
+            />
             <Link href={`/admin/dashboard/properties/${property.id}`}>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><Eye className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 cursor-pointer"><Eye className="w-4 h-4" /></Button>
             </Link>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 cursor-pointer"
               onClick={() => { setEditingProperty(property); setStatusModalOpen(true); }}
             >
               <Edit className="w-4 h-4" />
@@ -358,7 +370,7 @@ export default function AdminPropertiesPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 cursor-pointer"
               onClick={() => setDeleteConfirm(property.id)}
             >
               <Trash2 className="w-4 h-4" />

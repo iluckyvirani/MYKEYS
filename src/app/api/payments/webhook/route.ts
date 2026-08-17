@@ -64,6 +64,44 @@ export async function POST(request: NextRequest) {
               console.warn(
                 `Booking ${payment.bookingId} not confirmed after payment: ${result.reason}`
               );
+            } else {
+              // Queue short-stay owner settle-up when applicable
+              try {
+                const booking = await prisma.booking.findUnique({
+                  where: { id: payment.bookingId },
+                  include: {
+                    property: {
+                      select: {
+                        ownerId: true,
+                        rentalType: true,
+                        listingType: true,
+                      },
+                    },
+                  },
+                });
+                if (
+                  booking &&
+                  booking.property.listingType === 'RENT' &&
+                  booking.property.rentalType === 'SHORT_TERM' &&
+                  payment.ownerEarnings != null &&
+                  payment.ownerEarnings > 0
+                ) {
+                  await prisma.payment.update({
+                    where: { id: payment.id },
+                    data: { settleStatus: 'PENDING' },
+                  });
+                  const { settlementService } = await import(
+                    '@/lib/services/settlementService'
+                  );
+                  await settlementService.ensureShortStaySettlement({
+                    paymentId: payment.id,
+                    beneficiaryUserId: booking.property.ownerId,
+                    amount: payment.ownerEarnings,
+                  });
+                }
+              } catch (settleErr) {
+                console.error('Short-stay settlement queue failed (non-fatal):', settleErr);
+              }
             }
           }
         }

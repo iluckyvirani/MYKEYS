@@ -153,4 +153,19 @@ export function renderOtpEmail(opts: {
   });
 }
 
+/** Mint/teal CTA used for magic-link emails (full-width friendly). */
+export function ctaButtonMint(href: string, label: string) {
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0 12px;">
+      <tr>
+        <td align="center" style="border-radius:8px;background:#a2d9d6;border:2px solid #339390;">
+          <a href="${href}" style="display:block;padding:14px 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#0f172a;text-decoration:none;border-radius:8px;text-align:center;">
+            ${label}
+          </a>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
 export { ctaButton };

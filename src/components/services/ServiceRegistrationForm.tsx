@@ -49,8 +49,6 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     serviceAreas: [] as string[],
-    instantBooking: false,
-    instantPrice: "",
     bio: "",
   });
   
@@ -236,8 +234,6 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
     setSelectedCategories([]);
     setFormData({
       serviceAreas: [] as string[],
-      instantBooking: false,
-      instantPrice: "",
       bio: "",
     });
     setUploadedDocuments([]);
@@ -249,7 +245,7 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
   const canProceed = () => {
     if (step === 1) return selectedCategories.length > 0;
     if (step === 2) return formData.serviceAreas.length > 0;
-    if (step === 3) return !formData.instantBooking || (formData.instantPrice !== "" && parseFloat(formData.instantPrice) > 0);
+    if (step === 3) return true;
     if (step === 4) return SERVICE_REQUIRED_DOCUMENTS.every((docType) =>
       uploadedDocuments.some((d) => d.documentType === docType && d.status === "uploaded")
     );
@@ -428,8 +424,10 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Service Details</h2>
-                <p className="text-gray-600">Configure your service offerings and pricing</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">About You</h2>
+                <p className="text-gray-600">
+                  Tell customers about your experience. Pricing is set by MYKEYS for each catalog service — after registration you will mark which services you provide.
+                </p>
               </div>
 
               <div className="space-y-4">
@@ -442,60 +440,6 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
                     onChange={(e) => handleInputChange("bio", e.target.value)}
                     className="mt-2 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 resize-none h-24"
                   />
-                </div>
-
-                {/* Instant Booking Section */}
-                <div className={`p-5 border-2 rounded-xl space-y-4 transition-all duration-300 ${
-                  formData.instantBooking
-                    ? "bg-green-50 border-green-300"
-                    : "bg-gray-50 border-gray-200"
-                }`}>
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.instantBooking}
-                      onChange={(e) => handleInputChange("instantBooking", e.target.checked)}
-                      className="w-5 h-5 mt-0.5 accent-green-600 rounded"
-                    />
-                    <div>
-                      <span className="font-semibold text-gray-900 block">Enable Instant Booking</span>
-                      <span className="text-sm text-gray-500">Allow customers to book your service immediately without scheduling</span>
-                    </div>
-                  </label>
-
-                  {formData.instantBooking && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-2"
-                    >
-                      <Label htmlFor="instantPrice" className="flex items-center gap-1 text-sm font-medium text-gray-800">
-                        Instant Booking Fee <span className="text-red-500 ml-1">*</span>
-                      </Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-semibold select-none">£</span>
-                        <Input
-                          id="instantPrice"
-                          type="number"
-                          min="1"
-                          placeholder="50"
-                          value={formData.instantPrice}
-                          onChange={(e) => handleInputChange("instantPrice", e.target.value)}
-                          className={`pl-8 ${
-                            !formData.instantPrice || parseFloat(formData.instantPrice) <= 0
-                              ? "border-red-400 focus-visible:ring-red-400"
-                              : "border-green-400 focus-visible:ring-green-400"
-                          }`}
-                        />
-                      </div>
-                      {(!formData.instantPrice || parseFloat(formData.instantPrice) <= 0) && (
-                        <p className="text-red-500 text-xs flex items-center gap-1.5">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          Instant booking fee is required. Enter the fee in GBP (£) to proceed.
-                        </p>
-                      )}
-                    </motion.div>
-                  )}
                 </div>
               </div>
             </div>

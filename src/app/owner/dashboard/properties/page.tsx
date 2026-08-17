@@ -23,7 +23,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { OwnerPackageWithUsage } from "@/types/package";
+import { OwnerActivePackages, OwnerPackageWithUsage } from "@/types/package";
+import SharePropertyButton from "@/components/property/SharePropertyButton";
 
 interface OwnerProperty {
   id: string;
@@ -218,7 +219,7 @@ export default function OwnerPropertiesPage() {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [updatingFeaturedId, setUpdatingFeaturedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ownerPkg, setOwnerPkg] = useState<OwnerPackageWithUsage | null>(null);
+  const [ownerPkgs, setOwnerPkgs] = useState<OwnerActivePackages>({ SALE: null, RENT: null });
 
   const fetchProperties = useCallback(async () => {
     try {
@@ -239,7 +240,10 @@ export default function OwnerPropertiesPage() {
 
   useEffect(() => {
     fetchProperties();
-    api.get("/owner/packages").then((res) => setOwnerPkg(res.data?.data ?? null)).catch(() => {});
+    api.get("/owner/packages").then((res) => {
+      const data = res.data?.data;
+      setOwnerPkgs({ SALE: data?.SALE ?? null, RENT: data?.RENT ?? null });
+    }).catch(() => {});
   }, [fetchProperties]);
 
   const isListedActive = (p: OwnerProperty) =>
@@ -290,11 +294,26 @@ export default function OwnerPropertiesPage() {
 
   // A property is "gated" if it needs a package to be published (LONG_RENT or BUY)
   const isGated = (p: OwnerProperty) => p.listingType === "buy" || p.rentalType === "long";
-  const hasPackage = ownerPkg !== null;
-  const packageFull = hasPackage && ownerPkg!.propertiesLimit > 0 && ownerPkg!.propertiesUsed >= ownerPkg!.propertiesLimit;
-  const featuredLimit = ownerPkg?.featuredLimit ?? 0;
-  const featuredUsed  = ownerPkg?.featuredUsed  ?? 0;
-  const canFeatureMore = featuredLimit > 0 && featuredUsed < featuredLimit;
+  const pkgFor = (p: OwnerProperty): OwnerPackageWithUsage | null => {
+    if (p.listingType === "buy") return ownerPkgs.SALE;
+    if (p.rentalType === "long") return ownerPkgs.RENT;
+    return null;
+  };
+  const hasPackageFor = (p: OwnerProperty) => !isGated(p) || !!pkgFor(p);
+  const packageFullFor = (p: OwnerProperty) => {
+    const pkg = pkgFor(p);
+    return !!pkg && pkg.propertiesLimit > 0 && pkg.propertiesUsed >= pkg.propertiesLimit;
+  };
+  const canFeatureProperty = (p: OwnerProperty) => {
+    const pkg = pkgFor(p);
+    if (!pkg) return false;
+    return pkg.featuredLimit > 0 && pkg.featuredUsed < pkg.featuredLimit;
+  };
+  const missingSalePkg = properties.some((p) => p.listingType === "buy") && !ownerPkgs.SALE;
+  const missingRentPkg = properties.some((p) => p.rentalType === "long") && !ownerPkgs.RENT;
+  const anyPackageFull = properties.some(
+    (p) => isGated(p) && packageFullFor(p) && !isListedActive(p)
+  );
 
   const toggleFeatured = async (id: string) => {
     const current = properties.find((p) => p.id === id);
@@ -307,7 +326,10 @@ export default function OwnerPropertiesPage() {
         prev.map((prop) => (prop.id === id ? { ...prop, isFeatured: next } : prop))
       );
       // Refresh package usage counts
-      api.get("/owner/packages").then((res) => setOwnerPkg(res.data?.data ?? null)).catch(() => {});
+      api.get("/owner/packages").then((res) => {
+      const data = res.data?.data;
+      setOwnerPkgs({ SALE: data?.SALE ?? null, RENT: data?.RENT ?? null });
+    }).catch(() => {});
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to update featured status");
     } finally {
@@ -317,13 +339,21 @@ export default function OwnerPropertiesPage() {
 
   return (
     <DashboardLayout defaultRole="owner">
-      {/* Package banner for owners with gated listings but no package */}
-      {!hasPackage && properties.some(isGated) && (
+      {/* Package banner for owners with gated listings but no matching package */}
+      {(missingSalePkg || missingRentPkg) && (
         <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-[5px] p-4 text-amber-900">
           <Package className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
           <div className="flex-1">
-            <p className="font-semibold">Package required for Long Rent &amp; Buy listings</p>
-            <p className="text-sm mt-0.5">You have Long Rent or Buy listings that need an active package to be published.</p>
+            <p className="font-semibold">Package required</p>
+            <p className="text-sm mt-0.5">
+              {[
+                missingSalePkg ? "Buy listings need a Sale package" : null,
+                missingRentPkg ? "Long Rent listings need a Rent package" : null,
+              ]
+                .filter(Boolean)
+                .join(". ")}
+              .
+            </p>
           </div>
           <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
             <Link href="/owner/packages"><Package className="w-4 h-4 mr-1" /> Buy a Package</Link>
@@ -341,12 +371,14 @@ export default function OwnerPropertiesPage() {
           </div>
         </div>
       )}
-      {hasPackage && packageFull && properties.some((p) => isGated(p) && !isListedActive(p)) && (
+      {anyPackageFull && (
         <div className="mb-5 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-[5px] p-4 text-blue-900">
           <Package className="w-5 h-5 shrink-0 mt-0.5 text-blue-600" />
           <div className="flex-1">
             <p className="font-semibold">Listing limit reached</p>
-            <p className="text-sm mt-0.5">Your current package is full ({ownerPkg!.propertiesUsed}/{ownerPkg!.propertiesLimit} listings used). Upgrade to publish more properties.</p>
+            <p className="text-sm mt-0.5">
+              One of your packages is full. Upgrade the matching Sale or Rent package to publish more properties.
+            </p>
           </div>
           <Button asChild size="sm" variant="outline" className="shrink-0">
             <Link href="/owner/packages">Upgrade</Link>
@@ -554,6 +586,14 @@ export default function OwnerPropertiesPage() {
                     </div>
                   </div>
 
+                  <div className="absolute top-3 right-3">
+                    <SharePropertyButton
+                      propertyId={property.id}
+                      title={property.title}
+                      variant="overlay"
+                    />
+                  </div>
+
                 </div>
 
                 <div className="p-4">
@@ -632,11 +672,11 @@ export default function OwnerPropertiesPage() {
                         Edit
                       </Button>
                     </Link>
-                    {isGated(property) && !hasPackage ? (
+                    {isGated(property) && !hasPackageFor(property) ? (
                       <Button asChild size="sm" className="flex-1 rounded-[5px] bg-amber-500 hover:bg-amber-600 text-white text-xs">
                         <Link href="/owner/packages"><Package className="w-3 h-3 mr-1" />Get Package</Link>
                       </Button>
-                    ) : isGated(property) && packageFull && !isListedActive(property) ? (
+                    ) : isGated(property) && packageFullFor(property) && !isListedActive(property) ? (
                       <Button asChild size="sm" variant="outline" className="flex-1 rounded-[5px] text-xs">
                         <Link href="/owner/packages">Upgrade</Link>
                       </Button>
@@ -663,8 +703,8 @@ export default function OwnerPropertiesPage() {
                     )}
                   </div>
 
-                  {/* Featured toggle — only visible when package supports it */}
-                  {featuredLimit > 0 && (
+                  {/* Featured toggle — only visible when matching package supports it */}
+                  {(pkgFor(property)?.featuredLimit ?? 0) > 0 && (
                     <div className="mt-2">
                       <Button
                         type="button"
@@ -673,22 +713,24 @@ export default function OwnerPropertiesPage() {
                         className={`w-full rounded-[5px] text-xs gap-1.5 ${
                           property.isFeatured
                             ? "text-amber-600 hover:text-amber-700"
-                            : canFeatureMore
+                            : canFeatureProperty(property)
                             ? "text-gray-500 hover:text-amber-600"
                             : "text-gray-300 cursor-not-allowed"
                         }`}
-                        disabled={updatingFeaturedId === property.id || (!property.isFeatured && !canFeatureMore)}
+                        disabled={updatingFeaturedId === property.id || (!property.isFeatured && !canFeatureProperty(property))}
                         onClick={() => toggleFeatured(property.id)}
                         title={
                           property.isFeatured
                             ? "Remove from featured"
-                            : !canFeatureMore
-                            ? `Featured limit reached (${featuredUsed}/${featuredLimit})`
-                            : `Feature this property (${featuredUsed}/${featuredLimit} used)`
+                            : !canFeatureProperty(property)
+                            ? `Featured limit reached (${pkgFor(property)!.featuredUsed}/${pkgFor(property)!.featuredLimit})`
+                            : `Feature this property (${pkgFor(property)!.featuredUsed}/${pkgFor(property)!.featuredLimit} used)`
                         }
                       >
                         <Star className={`w-3.5 h-3.5 ${property.isFeatured ? "fill-amber-400 text-amber-400" : ""}`} />
-                        {property.isFeatured ? "Remove Featured" : `Feature (${featuredUsed}/${featuredLimit})`}
+                        {property.isFeatured
+                          ? "Remove Featured"
+                          : `Feature (${pkgFor(property)!.featuredUsed}/${pkgFor(property)!.featuredLimit})`}
                       </Button>
                     </div>
                   )}
@@ -760,17 +802,27 @@ export default function OwnerPropertiesPage() {
                       )}
                     </td>
                     <td className="py-4 px-4">
-                      {featuredLimit > 0 ? (
+                      {(pkgFor(property)?.featuredLimit ?? 0) > 0 ? (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           className={`h-8 w-8 p-0 ${
-                            property.isFeatured ? "text-amber-500" : canFeatureMore ? "text-gray-400 hover:text-amber-500" : "text-gray-200 cursor-not-allowed"
+                            property.isFeatured
+                              ? "text-amber-500"
+                              : canFeatureProperty(property)
+                                ? "text-gray-400 hover:text-amber-500"
+                                : "text-gray-200 cursor-not-allowed"
                           }`}
-                          disabled={updatingFeaturedId === property.id || (!property.isFeatured && !canFeatureMore)}
+                          disabled={updatingFeaturedId === property.id || (!property.isFeatured && !canFeatureProperty(property))}
                           onClick={() => toggleFeatured(property.id)}
-                          title={property.isFeatured ? "Remove featured" : !canFeatureMore ? `Limit reached (${featuredUsed}/${featuredLimit})` : `Feature property`}
+                          title={
+                            property.isFeatured
+                              ? "Remove featured"
+                              : !canFeatureProperty(property)
+                                ? `Limit reached (${pkgFor(property)!.featuredUsed}/${pkgFor(property)!.featuredLimit})`
+                                : "Feature property"
+                          }
                         >
                           <Star className={`w-4 h-4 ${property.isFeatured ? "fill-amber-400" : ""}`} />
                         </Button>
@@ -780,6 +832,11 @@ export default function OwnerPropertiesPage() {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
+                        <SharePropertyButton
+                          propertyId={property.id}
+                          title={property.title}
+                          variant="icon"
+                        />
                         <Link href={`/owner/dashboard/properties/${property.id}`}>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <Eye className="w-4 h-4" />
@@ -790,11 +847,11 @@ export default function OwnerPropertiesPage() {
                             <Edit className="w-4 h-4" />
                           </Button>
                         </Link>
-                        {isGated(property) && !hasPackage ? (
+                        {isGated(property) && !hasPackageFor(property) ? (
                             <Button asChild size="sm" className="h-8 px-2 bg-amber-500 hover:bg-amber-600 text-white text-xs">
                               <Link href="/owner/packages"><Package className="w-3 h-3 mr-1" />Get Package</Link>
                             </Button>
-                          ) : isGated(property) && packageFull && !isListedActive(property) ? (
+                          ) : isGated(property) && packageFullFor(property) && !isListedActive(property) ? (
                             <Button asChild size="sm" variant="outline" className="h-8 px-2 text-xs">
                               <Link href="/owner/packages">Upgrade</Link>
                             </Button>

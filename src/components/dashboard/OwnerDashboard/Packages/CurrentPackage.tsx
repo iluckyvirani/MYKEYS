@@ -10,17 +10,25 @@ interface CurrentPackageProps {
   currentPackage: any;
   packageUsage: any;
   onRefresh: () => void;
+  categoryLabel?: string;
 }
 
-export default function CurrentPackage({ currentPackage, packageUsage, onRefresh }: CurrentPackageProps) {
+export default function CurrentPackage({
+  currentPackage,
+  packageUsage,
+  onRefresh,
+  categoryLabel = "Rent",
+}: CurrentPackageProps) {
   if (!currentPackage || !packageUsage) {
     return (
       <Card className="p-8 text-center bg-linear-to-br from-gray-50 to-gray-100 border-dashed">
         <div className="max-w-md mx-auto">
           <Home className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Package</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active {categoryLabel} Package</h3>
           <p className="text-gray-600 text-sm mb-4">
-            You don't have an active subscription. Choose a package below to get started.
+            {categoryLabel === "Sale"
+              ? "Choose a Sale package below to publish Buy listings."
+              : "Choose a Rent package below to publish Long Rent listings."}
           </p>
         </div>
       </Card>
@@ -94,7 +102,10 @@ export default function CurrentPackage({ currentPackage, packageUsage, onRefresh
               </div>
               <div>
                 <h2 className="text-xl font-bold">{pkg.packageName}</h2>
-                <p className="text-green-100 text-sm">Premium features for property owners</p>
+                <p className="text-green-100 text-sm">
+                  {categoryLabel} package ·{" "}
+                  {categoryLabel === "Sale" ? "Buy listings" : "Long Rent listings"}
+                </p>
               </div>
             </div>
             <Badge className={`${statusConfig.color} flex items-center gap-1`}>

@@ -222,8 +222,7 @@ export default function AdminBidsPage() {
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {new Date(bid.startDate).toLocaleDateString("en-GB")} →{" "}
-                          {new Date(bid.endDate).toLocaleDateString("en-GB")}
+                          {new Date(bid.startDate).toLocaleDateString("en-GB")} (same day)
                         </span>
                         {bid.status === "ACTIVE" && (
                           <span className="text-green-600 font-medium mt-0.5 block">

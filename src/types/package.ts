@@ -1,6 +1,9 @@
 // Phase 1: Fully dynamic packages — no fixed tiers
 export type DurationUnit = 'days' | 'months' | 'years';
 
+/** SALE = Buy listings · RENT = Long-let rentals (short stay needs no package) */
+export type PackageCategory = 'SALE' | 'RENT';
+
 export type PackageInput = {
   name: string;
   description?: string;
@@ -9,6 +12,7 @@ export type PackageInput = {
   durationValue: number;  // e.g. 10, 1, 6
   durationUnit: DurationUnit; // "days" | "months" | "years"
   isActive?: boolean;
+  category?: PackageCategory;
 
   // Core features
   propertyLimit?: number; // 0 = unlimited
@@ -25,6 +29,7 @@ export type PackageInput = {
 
 export type PackageRecord = PackageInput & {
   id: string;
+  category: PackageCategory;
   createdAt: string;
   updatedAt: string;
 };
@@ -51,6 +56,7 @@ export type OwnerPackageWithUsage = {
   durationValue: number;
   durationUnit: DurationUnit;
   shortDescription?: string;
+  category: PackageCategory;
 
   // Feature flags
   showOwnerName: boolean;
@@ -59,6 +65,11 @@ export type OwnerPackageWithUsage = {
   adminCCOnInquiry: boolean;
   fullAdminSupport: boolean;
   docExpiryAlert: boolean;
+};
+
+export type OwnerActivePackages = {
+  SALE: OwnerPackageWithUsage | null;
+  RENT: OwnerPackageWithUsage | null;
 };
 
 export type AdminSettings = {

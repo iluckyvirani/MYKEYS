@@ -21,7 +21,7 @@ export const PATCH = withAuth<{ id: string }>(
 
       const property = await prisma.property.findUnique({
         where: { id },
-        select: { id: true, ownerId: true, isFeatured: true },
+        select: { id: true, ownerId: true, isFeatured: true, listingType: true, rentalType: true },
       });
 
       if (!property) {
@@ -32,20 +32,39 @@ export const PATCH = withAuth<{ id: string }>(
         return errorResponse("You don't have permission to update this property", 403, ErrorCode.FORBIDDEN);
       }
 
+      const category =
+        property.listingType === "BUY"
+          ? ("SALE" as const)
+          : property.listingType === "RENT" && property.rentalType !== "SHORT_TERM"
+            ? ("RENT" as const)
+            : null;
+
       // ── Featuring: check package allows it ───────────────────────────────
       if (isFeatured && !property.isFeatured) {
         if (user.role !== "ADMIN") {
-          const { allowed, reason } = await packageService.canFeature(property.ownerId);
+          if (!category) {
+            return errorResponse(
+              "Short stay listings cannot use package featured slots.",
+              403,
+              ErrorCode.FORBIDDEN
+            );
+          }
+          const { allowed, reason } = await packageService.canFeature(property.ownerId, {
+            listingType: property.listingType,
+            rentalType: property.rentalType,
+          });
           if (!allowed) {
             return errorResponse(reason!, 403, ErrorCode.FORBIDDEN);
           }
         }
-        await packageService.incrementFeaturedUsage(property.ownerId);
+        if (category) {
+          await packageService.incrementFeaturedUsage(property.ownerId, category);
+        }
       }
 
       // ── Unfeaturing: free up the slot ────────────────────────────────────
-      if (!isFeatured && property.isFeatured) {
-        await packageService.decrementFeaturedUsage(property.ownerId);
+      if (!isFeatured && property.isFeatured && category) {
+        await packageService.decrementFeaturedUsage(property.ownerId, category);
       }
 
       const updated = await prisma.property.update({

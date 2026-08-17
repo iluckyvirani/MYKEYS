@@ -51,25 +51,11 @@ export default function BoostPropertyPage({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Form fields
-  const today = new Date().toISOString().split("T")[0];
   const [zipCode, setZipCode] = useState("");
   const [amount, setAmount] = useState("1.00");
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState("");
 
-  // Computed
-  const days =
-    startDate && endDate
-      ? Math.max(
-          0,
-          Math.ceil(
-            (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-              (1000 * 60 * 60 * 24)
-          )
-        )
-      : 0;
-  const totalCost = days > 0 ? parseFloat((parseFloat(amount || "0") * days).toFixed(2)) : 0;
+  const bidAmount = parseFloat(amount || "0") || 0;
+  const totalCost = parseFloat(bidAmount.toFixed(2));
 
   useEffect(() => {
     (async () => {
@@ -82,7 +68,6 @@ export default function BoostPropertyPage({
           setProperty(p);
           setZipCode(p.zipCode ?? "");
 
-          // Fetch highest bid info for this zip
           const ownBid = await refreshOwnActiveBid(p.zipCode ?? "");
           if (p.zipCode) {
             await refreshHighest(p.zipCode, ownBid);
@@ -149,14 +134,11 @@ export default function BoostPropertyPage({
         {
           propertyId: id,
           zipCode: zipCode.trim(),
-          amount: parseFloat(amount),
-          startDate,
-          endDate,
+          amount: bidAmount,
         }
       );
 
       if (res.data?.razorpayOrder && res.data.keyId) {
-        // Open Razorpay checkout
         const Razorpay = (window as any).Razorpay;
         if (Razorpay) {
           const options = {
@@ -165,7 +147,7 @@ export default function BoostPropertyPage({
             amount: Math.round(totalCost * 100),
             currency: "GBP",
             name: "MYKEYS — Property Boost",
-            description: `Boost for ${property?.title} in ${zipCode} (${days} days)`,
+            description: `Same-day boost for ${property?.title} in ${zipCode}`,
             handler: async (payment: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
               await api.post(`/owner/bids/${res.data!.bid.id}/payment/verify`, {
                 razorpayOrderId: payment.razorpay_order_id,
@@ -182,7 +164,6 @@ export default function BoostPropertyPage({
         }
       }
 
-      // No Razorpay (dev mode) — treat as success
       setSuccess(true);
       setTimeout(() => router.push("/owner/dashboard/bids"), 1500);
     } catch (err: unknown) {
@@ -214,7 +195,6 @@ export default function BoostPropertyPage({
     );
   }
 
-
   if (success) {
     return (
       <DashboardLayout defaultRole="owner">
@@ -224,24 +204,25 @@ export default function BoostPropertyPage({
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Boost Active!</h2>
           <p className="text-gray-500">
-            Your property is now boosted in <strong>{zipCode}</strong>. Redirecting…
+            Your property is boosted in <strong>{zipCode}</strong> for today. Redirecting…
           </p>
         </div>
       </DashboardLayout>
     );
   }
 
-  const maxEnd = new Date(startDate);
-  maxEnd.setDate(maxEnd.getDate() + settings.maxBidDurationDays);
-  const maxEndStr = maxEnd.toISOString().split("T")[0];
+  const todayLabel = new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   return (
     <DashboardLayout defaultRole="owner">
-      {/* Razorpay SDK */}
       <script src="https://checkout.razorpay.com/v1/checkout.js" async />
 
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-3">
           <Link href={`/owner/dashboard/properties/${id}`}>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -257,32 +238,31 @@ export default function BoostPropertyPage({
           </div>
         </div>
 
-        {/* Info card */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
           <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
             <p className="font-medium mb-1">How Boosting Works</p>
             <ul className="space-y-0.5 text-amber-700">
-              <li>• Your property appears at the top of search results for the target zip code.</li>
+              <li>• Boosts are valid for <strong>today only</strong> ({todayLabel}).</li>
+              <li>• You can raise your bid unlimited times during the day (e.g. £1 → £2 → £3).</li>
               <li>• Higher bids rank above lower bids. Up to {settings.maxBoostedSlotsPerZip} boosted slots are shown.</li>
-              <li>• You pay the full amount upfront. No refunds after the grace period.</li>
+              <li>• Each raise is charged at the new bid amount for today.</li>
             </ul>
           </div>
         </div>
 
-        {/* Current highest bid */}
         {ownActiveBid != null && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-4">
             <Zap className="w-8 h-8 text-blue-600 shrink-0" />
             <div>
               <p className="text-xs text-blue-600 uppercase tracking-wide font-medium">
-                Your Current Boost
+                Your Current Boost (today)
               </p>
               <p className="text-xl font-bold text-gray-900">
-                £{ownActiveBid.toFixed(2)}/day
+                £{ownActiveBid.toFixed(2)}
               </p>
               <p className="text-xs text-blue-700">
-                Re-boost with a higher amount to upgrade your ranking.
+                Enter a higher amount to raise your ranking — as many times as you like today.
               </p>
             </div>
           </div>
@@ -296,14 +276,13 @@ export default function BoostPropertyPage({
                 Current Highest Bid in {zipCode}
               </p>
               <p className="text-xl font-bold text-gray-900">
-                £{highest.amount.toFixed(2)}/day
+                £{highest.amount.toFixed(2)}
               </p>
               <p className="text-xs text-gray-400">{highest.propertyTitle}</p>
             </div>
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
@@ -318,7 +297,12 @@ export default function BoostPropertyPage({
               </h2>
             </div>
             <div className="p-6 space-y-5">
-              {/* Zip code */}
+              <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3 text-sm text-gray-700">
+                Valid for <span className="font-semibold text-gray-900">today only</span>
+                <span className="text-gray-400"> · </span>
+                {todayLabel}
+              </div>
+
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">
                   Target Zip Code *
@@ -342,14 +326,17 @@ export default function BoostPropertyPage({
                 </p>
               </div>
 
-              {/* Bid amount */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">
-                  Bid Amount (£/day) *
+                  Bid Amount (£) *
                 </Label>
                 <Input
                   type="number"
-                  min={settings.minBidAmountPerDay}
+                  min={
+                    ownActiveBid != null
+                      ? (ownActiveBid + 0.01).toFixed(2)
+                      : settings.minBidAmountPerDay
+                  }
                   step="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -357,73 +344,41 @@ export default function BoostPropertyPage({
                   required
                 />
                 <p className="text-xs text-gray-400">
-                  Minimum £{settings.minBidAmountPerDay.toFixed(2)}/day.
+                  Minimum £{settings.minBidAmountPerDay.toFixed(2)}.
                   {ownActiveBid != null
-                    ? ` Re-boost above £${ownActiveBid.toFixed(2)}/day.`
+                    ? ` Raise above your current £${ownActiveBid.toFixed(2)}.`
                     : highest
-                    ? ` Bid above £${highest.amount.toFixed(2)}/day to rank first.`
+                    ? ` Bid above £${highest.amount.toFixed(2)} to rank first.`
                     : " Be the first to boost in this zip code!"}
                 </p>
               </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-gray-700">Start Date *</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    min={today}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      setEndDate(""); // reset end
-                    }}
-                    className="bg-gray-50 border-gray-200 focus:bg-white"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-gray-700">End Date *</Label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    min={startDate || today}
-                    max={maxEndStr}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="bg-gray-50 border-gray-200 focus:bg-white"
-                    required
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-gray-400">
-                Maximum {settings.maxBidDurationDays} days per boost.
-              </p>
             </div>
           </div>
 
-          {/* Cost preview */}
-          {days > 0 && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-700 font-medium">Total Cost</p>
-                  <p className="text-xs text-green-600 mt-0.5">
-                    £{parseFloat(amount || "0").toFixed(2)}/day × {days} day{days !== 1 ? "s" : ""}
-                  </p>
-                </div>
-                <p className="text-3xl font-bold text-green-700">£{totalCost.toFixed(2)}</p>
+          <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-700 font-medium">Total Cost</p>
+                <p className="text-xs text-green-600 mt-0.5">
+                  Same-day boost · expires tonight
+                </p>
               </div>
+              <p className="text-3xl font-bold text-green-700">£{totalCost.toFixed(2)}</p>
             </div>
-          )}
+          </div>
 
           <div className="flex gap-3 pt-1">
             <Button
               type="submit"
-              disabled={submitting || days < 1}
+              disabled={submitting || bidAmount < settings.minBidAmountPerDay}
               className="bg-amber-500 hover:bg-amber-600 text-white px-6"
             >
               <Zap className="w-4 h-4 mr-2" />
-              {submitting ? "Processing…" : `Boost — £${totalCost.toFixed(2)}`}
+              {submitting
+                ? "Processing…"
+                : ownActiveBid != null
+                  ? `Raise Bid — £${totalCost.toFixed(2)}`
+                  : `Boost Today — £${totalCost.toFixed(2)}`}
             </Button>
             <Link href={`/owner/dashboard/properties/${id}`}>
               <Button type="button" variant="outline" className="border-gray-300 text-gray-700">

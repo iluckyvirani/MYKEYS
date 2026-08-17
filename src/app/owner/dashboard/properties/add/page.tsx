@@ -34,6 +34,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/lib/api";
 import LocationPickerMap, { LocationResult } from "@/components/common/LocationPickerMap";
+import { formatUkPostcode, isLikelyUkPostcode } from "@/lib/ukPostcode";
 import PropertyUkExtraFields, {
   DEFAULT_UK_EXTRA,
   type PropertyUkExtraValues,
@@ -223,6 +224,14 @@ export default function AddPropertyPage() {
     ) : null;
 
   const handleFieldBlur = (name: RequiredField) => {
+    if (name === "zipCode") {
+      setFormData((prev) => ({
+        ...prev,
+        zipCode: isLikelyUkPostcode(prev.zipCode)
+          ? formatUkPostcode(prev.zipCode)
+          : prev.zipCode.trim(),
+      }));
+    }
     setTouchedFields((prev) => ({ ...prev, [name]: true }));
     validateField(name);
   };
@@ -829,7 +838,7 @@ export default function AddPropertyPage() {
               onChange={handleInputChange}
               onBlur={() => handleFieldBlur("zipCode")}
               className={fieldErrorClass("zipCode")}
-              placeholder="e.g., E14"
+              placeholder="e.g., SW1A 1AA"
               required
               aria-invalid={Boolean(fieldErrors.zipCode)}
               aria-describedby={fieldErrors.zipCode ? "zipCode-error" : undefined}

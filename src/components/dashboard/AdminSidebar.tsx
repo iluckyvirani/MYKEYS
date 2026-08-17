@@ -24,6 +24,8 @@ import {
   FileText,
   HelpCircle,
   Building2,
+  Wallet,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -42,8 +44,10 @@ const adminNavigation = [
   { name: "Properties", href: "/admin/dashboard/properties", icon: Building },
   { name: "Bookings", href: "/admin/dashboard/bookings", icon: Calendar },
   { name: "Payments", href: "/admin/dashboard/payments", icon: CreditCard },
+  { name: "Settle Up", href: "/admin/dashboard/settle-up", icon: Wallet },
   { name: "Packages", href: "/admin/dashboard/packages", icon: Package },
   { name: "Service Categories", href: "/admin/dashboard/categories", icon: Grid3x3 },
+  { name: "Catalog Services", href: "/admin/dashboard/services", icon: Wrench },
   { name: "Site Content", href: "/admin/dashboard/content/home", icon: FileText },
   { name: "FAQs", href: "/admin/dashboard/faqs", icon: HelpCircle },
   { name: "Contact Departments", href: "/admin/dashboard/contact-departments", icon: Building2 },

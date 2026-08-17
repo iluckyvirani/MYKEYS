@@ -33,6 +33,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/lib/api";
+import { formatUkPostcode, isLikelyUkPostcode } from "@/lib/ukPostcode";
 import type { PropertyUtilities } from "@/lib/propertyDetails";
 
 const propertyTypes = [
@@ -567,7 +568,15 @@ export default function EditPropertyPage() {
               name="zipCode"
               value={formData.zipCode}
               onChange={handleInputChange}
-              placeholder="e.g., 400001"
+              onBlur={() =>
+                setFormData((prev: any) => ({
+                  ...prev,
+                  zipCode: isLikelyUkPostcode(prev.zipCode)
+                    ? formatUkPostcode(prev.zipCode)
+                    : String(prev.zipCode || "").trim(),
+                }))
+              }
+              placeholder="e.g., SW1A 1AA"
             />
           </div>
 

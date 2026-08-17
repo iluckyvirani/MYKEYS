@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, MapPin, Loader, Info, AlertTriangle } from "lucide-react";
 import { GOOGLE_MAPS_API_KEY, hasGoogleMapsApiKey } from "@/lib/googleMaps";
+import { formatUkPostcode, isLikelyUkPostcode } from "@/lib/ukPostcode";
 
 export interface LocationResult {
   lat: number;
@@ -41,7 +42,18 @@ function extractComponents(
   }
 
   const address = [streetNumber, route].filter(Boolean).join(" ");
-  return { lat, lng, address, city, state, zipCode };
+  return {
+    lat,
+    lng,
+    address,
+    city,
+    state,
+    zipCode: zipCode
+      ? isLikelyUkPostcode(zipCode)
+        ? formatUkPostcode(zipCode)
+        : zipCode
+      : "",
+  };
 }
 
 declare global {

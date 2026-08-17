@@ -7,6 +7,12 @@ import { JWTPayload } from "@/lib/auth/jwt";
 import { getBoostedPropertyIds, getAdminSettings } from "@/lib/bids/bidService";
 import { getDocumentVerificationStatesForProperties } from "@/lib/documents/documentService";
 import { maybeNotifyNewListing } from "@/lib/newsletter/service";
+import {
+  compactUkPostcode,
+  formatUkPostcode,
+  isLikelyUkPostcode,
+  ukOutwardCode,
+} from "@/lib/ukPostcode";
 
 /**
  * GET /api/properties
@@ -122,13 +128,7 @@ export async function GET(request: NextRequest) {
       wantsRadius && Number.isFinite(searchLat) && Number.isFinite(searchLng);
 
     // UK outward-code widen when radius requested but geocode unavailable
-    const outwardFromZip = (value: string) => {
-      const cleaned = value.trim().toUpperCase().replace(/\s+/g, " ");
-      const parts = cleaned.split(" ");
-      if (parts.length >= 2) return parts[0];
-      const m = cleaned.match(/^([A-Z]{1,2}\d{1,2}[A-Z]?)/);
-      return m?.[1] || cleaned;
-    };
+    const outwardFromZip = (value: string) => ukOutwardCode(value);
 
     if (useGeoRadius) {
       where.latitude = { not: null };
@@ -136,9 +136,29 @@ export async function GET(request: NextRequest) {
     } else {
       if (city) where.city = { contains: city, mode: "insensitive" };
       if (zipCode) {
-        const zipFilter =
-          wantsRadius ? outwardFromZip(zipCode) : zipCode;
-        where.zipCode = { contains: zipFilter, mode: "insensitive" };
+        const formatted = isLikelyUkPostcode(zipCode)
+          ? formatUkPostcode(zipCode)
+          : zipCode.trim();
+        const compact = compactUkPostcode(formatted);
+        const outward = outwardFromZip(formatted);
+        const zipFilter = wantsRadius ? outward : formatted;
+
+        // Match formatted (E14 9RZ), compact (E149RZ), and outward (E14)
+        // so owner/user spacing & case differences still find listings
+        where.AND = [
+          ...((where.AND as object[]) || []),
+          {
+            OR: [
+              { zipCode: { contains: zipFilter, mode: "insensitive" } },
+              ...(compact !== zipFilter
+                ? [{ zipCode: { contains: compact, mode: "insensitive" } }]
+                : []),
+              ...(outward !== zipFilter && outward !== compact
+                ? [{ zipCode: { contains: outward, mode: "insensitive" } }]
+                : []),
+            ],
+          },
+        ];
       }
     }
     if (state) where.state = { contains: state, mode: "insensitive" };
@@ -443,7 +463,11 @@ export const POST = withAuth(
           city,
           state,
           country: country || "India",
-          zipCode,
+          zipCode: zipCode
+            ? isLikelyUkPostcode(zipCode)
+              ? formatUkPostcode(zipCode)
+              : String(zipCode).trim()
+            : zipCode,
           latitude: body.latitude,
           longitude: body.longitude,
           price,

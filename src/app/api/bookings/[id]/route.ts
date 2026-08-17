@@ -135,29 +135,67 @@ export const PATCH = withAuth<{ id: string }>(async (request: NextRequest, user:
       return errorResponse('Only the property owner or the guest can update this booking', 403, ErrorCode.UNAUTHORIZED);
     }
 
+    const propertyMeta = await prisma.property.findUnique({
+      where: { id: booking.propertyId },
+      select: { rentalType: true, listingType: true },
+    });
+    const isShortStay =
+      propertyMeta?.listingType === 'RENT' &&
+      propertyMeta?.rentalType === 'SHORT_TERM';
+
     const currentStatus = booking.status as BookingStatus;
     const requestedStatus = body.status as BookingStatus;
 
+    // Short-stay: payment auto-confirms. Owner cannot Confirm or Cancel.
+    if (
+      isShortStay &&
+      isOwner &&
+      (requestedStatus === BookingStatus.CONFIRMED ||
+        requestedStatus === BookingStatus.CANCELLED)
+    ) {
+      return errorResponse(
+        'Short-stay bookings are confirmed automatically after payment. Owners cannot confirm or cancel them.',
+        400,
+        ErrorCode.VALIDATION_ERROR
+      );
+    }
+
     // ─── Valid transitions ───────────────────────────────────────────────────
-    // Owner: PENDING → CONFIRMED | CANCELLED
-    //        CONFIRMED → CHECKED_IN | CANCELLED
-    //        CHECKED_IN → CHECKED_OUT
-    //        CHECKED_OUT → COMPLETED
-    // Guest: PENDING → CANCELLED  (unpaid bookings only)
-    //        CONFIRMED → CANCELLED (if checkout hasn't started)
+    // Short-stay owner: check-in / check-out / complete only
+    // Other owner: PENDING → CONFIRMED | CANCELLED, etc.
+    // Guest: PENDING → CANCELLED (unpaid); paid short-stay cannot cancel via status
     // ────────────────────────────────────────────────────────────────────────
 
-    const ownerTransitions: Partial<Record<BookingStatus, BookingStatus[]>> = {
-      [BookingStatus.PENDING]:    [BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
-      [BookingStatus.CONFIRMED]:  [BookingStatus.CHECKED_IN, BookingStatus.CANCELLED],
-      [BookingStatus.CHECKED_IN]: [BookingStatus.CHECKED_OUT],
-      [BookingStatus.CHECKED_OUT]:[BookingStatus.COMPLETED],
-    };
+    const ownerTransitions: Partial<Record<BookingStatus, BookingStatus[]>> = isShortStay
+      ? {
+          [BookingStatus.CONFIRMED]: [BookingStatus.CHECKED_IN],
+          [BookingStatus.CHECKED_IN]: [BookingStatus.CHECKED_OUT],
+          [BookingStatus.CHECKED_OUT]: [BookingStatus.COMPLETED],
+        }
+      : {
+          [BookingStatus.PENDING]: [BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
+          [BookingStatus.CONFIRMED]: [BookingStatus.CHECKED_IN, BookingStatus.CANCELLED],
+          [BookingStatus.CHECKED_IN]: [BookingStatus.CHECKED_OUT],
+          [BookingStatus.CHECKED_OUT]: [BookingStatus.COMPLETED],
+        };
 
     const guestTransitions: Partial<Record<BookingStatus, BookingStatus[]>> = {
-      [BookingStatus.PENDING]:   [BookingStatus.CANCELLED],
-      [BookingStatus.CONFIRMED]: [BookingStatus.CANCELLED],
+      [BookingStatus.PENDING]: [BookingStatus.CANCELLED],
+      [BookingStatus.CONFIRMED]: isShortStay ? [] : [BookingStatus.CANCELLED],
     };
+
+    if (
+      isShortStay &&
+      isGuest &&
+      requestedStatus === BookingStatus.CANCELLED &&
+      booking.paymentStatus === 'PAID'
+    ) {
+      return errorResponse(
+        'This short-stay booking is already paid and confirmed and cannot be cancelled here.',
+        400,
+        ErrorCode.VALIDATION_ERROR
+      );
+    }
 
     const allowed = isOwner
       ? ownerTransitions[currentStatus] ?? []
@@ -287,6 +325,25 @@ export const DELETE = withAuth<{ id: string }>(async (request: NextRequest, user
     // Check if booking can be cancelled
     if ([BookingStatus.CANCELLED, BookingStatus.COMPLETED, BookingStatus.CHECKED_OUT].includes(booking.status as BookingStatus)) {
       return errorResponse('This booking cannot be cancelled in its current status', 400, ErrorCode.INVALID_INPUT);
+    }
+
+    // Paid short-stay bookings are auto-confirmed and cannot be cancelled by guest here
+    const propertyMeta = await prisma.property.findUnique({
+      where: { id: booking.propertyId },
+      select: { rentalType: true, listingType: true },
+    });
+    const isShortStay =
+      propertyMeta?.listingType === 'RENT' &&
+      propertyMeta?.rentalType === 'SHORT_TERM';
+    if (
+      isShortStay &&
+      (booking.paymentStatus === 'PAID' || booking.status === BookingStatus.CONFIRMED)
+    ) {
+      return errorResponse(
+        'Paid short-stay bookings are confirmed automatically and cannot be cancelled here.',
+        400,
+        ErrorCode.VALIDATION_ERROR
+      );
     }
 
     // TODO:
