@@ -52,11 +52,13 @@ export default function OwnerPackagesPage() {
         localStorage.setItem("refreshToken", response.data.data.refreshToken);
       }
       if (response.data?.data?.user) {
-        localStorage.setItem("user", JSON.stringify(response.data.data.user));
+        const { setStoredUser } = await import("@/lib/auth/storedUser");
+        setStoredUser(response.data.data.user);
       }
 
       setShowBecomeOwnerModal(false);
       setAuthState("allowed");
+      router.replace("/owner/packages");
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -102,7 +104,7 @@ export default function OwnerPackagesPage() {
             </p>
             <div className="flex gap-3">
               <Button
-                onClick={() => router.push("/user/dashboard")}
+                onClick={() => router.push("/owner/dashboard")}
                 variant="outline"
                 className="flex-1 rounded-[5px]"
               >

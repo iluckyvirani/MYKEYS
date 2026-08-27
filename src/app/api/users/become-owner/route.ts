@@ -1,64 +1,76 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
 import { verifyAccessToken, generateTokenPair } from "@/lib/auth/jwt";
 import { toUserDTO } from "@/lib/auth/helpers";
 import { ErrorCode, createApiError } from "@/lib/auth/errors";
-import { BecomeOwnerResponse } from "@/types/auth";
+
+function setAuthCookies(
+  response: ReturnType<typeof successResponse>,
+  accessToken: string,
+  refreshToken: string
+) {
+  response.cookies.set("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 15 * 60,
+    path: "/",
+  });
+  response.cookies.set("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60,
+    path: "/",
+  });
+  return response;
+}
 
 /**
  * POST /api/users/become-owner
- * Allow a USER to become an OWNER by adding OWNER role
+ * Allow a USER to become an OWNER by adding OWNER role.
+ * If already OWNER, still refresh tokens + return user (client sync).
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get token from authorization header
     const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const cookieToken = request.cookies.get("accessToken")?.value;
+    const token =
+      authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : cookieToken;
+
+    if (!token) {
       throw createApiError(ErrorCode.UNAUTHORIZED);
     }
 
-    const token = authHeader.substring(7);
     const payload = await verifyAccessToken(token);
-
     if (!payload) {
       throw createApiError(ErrorCode.UNAUTHORIZED);
     }
 
-    // Get the user
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      include: {
-        roles: true,
-      },
+      include: { roles: true },
     });
 
     if (!user) {
       throw createApiError(ErrorCode.USER_NOT_FOUND);
     }
 
-    // Check if user already has OWNER role
     const hasOwnerRole = user.roles.some((r) => r.role === "OWNER");
-    if (hasOwnerRole) {
-      return errorResponse(
-        "User already has OWNER role",
-        400,
-        ErrorCode.VALIDATION_ERROR
-      );
-    }
 
-    // Parse request body for optional owner details
-    let companyName, taxId, website;
+    let companyName: string | null = null;
+    let taxId: string | null = null;
+    let website: string | null = null;
     try {
       const body = await request.json();
       companyName = body.companyName || null;
       taxId = body.taxId || null;
       website = body.website || null;
-    } catch (error) {
-      // If body is empty, just ignore
+    } catch {
+      // empty body ok
     }
 
-    // Update user with owner details if provided
     if (companyName || taxId || website) {
       await prisma.user.update({
         where: { id: user.id },
@@ -70,48 +82,42 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Add OWNER role
-    await prisma.userRoleAssignment.create({
-      data: {
-        userId: user.id,
-        role: "OWNER",
-      },
-    });
+    if (!hasOwnerRole) {
+      await prisma.userRoleAssignment.create({
+        data: {
+          userId: user.id,
+          role: "OWNER",
+        },
+      });
+    }
 
-    // Fetch updated user with new roles
     const updatedUser = await prisma.user.findUnique({
       where: { id: user.id },
-      include: {
-        roles: true,
-      },
+      include: { roles: true },
     });
 
     if (!updatedUser) {
       throw createApiError(ErrorCode.USER_NOT_FOUND);
     }
 
-    // Convert to DTO
     const userDTO = await toUserDTO(updatedUser);
+    const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+      await generateTokenPair(user.id, user.email, "OWNER");
 
-    // Generate new tokens with OWNER role
-    const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await generateTokenPair(
-      user.id,
-      user.email,
-      "OWNER"
+    const nextResponse = successResponse(
+      {
+        user: userDTO,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        alreadyOwner: hasOwnerRole,
+      },
+      hasOwnerRole
+        ? "Owner role synced. You can switch to Seller/Landlord dashboard."
+        : "You are now an owner! You can start listing properties.",
+      200
     );
 
-    // Prepare response
-    const response: BecomeOwnerResponse = {
-      success: true,
-      message: "You are now an owner! You can start listing properties.",
-      data: {
-        user: userDTO,
-        accessToken: newAccessToken, // New token with OWNER role
-        refreshToken: newRefreshToken,
-      },
-    };
-
-    return successResponse(response.data, response.message, 200);
+    return setAuthCookies(nextResponse, newAccessToken, newRefreshToken);
   } catch (error) {
     console.error("Become owner error:", error);
 

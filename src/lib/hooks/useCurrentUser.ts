@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { getStoredUserFromLocalStorage } from "@/lib/auth/storedUser";
+import { getStoredUserFromLocalStorage, setStoredUser } from "@/lib/auth/storedUser";
 import { MeResponse, UserDTO } from "@/types/auth";
 
 export function useCurrentUser() {
@@ -15,7 +15,6 @@ export function useCurrentUser() {
       if (stored?.firstName) {
         setUser(stored);
         setLoading(false);
-        return;
       }
 
       try {
@@ -23,10 +22,10 @@ export function useCurrentUser() {
         const userData = response.data?.data;
         if (userData) {
           setUser(userData);
-          localStorage.setItem("user", JSON.stringify(userData));
+          setStoredUser(userData);
         }
       } catch {
-        // keep null — greeting falls back to generic name
+        // keep stored / null
       } finally {
         setLoading(false);
       }

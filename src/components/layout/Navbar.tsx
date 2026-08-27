@@ -19,6 +19,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
 import { UserDTO } from "@/types/auth";
 import { api } from "@/lib/api";
+import {
+  getStoredUserFromLocalStorage,
+  setStoredUser,
+  userHasRole,
+} from "@/lib/auth/storedUser";
 
 type MegaMenu = "rent" | "inspire" | "dashboard" | null;
 
@@ -124,13 +129,32 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const token = localStorage.getItem("accessToken");
-      const userStr = localStorage.getItem("user");
-      if (token && userStr) {
+      const stored = getStoredUserFromLocalStorage();
+      if (token && stored) {
+        setIsLoggedIn(true);
+        setUser(stored);
+        // Refresh roles from DB so OWNER/USER multi-role stays in sync
         try {
-          setIsLoggedIn(true);
-          setUser(JSON.parse(userStr) as UserDTO);
+          const res = await api.get("/auth/me");
+          const me = res.data?.data;
+          if (me?.roles) {
+            setStoredUser(me);
+            setUser(me);
+          }
+        } catch {
+          // keep stored user
+        }
+      } else if (token) {
+        setIsLoggedIn(true);
+        try {
+          const res = await api.get("/auth/me");
+          const me = res.data?.data;
+          if (me) {
+            setStoredUser(me);
+            setUser(me);
+          }
         } catch {
           setIsLoggedIn(false);
           setUser(null);
@@ -141,6 +165,15 @@ export default function Navbar() {
       }
     };
     checkAuth();
+    const onUserUpdated = () => {
+      const stored = getStoredUserFromLocalStorage();
+      if (stored) {
+        setIsLoggedIn(true);
+        setUser(stored);
+      }
+    };
+    window.addEventListener("mykeys:user-updated", onUserUpdated);
+    return () => window.removeEventListener("mykeys:user-updated", onUserUpdated);
   }, [pathname]);
 
   useEffect(() => {
@@ -173,20 +206,28 @@ export default function Navbar() {
     setErrorMessage("");
     try {
       const response = await api.post("/users/become-owner");
-      if (response.data?.data?.accessToken) {
-        localStorage.setItem("accessToken", response.data.data.accessToken);
+      const payload = response.data?.data;
+      if (payload?.accessToken) {
+        localStorage.setItem("accessToken", payload.accessToken);
       }
-      if (response.data?.data?.refreshToken) {
-        localStorage.setItem("refreshToken", response.data.data.refreshToken);
+      if (payload?.refreshToken) {
+        localStorage.setItem("refreshToken", payload.refreshToken);
       }
-      if (response.data?.data?.user) {
-        localStorage.setItem("user", JSON.stringify(response.data.data.user));
-        setUser(response.data.data.user);
+      if (payload?.user) {
+        setStoredUser(payload.user);
+        setUser(payload.user);
       }
       setShowBecomeOwnerModal(false);
-      setSuccessMessage("You are now a Seller/Landlord! You can start listing properties.");
+      setSuccessMessage(
+        payload?.alreadyOwner
+          ? "Seller/Landlord is ready — opening your owner dashboard."
+          : "You are now a Seller/Landlord! You can start listing properties."
+      );
       setShowSuccessModal(true);
-      setTimeout(() => setShowSuccessModal(false), 3000);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        router.push("/owner/dashboard");
+      }, 1200);
     } catch (error: any) {
       setErrorMessage(
         error.response?.data?.message || "Failed to become owner. Please try again."
@@ -201,12 +242,8 @@ export default function Navbar() {
     setShowBecomeServiceModal(false);
   };
 
-  const hasOwnerRole = Boolean(
-    user?.roles?.some((role) => role === "OWNER")
-  );
-  const hasServiceRole = Boolean(
-    user?.roles?.some((role) => role === "SERVICE")
-  );
+  const hasOwnerRole = userHasRole(user, "OWNER");
+  const hasServiceRole = userHasRole(user, "SERVICE");
 
   const MEGA_BG = "#F2F4F5";
   const NAV_INK = "#010E28";

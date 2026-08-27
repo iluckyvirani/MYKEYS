@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import CurrentPackage from "@/components/dashboard/OwnerDashboard/Packages/CurrentPackage";
 import AvailablePackages from "@/components/dashboard/OwnerDashboard/Packages/AvailablePackages";
@@ -9,14 +10,19 @@ import PackageHistory from "@/components/dashboard/OwnerDashboard/Packages/Packa
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OwnerActivePackages, PackageCategory } from "@/types/package";
+import { useToast } from "@/hooks/use-toast";
+import { setStoredUser } from "@/lib/auth/storedUser";
 
-export default function OwnerPackagesPage() {
+function OwnerPackagesContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [packages, setPackages] = useState<OwnerActivePackages>({ SALE: null, RENT: null });
   const [availablePackages, setAvailablePackages] = useState<any[]>([]);
   const [category, setCategory] = useState<PackageCategory>("RENT");
   const [refreshKey, setRefreshKey] = useState(0);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,6 +51,52 @@ export default function OwnerPackagesPage() {
 
     fetchData();
   }, [refreshKey]);
+
+  // Stripe redirect return (Link / 3DS) — stay on owner packages
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    const paymentIntent = searchParams.get("payment_intent");
+    const redirectStatus = searchParams.get("redirect_status");
+
+    if (payment !== "return" && !paymentIntent) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        try {
+          const me = await api.get("/auth/me");
+          if (me.data?.data) setStoredUser(me.data.data);
+        } catch {
+          /* ignore */
+        }
+
+        if (paymentIntent && (redirectStatus === "succeeded" || payment === "return")) {
+          try {
+            await api.post("/payments/verify-by-intent", {
+              stripePaymentIntentId: paymentIntent,
+            });
+          } catch {
+            // webhook may have already activated
+          }
+          if (!cancelled) {
+            toast({
+              title: "Package Activated",
+              description: "Your package payment completed successfully.",
+            });
+            setRefreshKey((k) => k + 1);
+          }
+        }
+      } finally {
+        if (!cancelled) {
+          router.replace("/owner/dashboard/packages");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, router, toast]);
 
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1);
@@ -90,7 +142,8 @@ export default function OwnerPackagesPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Packages & Pricing</h1>
             <p className="text-gray-600 mt-2">
-              Sale packages for Buy listings · Rent packages for Long Rent. Short stay needs no package.
+              Sale packages for Buy listings · Rent packages for Long Rent. Short stay needs no
+              package.
             </p>
           </div>
         </div>
@@ -137,5 +190,21 @@ export default function OwnerPackagesPage() {
         <PackageHistory />
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function OwnerPackagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout defaultRole="owner">
+          <div className="flex items-center justify-center min-h-96">
+            <Loader2 className="w-12 h-12 animate-spin text-green-600" />
+          </div>
+        </DashboardLayout>
+      }
+    >
+      <OwnerPackagesContent />
+    </Suspense>
   );
 }

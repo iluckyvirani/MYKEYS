@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Label } from "@/components/ui/label";
 import { Home, Building, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { UserDTO } from "@/types/auth";
+import { api } from "@/lib/api";
+import {
+  getStoredUserFromLocalStorage,
+  setStoredUser,
+  userHasRole,
+} from "@/lib/auth/storedUser";
 
 interface RoleSwitcherProps {
   currentRole: "user" | "owner" | "service";
@@ -20,25 +25,39 @@ export default function RoleSwitcher({
   const isService = currentRole === "service";
   const [user, setUser] = useState<UserDTO | null>(null);
 
-  // Check if user has roles
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
+    const sync = async () => {
+      const stored = getStoredUserFromLocalStorage();
+      setUser(stored);
+
       try {
-        const userData = JSON.parse(userStr) as UserDTO;
-        setUser(userData);
-      } catch (error) {
-        console.error("Failed to parse user data:", error);
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+        const res = await api.get("/auth/me");
+        const me = res.data?.data;
+        if (me?.roles) {
+          setStoredUser(me);
+          setUser(me);
+        }
+      } catch {
+        // keep stored
       }
-    }
+    };
+
+    sync();
+    const onUserUpdated = () => setUser(getStoredUserFromLocalStorage());
+    window.addEventListener("mykeys:user-updated", onUserUpdated);
+    window.addEventListener("storage", onUserUpdated);
+    return () => {
+      window.removeEventListener("mykeys:user-updated", onUserUpdated);
+      window.removeEventListener("storage", onUserUpdated);
+    };
   }, []);
 
-  // Check available roles
-  const hasUserRole = user?.roles?.includes("USER");
-  const hasOwnerRole = user?.roles?.includes("OWNER");
-  const hasServiceRole = user?.roles?.includes("SERVICE");
-  
-  // Only show if user has multiple roles
+  const hasUserRole = userHasRole(user, "USER") || Boolean(user);
+  const hasOwnerRole = userHasRole(user, "OWNER");
+  const hasServiceRole = userHasRole(user, "SERVICE");
+
   const availableRoles = [
     hasUserRole ? "USER" : null,
     hasOwnerRole ? "OWNER" : null,
@@ -100,9 +119,7 @@ export default function RoleSwitcher({
           </div>
 
           <div>
-            <h3 className="font-semibold">
-              {getRoleLabel(currentRole)}
-            </h3>
+            <h3 className="font-semibold">{getRoleLabel(currentRole)}</h3>
             <p className="text-sm text-gray-500">
               {getRoleDescription(currentRole)}
             </p>
@@ -114,8 +131,9 @@ export default function RoleSwitcher({
             <div className="flex items-center gap-2 space-x-3">
               {hasUserRole && (
                 <button
+                  type="button"
                   onClick={() => handleRoleChange("user")}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                     currentRole === "user"
                       ? "bg-green-100 text-green-700 border border-green-300"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -126,8 +144,9 @@ export default function RoleSwitcher({
               )}
               {hasOwnerRole && (
                 <button
+                  type="button"
                   onClick={() => handleRoleChange("owner")}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                     currentRole === "owner"
                       ? "bg-blue-100 text-blue-700 border border-blue-300"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -138,8 +157,9 @@ export default function RoleSwitcher({
               )}
               {hasServiceRole && (
                 <button
+                  type="button"
                   onClick={() => handleRoleChange("service")}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                     currentRole === "service"
                       ? "bg-purple-100 text-purple-700 border border-purple-300"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"

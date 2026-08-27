@@ -189,6 +189,16 @@ export const paymentService = {
       if (!payment) throw new Error('Payment not found');
       if (payment.userId !== userId) throw new Error('Unauthorized');
 
+      // Already confirmed — treat as success (Stripe return / double-submit safe)
+      if (payment.status === PaymentStatus.PAID) {
+        return {
+          success: true,
+          paymentId: payment.id,
+          status: payment.status,
+          message: 'Payment already confirmed',
+        };
+      }
+
       const intentId = data.stripePaymentIntentId || payment.stripePaymentIntentId;
       if (!intentId) throw new Error('Stripe PaymentIntent ID missing');
 

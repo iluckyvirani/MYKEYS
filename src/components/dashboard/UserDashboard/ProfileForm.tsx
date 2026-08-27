@@ -175,11 +175,14 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
     }
 
     try {
-      const response = await api.patch<UserDTO>("/auth/profile", formData);
+      const response = await api.patch("/auth/profile", formData);
 
-      if (response.data) {
-        // Update localStorage
-        localStorage.setItem("user", JSON.stringify(response.data));
+      if (response.data?.success) {
+        const userDto = response.data.data;
+        if (userDto) {
+          const { setStoredUser } = await import("@/lib/auth/storedUser");
+          setStoredUser(userDto);
+        }
         setSuccess("Profile updated successfully!");
 
         if (onSuccess) {

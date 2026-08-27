@@ -221,10 +221,12 @@ export default function AvailablePackages({
           amount={pendingPayment.price}
           onClose={() => setPendingPayment(null)}
           onSuccess={() => {
-            const name = pendingPayment.packageName;
-            setPendingPayment(null);
-            toast({ title: "Package Activated", description: `${name} is now active on your account.` });
+            toast({
+              title: "Package Activated",
+              description: `${pendingPayment.packageName} is now active on your account.`,
+            });
             onSubscribe();
+            // Do not clear pendingPayment here — modal shows success until user closes it.
           }}
           onError={(msg) => toast({ title: "Payment Failed", description: msg, variant: "destructive" })}
         />

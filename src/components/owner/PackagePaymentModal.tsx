@@ -8,6 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Elements,
   PaymentElement,
@@ -61,9 +62,17 @@ function PaymentForm({ paymentId, packageName, amount, onSuccess, onError }: Pay
     setError(null);
 
     try {
+      const returnUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/owner/dashboard/packages?payment=return`
+          : "/owner/dashboard/packages?payment=return";
+
       const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
         elements,
         redirect: "if_required",
+        confirmParams: {
+          return_url: returnUrl,
+        },
       });
 
       if (stripeError) {
@@ -80,7 +89,6 @@ function PaymentForm({ paymentId, packageName, amount, onSuccess, onError }: Pay
         return;
       }
 
-      // Confirm on backend → activates the OwnerPackage
       await api.post(`/payments/${paymentId}/verify`, {
         stripePaymentIntentId: paymentIntent.id,
       });
@@ -158,6 +166,7 @@ export default function PackagePaymentModal({
   onSuccess,
   onError,
 }: PackagePaymentModalProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -258,8 +267,14 @@ export default function PackagePaymentModal({
               <Package className="w-5 h-5 text-green-600" />
               <span className="text-green-800 font-medium">£{amount.toLocaleString()} paid</span>
             </div>
-            <Button onClick={handleClose} className="w-full rounded-lg bg-green-600 hover:bg-green-700">
-              Go to Dashboard
+            <Button
+              onClick={() => {
+                handleClose();
+                router.push("/owner/dashboard");
+              }}
+              className="w-full rounded-lg bg-green-600 hover:bg-green-700"
+            >
+              Go to Owner Dashboard
             </Button>
           </div>
         )}
