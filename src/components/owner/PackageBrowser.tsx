@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Clock, Building2, Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { PackageCategory } from "@/types/package";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
 interface PackageRecord {
   id: string;
@@ -60,6 +61,8 @@ export default function PackageBrowser({
   onSelect,
   subscribing,
 }: PackageBrowserProps) {
+  const { role } = useDashboardBase();
+  const audience = role === "agent" ? "AGENT" : "OWNER";
   const [packages, setPackages] = useState<PackageRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [internalCategory, setInternalCategory] = useState<PackageCategory>("RENT");
@@ -72,11 +75,11 @@ export default function PackageBrowser({
 
   useEffect(() => {
     api
-      .get("/packages")
+      .get(`/packages?audience=${audience}`)
       .then((res) => setPackages(res.data?.data ?? []))
       .catch(() => setPackages([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [audience]);
 
   const filtered = packages.filter((p) => (p.category ?? "RENT") === category);
   const currentId =

@@ -27,9 +27,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import type { DashboardPanelRole } from "@/lib/dashboard/DashboardContext";
 
 interface SidebarProps {
-  role: "user" | "owner" | "service";
+  role: DashboardPanelRole;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -67,6 +68,24 @@ const ownerNavigation = [
   { name: "Profile", href: "/owner/dashboard/profile", icon: Settings },
 ];
 
+const agentNavigation = [
+  { name: "Dashboard", href: "/agent/dashboard", icon: Home },
+  { name: "Properties", href: "/agent/dashboard/properties", icon: Building },
+  { name: "Rent Management", href: "/agent/dashboard/rent", icon: Key },
+  { name: "Expenses", href: "/agent/dashboard/expenses", icon: Wallet },
+  { name: "Diary", href: "/agent/dashboard/diary", icon: BookOpen },
+  { name: "Bookings", href: "/agent/dashboard/bookings", icon: Calendar },
+  { name: "Service Bookings", href: "/agent/dashboard/service-bookings", icon: Wrench },
+  { name: "Inquiries", href: "/agent/dashboard/inquiries", icon: MessageSquare },
+  { name: "Services", href: "/agent/dashboard/services", icon: Megaphone },
+  { name: "Payments", href: "/agent/dashboard/finance", icon: DollarSign },
+  { name: "Packages", href: "/agent/dashboard/packages", icon: Star },
+  { name: "Boosts", href: "/agent/dashboard/bids", icon: Zap },
+  { name: "Reports", href: "/agent/dashboard/reports", icon: FileBarChart },
+  { name: "Analytics", href: "/agent/dashboard/analytics", icon: BarChart3 },
+  { name: "Profile", href: "/agent/dashboard/profile", icon: Settings },
+];
+
 const serviceNavigation = [
   { name: "Dashboard", href: "/service/dashboard", icon: Home },
   { name: "Bookings", href: "/service/dashboard/bookings", icon: Calendar },
@@ -85,7 +104,8 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   
   const navigation = 
     role === "user" ? userNavigation : 
-    role === "service" ? serviceNavigation : 
+    role === "service" ? serviceNavigation :
+    role === "agent" ? agentNavigation :
     ownerNavigation;
 
   const handleLogout = async () => {

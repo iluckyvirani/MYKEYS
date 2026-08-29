@@ -10,7 +10,7 @@ interface DocumentUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  userRole?: "USER" | "OWNER" | "SERVICE";
+  userRole?: "USER" | "OWNER" | "AGENT" | "SERVICE";
 }
 
 export default function DocumentUploadModal({

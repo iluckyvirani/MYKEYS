@@ -9,9 +9,17 @@ import { prisma } from "@/lib/prisma";
 export const UserRole = {
   USER: "USER",
   OWNER: "OWNER",
+  AGENT: "AGENT",
   SERVICE: "SERVICE",
   ADMIN: "ADMIN"
 } as const;
+
+/** Roles allowed for seller dashboards (owner + agent APIs). */
+export const SELLER_ROLES = [
+  UserRole.OWNER,
+  UserRole.AGENT,
+  UserRole.ADMIN,
+] as const;
 
 export type UserRole = typeof UserRole[keyof typeof UserRole];
 /**
@@ -78,7 +86,7 @@ async function userHasAnyRole(
   const assignment = await prisma.userRoleAssignment.findFirst({
     where: {
       userId,
-      role: { in: allowedRoles as ("USER" | "OWNER" | "SERVICE" | "ADMIN")[] },
+      role: { in: allowedRoles as ("USER" | "OWNER" | "AGENT" | "SERVICE" | "ADMIN")[] },
     },
     select: { id: true },
   });
@@ -113,12 +121,21 @@ export async function requireAdmin(request: NextRequest): Promise<JWTPayload> {
 }
 
 /**
- * Check if user is owner or admin
+ * Check if user is owner, agent, or admin (seller panel APIs)
+ */
+export async function requireSellerOrAdmin(
+  request: NextRequest
+): Promise<JWTPayload> {
+  return requireRole(request, [...SELLER_ROLES]);
+}
+
+/**
+ * @deprecated Use requireSellerOrAdmin
  */
 export async function requireOwnerOrAdmin(
   request: NextRequest
 ): Promise<JWTPayload> {
-  return requireRole(request, [UserRole.OWNER, UserRole.ADMIN]);
+  return requireSellerOrAdmin(request);
 }
 
 /**

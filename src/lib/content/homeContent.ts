@@ -34,20 +34,35 @@ function mergeSection<T extends Record<string, unknown>>(
 }
 
 export async function ensureHomeContentSeeded() {
-  for (const section of HOME_SECTIONS) {
-    const existing = await prisma.pageSection.findUnique({
-      where: { page_section: { page: "home", section } },
-    });
-    if (!existing) {
-      await prisma.pageSection.create({
-        data: {
-          page: "home",
-          section,
-          content: DEFAULT_HOME_CONTENT[section] as Prisma.InputJsonValue,
-          isActive: true,
-        },
+  try {
+    for (const section of HOME_SECTIONS) {
+      const existing = await prisma.pageSection.findUnique({
+        where: { page_section: { page: "home", section } },
       });
+      if (!existing) {
+        await prisma.pageSection.create({
+          data: {
+            page: "home",
+            section,
+            content: DEFAULT_HOME_CONTENT[section] as Prisma.InputJsonValue,
+            isActive: true,
+          },
+        });
+      }
     }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (
+      msg.includes("Can't reach database") ||
+      msg.includes("ENOTFOUND") ||
+      msg.includes("ECONNREFUSED")
+    ) {
+      console.warn(
+        "[home] Database unreachable — using default home content. Check DATABASE_URL / internet / DNS."
+      );
+      return;
+    }
+    throw error;
   }
 }
 
@@ -88,6 +103,15 @@ export async function getHomeContent(): Promise<HomeContent> {
       ) as unknown as HomeContent["faq"],
     };
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (
+      msg.includes("Can't reach database") ||
+      msg.includes("ENOTFOUND") ||
+      msg.includes("ECONNREFUSED")
+    ) {
+      console.warn("[home] Database unreachable — serving default home content.");
+      return DEFAULT_HOME_CONTENT;
+    }
     console.error("getHomeContent error:", error);
     return DEFAULT_HOME_CONTENT;
   }

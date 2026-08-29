@@ -38,7 +38,7 @@ export const GET = withAuth<{ id: string }>(
     const docs = await getPropertyDocuments(ctx!.params.id);
     return successResponse(docs, "Documents retrieved successfully");
   },
-  { roles: [UserRole.OWNER, UserRole.ADMIN] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );
 
 /**
@@ -94,5 +94,5 @@ export const POST = withAuth<{ id: string }>(
       throw err;
     }
   },
-  { roles: [UserRole.OWNER, UserRole.ADMIN] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );

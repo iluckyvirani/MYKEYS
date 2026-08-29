@@ -26,6 +26,8 @@ import { api } from "@/lib/api";
 import { OwnerActivePackages, OwnerPackageWithUsage } from "@/types/package";
 import SharePropertyButton from "@/components/property/SharePropertyButton";
 
+const PACKAGES_PATH = "/owner/dashboard/packages";
+
 interface OwnerProperty {
   id: string;
   title: string;
@@ -356,7 +358,7 @@ export default function OwnerPropertiesPage() {
             </p>
           </div>
           <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
-            <Link href="/owner/packages"><Package className="w-4 h-4 mr-1" /> Buy a Package</Link>
+            <Link href={PACKAGES_PATH}><Package className="w-4 h-4 mr-1" /> Buy a Package</Link>
           </Button>
         </div>
       )}
@@ -381,7 +383,7 @@ export default function OwnerPropertiesPage() {
             </p>
           </div>
           <Button asChild size="sm" variant="outline" className="shrink-0">
-            <Link href="/owner/packages">Upgrade</Link>
+            <Link href={PACKAGES_PATH}>Upgrade</Link>
           </Button>
         </div>
       )}
@@ -674,11 +676,11 @@ export default function OwnerPropertiesPage() {
                     </Link>
                     {isGated(property) && !hasPackageFor(property) ? (
                       <Button asChild size="sm" className="flex-1 rounded-[5px] bg-amber-500 hover:bg-amber-600 text-white text-xs">
-                        <Link href="/owner/packages"><Package className="w-3 h-3 mr-1" />Get Package</Link>
+                        <Link href={PACKAGES_PATH}><Package className="w-3 h-3 mr-1" />Get Package</Link>
                       </Button>
                     ) : isGated(property) && packageFullFor(property) && !isListedActive(property) ? (
                       <Button asChild size="sm" variant="outline" className="flex-1 rounded-[5px] text-xs">
-                        <Link href="/owner/packages">Upgrade</Link>
+                        <Link href={PACKAGES_PATH}>Upgrade</Link>
                       </Button>
                     ) : property.documentsPendingVerification ? (
                       <Button
@@ -849,11 +851,11 @@ export default function OwnerPropertiesPage() {
                         </Link>
                         {isGated(property) && !hasPackageFor(property) ? (
                             <Button asChild size="sm" className="h-8 px-2 bg-amber-500 hover:bg-amber-600 text-white text-xs">
-                              <Link href="/owner/packages"><Package className="w-3 h-3 mr-1" />Get Package</Link>
+                              <Link href={PACKAGES_PATH}><Package className="w-3 h-3 mr-1" />Get Package</Link>
                             </Button>
                           ) : isGated(property) && packageFullFor(property) && !isListedActive(property) ? (
                             <Button asChild size="sm" variant="outline" className="h-8 px-2 text-xs">
-                              <Link href="/owner/packages">Upgrade</Link>
+                              <Link href={PACKAGES_PATH}>Upgrade</Link>
                             </Button>
                           ) : property.documentsPendingVerification ? (
                             <Button

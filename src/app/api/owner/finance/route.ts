@@ -129,10 +129,14 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
 
     // ── Package Subscriptions ──────────────────────────────────────────────────
     if (type === 'packages') {
+      const audienceParam = searchParams.get('audience');
       const where: any = {
         userId: user.userId,
         packageId: { not: null },
       };
+      if (audienceParam === 'AGENT' || audienceParam === 'OWNER') {
+        where.package = { package: { audience: audienceParam } };
+      }
       if (status) where.status = status;
       if (fromDate || toDate) {
         where.createdAt = {};

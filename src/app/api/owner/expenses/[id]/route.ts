@@ -39,7 +39,7 @@ export const PATCH = withAuth<{ id: string }>(
       );
     }
   },
-  { roles: ["OWNER" as any, "ADMIN" as any] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );
 
 /**
@@ -66,5 +66,5 @@ export const DELETE = withAuth<{ id: string }>(
       );
     }
   },
-  { roles: ["OWNER" as any, "ADMIN" as any] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );

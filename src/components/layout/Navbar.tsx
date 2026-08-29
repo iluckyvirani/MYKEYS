@@ -14,6 +14,7 @@ import {
   Building2,
   CheckCircle,
   Wrench,
+  Briefcase,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
@@ -63,6 +64,8 @@ export default function Navbar() {
   const [openMenu, setOpenMenu] = useState<MegaMenu>(null);
   const [showBecomeOwnerModal, setShowBecomeOwnerModal] = useState(false);
   const [becomingOwner, setBecomingOwner] = useState(false);
+  const [showBecomeAgentModal, setShowBecomeAgentModal] = useState(false);
+  const [becomingAgent, setBecomingAgent] = useState(false);
   const [showBecomeServiceModal, setShowBecomeServiceModal] = useState(false);
   const [becomingService, setBecomingService] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -242,7 +245,44 @@ export default function Navbar() {
     setShowBecomeServiceModal(false);
   };
 
+  const handleBecomeAgent = async () => {
+    setBecomingAgent(true);
+    setErrorMessage("");
+    try {
+      const response = await api.post("/users/become-agent");
+      const payload = response.data?.data;
+      if (payload?.accessToken) {
+        localStorage.setItem("accessToken", payload.accessToken);
+      }
+      if (payload?.refreshToken) {
+        localStorage.setItem("refreshToken", payload.refreshToken);
+      }
+      if (payload?.user) {
+        setStoredUser(payload.user);
+        setUser(payload.user);
+      }
+      setShowBecomeAgentModal(false);
+      setSuccessMessage(
+        payload?.alreadyAgent
+          ? "Agent role synced — opening your agent dashboard."
+          : "You are now an estate agent! You can start listing properties."
+      );
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        router.push("/agent/dashboard");
+      }, 1200);
+    } catch (error: any) {
+      setErrorMessage(
+        error.response?.data?.message || "Failed to become agent. Please try again."
+      );
+    } finally {
+      setBecomingAgent(false);
+    }
+  };
+
   const hasOwnerRole = userHasRole(user, "OWNER");
+  const hasAgentRole = userHasRole(user, "AGENT");
   const hasServiceRole = userHasRole(user, "SERVICE");
 
   const MEGA_BG = "#F2F4F5";
@@ -467,6 +507,35 @@ export default function Navbar() {
                           </button>
                         )}
 
+                        {hasAgentRole ? (
+                          <Link
+                            href="/agent/dashboard"
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-100"
+                            onClick={() => setOpenMenu(null)}
+                          >
+                            <Briefcase className="w-4 h-4 text-amber-600" />
+                            <div>
+                              <p className="font-medium text-slate-900">Estate Agent</p>
+                              <p className="text-xs text-gray-500">Manage agency listings</p>
+                            </div>
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowBecomeAgentModal(true);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-amber-50 text-amber-800 border-b border-gray-100"
+                          >
+                            <Briefcase className="w-4 h-4" />
+                            <div>
+                              <p className="font-medium">Become Estate Agent</p>
+                              <p className="text-xs">List properties as an agent</p>
+                            </div>
+                          </button>
+                        )}
+
                         {hasServiceRole ? (
                           <Link
                             href="/service/dashboard"
@@ -648,6 +717,53 @@ export default function Navbar() {
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
                 >
                   {becomingOwner ? "Processing..." : "Continue"}
+                </Button>
+              </div>
+              {errorMessage && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-[5px]">
+                  {errorMessage}
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Become Agent Modal */}
+      <AnimatePresence>
+        {showBecomeAgentModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBecomeAgentModal(false)}
+              className="fixed inset-0 bg-black/50 z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 max-w-sm w-full mx-4"
+            >
+              <h3 className="text-xl font-bold mb-2">Become an Estate Agent</h3>
+              <p className="text-gray-600 mb-6">
+                List properties as an agency with direct phone contact on every listing.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowBecomeAgentModal(false)}
+                  variant="outline"
+                  className="flex-1 rounded-[5px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBecomeAgent}
+                  disabled={becomingAgent}
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white rounded-[5px]"
+                >
+                  {becomingAgent ? "Processing..." : "Continue"}
                 </Button>
               </div>
               {errorMessage && (
@@ -870,6 +986,26 @@ export default function Navbar() {
                               }}
                             >
                               Become Seller/Landlord
+                            </button>
+                          )}
+                          {hasAgentRole ? (
+                            <Link
+                              href="/agent/dashboard"
+                              className="block py-3 px-4 rounded-lg text-slate-800 hover:bg-gray-50"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              Estate Agent
+                            </Link>
+                          ) : (
+                            <button
+                              type="button"
+                              className="w-full text-left py-3 px-4 rounded-lg text-amber-800 hover:bg-amber-50"
+                              onClick={() => {
+                                setShowBecomeAgentModal(true);
+                                setMobileMenuOpen(false);
+                              }}
+                            >
+                              Become Estate Agent
                             </button>
                           )}
                           {hasServiceRole ? (

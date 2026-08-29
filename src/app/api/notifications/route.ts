@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { notificationService } from '@/lib/notifications/notificationService';
 import { getUserFromToken } from '@/lib/auth';
 import { NotificationFilter } from '@/types/notification';
+import { isDatabaseConnectionError } from '@/lib/prisma';
 
 /**
  * GET /api/notifications
@@ -33,6 +34,14 @@ export async function GET(req: NextRequest) {
     const result = await notificationService.getAll(filters);
     return NextResponse.json(result);
   } catch (err: any) {
+    if (isDatabaseConnectionError(err)) {
+      console.warn('GET /api/notifications: database unreachable, returning empty list');
+      const limit = parseInt(new URL(req.url).searchParams.get('limit') || '20');
+      return NextResponse.json({
+        notifications: [],
+        pagination: { total: 0, page: 1, limit, totalPages: 0 },
+      });
+    }
     console.error('GET /api/notifications error:', err);
     return NextResponse.json(
       { error: 'Failed to fetch notifications' },

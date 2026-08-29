@@ -10,10 +10,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Notifications from "@/components/dashboard/UserDashboard/Notifications";
 
+import type { DashboardPanelRole } from "@/lib/dashboard/DashboardContext";
+
 interface HeaderProps {
-  role: "user" | "owner" | "service" | "admin";
+  role: DashboardPanelRole | "admin";
   onMenuClick: () => void;
-  onRoleChange: (role: "user" | "owner" | "service") => void;
+  onRoleChange: (role: DashboardPanelRole) => void;
 }
 
 interface Notification {
@@ -82,8 +84,8 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
       if (lastFetch && Date.now() - parseInt(lastFetch) < NOTIF_CACHE_TTL) {
         return;
       }
-      sessionStorage.setItem(NOTIF_CACHE_KEY, String(Date.now()));
       const response = await api.get("/notifications?limit=100");
+      sessionStorage.setItem(NOTIF_CACHE_KEY, String(Date.now()));
       const notifications: Notification[] =
         response.data?.notifications || response.data?.data?.items || [];
       if (notifications.length > 0) {

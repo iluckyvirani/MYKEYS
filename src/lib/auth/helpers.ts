@@ -58,7 +58,7 @@ export async function toUserDTO(user: User): Promise<UserDTO> {
 export function extractUserRolesFromAssignments(
   roleAssignments: { role: string }[]
 ): string[] {
-  const ROLE_ORDER = ["USER", "OWNER", "SERVICE", "ADMIN"] as const;
+  const ROLE_ORDER = ["USER", "OWNER", "AGENT", "SERVICE", "ADMIN"] as const;
   const roleSet = new Set(roleAssignments.map((r) => r.role));
   const ordered = ROLE_ORDER.filter((role) => roleSet.has(role));
   return ordered.length > 0 ? [...ordered] : ["USER"];
@@ -72,10 +72,36 @@ export function getUserFullName(user: User | UserDTO): string {
 }
 
 /**
+ * Pick JWT primary role from role assignments (highest privilege wins).
+ */
+export function primaryRoleFromAssignments(
+  roles: { role: string }[] | string[] | undefined
+): string {
+  const roleSet = new Set(
+    (roles ?? []).map((r) => (typeof r === "string" ? r : r.role))
+  );
+  if (roleSet.has("ADMIN")) return "ADMIN";
+  if (roleSet.has("OWNER")) return "OWNER";
+  if (roleSet.has("AGENT")) return "AGENT";
+  if (roleSet.has("SERVICE")) return "SERVICE";
+  return "USER";
+}
+
+/**
  * Check if user can access owner features
  */
 export function canAccessOwnerFeatures(user: UserDTO): boolean {
-  return user.roles.some((r) => r === "OWNER") || user.roles.some((r) => r === "ADMIN");
+  return (
+    user.roles.some((r) => r === "OWNER" || r === "AGENT") ||
+    user.roles.some((r) => r === "ADMIN")
+  );
+}
+
+/**
+ * Check if user can access agent features
+ */
+export function canAccessAgentFeatures(user: UserDTO): boolean {
+  return user.roles.some((r) => r === "AGENT") || user.roles.some((r) => r === "ADMIN");
 }
 
 /**
@@ -90,6 +116,13 @@ export function isAdmin(user: UserDTO): boolean {
  */
 export function hasOwnerRole(user: UserDTO): boolean {
   return user.roles.some((r) => r === "OWNER");
+}
+
+/**
+ * Check if user has agent role
+ */
+export function hasAgentRole(user: UserDTO): boolean {
+  return user.roles.some((r) => r === "AGENT");
 }
 
 /**

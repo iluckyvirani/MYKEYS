@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import SharePropertyButton from "@/components/property/SharePropertyButton";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
 
 
@@ -59,6 +60,7 @@ const getOccupancyColor = (percentage: number) => {
 };
 
 export default function PropertyList() {
+  const { basePath } = useDashboardBase();
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -145,7 +147,7 @@ export default function PropertyList() {
               View Public Listings
             </Button>
           </Link> */}
-          <Link href="/owner/dashboard/properties/add">
+          <Link href={`${basePath}/properties/add`}>
             <Button className="bg-green-600 hover:bg-green-700">
               <Building className="w-4 h-4 mr-2" />
               Add New Property
@@ -187,7 +189,7 @@ export default function PropertyList() {
           <p className="text-gray-600 mb-4">
             Start by adding your first property to the platform
           </p>
-          <Link href="/owner/dashboard/properties/add">
+          <Link href={`${basePath}/properties/add`}>
             <Button className="bg-green-600 hover:bg-green-700">
               <Building className="w-4 h-4 mr-2" />
               Add Your First Property
@@ -302,12 +304,12 @@ export default function PropertyList() {
                         title={property.title}
                         variant="icon"
                       />
-                      <Link href={`/owner/dashboard/properties/${property.id}`}>
+                      <Link href={`${basePath}/properties/${property.id}`}>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Eye className="w-4 h-4" />
                         </Button>
                       </Link>
-                      <Link href={`/owner/dashboard/properties/${property.id}/edit`}>
+                      <Link href={`${basePath}/properties/${property.id}/edit`}>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Edit className="w-4 h-4" />
                         </Button>

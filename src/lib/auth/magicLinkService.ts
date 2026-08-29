@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { emailService } from "@/lib/email/emailService";
 import { generateTokenPair } from "@/lib/auth/jwt";
-import { toUserDTO } from "@/lib/auth/helpers";
+import { toUserDTO, primaryRoleFromAssignments } from "@/lib/auth/helpers";
 import { hashOtp, maskEmail } from "@/lib/auth/otp";
 import { getAppBaseUrl } from "@/lib/email/emailLayout";
 
@@ -11,16 +11,6 @@ const MAGIC_LINK_COOLDOWN_SECONDS = 60;
 
 export function generateMagicLinkToken(): string {
   return crypto.randomBytes(32).toString("hex");
-}
-
-function primaryRoleFromAssignments(
-  roles: { role: string }[] | undefined
-): string {
-  if (!roles?.length) return "USER";
-  if (roles.some((r) => r.role === "ADMIN")) return "ADMIN";
-  if (roles.some((r) => r.role === "OWNER")) return "OWNER";
-  if (roles.some((r) => r.role === "SERVICE")) return "SERVICE";
-  return "USER";
 }
 
 export function detectDeviceFromUserAgent(ua: string | null | undefined): string {

@@ -1,14 +1,21 @@
+import { NextRequest } from 'next/server';
 import { packageService } from '@/lib/packages/packageService';
 import { successResponse, errorResponse } from '@/lib/response';
 import { ErrorCode } from '@/lib/auth/errors';
+import { PackageAudience } from '@/types/package';
 
 /**
- * GET /api/packages
- * Public list of active packages (for owner purchase page)
+ * GET /api/packages?audience=OWNER|AGENT
+ * Public list of active packages (for seller purchase page)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const packages = await packageService.getAll(true); // activeOnly
+    const audienceParam = request.nextUrl.searchParams.get('audience');
+    const audience =
+      audienceParam === 'AGENT' || audienceParam === 'OWNER'
+        ? (audienceParam as PackageAudience)
+        : 'OWNER';
+    const packages = await packageService.getAll(true, undefined, audience);
     return successResponse(packages, 'Packages retrieved successfully', 200);
   } catch (err: any) {
     console.error('Error fetching packages:', err);

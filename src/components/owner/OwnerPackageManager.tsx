@@ -10,6 +10,7 @@ import { api } from "@/lib/api";
 import { OwnerActivePackages, OwnerPackageWithUsage, PackageCategory } from "@/types/package";
 import PackageBrowser from "./PackageBrowser";
 import PackagePaymentModal from "./PackagePaymentModal";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
 interface ActivePackageCardProps {
   sub: OwnerPackageWithUsage;
@@ -107,6 +108,8 @@ interface PendingPayment {
 }
 
 export default function OwnerPackageManager() {
+  const { role } = useDashboardBase();
+  const audience = role === "agent" ? "AGENT" : "OWNER";
   const [packages, setPackages] = useState<OwnerActivePackages>({ SALE: null, RENT: null });
   const [loading, setLoading] = useState(true);
   const [showBrowser, setShowBrowser] = useState(false);
@@ -117,7 +120,7 @@ export default function OwnerPackageManager() {
 
   const fetchCurrent = async () => {
     try {
-      const res = await api.get("/owner/packages");
+      const res = await api.get(`/owner/packages?audience=${audience}`);
       const data = res.data?.data;
       setPackages({
         SALE: data?.SALE ?? null,

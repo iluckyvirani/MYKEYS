@@ -62,5 +62,5 @@ export const PATCH = withAuth<{ id: string; rid: string }>(
       return NextResponse.json({ success: false, message: 'Internal server error', data: null }, { status: 500 });
     }
   },
-  { roles: [UserRole.OWNER, UserRole.ADMIN] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );

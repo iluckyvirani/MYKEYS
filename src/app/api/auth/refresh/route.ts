@@ -5,6 +5,7 @@ import { refreshTokenSchema, validateSchema } from "@/lib/auth/validation";
 import { verifyRefreshToken, generateTokenPair } from "@/lib/auth/jwt";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
 import { RefreshTokenRequest, RefreshTokenResponse } from "@/types/auth";
+import { primaryRoleFromAssignments } from "@/lib/auth/helpers";
 
 /**
  * POST /api/auth/refresh
@@ -63,18 +64,7 @@ export async function POST(request: NextRequest) {
       throw createApiError(ErrorCode.USER_NOT_FOUND, "User not found");
     }
 
-    // Get primary role - select highest privilege role
-    // Priority: ADMIN > OWNER > USER
-    let primaryRole = "USER";
-    if (user.roles && user.roles.length > 0) {
-      if (user.roles.some((r) => r.role === "ADMIN")) {
-        primaryRole = "ADMIN";
-      } else if (user.roles.some((r) => r.role === "OWNER")) {
-        primaryRole = "OWNER";
-      } else {
-        primaryRole = "USER";
-      }
-    }
+    const primaryRole = primaryRoleFromAssignments(user.roles);
 
     // Generate new token pair with current role
     const { accessToken, refreshToken: newRefreshToken } =

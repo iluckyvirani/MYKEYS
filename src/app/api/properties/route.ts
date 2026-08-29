@@ -570,5 +570,5 @@ export const POST = withAuth(
       );
     }
   },
-  { roles: ["OWNER" as any, "ADMIN" as any] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );

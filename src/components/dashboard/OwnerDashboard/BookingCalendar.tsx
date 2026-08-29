@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
 import { api } from "@/lib/api";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
 interface Booking {
   id: string;
@@ -38,6 +39,7 @@ const getStatusConfig = (status: string) => {
 
 export default function BookingCalendar() {
   const router = useRouter();
+  const { basePath } = useDashboardBase();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -309,14 +311,14 @@ export default function BookingCalendar() {
                         size="sm" 
                         variant="outline" 
                         className="flex-1"
-                        onClick={() => router.push(`/owner/dashboard/bookings/${booking.id}`)}
+                        onClick={() => router.push(`${basePath}/bookings/${booking.id}`)}
                       >
                         View Details
                       </Button>
                       {/* <Button 
                         size="sm" 
                         className="flex-1"
-                        onClick={() => router.push(`/owner/dashboard/bookings/${booking.id}`)}
+                        onClick={() => router.push(`${basePath}/bookings/${booking.id}`)}
                       >
                         {isCheckIn ? "Check-in" : isCheckOut ? "Check-out" : "Manage"}
                       </Button> */}

@@ -4,7 +4,7 @@ import { successResponse, errorResponse } from "@/lib/response";
 import { loginSchema, validateSchema } from "@/lib/auth/validation";
 import { verifyPassword } from "@/lib/auth/password";
 import { generateTokenPair } from "@/lib/auth/jwt";
-import { toUserDTO } from "@/lib/auth/helpers";
+import { toUserDTO, primaryRoleFromAssignments } from "@/lib/auth/helpers";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
 import { LoginRequest, LoginResponse } from "@/types/auth";
 // import { UserStatus } from "@prisma/client";
@@ -83,18 +83,7 @@ export async function POST(request: NextRequest) {
       data: { lastLoginAt: new Date() },
     });
 
-    // Get primary role - select highest privilege role
-    // Priority: ADMIN > OWNER > USER
-    let primaryRole = "USER";
-    if (user.roles && user.roles.length > 0) {
-      if (user.roles.some((r) => r.role === "ADMIN")) {
-        primaryRole = "ADMIN";
-      } else if (user.roles.some((r) => r.role === "OWNER")) {
-        primaryRole = "OWNER";
-      } else {
-        primaryRole = "USER";
-      }
-    }
+    const primaryRole = primaryRoleFromAssignments(user.roles);
 
     // Generate tokens
     const { accessToken, refreshToken } = await generateTokenPair(

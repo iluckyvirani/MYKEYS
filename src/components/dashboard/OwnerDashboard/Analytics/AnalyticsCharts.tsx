@@ -5,6 +5,7 @@ import { Zap, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { AnalyticsPeriod, OwnerAnalyticsData } from "@/types/ownerAnalytics";
 import Link from "next/link";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
 interface AnalyticsChartsProps {
   data: OwnerAnalyticsData;
@@ -28,6 +29,7 @@ export default function AnalyticsCharts({
   onPeriodChange,
   loading,
 }: AnalyticsChartsProps) {
+  const { basePath } = useDashboardBase();
   const [activeChart, setActiveChart] = useState<"occupancy" | "revenue" | "bookings" | "earnings">("revenue");
 
   if (loading) {
@@ -234,7 +236,7 @@ export default function AnalyticsCharts({
             </ul>
           )}
           <Link
-            href="/owner/dashboard/bids"
+            href={`${basePath}/bids`}
             className="inline-block mt-3 text-sm text-green-600 hover:text-green-700 font-medium"
           >
             Manage boosts →
@@ -277,7 +279,7 @@ export default function AnalyticsCharts({
             <p className="text-sm text-gray-500">No active package subscription.</p>
           )}
           <Link
-            href="/owner/dashboard/packages"
+            href={`${basePath}/packages`}
             className="inline-block mt-3 text-sm text-green-600 hover:text-green-700 font-medium"
           >
             View packages →

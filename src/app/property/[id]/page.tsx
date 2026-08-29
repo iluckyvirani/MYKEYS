@@ -84,6 +84,7 @@ const emptyPropertyData = {
     logoUrl: "",
     description: "",
     sellerType: "" as string,
+    isAgentLister: false,
   },
   latitude: null as number | null,
   longitude: null as number | null,
@@ -175,6 +176,10 @@ export default function PropertyDetailsPage() {
             .map((a: any) => a.amenity?.name || a.name)
             .filter(Boolean);
 
+          const isAgentLister = Boolean(
+            owner?.isAgentLister || owner?.roles?.includes("AGENT")
+          );
+
           setProperty({
             ...emptyPropertyData,
             id: apiData.id,
@@ -251,10 +256,11 @@ export default function PropertyDetailsPage() {
               logoUrl: resolveListingAgentLogo(owner) || "",
               description: owner?.website
                 ? `Visit ${owner.website}`
-                : owner?.listingSellerType === "AGENT"
+                : isAgentLister
                 ? `${agentName} is marketing this property on MYKEYS.`
                 : "Listed by the property owner on MYKEYS.",
-              sellerType: owner?.listingSellerType || "",
+              sellerType: isAgentLister ? "AGENT" : "",
+              isAgentLister,
             },
           });
 
@@ -719,7 +725,7 @@ export default function PropertyDetailsPage() {
                         {property.agent.address}
                       </p>
                     )}
-                    {property.agent.sellerType === "AGENT" && (
+                    {property.agent.isAgentLister && (
                       <a
                         href={`/buy/results?location=${encodeURIComponent(
                           property.city || property.state || "London"
@@ -745,13 +751,18 @@ export default function PropertyDetailsPage() {
 
                 {!isShortStay && (
                   <div className="space-y-2 pt-2">
+                    {property.agent.phone && (
+                      <p className="text-[14px] font-semibold text-[#0f172a] text-center">
+                        {property.agent.phone}
+                      </p>
+                    )}
                     {property.agent.phone ? (
                       <a
                         href={`tel:${property.agent.phone}`}
                         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-[15px] py-3 px-4 rounded-[6px] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                       >
                         <Phone className="w-4 h-4 stroke-[2.5]" />
-                        Call agent
+                        Call {property.agent.isAgentLister ? "agent" : "seller"}
                       </a>
                     ) : null}
 

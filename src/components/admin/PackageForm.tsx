@@ -15,21 +15,57 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
-import { PackageInput, DurationUnit, PackageCategory } from "@/types/package";
+import { PackageInput, DurationUnit, PackageCategory, PackageAudience } from "@/types/package";
 
 interface PackageFormProps {
   initialData?: Partial<PackageInput & { id: string }>;
   mode: "create" | "edit";
 }
 
-const FEATURE_FLAGS: { key: keyof PackageInput; label: string; description: string }[] = [
-  { key: "showOwnerName",        label: "Show Owner Name",           description: "Owner full name shown on listing" },
-  { key: "showOwnerPhone",       label: "Show Owner Phone",          description: "Owner phone number shown on listing" },
-  { key: "directInquiryToOwner", label: "Direct Inquiry to Owner",   description: "Inquiries go directly to owner" },
-  { key: "adminCCOnInquiry",     label: "Admin CC on Inquiry",       description: "Admin also receives every inquiry" },
-  { key: "fullAdminSupport",     label: "Full Admin Support",        description: "Dedicated admin handling" },
-  { key: "docExpiryAlert",       label: "Document Expiry Alert",     description: "Notify owner when property docs near expiry" },
-];
+function getFeatureFlags(audience: PackageAudience) {
+  const who = audience === "AGENT" ? "Agent" : "Owner";
+  const whoLower = audience === "AGENT" ? "agent" : "owner";
+
+  return [
+    {
+      key: "showOwnerName" as const,
+      label: `Show ${who} Name`,
+      description: `${who} full name shown on listing`,
+    },
+    {
+      key: "showOwnerPhone" as const,
+      label: `Show ${who} Phone`,
+      description:
+        audience === "AGENT"
+          ? "Agent phone is always visible on listings (recommended to leave on)"
+          : `${who} phone number shown on listing`,
+    },
+    {
+      key: "directInquiryToOwner" as const,
+      label: `Direct Inquiry to ${who}`,
+      description: `Inquiries go directly to ${whoLower}`,
+    },
+    {
+      key: "adminCCOnInquiry" as const,
+      label: "Admin CC on Inquiry",
+      description: "Admin also receives every inquiry",
+    },
+    {
+      key: "fullAdminSupport" as const,
+      label: "Full Admin Support",
+      description: "Dedicated admin handling",
+    },
+    {
+      key: "docExpiryAlert" as const,
+      label: "Document Expiry Alert",
+      description: `Notify ${whoLower} when property docs near expiry`,
+    },
+  ];
+}
+
+function getAudienceLabel(audience: PackageAudience) {
+  return audience === "AGENT" ? "Agents" : "Owners";
+}
 
 export default function PackageForm({ initialData, mode }: PackageFormProps) {
   const router = useRouter();
@@ -44,6 +80,7 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
     durationValue: initialData?.durationValue ?? 1,
     durationUnit: (initialData?.durationUnit as DurationUnit) ?? "months",
     category: (initialData?.category as PackageCategory) ?? "RENT",
+    audience: (initialData?.audience as PackageAudience) ?? "OWNER",
     propertyLimit: initialData?.propertyLimit ?? 1,
     featuredLimit: initialData?.featuredLimit ?? 0,
     isActive: initialData?.isActive ?? true,
@@ -54,6 +91,10 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
     fullAdminSupport: initialData?.fullAdminSupport ?? false,
     docExpiryAlert: initialData?.docExpiryAlert ?? false,
   });
+
+  const audience = form.audience ?? "OWNER";
+  const featureFlags = getFeatureFlags(audience);
+  const audiencePlural = getAudienceLabel(audience);
 
   const set = (field: keyof PackageInput, value: any) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -118,8 +159,23 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500">
-              Owners need a Sale package to go live with Buy properties, and a Rent package for Long Rent. Short stay does not need a package.
+              {audiencePlural} need a Sale package to go live with Buy properties, and a Rent package for Long Rent. Short stay does not need a package.
             </p>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="audience" className="text-sm font-medium text-gray-700">Package for *</Label>
+            <Select
+              value={form.audience ?? "OWNER"}
+              onValueChange={(v) => set("audience", v as PackageAudience)}
+            >
+              <SelectTrigger id="audience" className="bg-gray-50 border-gray-200">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="OWNER">Owner (landlord / seller)</SelectItem>
+                <SelectItem value="AGENT">Agent (estate agent)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="shortDescription" className="text-sm font-medium text-gray-700">Short Description</Label>
@@ -237,7 +293,7 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Feature Flags</h2>
         </div>
         <div className="divide-y divide-gray-100">
-          {FEATURE_FLAGS.map(({ key, label, description }) => (
+          {featureFlags.map(({ key, label, description }) => (
             <div key={key} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
               <div>
                 <p className="text-sm font-medium text-gray-900">{label}</p>
@@ -256,7 +312,7 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex items-center justify-between px-6 py-4">
         <div>
           <p className="font-medium text-gray-900">Active</p>
-          <p className="text-sm text-gray-500">Owners can see and purchase this package</p>
+          <p className="text-sm text-gray-500">{audiencePlural} can see and purchase this package</p>
         </div>
         <Switch
           checked={!!form.isActive}

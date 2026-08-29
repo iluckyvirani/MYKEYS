@@ -25,6 +25,7 @@ enum FaqStatus {
 enum RoleType {
   USER
   OWNER
+  AGENT
   SERVICE
   ADMIN
 }
@@ -136,6 +137,11 @@ enum SubscriptionStatus {
 enum PackageCategory {
   SALE
   RENT
+}
+
+enum PackageAudience {
+  OWNER
+  AGENT
 }
 
 // ==================== SERVICE ENUMS ====================
@@ -834,6 +840,9 @@ model Package {
 
   /// SALE = Buy listings · RENT = Long-let rentals (short stay does not require a package)
   category PackageCategory @default(RENT)
+
+  /// OWNER = landlord packages · AGENT = estate agent packages
+  audience PackageAudience @default(OWNER)
 
   // Duration (dynamic — admin sets freely)
   durationValue Int    @default(1)     // e.g. 10, 1, 6

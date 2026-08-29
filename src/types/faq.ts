@@ -1,6 +1,7 @@
 export type FaqCategoryType =
   | "LISTING"
   | "OWNER"
+  | "AGENT"
   | "USER"
   | "SHORT_RENT"
   | "LONG_RENT"

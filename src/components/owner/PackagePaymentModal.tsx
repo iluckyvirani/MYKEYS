@@ -24,6 +24,7 @@ import {
   buildStripeElementsOptions,
   stripePaymentElementOptions,
 } from "@/lib/stripe/elementsOptions";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ interface PaymentFormProps {
 function PaymentForm({ paymentId, packageName, amount, onSuccess, onError }: PaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
+  const { basePath } = useDashboardBase();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [elementsReady, setElementsReady] = useState(false);
@@ -64,8 +66,8 @@ function PaymentForm({ paymentId, packageName, amount, onSuccess, onError }: Pay
     try {
       const returnUrl =
         typeof window !== "undefined"
-          ? `${window.location.origin}/owner/dashboard/packages?payment=return`
-          : "/owner/dashboard/packages?payment=return";
+          ? `${window.location.origin}${basePath}/packages?payment=return`
+          : `${basePath}/packages?payment=return`;
 
       const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
         elements,
@@ -167,6 +169,7 @@ export default function PackagePaymentModal({
   onError,
 }: PackagePaymentModalProps) {
   const router = useRouter();
+  const { basePath } = useDashboardBase();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -270,11 +273,11 @@ export default function PackagePaymentModal({
             <Button
               onClick={() => {
                 handleClose();
-                router.push("/owner/dashboard");
+                router.push(basePath);
               }}
               className="w-full rounded-lg bg-green-600 hover:bg-green-700"
             >
-              Go to Owner Dashboard
+              Go to Dashboard
             </Button>
           </div>
         )}

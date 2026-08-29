@@ -18,6 +18,7 @@ export const FAQ_CATEGORIES: {
   { id: "GENERAL", label: "General", description: "Contact page and all topics" },
   { id: "LISTING", label: "Listing", description: "How listing works page" },
   { id: "OWNER", label: "Owners", description: "Home page and owner dashboard" },
+  { id: "AGENT", label: "Agents", description: "Agent dashboard" },
   { id: "USER", label: "Guests & Users", description: "Home page and user dashboard" },
   { id: "SHORT_RENT", label: "Short Rent", description: "Short rent page" },
   { id: "LONG_RENT", label: "Long Rent", description: "Long rent page" },
@@ -39,6 +40,8 @@ export function getFaqCategoryIcon(category: FaqCategoryType) {
       return TrendingUp;
     case "OWNER":
       return Key;
+    case "AGENT":
+      return Building2;
     case "USER":
       return User;
     case "SERVICE":

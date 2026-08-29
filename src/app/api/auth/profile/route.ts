@@ -98,9 +98,6 @@ export async function PATCH(request: NextRequest) {
         ...(validatedData.taxId !== undefined && {
           taxId: validatedData.taxId || null,
         }),
-        ...(validatedData.listingSellerType !== undefined && {
-          listingSellerType: validatedData.listingSellerType || null,
-        }),
         ...(validatedData.agentLogo !== undefined && {
           agentLogo: validatedData.agentLogo || null,
         }),

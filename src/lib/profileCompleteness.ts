@@ -1,4 +1,4 @@
-export type ProfileRole = "user" | "owner" | "service";
+export type ProfileRole = "user" | "owner" | "agent" | "service";
 
 export type ProfileCompletionItem = {
   key: string;
@@ -66,7 +66,6 @@ export function getUserProfileCompletion(user: Record<string, any> | null | unde
 /** OWNER profile completeness from /auth/me */
 export function getOwnerProfileCompletion(user: Record<string, any> | null | undefined) {
   const u = user || {};
-  const isAgent = String(u.listingSellerType || "").toUpperCase() === "AGENT";
 
   const items: ProfileCompletionItem[] = [
     { key: "firstName", label: "First name", filled: filled(u.firstName) },
@@ -75,35 +74,34 @@ export function getOwnerProfileCompletion(user: Record<string, any> | null | und
     { key: "avatar", label: "Profile photo", filled: filled(u.avatar) },
     { key: "city", label: "City", filled: filled(u.city) },
     {
-      key: "listingSellerType",
-      label: "Listing type (Agent / Owner)",
-      filled: filled(u.listingSellerType),
-    },
-  ];
-
-  if (isAgent) {
-    items.push(
-      { key: "companyName", label: "Agency / company name", filled: filled(u.companyName) },
-      { key: "agentLogo", label: "Agency logo", filled: filled(u.agentLogo) }
-    );
-  } else {
-    items.push({
       key: "companyName",
       label: "Company name (optional)",
-      filled: filled(u.companyName) || filled(u.listingSellerType),
-    });
-  }
-
-  items.push(
+      filled: filled(u.companyName),
+    },
     { key: "address", label: "Address", filled: filled(u.address) },
     {
       key: "location",
       label: "State / country / postcode",
       filled: filled(u.state) && filled(u.country) && filled(u.zipCode),
-    }
-  );
+    },
+  ];
 
   return score(items);
+}
+
+/** AGENT profile completeness from /auth/me */
+export function getAgentProfileCompletion(user: Record<string, any> | null | undefined) {
+  const u = user || {};
+
+  return score([
+    { key: "firstName", label: "First name", filled: filled(u.firstName) },
+    { key: "lastName", label: "Last name", filled: filled(u.lastName) },
+    { key: "phone", label: "Phone number (shown on listings)", filled: filled(u.phone) },
+    { key: "companyName", label: "Agency / company name", filled: filled(u.companyName) },
+    { key: "agentLogo", label: "Agency logo", filled: filled(u.agentLogo) },
+    { key: "city", label: "City", filled: filled(u.city) },
+    { key: "avatar", label: "Profile photo", filled: filled(u.avatar) },
+  ]);
 }
 
 /** SERVICE profile completeness from /service/profile (+ optional auth user) */
@@ -142,6 +140,7 @@ export function getServiceProfileCompletion(
 
 export function getProfileHref(role: ProfileRole): string {
   if (role === "owner") return "/owner/dashboard/profile";
+  if (role === "agent") return "/agent/dashboard/profile";
   if (role === "service") return "/service/dashboard/profile";
   return "/user/dashboard/profile";
 }

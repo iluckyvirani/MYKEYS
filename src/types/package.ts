@@ -4,6 +4,9 @@ export type DurationUnit = 'days' | 'months' | 'years';
 /** SALE = Buy listings · RENT = Long-let rentals (short stay needs no package) */
 export type PackageCategory = 'SALE' | 'RENT';
 
+/** OWNER = landlord packages · AGENT = estate agent packages */
+export type PackageAudience = 'OWNER' | 'AGENT';
+
 export type PackageInput = {
   name: string;
   description?: string;
@@ -13,6 +16,7 @@ export type PackageInput = {
   durationUnit: DurationUnit; // "days" | "months" | "years"
   isActive?: boolean;
   category?: PackageCategory;
+  audience?: PackageAudience;
 
   // Core features
   propertyLimit?: number; // 0 = unlimited
@@ -30,6 +34,7 @@ export type PackageInput = {
 export type PackageRecord = PackageInput & {
   id: string;
   category: PackageCategory;
+  audience: PackageAudience;
   createdAt: string;
   updatedAt: string;
 };

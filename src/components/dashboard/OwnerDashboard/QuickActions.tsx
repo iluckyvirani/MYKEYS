@@ -1,70 +1,73 @@
 // components/dashboard/OwnerDashboard/QuickActions.tsx
 "use client";
 
-import { PlusCircle, Calendar, MessageSquare, BarChart3, DollarSign, Settings, Users, Megaphone } from "lucide-react";
+import { PlusCircle, Calendar, MessageSquare, BarChart3, DollarSign, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-
-const quickActions = [
-  {
-    title: "Add New Property",
-    description: "List a new property for rent or sale",
-    icon: PlusCircle,
-    color: "bg-green-500",
-    href: "/owner/dashboard/properties/add",
-  },
-  {
-    title: "Manage Bookings",
-    description: "View and manage all bookings",
-    icon: Calendar,
-    color: "bg-blue-500",
-    href: "/owner/dashboard/bookings",
-  },
-  {
-    title: "Respond to Inquiries",
-    description: "Reply to pending inquiries",
-    icon: MessageSquare,
-    color: "bg-orange-500",
-    href: "/owner/dashboard/inquiries",
-  },
-  {
-    title: "View Analytics",
-    description: "Check performance metrics",
-    icon: BarChart3,
-    color: "bg-purple-500",
-    href: "/owner/dashboard/analytics",
-  },
-  {
-    title: "Manage Payouts",
-    description: "Withdraw earnings",
-    icon: DollarSign,
-    color: "bg-emerald-500",
-    href: "/owner/dashboard/finance",
-  },
-  {
-    title: "Run Ads",
-    description: "Boost property visibility",
-    icon: Megaphone,
-    color: "bg-pink-500",
-    href: "/owner/dashboard/ads",
-  },
-  {
-    title: "View Reports",
-    description: "Access detailed reports",
-    icon: BarChart3,
-    color: "bg-indigo-500",
-    href: "/owner/dashboard/reports",
-  },
-  {
-    title: "Manage Reviews",
-    description: "Respond to reviews",
-    icon: MessageSquare,
-    color: "bg-yellow-500",
-    href: "/owner/dashboard/reviews",
-  },
-];
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
 export default function QuickActions() {
+  const { basePath } = useDashboardBase();
+
+  const quickActions = [
+    {
+      title: "Add New Property",
+      description: "List a new property for rent or sale",
+      icon: PlusCircle,
+      color: "bg-green-500",
+      href: `${basePath}/properties/add`,
+    },
+    {
+      title: "Manage Bookings",
+      description: "View and manage all bookings",
+      icon: Calendar,
+      color: "bg-blue-500",
+      href: `${basePath}/bookings`,
+    },
+    {
+      title: "Respond to Inquiries",
+      description: "Reply to pending inquiries",
+      icon: MessageSquare,
+      color: "bg-orange-500",
+      href: `${basePath}/inquiries`,
+    },
+    {
+      title: "View Analytics",
+      description: "Check performance metrics",
+      icon: BarChart3,
+      color: "bg-purple-500",
+      href: `${basePath}/analytics`,
+    },
+    {
+      title: "Manage Payouts",
+      description: "Withdraw earnings",
+      icon: DollarSign,
+      color: "bg-emerald-500",
+      href: `${basePath}/finance`,
+    },
+    {
+      title: "Run Ads",
+      description: "Boost property visibility",
+      icon: Megaphone,
+      color: "bg-pink-500",
+      href: `${basePath}/ads`,
+    },
+    {
+      title: "View Reports",
+      description: "Access detailed reports",
+      icon: BarChart3,
+      color: "bg-indigo-500",
+      href: `${basePath}/reports`,
+    },
+    {
+      title: "Manage Reviews",
+      description: "Respond to reviews",
+      icon: MessageSquare,
+      color: "bg-yellow-500",
+      href: `${basePath}/reviews`,
+    },
+  ];
+
   return (
     <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-[5px] p-5 border border-blue-100">
       <div className="flex items-center justify-between mb-6">
@@ -74,9 +77,6 @@ export default function QuickActions() {
             Quickly access frequently used features
           </p>
         </div>
-        {/* <Button variant="outline" size="sm">
-          Customize
-        </Button> */}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">

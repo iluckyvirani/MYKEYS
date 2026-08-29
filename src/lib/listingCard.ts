@@ -58,12 +58,14 @@ export type ListingOwnerLike = {
   phone?: string | null;
   avatar?: string | null;
   agentLogo?: string | null;
-  listingSellerType?: string | null;
+  isAgentLister?: boolean;
+  roles?: string[] | null;
 };
 
 export function formatListingAgentName(owner?: ListingOwnerLike | null): string {
   if (!owner) return "Private Owner";
-  const isAgent = owner.listingSellerType === "AGENT";
+  const isAgent =
+    owner.isAgentLister || owner.roles?.includes("AGENT");
   const fullName = [owner.firstName, owner.lastName].filter(Boolean).join(" ").trim();
   const name = isAgent
     ? owner.companyName?.trim() || fullName || "Estate Agent"
@@ -76,7 +78,9 @@ export function resolveListingAgentLogo(
   owner?: ListingOwnerLike | null
 ): string | undefined {
   if (!owner) return undefined;
-  if (owner.listingSellerType === "AGENT") {
+  const isAgent =
+    owner.isAgentLister || owner.roles?.includes("AGENT");
+  if (isAgent) {
     return owner.agentLogo || owner.avatar || undefined;
   }
   return owner.agentLogo || owner.avatar || undefined;

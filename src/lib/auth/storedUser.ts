@@ -37,6 +37,7 @@ export function getPrimaryDashboardPath(user: UserDTO | null | undefined): strin
   const roles = user?.roles ?? [];
   if (roles.includes("ADMIN")) return "/admin/dashboard";
   if (roles.includes("OWNER")) return "/owner/dashboard";
+  if (roles.includes("AGENT")) return "/agent/dashboard";
   if (roles.includes("SERVICE")) return "/service/dashboard";
   return "/user/dashboard";
 }

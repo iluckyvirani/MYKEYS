@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import {
+  getAgentProfileCompletion,
   getOwnerProfileCompletion,
   getProfileHref,
   getServiceProfileCompletion,
@@ -48,7 +49,9 @@ export default function ProfileCompletionBanner({
             setResult(
               role === "owner"
                 ? getOwnerProfileCompletion(data)
-                : getUserProfileCompletion(data)
+                : role === "agent"
+                  ? getAgentProfileCompletion(data)
+                  : getUserProfileCompletion(data)
             );
           }
         }

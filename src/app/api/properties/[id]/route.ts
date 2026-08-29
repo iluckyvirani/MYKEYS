@@ -40,8 +40,8 @@ export async function GET(
             website: true,
             city: true,
             address: true,
-            listingSellerType: true,
             agentLogo: true,
+            roles: { select: { role: true } },
           },
         },
         images: {
@@ -110,25 +110,36 @@ export async function GET(
       showPhone: ownerSub?.package?.showOwnerPhone ?? false,
     };
 
-    // Mask owner fields for public viewers; owners/admins get full contact fields
-    const isAgent = property.owner?.listingSellerType === "AGENT";
+    const isAgentLister = Boolean(
+      property.owner?.roles?.some((r) => r.role === "AGENT")
+    );
     const maskedOwner = property.owner
       ? isOwnerOrAdmin
-        ? property.owner
+        ? {
+            ...property.owner,
+            isAgentLister,
+            roles: property.owner.roles?.map((r) => r.role) ?? [],
+          }
         : {
             id: property.owner.id,
             avatar: property.owner.avatar,
             agentLogo: property.owner.agentLogo,
-            listingSellerType: property.owner.listingSellerType,
+            isAgentLister,
             companyName: property.owner.companyName,
             website: property.owner.website,
             city: property.owner.city,
             address: property.owner.address,
-            firstName: ownerVisibility.showName ? property.owner.firstName : undefined,
-            lastName: ownerVisibility.showName ? property.owner.lastName : undefined,
+            firstName:
+              ownerVisibility.showName || isAgentLister
+                ? property.owner.firstName
+                : undefined,
+            lastName:
+              ownerVisibility.showName || isAgentLister
+                ? property.owner.lastName
+                : undefined,
             email: ownerVisibility.showName ? property.owner.email : undefined,
             phone:
-              ownerVisibility.showPhone || isAgent
+              ownerVisibility.showPhone || isAgentLister
                 ? property.owner.phone
                 : undefined,
           }
@@ -378,7 +389,7 @@ export const PATCH = withAuth<{ id: string }>(
       );
     }
   },
-  { roles: ["OWNER" as any, "ADMIN" as any] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );
 
 /**
@@ -425,5 +436,5 @@ export const DELETE = withAuth<{ id: string }>(
       );
     }
   },
-  { roles: ["OWNER" as any, "ADMIN" as any] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );

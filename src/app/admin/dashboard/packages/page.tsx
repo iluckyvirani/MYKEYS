@@ -20,6 +20,7 @@ interface PackageRow {
   featuredLimit: number;
   isActive: boolean;
   category?: "SALE" | "RENT";
+  audience?: "OWNER" | "AGENT";
   shortDescription?: string;
   showOwnerName: boolean;
   showOwnerPhone: boolean;
@@ -38,6 +39,7 @@ export default function AdminPackagesPage() {
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [audienceTab, setAudienceTab] = useState<"OWNER" | "AGENT">("OWNER");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -71,6 +73,7 @@ export default function AdminPackagesPage() {
   };
 
   const filtered = packages.filter((p) =>
+    (p.audience ?? "OWNER") === audienceTab &&
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -86,12 +89,12 @@ export default function AdminPackagesPage() {
               <Package className="w-6 h-6 text-green-600" /> Package Management
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              Manage Sale and Rent subscription packages for property owners
+              Manage Sale and Rent subscription packages for owners and agents
             </p>
           </div>
           <Button
             className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-            onClick={() => router.push("/admin/dashboard/packages/new")}
+            onClick={() => router.push(`/admin/dashboard/packages/new?audience=${audienceTab}`)}
           >
             <Plus className="w-4 h-4 mr-2" /> Create Package
           </Button>
@@ -109,6 +112,20 @@ export default function AdminPackagesPage() {
               <p className="text-xs text-gray-500 font-medium">{label}</p>
               <p className={`text-2xl font-bold mt-1 text-${color}-600`}>{value}</p>
             </Card>
+          ))}
+        </div>
+
+        {/* Audience tabs */}
+        <div className="flex gap-2">
+          {(["OWNER", "AGENT"] as const).map((tab) => (
+            <Button
+              key={tab}
+              variant={audienceTab === tab ? "default" : "outline"}
+              className={audienceTab === tab ? "bg-green-600 hover:bg-green-700" : ""}
+              onClick={() => setAudienceTab(tab)}
+            >
+              {tab === "OWNER" ? "Owner packages" : "Agent packages"}
+            </Button>
           ))}
         </div>
 

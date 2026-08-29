@@ -5,6 +5,7 @@ import {
   OwnerActivePackages,
   DurationUnit,
   PackageCategory,
+  PackageAudience,
 } from '@/types/package';
 import { addDays, addMonths, addYears } from 'date-fns';
 
@@ -38,11 +39,30 @@ function categoryLabel(category: PackageCategory): string {
   return category === 'SALE' ? 'Sale' : 'Rent';
 }
 
+async function getSubscriberAudiences(userId: string): Promise<PackageAudience[]> {
+  const roles = await prisma.userRoleAssignment.findMany({
+    where: { userId },
+    select: { role: true },
+  });
+  const audiences: PackageAudience[] = [];
+  if (roles.some((r) => r.role === 'OWNER')) audiences.push('OWNER');
+  if (roles.some((r) => r.role === 'AGENT')) audiences.push('AGENT');
+  return audiences.length > 0 ? audiences : ['OWNER'];
+}
+
+function resolveAudiences(
+  requested: PackageAudience | undefined,
+  fallback: PackageAudience[]
+): PackageAudience[] {
+  return requested ? [requested] : fallback;
+}
+
 // ─── Package CRUD (admin) ─────────────────────────────────────────────────────
 
 export const packageService = {
   async create(data: PackageInput) {
     const category = data.category === 'SALE' ? 'SALE' : 'RENT';
+    const audience = data.audience === 'AGENT' ? 'AGENT' : 'OWNER';
     return prisma.package.create({
       data: {
         name: data.name,
@@ -53,6 +73,7 @@ export const packageService = {
         durationUnit: data.durationUnit,
         isActive: data.isActive ?? true,
         category,
+        audience,
         propertyLimit: data.propertyLimit ?? 1,
         featuredLimit: data.featuredLimit ?? 0,
         showOwnerName: data.showOwnerName ?? false,
@@ -65,13 +86,18 @@ export const packageService = {
     });
   },
 
-  async getAll(activeOnly = false, category?: PackageCategory) {
+  async getAll(
+    activeOnly = false,
+    category?: PackageCategory,
+    audience?: PackageAudience
+  ) {
     return prisma.package.findMany({
       where: {
         ...(activeOnly ? { isActive: true } : {}),
         ...(category ? { category } : {}),
+        ...(audience ? { audience } : {}),
       },
-      orderBy: [{ category: 'asc' }, { price: 'asc' }],
+      orderBy: [{ audience: 'asc' }, { category: 'asc' }, { price: 'asc' }],
     });
   },
 
@@ -83,6 +109,9 @@ export const packageService = {
     const payload: Record<string, unknown> = { ...data };
     if (data.category !== undefined) {
       payload.category = data.category === 'SALE' ? 'SALE' : 'RENT';
+    }
+    if (data.audience !== undefined) {
+      payload.audience = data.audience === 'AGENT' ? 'AGENT' : 'OWNER';
     }
     return prisma.package.update({ where: { id }, data: payload });
   },
@@ -105,11 +134,21 @@ export const packageService = {
    */
   async createPendingSubscription(
     ownerId: string,
-    packageId: string
+    packageId: string,
+    opts?: { audience?: PackageAudience }
   ): Promise<{ ownerPackageId: string; price: number }> {
     const pkg = await prisma.package.findUnique({ where: { id: packageId } });
     if (!pkg) throw new Error('Package not found');
     if (!pkg.isActive) throw new Error('Package is not available for purchase');
+
+    const allowedAudiences = await getSubscriberAudiences(ownerId);
+    const pkgAudience = pkg.audience as PackageAudience;
+    if (opts?.audience && pkgAudience !== opts.audience) {
+      throw new Error('This package is not available for your account type');
+    }
+    if (!allowedAudiences.includes(pkgAudience)) {
+      throw new Error('This package is not available for your account type');
+    }
 
     // Clean up stale PENDING subscriptions for the same package/owner pair
     await prisma.ownerPackage.deleteMany({
@@ -149,7 +188,7 @@ export const packageService = {
         ownerId: ownerPkg.ownerId,
         status: 'ACTIVE',
         id: { not: ownerPackageId },
-        package: { category },
+        package: { category, audience: ownerPkg.package.audience },
       },
       select: { id: true },
     });
@@ -205,100 +244,143 @@ export const packageService = {
 
   async getOwnerActivePackage(
     ownerId: string,
-    category: PackageCategory
+    category: PackageCategory,
+    audience?: PackageAudience
   ): Promise<OwnerPackageWithUsage | null> {
-    const sub = await prisma.ownerPackage.findFirst({
-      where: {
-        ownerId,
-        status: 'ACTIVE',
-        endDate: { gt: new Date() },
-        package: { category },
-      },
-      include: { package: true },
-    });
-    return sub ? mapOwnerPackage(sub) : null;
+    const audiences = resolveAudiences(
+      audience,
+      await getSubscriberAudiences(ownerId)
+    );
+
+    for (const aud of audiences) {
+      const sub = await prisma.ownerPackage.findFirst({
+        where: {
+          ownerId,
+          status: 'ACTIVE',
+          endDate: { gt: new Date() },
+          package: { category, audience: aud },
+        },
+        include: { package: true },
+      });
+      if (sub) return mapOwnerPackage(sub);
+    }
+    return null;
   },
 
-  async getOwnerActivePackages(ownerId: string): Promise<OwnerActivePackages> {
+  async getOwnerActivePackages(
+    ownerId: string,
+    audience?: PackageAudience
+  ): Promise<OwnerActivePackages> {
     const [sale, rent] = await Promise.all([
-      this.getOwnerActivePackage(ownerId, 'SALE'),
-      this.getOwnerActivePackage(ownerId, 'RENT'),
+      this.getOwnerActivePackage(ownerId, 'SALE', audience),
+      this.getOwnerActivePackage(ownerId, 'RENT', audience),
     ]);
     return { SALE: sale, RENT: rent };
   },
 
-  async incrementPropertyUsage(ownerId: string, category: PackageCategory, count = 1) {
-    const active = await prisma.ownerPackage.findFirst({
-      where: {
-        ownerId,
-        status: 'ACTIVE',
-        endDate: { gt: new Date() },
-        package: { category },
-      },
-      select: { id: true },
-    });
-    if (!active) return { count: 0 };
-    return prisma.ownerPackage.updateMany({
-      where: { id: active.id },
-      data: { propertiesUsed: { increment: count } },
-    });
+  async incrementPropertyUsage(
+    ownerId: string,
+    category: PackageCategory,
+    count = 1,
+    audience?: PackageAudience
+  ) {
+    const audiences = resolveAudiences(
+      audience,
+      await getSubscriberAudiences(ownerId)
+    );
+    for (const aud of audiences) {
+      const active = await prisma.ownerPackage.findFirst({
+        where: {
+          ownerId,
+          status: 'ACTIVE',
+          endDate: { gt: new Date() },
+          package: { category, audience: aud },
+        },
+        select: { id: true },
+      });
+      if (!active) continue;
+      return prisma.ownerPackage.updateMany({
+        where: { id: active.id },
+        data: { propertiesUsed: { increment: count } },
+      });
+    }
+    return { count: 0 };
   },
 
-  async decrementPropertyUsage(ownerId: string, category: PackageCategory, count = 1) {
-    const active = await prisma.ownerPackage.findFirst({
-      where: {
-        ownerId,
-        status: 'ACTIVE',
-        package: { category },
-      },
-      select: { id: true, propertiesUsed: true },
-    });
-    if (!active || active.propertiesUsed <= 0) return { count: 0 };
-    return prisma.ownerPackage.updateMany({
-      where: { id: active.id },
-      data: { propertiesUsed: { decrement: Math.min(count, active.propertiesUsed) } },
-    });
+  async decrementPropertyUsage(
+    ownerId: string,
+    category: PackageCategory,
+    count = 1,
+    audience?: PackageAudience
+  ) {
+    const audiences = resolveAudiences(
+      audience,
+      await getSubscriberAudiences(ownerId)
+    );
+    for (const aud of audiences) {
+      const active = await prisma.ownerPackage.findFirst({
+        where: {
+          ownerId,
+          status: 'ACTIVE',
+          package: { category, audience: aud },
+        },
+        select: { id: true, propertiesUsed: true },
+      });
+      if (!active || active.propertiesUsed <= 0) continue;
+      return prisma.ownerPackage.updateMany({
+        where: { id: active.id },
+        data: { propertiesUsed: { decrement: Math.min(count, active.propertiesUsed) } },
+      });
+    }
+    return { count: 0 };
   },
 
   async canPublish(
     ownerId: string,
-    opts: { listingType: string; rentalType?: string | null }
+    opts: {
+      listingType: string;
+      rentalType?: string | null;
+      audience?: PackageAudience;
+    }
   ): Promise<{ allowed: boolean; reason?: string }> {
     const category = packageCategoryForListing(opts.listingType, opts.rentalType);
     if (!category) {
       return { allowed: true };
     }
 
-    const sub = await prisma.ownerPackage.findFirst({
-      where: {
-        ownerId,
-        status: 'ACTIVE',
-        endDate: { gt: new Date() },
-        package: { category },
-      },
-      include: { package: true },
-    });
+    const audiences = resolveAudiences(
+      opts.audience,
+      await getSubscriberAudiences(ownerId)
+    );
+
+    for (const aud of audiences) {
+      const sub = await prisma.ownerPackage.findFirst({
+        where: {
+          ownerId,
+          status: 'ACTIVE',
+          endDate: { gt: new Date() },
+          package: { category, audience: aud },
+        },
+        include: { package: true },
+      });
+
+      if (!sub) continue;
+
+      const limit = sub.package.propertyLimit;
+      if (limit > 0 && sub.propertiesUsed >= limit) {
+        continue;
+      }
+      return { allowed: true };
+    }
 
     const label = categoryLabel(category);
-    if (!sub) {
-      return {
-        allowed: false,
-        reason:
-          category === 'SALE'
-            ? 'You need an active Sale package to publish Buy listings.'
-            : 'You need an active Rent package to publish Long Rent listings.',
-      };
-    }
-
-    const limit = sub.package.propertyLimit;
-    if (limit > 0 && sub.propertiesUsed >= limit) {
-      return {
-        allowed: false,
-        reason: `You have reached your ${label} package limit of ${limit} live listing${limit === 1 ? '' : 's'}. Upgrade your ${label} package to publish more.`,
-      };
-    }
-
-    return { allowed: true };
+    return {
+      allowed: false,
+      reason:
+        category === 'SALE'
+          ? `You need an active ${label} package to publish Buy listings.`
+          : `You need an active ${label} package to publish Long Rent listings.`,
+    };
   },
 
   async canFeature(
@@ -386,25 +468,39 @@ export const packageService = {
     return this.getOwnerActivePackages(ownerId);
   },
 
-  async getUpgradeOptions(ownerId: string, category: PackageCategory) {
+  async getUpgradeOptions(
+    ownerId: string,
+    category: PackageCategory,
+    audience?: PackageAudience
+  ) {
+    const audiences = resolveAudiences(
+      audience,
+      await getSubscriberAudiences(ownerId)
+    );
+    const aud = audiences[0] ?? 'OWNER';
+
     const activeSub = await prisma.ownerPackage.findFirst({
       where: {
         ownerId,
         status: 'ACTIVE',
         endDate: { gt: new Date() },
-        package: { category },
+        package: { category, audience: aud },
       },
       include: { package: { select: { price: true } } },
     });
     const currentPrice = activeSub?.package?.price ?? -1;
     return prisma.package.findMany({
-      where: { isActive: true, category, price: { gt: currentPrice } },
+      where: { isActive: true, category, audience: aud, price: { gt: currentPrice } },
       orderBy: { price: 'asc' },
     });
   },
 
-  async canUpgradePackage(ownerId: string, category: PackageCategory): Promise<boolean> {
-    const options = await this.getUpgradeOptions(ownerId, category);
+  async canUpgradePackage(
+    ownerId: string,
+    category: PackageCategory,
+    audience?: PackageAudience
+  ): Promise<boolean> {
+    const options = await this.getUpgradeOptions(ownerId, category, audience);
     return options.length > 0;
   },
 

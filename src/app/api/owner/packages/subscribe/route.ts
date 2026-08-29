@@ -1,8 +1,13 @@
 import { NextRequest } from 'next/server';
-import { requireRole, UserRole } from '@/lib/auth/middleware';
+import { requireRole, SELLER_ROLES, UserRole } from '@/lib/auth/middleware';
 import { packageService } from '@/lib/packages/packageService';
 import { successResponse, errorResponse } from '@/lib/response';
 import { ErrorCode } from '@/lib/auth/errors';
+import { PackageAudience } from '@/types/package';
+
+function audienceForUser(role: string): PackageAudience {
+  return role === UserRole.AGENT ? 'AGENT' : 'OWNER';
+}
 
 /**
  * POST /api/owner/packages/subscribe
@@ -13,7 +18,7 @@ import { ErrorCode } from '@/lib/auth/errors';
  */
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await requireRole(request, [UserRole.OWNER, UserRole.ADMIN]);
+    const authUser = await requireRole(request, [...SELLER_ROLES]);
 
     const body = await request.json();
     const { packageId } = body;
@@ -22,7 +27,12 @@ export async function POST(request: NextRequest) {
       return errorResponse('packageId is required', 400, ErrorCode.VALIDATION_ERROR);
     }
 
-    const result = await packageService.createPendingSubscription(authUser.userId, packageId);
+    const audience = audienceForUser(authUser.role);
+    const result = await packageService.createPendingSubscription(
+      authUser.userId,
+      packageId,
+      { audience }
+    );
     return successResponse(result, 'Subscription initiated — complete payment to activate', 201);
   } catch (error: any) {
     console.error('Error initiating package subscription:', error);

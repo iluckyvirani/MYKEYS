@@ -187,7 +187,7 @@ function OwnerPackagesContent() {
       </div>
 
       <div>
-        <PackageHistory />
+        <PackageHistory audience="OWNER" />
       </div>
     </DashboardLayout>
   );

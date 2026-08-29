@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { PackageAudience } from "@/types/package";
 
 interface PaymentHistory {
   id: string;
@@ -19,7 +20,12 @@ interface PaymentHistory {
   };
 }
 
-export default function PackageHistory() {
+interface PackageHistoryProps {
+  /** Filter history to owner vs agent package subscriptions */
+  audience?: PackageAudience;
+}
+
+export default function PackageHistory({ audience = "OWNER" }: PackageHistoryProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
@@ -30,14 +36,25 @@ export default function PackageHistory() {
         setLoading(true);
         setError(null);
 
-        // Fetch payments related to packages only
-        const response = await api.get("/payments?limit=50");
-        const allPayments = response.data?.data?.items || [];
-
-        // Filter for package payments only (those with package relation)
-        const packagePayments = allPayments.filter((p: any) => 
-          p.packageId || (p.metadata && p.metadata.type === "package")
+        const response = await api.get(
+          `/owner/finance?type=packages&limit=50&audience=${audience}`
         );
+        const items = response.data?.data?.items || [];
+
+        const packagePayments: PaymentHistory[] = items.map((p: any) => ({
+          id: p.id,
+          amount: p.amount,
+          status: p.status,
+          paymentMethod: p.paymentMethod,
+          createdAt: p.createdAt,
+          package: p.package?.name
+            ? {
+                id: p.package.ownerPackageId ?? p.id,
+                name: p.package.name,
+                tier: "",
+              }
+            : undefined,
+        }));
 
         setPayments(packagePayments);
       } catch (err: any) {
@@ -49,14 +66,14 @@ export default function PackageHistory() {
     };
 
     fetchHistory();
-  }, []);
+  }, [audience]);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-GB", {
       style: "currency",
       currency: "GBP",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(amount);
 
   const formatDate = (dateString: string) => {
@@ -84,6 +101,11 @@ export default function PackageHistory() {
     }
   };
 
+  const emptyHint =
+    audience === "AGENT"
+      ? "When you subscribe to an agent package, your payments will appear here."
+      : "Your package payment history will appear here.";
+
   if (loading) {
     return (
       <Card className="p-8 text-center">
@@ -108,7 +130,7 @@ export default function PackageHistory() {
       <div className="mb-5">
         <h2 className="text-xl font-bold text-gray-900">Payment History</h2>
         <p className="text-gray-600 text-sm mt-1">
-          Your package subscription and payment transactions
+          Your {audience === "AGENT" ? "agent " : ""}package subscription and payment transactions
         </p>
       </div>
 
@@ -116,9 +138,7 @@ export default function PackageHistory() {
         <Card className="p-8 text-center bg-gray-50">
           <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
           <p className="text-gray-900 font-semibold mb-2">No Payment History</p>
-          <p className="text-gray-600 text-sm">
-            Your package payment history will appear here.
-          </p>
+          <p className="text-gray-600 text-sm">{emptyHint}</p>
         </Card>
       ) : (
         <Card className="divide-y">
@@ -150,7 +170,7 @@ export default function PackageHistory() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm ml-14">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm ml-14">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-gray-400" />
                         <div>
@@ -167,17 +187,6 @@ export default function PackageHistory() {
                           </p>
                         </div>
                       </div>
-                      {payment.package && (
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <p className="text-gray-600">Tier</p>
-                            <p className="font-medium text-gray-900 capitalize">
-                              {payment.package.tier}
-                            </p>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
 

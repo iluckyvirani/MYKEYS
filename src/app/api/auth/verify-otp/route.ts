@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
 import { emailSchema, validateSchema } from "@/lib/auth/validation";
 import { generateTokenPair } from "@/lib/auth/jwt";
-import { toUserDTO } from "@/lib/auth/helpers";
+import { toUserDTO, primaryRoleFromAssignments } from "@/lib/auth/helpers";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
 import { notificationService } from "@/lib/notifications/notificationService";
 import { emailService } from "@/lib/email/emailService";
@@ -92,9 +92,7 @@ export async function POST(request: NextRequest) {
     });
     if (!fresh) throw createApiError(ErrorCode.USER_NOT_FOUND);
 
-    let primaryRole = "USER";
-    if (fresh.roles?.some((r) => r.role === "ADMIN")) primaryRole = "ADMIN";
-    else if (fresh.roles?.some((r) => r.role === "OWNER")) primaryRole = "OWNER";
+    const primaryRole = primaryRoleFromAssignments(fresh.roles);
 
     const { accessToken, refreshToken } = await generateTokenPair(
       fresh.id,

@@ -1,17 +1,30 @@
 import { NextRequest } from 'next/server';
-import { requireAuth } from '@/lib/auth/middleware';
+import { requireAuth, SELLER_ROLES, UserRole } from '@/lib/auth/middleware';
 import { packageService } from '@/lib/packages/packageService';
 import { successResponse, errorResponse } from '@/lib/response';
 import { ErrorCode } from '@/lib/auth/errors';
+import { PackageAudience } from '@/types/package';
+
+function audienceForUser(role: string): PackageAudience {
+  return role === UserRole.AGENT ? 'AGENT' : 'OWNER';
+}
 
 /**
  * GET /api/owner/packages
- * Get owner's current active Sale + Rent packages with usage
+ * Get seller's current active Sale + Rent packages with usage
  */
 export async function GET(request: NextRequest) {
   try {
     const authUser = await requireAuth(request);
-    const packages = await packageService.getOwnerActivePackages(authUser.userId);
+    const audienceParam = request.nextUrl.searchParams.get('audience');
+    const audience =
+      audienceParam === 'AGENT' || audienceParam === 'OWNER'
+        ? (audienceParam as PackageAudience)
+        : audienceForUser(authUser.role);
+    const packages = await packageService.getOwnerActivePackages(
+      authUser.userId,
+      audience
+    );
     const hasAny = Boolean(packages.SALE || packages.RENT);
     return successResponse(
       packages,

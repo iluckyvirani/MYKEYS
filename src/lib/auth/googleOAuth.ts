@@ -1,7 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { generateTokenPair } from "@/lib/auth/jwt";
-import { toUserDTO } from "@/lib/auth/helpers";
+import { toUserDTO, primaryRoleFromAssignments } from "@/lib/auth/helpers";
 import { emailService } from "@/lib/email/emailService";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -182,16 +182,6 @@ function splitName(profile: GoogleUserInfo) {
     profile.name?.trim()?.split(/\s+/).slice(1).join(" ") ||
     "";
   return { firstName: first, lastName: last || " " };
-}
-
-function primaryRoleFromAssignments(
-  roles: { role: string }[] | undefined
-): string {
-  if (!roles?.length) return "USER";
-  if (roles.some((r) => r.role === "ADMIN")) return "ADMIN";
-  if (roles.some((r) => r.role === "OWNER")) return "OWNER";
-  if (roles.some((r) => r.role === "SERVICE")) return "SERVICE";
-  return "USER";
 }
 
 /**

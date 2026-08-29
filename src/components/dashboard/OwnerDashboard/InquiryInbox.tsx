@@ -7,6 +7,7 @@ import { MessageSquare, Search, Inbox, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
 import UserAvatar from "@/components/common/UserAvatar";
 import { timeAgoShort } from "@/lib/inquiries/inquiryDisplay";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
 interface InquiryThread {
   id: string;
@@ -44,6 +45,7 @@ function timeAgo(dateStr: string | null) {
 }
 
 export default function InquiryInbox() {
+  const { basePath } = useDashboardBase();
   const [threads, setThreads] = useState<InquiryThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -107,7 +109,7 @@ export default function InquiryInbox() {
             </div>
           </div>
         </div>
-        <Link href="/owner/dashboard/inquiries" className="flex items-center gap-1.5 text-xs text-green-600 hover:text-green-700 font-medium shrink-0">
+        <Link href={`${basePath}/inquiries`} className="flex items-center gap-1.5 text-xs text-green-600 hover:text-green-700 font-medium shrink-0">
           View All <ExternalLink className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -177,7 +179,7 @@ export default function InquiryInbox() {
                     {timeAgo(thread.lastMessageAt || thread.createdAt)}
                   </span>
                   <Link
-                    href={`/owner/dashboard/inquiries/${thread.id}?from=dashboard`}
+                    href={`${basePath}/inquiries/${thread.id}?from=dashboard`}
                     className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium border border-green-200 hover:border-green-400 rounded px-2 py-1 transition-colors"
                   >
                     <MessageSquare className="w-3 h-3" />

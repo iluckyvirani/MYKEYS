@@ -34,7 +34,7 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
       ErrorCode.INTERNAL_SERVER_ERROR
     );
   }
-}, { roles: ["OWNER" as any, "ADMIN" as any] });
+}, { roles: ["OWNER", "AGENT", "ADMIN"] });
 
 /**
  * POST /api/owner/expenses
@@ -63,4 +63,4 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
           : ErrorCode.INTERNAL_SERVER_ERROR
     );
   }
-}, { roles: ["OWNER" as any, "ADMIN" as any] });
+}, { roles: ["OWNER", "AGENT", "ADMIN"] });
