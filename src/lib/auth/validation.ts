@@ -53,7 +53,7 @@ export const registerSchema = z.object({
   firstName: nameSchema,
   lastName: nameSchema,
   phone: phoneSchema,
-  role: z.enum(["USER", "OWNER"]).optional().default("USER"),
+  role: z.enum(["USER", "OWNER", "ADMIN"]).optional().default("USER"),
   // Owner-specific fields
   companyName: z.string().min(2).max(100).optional(),
   website: z.string().url("Invalid website URL").optional().or(z.literal("")),
@@ -68,15 +68,59 @@ export const loginSchema = z.object({
 });
 
 /**
+ * Phone validation for profile updates (UK + international flexible)
+ */
+export const profilePhoneSchema = z
+  .string()
+  .max(20, "Phone must not exceed 20 characters")
+  .regex(/^[\d\s+()-]*$/, "Invalid phone number format")
+  .optional()
+  .or(z.literal(""));
+
+/**
  * Update Profile Validation
  */
 export const updateProfileSchema = z.object({
   firstName: nameSchema.optional(),
   lastName: nameSchema.optional(),
-  phone: phoneSchema,
+  phone: profilePhoneSchema,
   avatar: z.string().url("Invalid avatar URL").optional().or(z.literal("")),
   // Personal Information
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)").optional(),
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const [y, m, d] = val.split("-").map(Number);
+        const born = new Date(y, m - 1, d);
+        if (Number.isNaN(born.getTime())) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        born.setHours(0, 0, 0, 0);
+        return born <= today;
+      },
+      { message: "Date of birth cannot be in the future" }
+    )
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const age = (() => {
+          const [y, m, d] = val.split("-").map(Number);
+          const born = new Date(y, m - 1, d);
+          const today = new Date();
+          let a = today.getFullYear() - born.getFullYear();
+          const md = today.getMonth() - born.getMonth();
+          if (md < 0 || (md === 0 && today.getDate() < born.getDate())) a -= 1;
+          return a;
+        })();
+        return age >= 16;
+      },
+      { message: "You must be at least 16 years old" }
+    ),
+  gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional().or(z.literal("")),
   // Address Information
   address: z.string().max(255).optional(),
   city: z.string().max(100).optional(),
@@ -85,11 +129,37 @@ export const updateProfileSchema = z.object({
   zipCode: z.string().max(20).optional(),
   // Emergency Contact
   emergencyName: nameSchema.optional(),
-  emergencyContact: phoneSchema.optional(),
+  emergencyContact: profilePhoneSchema,
   // Owner-specific fields
   website: z.string().url("Invalid website URL").optional().or(z.literal("")),
-  companyName: z.string().min(2).max(100).optional(),
-  taxId: z.string().max(50).optional(),
+  companyName: z.string().min(2).max(100).optional().or(z.literal("")),
+  taxId: z.string().max(50).optional().or(z.literal("")),
+  listingSellerType: z.enum(["AGENT", "PROPERTY_OWNER"]).optional().or(z.literal("")),
+  agentLogo: z.string().url("Invalid agent logo URL").optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  if (data.listingSellerType === "AGENT") {
+    if (!data.phone || !String(data.phone).trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Phone number is required for estate agents",
+        path: ["phone"],
+      });
+    }
+    if (!data.agentLogo || !String(data.agentLogo).trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Agent logo is required for estate agents",
+        path: ["agentLogo"],
+      });
+    }
+    if (!data.companyName || !String(data.companyName).trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Agency / company name is required for estate agents",
+        path: ["companyName"],
+      });
+    }
+  }
 });
 
 /**

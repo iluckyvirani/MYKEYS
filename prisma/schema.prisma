@@ -6,9 +6,27 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole {
+enum FaqCategory {
+  LISTING
+  OWNER
+  USER
+  SHORT_RENT
+  LONG_RENT
+  BUY
+  SERVICE
+  GENERAL
+}
+
+enum FaqStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RoleType {
   USER
   OWNER
+  AGENT
+  SERVICE
   ADMIN
 }
 
@@ -39,6 +57,9 @@ enum PropertyType {
   CONDOMINIUM
   TOWNHOUSE
   STUDIO
+  LAND
+  COMMERCIAL
+  OTHER
 }
 
 enum ListingType {
@@ -49,6 +70,18 @@ enum ListingType {
 enum RentalType {
   SHORT_TERM
   LONG_TERM
+}
+
+/// Long-let inventory: whole home vs room in a shared house
+enum OccupancyType {
+  WHOLE_PROPERTY
+  ROOM
+}
+
+enum PriceType {
+  NIGHTLY
+  MONTHLY
+  TOTAL
 }
 
 enum BookingStatus {
@@ -75,6 +108,7 @@ enum PaymentMethod {
   NET_BANKING
   CASH
   WALLET
+  BANK_TRANSFER
 }
 
 enum InquiryStatus {
@@ -85,11 +119,11 @@ enum InquiryStatus {
   CONVERTED
 }
 
-enum PackageTier {
-  BASIC
-  PROFESSIONAL
-  PREMIUM
-  ENTERPRISE
+enum AlertFrequency {
+  INSTANTLY
+  DAILY
+  EVERY_3_DAYS
+  EVERY_7_DAYS
 }
 
 enum SubscriptionStatus {
@@ -99,20 +133,167 @@ enum SubscriptionStatus {
   PENDING
 }
 
+/// Owner listing packages: Sale (BUY) vs Rent (long-let). Short stay needs no package.
+enum PackageCategory {
+  SALE
+  RENT
+}
+
+enum PackageAudience {
+  OWNER
+  AGENT
+}
+
+// ==================== SERVICE ENUMS ====================
+
+enum ServiceCategory {
+  PLUMBING
+  CLEANING
+  AC_REPAIR
+  ELECTRICAL
+  PAINTING
+  CARPENTRY
+  APPLIANCE_REPAIR
+}
+
+enum ServiceBookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceBookingType {
+  INSTANT
+  SCHEDULED
+}
+
+enum ServicePaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ServiceSettleStatus {
+  PENDING
+  SETTLED
+  NOT_APPLICABLE
+}
+
+enum ServicePendingAction {
+  COMPLETE
+  CANCEL
+}
+
+enum SettlementType {
+  SERVICE
+  SHORT_STAY
+}
+
+enum SettlementStatus {
+  PENDING
+  SETTLED
+}
+
+enum ServiceRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ServiceRequestUrgency {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum DocumentType {
+  // User Role Documents
+  PAN_CARD
+  AADHAR_CARD
+  DRIVING_LICENSE
+  PASSPORT
+  VOTER_ID
+
+  // Owner Role Documents
+  PROPERTY_LICENSE
+  BUSINESS_LICENSE
+  GST_CERTIFICATE
+  TAX_IDENTIFICATION
+  RENTAL_AGREEMENT_TEMPLATE
+
+  // Service Role Documents
+  SERVICE_CERTIFICATE
+  SERVICE_LICENSE
+  SERVICE_SKILL_CERTIFICATE
+  SERVICE_EXPERIENCE_LETTER
+  SERVICE_TRAINING_CERTIFICATE
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum PermissionCategory {
+  USERS
+  PROPERTIES
+  BOOKINGS
+  PAYMENTS
+  DOCUMENTS
+  INQUIRIES
+  PACKAGES
+  MARKETING
+  SERVICES
+  SETTINGS
+  ANALYTICS
+  ADMIN
+}
+
+enum TeamMemberRole {
+  ADMIN
+  SUBADMIN
+}
+
+model UserRoleAssignment {
+  id String @id @default(cuid())
+
+  userId String
+  role   RoleType
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, role])
+  @@index([userId])
+}
+
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  phone     String?    @unique
-  password  String
+  id        String               @id @default(cuid())
+  email     String               @unique
+  phone     String?              @unique
+  /// Nullable for Google-only accounts
+  password  String?
   firstName String
   lastName  String
   avatar    String?
-  role      UserRole   @default(USER)
-  status    UserStatus @default(ACTIVE)
+  roles     UserRoleAssignment[]
+  status    UserStatus           @default(ACTIVE)
+
+  /// EMAIL | GOOGLE | BOTH
+  authProvider String @default("EMAIL")
+  /// Google subject (`sub`) — unique when linked
+  googleId     String? @unique
 
   // Personal Information (for USER role)
   birthDate String?
-  
+  gender    String? // MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
+
   // Address Information (for USER role)
   address String?
   city    String?
@@ -128,6 +309,19 @@ model User {
   companyName String?
   taxId       String?
   website     String?
+  /// AGENT | PROPERTY_OWNER — how this owner lists on the marketplace
+  listingSellerType String?
+  /// Agency / brand logo shown on search result cards (required when AGENT)
+  agentLogo String?
+
+  /// Stripe Customer ID for saved payment methods
+  stripeCustomerId String? @unique
+
+  /// UK bank details (sort code + 8-digit account number)
+  bankAccountHolder String?
+  bankSortCode      String?
+  bankAccountNumber String?
+  bankName          String?
 
   // Relations
   properties      Property[]
@@ -140,20 +334,64 @@ model User {
   payments        Payment[]
   adCampaigns     AdCampaign[]
   reports         Report[]
+  favorites       Favorite[]
+  savedSearches   SavedSearch[]
+  documents       Document[]     @relation("UserDocuments")
+  propertyTenants PropertyTenant[]
+  propertyTenancies PropertyTenancy[]
+  propertyExpenses PropertyExpense[]
+  diaryTasks       DiaryTask[]
+
+  // Phase 3 — Bids
+  bids            PropertyBid[]
+
+  // Phase 4 — Inquiry Chat
+  inquiryMessages  InquiryMessage[]  @relation("InquiryMessageSender")
+  inquiryReminders InquiryReminder[] @relation("InquiryReminderCreator")
+
+  // Service Relations
+  serviceProvider ServiceProvider?
+  serviceBookings ServiceBooking[] @relation("ServiceClient")
+  serviceRequests ServiceRequest[] @relation("ServiceRequester")
+  serviceReviews  ServiceReview[]  @relation("ServiceReviewer")
+  settlementsAsBeneficiary Settlement[] @relation("SettlementBeneficiary")
+  settlementsSettledBy     Settlement[] @relation("SettlementAdmin")
+
+  // Admin/Team Relations
+  teamMember TeamMember?
 
   // Authentication
   resetToken       String?
   resetTokenExpiry DateTime?
 
+  /// Passwordless magic-link login (hashed token, 10 min expiry)
+  magicLinkTokenHash   String?
+  magicLinkExpiresAt   DateTime?
+  magicLinkLastSentAt  DateTime?
+
+  /// Email verification (signup OTP)
+  emailVerified      Boolean   @default(false)
+  emailOtpHash       String?
+  emailOtpExpiresAt  DateTime?
+  emailOtpLastSentAt DateTime?
+
+  /// Change-email flow (OTP to old email, then OTP to new email)
+  pendingEmail              String?
+  /// VERIFY_OLD | VERIFY_NEW
+  emailChangeStep           String?
+  emailChangeOtpHash        String?
+  emailChangeOtpExpiresAt   DateTime?
+  emailChangeLastSentAt     DateTime?
+
   // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
 
   // Indexes
   @@index([email])
-  @@index([role])
   @@index([status])
+  @@index([googleId])
 }
 
 model Property {
@@ -178,40 +416,86 @@ model Property {
 
   // Pricing
   price           Float
-  priceType       String // nightly, monthly, total
-  cleaningFee     Float? @default(0)
-  serviceFee      Float? @default(0)
-  securityDeposit Float? @default(0)
+  priceType       PriceType // nightly, monthly, total
+  originalPrice   Float?
+  cleaningFee     Float?    @default(0)
+  serviceFee      Float?    @default(0)
+  securityDeposit Float?    @default(0)
 
   // Specifications
   bedrooms  Int
   bathrooms Int
   sqft      Int?
   guests    Int  @default(2)
-  minStay   Int  @default(1)
-  maxStay   Int?
-  yearBuilt Int?
-  parking   Int? @default(0)
+
+  // Short Stay specific
+  minStay      Int     @default(1)
+  maxStay      Int?
+  yearBuilt    Int?
+  checkInTime  String  @default("14:00")
+  checkOutTime String  @default("11:00")
+  selfCheckIn  Boolean @default(false)
+  parking      Boolean @default(false)
 
   // Status & Visibility
-  status        PropertyStatus @default(DRAFT)
+  status        PropertyStatus @default(ACTIVE)
   isFeatured    Boolean        @default(false)
   isVerified    Boolean        @default(false)
   featuredUntil DateTime?
 
+  // Long Rent specific
+  availableFrom  DateTime?
+  minTerm        Int       @default(1) // months (standard in UK)
+  maxTerm        Int?
+  billsIncluded  Boolean?
+  /// WHOLE_PROPERTY | ROOM — only for LONG_TERM lets
+  occupancyType  OccupancyType?
+  councilTaxBand String? // UK specific
+  epcRating      String? // UK Energy Performance Certificate letter A–G
+  epcCurrentScore   Int?
+  epcPotentialScore Int?
+  /// UNFURNISHED | PART_FURNISHED | FURNISHED
+  furnishType    String?
+  /// NONE | PRIVATE | SHARED | COMMUNAL | ASK
+  garden         String?
+  /// NONE | ON_STREET | PERMIT | ALLOCATED | GARAGE | DRIVEWAY | ASK
+  parkingType    String?
+  accessibility  String?
+  /// Bullet features shown on details (separate from amenity tags)
+  keyFeatures    String[]  @default([])
+  /// { electricity, water, heating, broadband, sewerage, privateRightOfWay, publicRightOfWay, listedProperty, restrictions, floodedLast5Years, floodDefenses, floodSource }
+  utilities      Json?
+  broadbandSpeed String?
+  floodRisk      String?
+
+  // Sale specific
+  propertyPrice Float?
+  propertyTax   Float? // UK council tax year
+  hoaFee        Float? // Service charge in UK month
+  leasehold     Boolean?
+  leaseYears    Int?
+  groundRent    Int?
+
   // Relations
-  ownerId   String
-  owner     User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  images    PropertyImage[]
-  amenities PropertyAmenity[]
-  bookings  Booking[]
-  reviews   Review[]
-  inquiries Inquiry[]
+  ownerId     String
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  images      PropertyImage[]
+  amenities   PropertyAmenity[]
+  bookings    Booking[]
+  reviews     Review[]
+  inquiries   Inquiry[]
   adCampaigns AdCampaign[]
+  favorites   Favorite[]
+  propertyDocuments PropertyDocument[]
+  bids         PropertyBid[]
+  tenancies    PropertyTenancy[]
+  expenses     PropertyExpense[]
 
   // Analytics
-  views Int @default(0)
-  saves Int @default(0)
+  views     Int   @default(0)
+  saves     Int   @default(0)
+  occupancy Int   @default(0) // percentage: 0-100
+  revenue   Float @default(0) // monthly revenue for owner dashboard
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -249,6 +533,20 @@ model Amenity {
   properties PropertyAmenity[]
 
   createdAt DateTime @default(now())
+}
+
+// Service Category for admin management
+model ServiceCategoryInfo {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  status      String   @default("active") // active, inactive
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  catalogServices CatalogService[]
 }
 
 model PropertyAmenity {
@@ -318,13 +616,22 @@ model Booking {
 model Payment {
   id                String        @id @default(cuid())
   amount            Float
-  currency          String        @default("INR")
+  currency          String        @default("GBP")
   paymentMethod     PaymentMethod
   status            PaymentStatus @default(PENDING)
   transactionId     String?       @unique
-  razorpayOrderId   String?
-  razorpayPaymentId String?
-  razorpaySignature String?
+  stripePaymentIntentId String?
+  stripeChargeId        String?
+
+  // Commission fields (for short rent bookings)
+  commissionPercent Float? // Rate applied at time of payment (e.g. 10 = 10%)
+  commissionAmount  Float? // Actual GBP amount taken by platform
+  ownerEarnings     Float? // Amount owner receives (amount - commissionAmount)
+
+  /// Manual settle-up for short-stay owner payouts
+  settleStatus     ServiceSettleStatus @default(NOT_APPLICABLE)
+  settledAt        DateTime?
+  settledByAdminId String?
 
   // Relations
   bookingId String?       @unique
@@ -333,6 +640,7 @@ model Payment {
   user      User          @relation(fields: [userId], references: [id])
   packageId String?
   package   OwnerPackage? @relation("PackagePayment", fields: [packageId], references: [id])
+  settlements Settlement[]
 
   // Metadata
   metadata Json?
@@ -347,6 +655,7 @@ model Payment {
   @@index([bookingId])
   @@index([status])
   @@index([createdAt])
+  @@index([settleStatus])
 }
 
 model Review {
@@ -354,6 +663,18 @@ model Review {
   rating   Int // Range: 1-5
   comment  String?
   response String?
+
+  // Rating breakdown (optional detailed ratings)
+  cleanlinessRating   Int? // 1-5
+  communicationRating Int? // 1-5
+  accuracyRating      Int? // 1-5
+  locationRating      Int? // 1-5
+  valueRating         Int? // 1-5
+
+  // Status & Verification
+  isVerified   Boolean @default(false) // Review from actual booking
+  helpfulCount Int     @default(0) // How many found this helpful
+  reportCount  Int     @default(0) // How many reported as inappropriate
 
   // Relations
   propertyId String
@@ -371,6 +692,8 @@ model Review {
   // Indexes
   @@index([propertyId])
   @@index([userId])
+  @@index([rating])
+  @@index([isVerified])
 }
 
 model Inquiry {
@@ -387,12 +710,29 @@ model Inquiry {
   email String
   phone String?
 
+  // Owner Response
+  response String? // Owner's response to the inquiry
+
   // Relations
   propertyId String
-  property   Property @relation(fields: [propertyId], references: [id])
+  property   Property        @relation(fields: [propertyId], references: [id])
   userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
+  user       User?           @relation(fields: [userId], references: [id])
   assignedTo String? // User ID of assigned staff
+  notes      InquiryNote[]
+  messages   InquiryMessage[]
+  reminders  InquiryReminder[]
+
+  // Phase 4 — Chat fields
+  lastMessageAt    DateTime?
+  lastMessageBy    String?
+  unreadByOwner    Int      @default(0)
+  unreadByUser     Int      @default(0)
+  unreadByAdmin    Int      @default(0)
+  userLabel        String?
+  ownerLabel       String?
+  isDeletedByUser  Boolean  @default(false)
+  isDeletedByOwner Boolean  @default(false)
 
   // Timestamps
   createdAt   DateTime  @default(now())
@@ -405,48 +745,132 @@ model Inquiry {
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+  @@index([lastMessageAt])
+}
+
+model InquiryNote {
+  id        String   @id @default(cuid())
+  content   String
+  inquiryId String
+  inquiry   Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@index([inquiryId])
+}
+
+model InquiryMessage {
+  id          String  @id @default(cuid())
+  content     String
+  messageType String  @default("TEXT") // TEXT, STATUS_CHANGE, SYSTEM
+  senderRole  String                   // USER, OWNER, ADMIN, SYSTEM
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  senderId String?
+  sender   User?   @relation("InquiryMessageSender", fields: [senderId], references: [id])
+
+  readBy    String[] @default([])
+  createdAt DateTime @default(now())
+
+  @@index([inquiryId])
+  @@index([createdAt])
+  @@index([senderId])
+}
+
+model InquiryReminder {
+  id          String   @id @default(cuid())
+  title       String
+  scheduledAt DateTime
+  note        String?
+  remindOwner Boolean  @default(true)
+  remindAdmin Boolean  @default(false)
+  isCompleted Boolean  @default(false)
+  notifiedAt  DateTime?
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("InquiryReminderCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([inquiryId])
+  @@index([scheduledAt])
 }
 
 model Notification {
   id      String  @id @default(cuid())
-  type    String // booking, inquiry, payment, system
+  type    String // booking, inquiry, payment, system, review, property
   title   String
   message String
   isRead  Boolean @default(false)
-  data    Json?
+  data    Json? // Additional context data
+
+  // Notification metadata
+  priority  String  @default("normal") // low, normal, high, urgent
+  category  String? // informational, action_required, warning, success
+  actionUrl String? // URL to navigate when notification is clicked
+  imageUrl  String? // Optional image for rich notifications
+
+  // Expiration
+  expiresAt DateTime? // Auto-delete after this date
 
   // Relations
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Timestamps
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  readAt    DateTime? // When the notification was read
 
   // Indexes
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+  @@index([type])
+  @@index([priority])
 }
 
 model Package {
-  id          String      @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  tier        PackageTier
   description String?
 
   // Pricing
   price    Float
-  duration String // monthly, yearly
   isActive Boolean @default(true)
 
-  // Features
-  propertyLimit Int    @default(1)
-  featuredLimit Int    @default(0)
-  storageLimit  Int    @default(5) // in GB
-  supportType   String @default("email")
+  /// SALE = Buy listings · RENT = Long-let rentals (short stay does not require a package)
+  category PackageCategory @default(RENT)
 
-  // Additional Features
-  features Json // Array of feature objects
+  /// OWNER = landlord packages · AGENT = estate agent packages
+  audience PackageAudience @default(OWNER)
+
+  // Duration (dynamic — admin sets freely)
+  durationValue Int    @default(1)     // e.g. 10, 1, 6
+  durationUnit  String @default("months") // "days" | "months" | "years"
+
+  // Core Features
+  propertyLimit Int @default(1) // Number of live listings allowed (0 = unlimited)
+  featuredLimit Int @default(0) // Number of featured properties allowed
+
+  // Contact / Visibility Feature Flags (all off by default — admin opts in)
+  showOwnerName        Boolean @default(false) // Show owner full name on listing
+  showOwnerPhone       Boolean @default(false) // Show owner phone on listing
+  directInquiryToOwner Boolean @default(false) // Inquiries go direct to owner
+  adminCCOnInquiry     Boolean @default(false) // Admin also receives inquiry copy
+  fullAdminSupport     Boolean @default(false) // Dedicated admin handling
+  docExpiryAlert       Boolean @default(false) // Notifications when docs near expiry
+
+  // Short Description for package card
+  shortDescription String?
+
+  /// Hex color for owner/agent package cards, e.g. #16a34a
+  accentColor String @default("#16a34a")
 
   // Timestamps
   createdAt     DateTime       @default(now())
@@ -454,7 +878,6 @@ model Package {
   ownerPackages OwnerPackage[]
 
   // Indexes
-  @@index([tier])
   @@index([isActive])
 }
 
@@ -477,14 +900,20 @@ model OwnerPackage {
   nextBilling DateTime?
   cancelledAt DateTime?
 
-  // Usage
-  propertiesUsed Int   @default(0)
-  featuredUsed   Int   @default(0)
-  storageUsed    Float @default(0) // in GB
+  /// e.g. "7d-2026-08-01" — last renew reminder sent (avoids duplicates)
+  lastRenewReminderKey String?
+
+  // Usage Tracking
+  propertiesUsed      Int     @default(0)
+  featuredUsed        Int     @default(0)
+  storageUsed         Float   @default(0) // in GB
+  leadsUsedToday      Int     @default(0)
+  leadsUsedTotal      Int     @default(0)
+  verifiedBadgeActive Boolean @default(false)
 
   // Payment
   lastPaymentId String?
-  lastPayment   Payment? @relation("LastPayment", fields: [lastPaymentId], references: [id])
+  lastPayment   Payment?  @relation("LastPayment", fields: [lastPaymentId], references: [id])
   payments      Payment[] @relation("PackagePayment")
 
   // Timestamps
@@ -496,6 +925,89 @@ model OwnerPackage {
   @@index([packageId])
   @@index([status])
   @@index([endDate])
+}
+
+// Global admin-configurable settings (single row, id = "singleton")
+model AdminSettings {
+  id                         String   @id @default("singleton")
+  shortRentCommissionPercent Float    @default(0)  // e.g. 10 = 10%; range 0–100
+  contactSupportEmail        String   @default("support@propertyplatform.com")
+  contactSupportPhone        String   @default("+44 20 1234 5678")
+  contactSupportDescription  String   @default("Whether you're looking for a property, listing yours, or need support, our team is ready to assist you.")
+  // Bid / Boost configuration (Phase 3)
+  minBidAmountPerDay         Float    @default(0.01)  // min £/day an owner can bid
+  maxBidDurationDays         Int      @default(30) // max days a bid can run
+  maxBoostedSlotsPerZip      Int      @default(3)  // max boosted listings per zip code page
+  serviceTaxPercent          Float    @default(0)
+  serviceBookingFee          Float    @default(0)
+  serviceExtraFeeLabel       String   @default("")
+  serviceExtraFeeAmount      Float    @default(0)
+  updatedAt                  DateTime @updatedAt
+}
+
+model ContactQuery {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  phone           String?
+  subject         String
+  message         String   @db.Text
+  inquiryType     String
+  propertyType    String?
+  urgency         String   @default("normal")
+  status          String   @default("NEW")
+  adminNote       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([inquiryType, createdAt])
+}
+
+model ContactDepartment {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String
+  description String
+  icon        String   @default("help-circle")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model PropertyBid {
+  id        String @id @default(cuid())
+  zipCode   String // target zip code
+  amount    Float  // £ per day
+  totalCost Float  // amount × days
+
+  startDate DateTime
+  endDate   DateTime
+  status    String   @default("ACTIVE") // ACTIVE, EXPIRED, CANCELLED
+
+  // Payment
+  paymentId             String?
+  stripePaymentIntentId String?
+  stripeChargeId        String?
+
+  // Relations
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  ownerId    String
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([zipCode])
+  @@index([status])
+  @@index([endDate])
+  @@index([propertyId])
+  @@index([ownerId])
 }
 
 model AdCampaign {
@@ -569,9 +1081,13 @@ model AuditLog {
   entity      String // User, Property, Booking, etc.
   entityId    String
   changes     Json? // JSON diff of changes
-  performedBy String // User ID
+  performedBy String // User ID or TeamMember ID
   ipAddress   String?
   userAgent   String?
+
+  // Relations (optional - to track which team member or user performed action)
+  teamMemberId String?
+  teamMember   TeamMember? @relation(fields: [teamMemberId], references: [id], onDelete: SetNull)
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -580,4 +1096,663 @@ model AuditLog {
   @@index([entity])
   @@index([entityId])
   @@index([createdAt])
+  @@index([teamMemberId])
+}
+
+model Document {
+  id           String         @id @default(cuid())
+  documentType DocumentType
+  documentUrl  String // URL to the uploaded document
+  fileName     String
+  fileSize     Int // File size in bytes
+  mimeType     String? // e.g., application/pdf, image/jpeg
+  status       DocumentStatus @default(PENDING)
+
+  // Admin Verification
+  verifiedNotes String? // Admin notes/reason for rejection
+  verifiedBy    String? // Admin user ID who verified
+  verifiedAt    DateTime? // When document was verified
+  expiresAt     DateTime? // Document expiration date
+
+  // Relations
+  userId String
+  user   User   @relation("UserDocuments", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes
+  @@index([userId])
+  @@index([documentType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Favorite {
+  id String @id @default(cuid())
+
+  // Relations
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  // Unique constraint - user can only favorite a property once
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@index([propertyId])
+}
+
+model SavedSearch {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Display name e.g. "Properties For Sale in London"
+  name String
+
+  listingType ListingType
+  rentalType  RentalType?
+
+  location String
+  /// Full filter snapshot (minPrice, maxPrice, beds, radius, etc.)
+  filters Json
+
+  /// When true, notify user about matching new listings
+  alertEnabled   Boolean         @default(false)
+  alertFrequency AlertFrequency?
+
+  lastNotifiedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, listingType])
+  @@index([alertEnabled])
+}
+
+// ==================== SERVICE MODELS ====================
+
+/// Admin-owned catalog of bookable services (fixed tenant price + MYKEYS commission)
+model CatalogService {
+  id                String  @id @default(cuid())
+  name              String
+  description       String?
+  image             String?
+  price             Float // Amount tenant pays (GBP)
+  commissionPercent Float   @default(10) // MYKEYS cut, e.g. 10 = 10%
+  morningSurcharge   Float  @default(0)
+  afternoonSurcharge Float  @default(0)
+  eveningSurcharge   Float  @default(0)
+  isActive          Boolean @default(true)
+  sortOrder         Int     @default(0)
+
+  categoryId String
+  category   ServiceCategoryInfo @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  offeredBy ProviderOfferedService[]
+  bookings  ServiceBooking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+/// Provider toggles which catalog services they can provide (no custom pricing)
+model ProviderOfferedService {
+  id               String @id @default(cuid())
+  providerId       String
+  catalogServiceId String
+
+  provider       ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  catalogService CatalogService  @relation(fields: [catalogServiceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([providerId, catalogServiceId])
+  @@index([providerId])
+  @@index([catalogServiceId])
+}
+
+model ServiceProvider {
+  id String @id @default(cuid())
+
+  // Linked user
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Professional Info
+  bio             String?
+  category        String // ServiceCategoryInfo.id (primary category)
+  categories      String[] @default([]) // All selected ServiceCategoryInfo.ids
+  subcategories   Json // Array of subcategory objects [{id, name, category}]
+  serviceAreas    Json // Array of service area strings
+  specializations Json? // Array of specialization strings
+  certifications  Json? // Array of certification strings
+
+  // Legacy pricing fields (unused in new catalog flow; kept nullable for compat)
+  instantBookingEnabled Boolean @default(false)
+  instantBookingPrice   Float?
+
+  // Verification
+  documentVerified Boolean @default(false)
+  documentsUrl     Json? // Array of document URLs
+
+  // Stats (cached / denormalized for quick reads)
+  rating            Float @default(0)
+  totalReviews      Int   @default(0)
+  completedBookings Int   @default(0)
+  totalEarnings     Float @default(0)
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Relations
+  services        ServiceListing[]
+  offeredServices ProviderOfferedService[]
+  bookings        ServiceBooking[]
+  serviceRequests ServiceRequest[]
+  serviceReviews  ServiceReview[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([category])
+  @@index([isActive])
+  @@index([rating])
+}
+
+model ServiceListing {
+  id String @id @default(cuid())
+
+  // Legacy provider-owned listings (deprecated; prefer CatalogService + ProviderOfferedService)
+  name        String
+  category    String
+  description String?
+  basePrice   Float
+  image       String?
+
+  // Status
+  status String @default("active") // active | inactive
+
+  // Stats (denormalized)
+  rating  Float @default(0)
+  reviews Int   @default(0)
+
+  // Relations
+  providerId String
+  provider   ServiceProvider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  bookings   ServiceBooking[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+  @@index([category])
+  @@index([status])
+}
+
+model ServiceBooking {
+  id String @id @default(cuid())
+
+  // Service details
+  service     String // service name / description
+  category    String // ServiceCategoryInfo.id or label
+  subcategory String?
+  serviceArea String?
+  bookingType ServiceBookingType @default(SCHEDULED)
+  description String?
+
+  // Schedule
+  scheduledDate DateTime?
+  scheduledTime String?
+
+  // Location
+  location String?
+
+  // Status
+  status        ServiceBookingStatus @default(PENDING)
+  paymentStatus ServicePaymentStatus @default(PENDING)
+
+  // Pricing (snapshot from catalog at book time)
+  totalAmount         Float
+  paidAmount          Float  @default(0)
+  price               Float? // catalog price snapshot
+  commissionPercent   Float?
+  commissionAmount    Float?
+  providerEarnings    Float?
+
+  // Stripe / payment
+  stripePaymentIntentId String?
+  paymentId             String?
+
+  // OTP for complete / cancel confirmation by tenant
+  actionOtpHash     String?
+  actionOtpExpiresAt DateTime?
+  pendingAction     ServicePendingAction?
+  otpVerifiedAt     DateTime?
+
+  // Manual settle-up for provider payout
+  settleStatus     ServiceSettleStatus @default(NOT_APPLICABLE)
+  settledAt        DateTime?
+  settledByAdminId String?
+
+  // Relations
+  clientId         String
+  client           User             @relation("ServiceClient", fields: [clientId], references: [id])
+  providerId       String
+  provider         ServiceProvider  @relation(fields: [providerId], references: [id])
+  serviceListingId String?
+  serviceListing   ServiceListing?  @relation(fields: [serviceListingId], references: [id])
+  catalogServiceId String?
+  catalogService   CatalogService?  @relation(fields: [catalogServiceId], references: [id])
+  review           ServiceReview?
+  settlements      Settlement[]
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  cancelledAt DateTime?
+
+  @@index([clientId])
+  @@index([providerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([scheduledDate])
+  @@index([catalogServiceId])
+  @@index([settleStatus])
+  @@index([paymentStatus])
+}
+
+/// Unified manual settle ledger (service man + short-stay owner)
+model Settlement {
+  id     String           @id @default(cuid())
+  type   SettlementType
+  amount Float
+  status SettlementStatus @default(PENDING)
+  note   String?
+
+  beneficiaryUserId String
+  beneficiary       User   @relation("SettlementBeneficiary", fields: [beneficiaryUserId], references: [id])
+
+  serviceBookingId String?
+  serviceBooking   ServiceBooking? @relation(fields: [serviceBookingId], references: [id])
+  paymentId        String?
+  payment          Payment?        @relation(fields: [paymentId], references: [id])
+
+  settledAt        DateTime?
+  settledByAdminId String?
+  settledByAdmin   User?     @relation("SettlementAdmin", fields: [settledByAdminId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([beneficiaryUserId])
+  @@index([serviceBookingId])
+  @@index([paymentId])
+}
+
+model ServiceRequest {
+  id String @id @default(cuid())
+
+  // Request details
+  serviceType String
+  description String?
+  location    String?
+  budget      Float?
+  urgency     ServiceRequestUrgency @default(MEDIUM)
+
+  // Status
+  status ServiceRequestStatus @default(PENDING)
+
+  // Relations
+  clientId   String
+  client     User            @relation("ServiceRequester", fields: [clientId], references: [id])
+  providerId String
+  provider   ServiceProvider @relation(fields: [providerId], references: [id])
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  respondedAt DateTime?
+
+  @@index([clientId])
+  @@index([providerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ServiceReview {
+  id String @id @default(cuid())
+
+  // Review content
+  rating   Int // 1-5
+  comment  String?
+  response String? // Provider's reply
+
+  // Meta
+  helpfulCount Int @default(0)
+
+  // Relations
+  bookingId  String          @unique
+  booking    ServiceBooking  @relation(fields: [bookingId], references: [id])
+  userId     String
+  user       User            @relation("ServiceReviewer", fields: [userId], references: [id])
+  providerId String
+  provider   ServiceProvider @relation(fields: [providerId], references: [id])
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  respondedAt DateTime?
+
+  @@index([providerId])
+  @@index([userId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+// ==================== ADMIN & TEAM MANAGEMENT ====================
+
+model AdminPermission {
+  id          String             @id @default(cuid())
+  name        String             @unique // e.g., "manage_users", "manage_properties"
+  label       String // e.g., "Manage Users"
+  description String? // e.g., "Can add, edit, delete users"
+  category    PermissionCategory
+
+  // Relations
+  teamMembers TeamMemberPermission[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+model TeamMember {
+  id       String         @id @default(cuid())
+  name     String
+  email    String         @unique
+  password String // hashed password
+  role     TeamMemberRole @default(SUBADMIN)
+  status   String         @default("active") // active, inactive
+
+  // Related User (optional - if they also have a user account)
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Relations
+  permissions TeamMemberPermission[]
+  auditLogs   AuditLog[]
+
+  // Activity Tracking
+  joinDate   DateTime  @default(now())
+  lastActive DateTime?
+  loginCount Int       @default(0)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([joinDate])
+}
+
+model TeamMemberPermission {
+  id String @id @default(cuid())
+
+  // Relations
+  teamMemberId String
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  permissionId String
+  permission   AdminPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  grantedAt DateTime @default(now())
+
+  // Unique constraint - each member can have each permission only once
+  @@unique([teamMemberId, permissionId])
+  @@index([teamMemberId])
+  @@index([permissionId])
+}
+
+// ─────────────────────────────────────────
+// PHASE 2 — PROPERTY DOCUMENTS
+// ─────────────────────────────────────────
+
+model PropertyDocumentType {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String?
+  isRequired        Boolean  @default(true)
+  requireIssueDate  Boolean  @default(false)
+  requireExpiryDate Boolean  @default(false)
+  /// Comma-separated or JSON array: "ALL" | "BUY" | "RENT_LONG" | "RENT_SHORT"
+  appliesTo         String[] @default([])
+  isActive          Boolean  @default(true)
+  sortOrder         Int      @default(0)
+
+  propertyDocuments PropertyDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model PropertyDocument {
+  id            String    @id @default(cuid())
+  documentUrl   String
+  fileName      String
+  fileSize      Int
+  mimeType      String?
+  issuedDate    DateTime?
+  expiryDate    DateTime?
+  /// PENDING | VERIFIED | REJECTED | EXPIRED
+  status        String    @default("PENDING")
+  verifiedNotes String?
+  verifiedBy    String?
+  verifiedAt    DateTime?
+
+  propertyId     String
+  property       Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  documentTypeId String
+  documentType   PropertyDocumentType @relation(fields: [documentTypeId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([documentTypeId])
+  @@index([expiryDate])
+  @@index([status])
+}
+
+model Faq {
+  id        String      @id @default(cuid())
+  question  String
+  answer    String      @db.Text
+  category  FaqCategory
+  tags      String[]    @default([])
+  sortOrder Int         @default(0)
+  status    FaqStatus   @default(ACTIVE)
+  featured  Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([category, status])
+  @@index([status])
+  @@index([featured])
+}
+
+enum RentTenure {
+  SIX_MONTHS
+  TWELVE_MONTHS
+}
+
+enum TenancyStatus {
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+/// Off-platform tenant contact — not linked to the main User table
+model PropertyTenant {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  phone     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenancies PropertyTenancy[]
+
+  @@index([ownerId])
+  @@index([email])
+}
+
+/// Manual long-term rental managed by the owner (no package required)
+model PropertyTenancy {
+  id                 String        @id @default(cuid())
+  propertyId         String
+  property           Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenantId           String
+  tenant             PropertyTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ownerId            String
+  owner              User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  tenure             RentTenure
+  agreementDate      DateTime
+  /// When the tenure ends (agreementDate + 6 or 12 months)
+  endsAt             DateTime
+  /// Day of month rent is due (1–28)
+  rentDueDay         Int
+  monthlyRent        Float?
+  status             TenancyStatus @default(ACTIVE)
+  /// YYYY-MM key of last due-date reminder (avoids duplicate sends)
+  lastDueReminderKey String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  documents PropertyTenantDocument[]
+
+  @@index([propertyId])
+  @@index([ownerId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([rentDueDay, status])
+  @@index([status, endsAt])
+}
+
+model PropertyTenantDocument {
+  id        String          @id @default(cuid())
+  tenancyId String
+  tenancy   PropertyTenancy @relation(fields: [tenancyId], references: [id], onDelete: Cascade)
+  name      String
+  fileUrl   String
+  createdAt DateTime        @default(now())
+
+  @@index([tenancyId])
+}
+
+/// Owner-recorded property expenses (maintenance, bills, etc.)
+model PropertyExpense {
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  amount      Float
+  expenseDate DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([propertyId])
+  @@index([expenseDate])
+  @@index([ownerId, expenseDate])
+  @@index([ownerId, propertyId])
+}
+
+enum DiaryPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum DiaryStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+/// Personal diary / to-do items for user, owner, and service dashboards
+model DiaryTask {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  priority     DiaryPriority @default(MEDIUM)
+  status       DiaryStatus   @default(PENDING)
+  dueDate      DateTime
+  /// Set when due-date email + notification were sent
+  reminderSentAt DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([dueDate, status])
+  @@index([reminderSentAt])
+}
+
+/// CMS blocks for marketing pages (home first, then buy/rent/etc.)
+model PageSection {
+  id        String   @id @default(cuid())
+  page      String   // e.g. "home"
+  section   String   // e.g. "hero" | "categories" | "featured" | "testimonials" | "stats" | "faq"
+  content   Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([page, section])
+  @@index([page, isActive])
+}
+
+/// Footer "Stay Updated" newsletter — emailed when a new property goes live
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  isActive       Boolean   @default(true)
+  unsubscribeToken String  @unique @default(cuid())
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  @@index([isActive])
 }

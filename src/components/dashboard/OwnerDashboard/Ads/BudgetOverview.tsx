@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DollarSign, TrendingUp, AlertCircle, Target, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -132,7 +132,7 @@ export default function BudgetOverview() {
               <div>
                 <div className="font-medium text-gray-900">{charge.description}</div>
                 <div className="text-xs text-gray-500">
-                  {new Date(charge.date).toLocaleDateString('en-IN', {
+                  {new Date(charge.date).toLocaleDateString('en-GB', {
                     day: 'numeric',
                     month: 'short'
                   })}

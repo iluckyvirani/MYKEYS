@@ -1,325 +1,277 @@
-"use client";
+﻿"use client";
 
-import { Crown, Check, Home, Star, Zap, Globe, Shield, Users, Target, Calendar } from "lucide-react";
+import { Check, Home, Loader2, Package, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
+import { api } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+import PackagePaymentModal from "@/components/owner/PackagePaymentModal";
+import { resolvePackageColor, withAlpha } from "@/lib/packages/packageColors";
 
-const packages = [
-  {
-    id: "basic",
-    name: "Basic",
-    price: 1999,
-    billing: "monthly",
-    recommended: false,
-    popular: false,
-    features: [
-      { name: "Up to 3 Properties", included: true },
-      { name: "Basic Analytics", included: true },
-      { name: "Email Support", included: true },
-      { name: "Standard Listing", included: true },
-      { name: "5 GB Storage", included: true },
-      { name: "Featured Listings", included: false },
-      { name: "Priority Support", included: false },
-      { name: "Advanced Analytics", included: false },
-      { name: "Custom Domain", included: false },
-      { name: "API Access", included: false },
-    ],
-    limits: {
-      properties: 3,
-      bookings: "Unlimited",
-      storage: "5 GB",
-      support: "Email",
-      featured: 0,
-    },
-    color: "gray",
-  },
-  {
-    id: "professional",
-    name: "Professional",
-    price: 4999,
-    billing: "monthly",
-    recommended: true,
-    popular: true,
-    features: [
-      { name: "Up to 10 Properties", included: true },
-      { name: "Advanced Analytics", included: true },
-      { name: "Priority Support", included: true },
-      { name: "Featured Listings (2)", included: true },
-      { name: "25 GB Storage", included: true },
-      { name: "Custom Domain", included: true },
-      { name: "API Access", included: true },
-      { name: "Team Members (3)", included: true },
-      { name: "Marketing Tools", included: false },
-      { name: "Dedicated Manager", included: false },
-    ],
-    limits: {
-      properties: 10,
-      bookings: "Unlimited",
-      storage: "25 GB",
-      support: "Priority",
-      featured: 2,
-    },
-    color: "blue",
-  },
-  {
-    id: "premium",
-    name: "Premium",
-    price: 9999,
-    billing: "monthly",
-    recommended: false,
-    popular: false,
-    features: [
-      { name: "Up to 25 Properties", included: true },
-      { name: "Premium Analytics", included: true },
-      { name: "24/7 Phone Support", included: true },
-      { name: "Featured Listings (5)", included: true },
-      { name: "100 GB Storage", included: true },
-      { name: "Custom Domain", included: true },
-      { name: "Full API Access", included: true },
-      { name: "Team Members (10)", included: true },
-      { name: "Marketing Tools", included: true },
-      { name: "Dedicated Manager", included: true },
-    ],
-    limits: {
-      properties: 25,
-      bookings: "Unlimited",
-      storage: "100 GB",
-      support: "24/7 Phone",
-      featured: 5,
-    },
-    color: "purple",
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 24999,
-    billing: "monthly",
-    recommended: false,
-    popular: false,
-    features: [
-      { name: "Unlimited Properties", included: true },
-      { name: "Enterprise Analytics", included: true },
-      { name: "Dedicated Support", included: true },
-      { name: "All Listings Featured", included: true },
-      { name: "Unlimited Storage", included: true },
-      { name: "Multiple Domains", included: true },
-      { name: "Custom API", included: true },
-      { name: "Unlimited Team", included: true },
-      { name: "Full Marketing Suite", included: true },
-      { name: "Account Manager", included: true },
-    ],
-    limits: {
-      properties: "Unlimited",
-      bookings: "Unlimited",
-      storage: "Unlimited",
-      support: "Dedicated",
-      featured: "All",
-    },
-    color: "green",
-  },
-];
+interface AvailablePackagesProps {
+  packages: any[];
+  currentPackageId: string | null;
+  onSubscribe: () => void;
+  categoryLabel?: string;
+}
 
-const getPackageColor = (color: string) => {
-  switch (color) {
-    case "gray":
-      return { bg: "bg-gray-100", text: "text-gray-800", border: "border-gray-200" };
-    case "blue":
-      return { bg: "bg-blue-100", text: "text-blue-800", border: "border-blue-200" };
-    case "purple":
-      return { bg: "bg-purple-100", text: "text-purple-800", border: "border-purple-200" };
-    case "green":
-      return { bg: "bg-green-100", text: "text-green-800", border: "border-green-200" };
-    default:
-      return { bg: "bg-gray-100", text: "text-gray-800", border: "border-gray-200" };
-  }
+export type PurchasePackageDetails = {
+  ownerPackageId: string;
+  name: string;
+  price: number;
+  shortDescription?: string;
+  durationValue: number;
+  durationUnit: string;
+  propertyLimit: number;
+  featuredLimit: number;
+  accentColor: string;
+  showOwnerName?: boolean;
+  showOwnerPhone?: boolean;
+  directInquiryToOwner?: boolean;
+  adminCCOnInquiry?: boolean;
+  fullAdminSupport?: boolean;
+  docExpiryAlert?: boolean;
 };
 
-export default function AvailablePackages() {
-  const [selectedPackage, setSelectedPackage] = useState("professional");
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
 
-  const handleSelectPackage = (packageId: string) => {
-    setSelectedPackage(packageId);
+function getDurationLabel(value: number, unit: string) {
+  const unitMap = { days: "day", months: "month", years: "year" };
+  const label = unitMap[unit as keyof typeof unitMap] || unit;
+  return `${value} ${label}${value === 1 ? "" : "s"}`;
+}
+
+function featureRows(pkg: any) {
+  return [
+    pkg.showOwnerName && "Show your name on listings",
+    pkg.showOwnerPhone && "Show your phone on listings",
+    pkg.directInquiryToOwner && "Inquiries come straight to you",
+    pkg.adminCCOnInquiry && "Admin copied on inquiries",
+    pkg.fullAdminSupport && "Full admin support",
+    pkg.docExpiryAlert && "Document expiry alerts",
+  ].filter(Boolean) as string[];
+}
+
+export default function AvailablePackages({
+  packages,
+  currentPackageId,
+  onSubscribe,
+  categoryLabel = "Rent",
+}: AvailablePackagesProps) {
+  const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [pendingPayment, setPendingPayment] = useState<PurchasePackageDetails | null>(
+    null
+  );
+
+  const handleSubscribe = async (pkg: any, color: string, index: number) => {
+    try {
+      setSubscribing(pkg.id);
+      const response = await api.post("/owner/packages/subscribe", {
+        packageId: pkg.id,
+      });
+      const { ownerPackageId } = response.data.data;
+      setPendingPayment({
+        ownerPackageId,
+        name: pkg.name,
+        price: pkg.price,
+        shortDescription: pkg.shortDescription,
+        durationValue: pkg.durationValue,
+        durationUnit: pkg.durationUnit,
+        propertyLimit: pkg.propertyLimit,
+        featuredLimit: pkg.featuredLimit,
+        accentColor: resolvePackageColor(pkg.accentColor, index),
+        showOwnerName: pkg.showOwnerName,
+        showOwnerPhone: pkg.showOwnerPhone,
+        directInquiryToOwner: pkg.directInquiryToOwner,
+        adminCCOnInquiry: pkg.adminCCOnInquiry,
+        fullAdminSupport: pkg.fullAdminSupport,
+        docExpiryAlert: pkg.docExpiryAlert,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Subscription Failed",
+        description:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to initiate subscription",
+        variant: "destructive",
+      });
+    } finally {
+      setSubscribing(null);
+    }
   };
 
-  const handleUpgrade = () => {
-    const selected = packages.find(p => p.id === selectedPackage);
-    alert(`Upgrading to ${selected?.name} plan at ₹${selected?.price.toLocaleString()}/${billingCycle}`);
-  };
+  if (!packages || packages.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed bg-white p-10 text-center">
+        <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+        <p className="text-gray-600">
+          No {categoryLabel.toLowerCase()} packages available at the moment.
+        </p>
+      </div>
+    );
+  }
 
-  const calculateYearlyPrice = (monthlyPrice: number) => {
-    return Math.round(monthlyPrice * 12 * 0.8); // 20% discount for yearly
-  };
+  const sorted = [...packages].sort((a, b) => a.price - b.price);
+  const popularId =
+    sorted.length >= 2 ? sorted[Math.min(1, sorted.length - 1)].id : null;
 
   return (
-    <div className="bg-white rounded-[5px] border p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Available Packages</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Choose the perfect plan for your business needs
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-gray-100 p-1 rounded-lg">
-            <button
-              className={`px-4 py-2 text-sm rounded-[5px] ${billingCycle === "monthly" ? "bg-white shadow" : ""}`}
-              onClick={() => setBillingCycle("monthly")}
-            >
-              Monthly
-            </button>
-            <button
-              className={`px-4 py-2 text-sm rounded-[5px] ${billingCycle === "yearly" ? "bg-white shadow" : ""}`}
-              onClick={() => setBillingCycle("yearly")}
-            >
-              Yearly (Save 20%)
-            </button>
-          </div>
-        </div>
+    <div>
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-gray-900">
+          Choose a {categoryLabel} plan
+        </h2>
+        <p className="text-gray-500 text-sm mt-1">
+          {categoryLabel === "Sale"
+            ? "Required to publish Buy listings."
+            : "Required to publish Long Rent listings."}
+        </p>
       </div>
 
-      {/* Packages Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {packages.map((pkg) => {
-          const colorConfig = getPackageColor(pkg.color);
-          const isSelected = selectedPackage === pkg.id;
-          const price = billingCycle === "yearly" ? calculateYearlyPrice(pkg.price) : pkg.price;
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {sorted.map((pkg, index) => {
+          const color = resolvePackageColor(pkg.accentColor, index);
+          const isCurrent = currentPackageId === pkg.id;
+          const isPopular = pkg.id === popularId && !isCurrent;
+          const features = featureRows(pkg);
 
           return (
             <div
               key={pkg.id}
-              className={`border rounded-lg p-6 relative transition-all ${
-                isSelected
-                  ? `ring-2 ring-green-500 border-green-500 transform scale-[1.02]`
-                  : "hover:border-gray-400"
-              } ${pkg.recommended ? "border-green-300" : ""}`}
-              onClick={() => handleSelectPackage(pkg.id)}
+              className="relative rounded-2xl border bg-white overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"
+              style={{
+                borderColor: withAlpha(color, 0.28),
+                boxShadow: isPopular ? `0 12px 32px ${withAlpha(color, 0.18)}` : undefined,
+              }}
             >
-              {pkg.popular && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <span className="px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-medium rounded-full">
-                    MOST POPULAR
-                  </span>
-                </div>
+              <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
+              {isPopular && (
+                <span
+                  className="absolute top-4 right-4 text-[10px] font-bold uppercase tracking-wide text-white px-2 py-1 rounded-full"
+                  style={{ backgroundColor: color }}
+                >
+                  Popular
+                </span>
               )}
 
-              {pkg.recommended && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <span className="px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-medium rounded-full">
-                    RECOMMENDED
+              <div
+                className="px-5 pt-5 pb-4"
+                style={{ background: `linear-gradient(180deg, ${withAlpha(color, 0.12)} 0%, #fff 100%)` }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white"
+                    style={{ backgroundColor: color }}
+                  >
+                    <Sparkles className="w-4 h-4" />
                   </span>
-                </div>
-              )}
-
-              <div className="text-center mb-4">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium inline-flex items-center gap-1 mb-3 ${colorConfig.bg} ${colorConfig.text} ${colorConfig.border}`}>
-                  {pkg.id === "premium" || pkg.id === "enterprise" ? (
-                    <Crown className="w-4 h-4" />
-                  ) : pkg.id === "professional" ? (
-                    <Star className="w-4 h-4" />
-                  ) : (
-                    <Home className="w-4 h-4" />
-                  )}
-                  {pkg.name}
-                </div>
-                
-                <div className="mb-2">
-                  <span className="text-3xl font-bold text-gray-900">
-                    ₹{price.toLocaleString()}
-                  </span>
-                  <span className="text-gray-600">/{billingCycle}</span>
-                </div>
-                
-                {billingCycle === "yearly" && (
-                  <div className="text-sm text-green-600">
-                    Save ₹{(pkg.price * 12 - price).toLocaleString()} yearly
+                  <div>
+                    <p className="font-semibold text-gray-900">{pkg.name}</p>
+                    {pkg.shortDescription && (
+                      <p className="text-xs text-gray-500 line-clamp-1">
+                        {pkg.shortDescription}
+                      </p>
+                    )}
                   </div>
+                </div>
+                <div className="mt-4 flex items-end gap-1">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {formatCurrency(pkg.price)}
+                  </span>
+                  <span className="text-sm text-gray-500 mb-1">
+                    / {getDurationLabel(pkg.durationValue, pkg.durationUnit)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="px-5 pb-5 flex-1 flex flex-col">
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="rounded-xl bg-gray-50 px-3 py-2">
+                    <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                      <Home className="w-3 h-3" /> Listings
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {pkg.propertyLimit === 0 ? "Unlimited" : pkg.propertyLimit}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-gray-50 px-3 py-2">
+                    <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                      <Star className="w-3 h-3" /> Featured
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {pkg.featuredLimit === 0 ? "—" : pkg.featuredLimit}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 mb-5 flex-1">
+                  {features.length === 0 ? (
+                    <p className="text-xs text-gray-400">Core listing access included.</p>
+                  ) : (
+                    features.map((f) => (
+                      <div key={f} className="flex items-start gap-2 text-sm text-gray-700">
+                        <Check className="w-4 h-4 shrink-0 mt-0.5" style={{ color }} />
+                        <span>{f}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {isCurrent ? (
+                  <Button disabled className="w-full rounded-xl" variant="outline">
+                    Current plan
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleSubscribe(pkg, color, index)}
+                    disabled={subscribing === pkg.id}
+                    className="w-full rounded-xl text-white hover:opacity-90 cursor-pointer"
+                    style={{ backgroundColor: color }}
+                  >
+                    {subscribing === pkg.id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Preparing…
+                      </>
+                    ) : (
+                      `Get ${pkg.name}`
+                    )}
+                  </Button>
                 )}
               </div>
-
-              {/* Limits */}
-              <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
-                <div className="text-center p-2 bg-gray-50 rounded">
-                  <div className="font-medium">{pkg.limits.properties}</div>
-                  <div className="text-xs text-gray-600">Properties</div>
-                </div>
-                <div className="text-center p-2 bg-gray-50 rounded">
-                  <div className="font-medium">{pkg.limits.featured}</div>
-                  <div className="text-xs text-gray-600">Featured</div>
-                </div>
-                <div className="text-center p-2 bg-gray-50 rounded">
-                  <div className="font-medium">{pkg.limits.storage}</div>
-                  <div className="text-xs text-gray-600">Storage</div>
-                </div>
-                <div className="text-center p-2 bg-gray-50 rounded">
-                  <div className="font-medium">{pkg.limits.support}</div>
-                  <div className="text-xs text-gray-600">Support</div>
-                </div>
-              </div>
-
-              {/* Features List */}
-              <div className="space-y-2 mb-6">
-                {pkg.features.slice(0, 5).map((feature, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm">
-                    {feature.included ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <div className="w-4 h-4 rounded-full border border-gray-300"></div>
-                    )}
-                    <span className={feature.included ? "text-gray-700" : "text-gray-400"}>
-                      {feature.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                className={`w-full ${
-                  isSelected
-                    ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                }`}
-                onClick={() => handleSelectPackage(pkg.id)}
-              >
-                {isSelected ? "Selected" : "Select Plan"}
-              </Button>
             </div>
           );
         })}
       </div>
 
-      {/* Upgrade Button */}
-      <div className="border-t pt-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="font-medium text-gray-900 mb-1">
-              Selected: {packages.find(p => p.id === selectedPackage)?.name} Plan
-            </div>
-            <div className="text-sm text-gray-600">
-              {billingCycle === "yearly" ? "Billed annually" : "Billed monthly"} • Cancel anytime
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-2xl font-bold text-gray-900">
-                ₹{(billingCycle === "yearly" 
-                  ? calculateYearlyPrice(packages.find(p => p.id === selectedPackage)?.price || 0)
-                  : packages.find(p => p.id === selectedPackage)?.price
-                )?.toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-600">/{billingCycle}</div>
-            </div>
-            <Button
-              onClick={handleUpgrade}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8"
-              size="lg"
-            >
-              Upgrade Now
-            </Button>
-          </div>
-        </div>
-      </div>
+      {pendingPayment && (
+        <PackagePaymentModal
+          isOpen
+          ownerPackageId={pendingPayment.ownerPackageId}
+          packageName={pendingPayment.name}
+          amount={pendingPayment.price}
+          details={pendingPayment}
+          onClose={() => setPendingPayment(null)}
+          onSuccess={() => {
+            toast({
+              title: "Package Activated",
+              description: `${pendingPayment.name} is now active on your account.`,
+            });
+            onSubscribe();
+          }}
+          onError={(msg) =>
+            toast({ title: "Payment Failed", description: msg, variant: "destructive" })
+          }
+        />
+      )}
     </div>
   );
 }

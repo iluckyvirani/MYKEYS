@@ -1,87 +1,22 @@
-// components/dashboard/OwnerDashboard/PropertyList.tsx
+﻿// components/dashboard/OwnerDashboard/PropertyList.tsx
 "use client";
 
-import { Building, MapPin, Eye, Edit, MoreVertical, Star, Calendar, DollarSign, Users } from "lucide-react";
+import { Building, MapPin, Eye, Edit, MoreVertical, Star, Calendar, DollarSign, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { api } from "@/lib/api";
+import SharePropertyButton from "@/components/property/SharePropertyButton";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
-const mockProperties = [
-  {
-    id: "PROP001",
-    name: "Seaside Luxury Villa",
-    location: "Goa, India",
-    type: "Villa",
-    status: "active", // active, inactive, maintenance, pending
-    price: 45000,
-    priceType: "per_night",
-    occupancy: 85,
-    rating: 4.8,
-    reviews: 124,
-    bookings: 12,
-    revenue: 540000,
-    image: "/api/placeholder/400/300",
-    amenities: ["Pool", "Beach View", "4 Beds", "WiFi"],
-    lastBooking: "2024-01-05",
-  },
-  {
-    id: "PROP002",
-    name: "Urban Studio Apartment",
-    location: "Bangalore, India",
-    type: "Apartment",
-    status: "active",
-    price: 25000,
-    priceType: "per_month",
-    occupancy: 92,
-    rating: 4.5,
-    reviews: 89,
-    bookings: 8,
-    revenue: 200000,
-    image: "/api/placeholder/400/300",
-    amenities: ["Fully Furnished", "Gym", "Security"],
-    lastBooking: "2024-01-10",
-  },
-  {
-    id: "PROP003",
-    name: "Mountain View Cottage",
-    location: "Shimla, Himachal",
-    type: "Cottage",
-    status: "maintenance",
-    price: 18000,
-    priceType: "per_night",
-    occupancy: 45,
-    rating: 4.9,
-    reviews: 67,
-    bookings: 5,
-    revenue: 90000,
-    image: "/api/placeholder/400/300",
-    amenities: ["Fireplace", "Mountain View", "Kitchen"],
-    lastBooking: "2023-12-28",
-  },
-  {
-    id: "PROP004",
-    name: "Luxury Penthouse",
-    location: "Mumbai, India",
-    type: "Penthouse",
-    status: "inactive",
-    price: 120000,
-    priceType: "per_month",
-    occupancy: 0,
-    rating: 4.7,
-    reviews: 45,
-    bookings: 0,
-    revenue: 0,
-    image: "/api/placeholder/400/300",
-    amenities: ["Pool", "Gym", "City View"],
-    lastBooking: null,
-  },
-];
+
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -125,23 +60,75 @@ const getOccupancyColor = (percentage: number) => {
 };
 
 export default function PropertyList() {
-  const [properties, setProperties] = useState(mockProperties);
+  const { basePath } = useDashboardBase();
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const togglePropertyStatus = (id: string) => {
-    setProperties(
-      properties.map((prop) =>
-        prop.id === id
-          ? {
-              ...prop,
-              status: prop.status === "active" ? "inactive" : "active",
-            }
-          : prop
-      )
-    );
+  // Fetch owner's properties
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await api.get("/owner/properties");
+      if (response.data.success) {
+        setProperties(response.data.data);
+      } else {
+        setError(response.data.message || "Failed to load properties");
+      }
+    } catch (err: any) {
+      console.error("Error fetching properties:", err);
+      setError(err.response?.data?.message || "Failed to load properties");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteProperty = (id: string) => {
-    setProperties(properties.filter((prop) => prop.id !== id));
+  const togglePropertyStatus = async (id: string) => {
+    try {
+      const property = properties.find((p) => p.id === id);
+      if (!property) return;
+
+      const newStatus = property.status === "active" ? "INACTIVE" : "ACTIVE";
+
+      // Optimistic update
+      setProperties(
+        properties.map((prop) =>
+          prop.id === id
+            ? { ...prop, status: newStatus.toLowerCase() }
+            : prop
+        )
+      );
+
+      // Update on server
+      await api.patch(`/properties/${id}`, { status: newStatus });
+    } catch (err: any) {
+      console.error("Error toggling property status:", err);
+      // Revert on error
+      fetchProperties();
+      alert(err.response?.data?.message || "Failed to update property status");
+    }
+  };
+
+  const deleteProperty = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this property?")) return;
+
+    try {
+      // Optimistic update
+      setProperties(properties.filter((prop) => prop.id !== id));
+
+      // Delete on server
+      await api.delete(`/properties/${id}`);
+    } catch (err: any) {
+      console.error("Error deleting property:", err);
+      // Revert on error
+      fetchProperties();
+      alert(err.response?.data?.message || "Failed to delete property");
+    }
   };
 
   return (
@@ -154,17 +141,66 @@ export default function PropertyList() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm">
-            <Eye className="w-4 h-4 mr-2" />
-            View Public Listings
-          </Button>
-          <Button className="bg-green-600 hover:bg-green-700">
-            <Building className="w-4 h-4 mr-2" />
-            Add New Property
-          </Button>
+          {/* <Link href="/rent">
+            <Button variant="outline" size="sm">
+              <Eye className="w-4 h-4 mr-2" />
+              View Public Listings
+            </Button>
+          </Link> */}
+          <Link href={`${basePath}/properties/add`}>
+            <Button className="bg-green-600 hover:bg-green-700">
+              <Building className="w-4 h-4 mr-2" />
+              Add New Property
+            </Button>
+          </Link>
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+          <span className="ml-3 text-gray-600">Loading properties...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 my-4">
+          <p className="text-red-800 text-sm">{error}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchProperties}
+            className="mt-2"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && properties.length === 0 && (
+        <div className="text-center py-12">
+          <Building className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No Properties Yet
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Start by adding your first property to the platform
+          </p>
+          <Link href={`${basePath}/properties/add`}>
+            <Button className="bg-green-600 hover:bg-green-700">
+              <Building className="w-4 h-4 mr-2" />
+              Add Your First Property
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Properties Table */}
+      {!loading && !error && properties.length > 0 && (
+        <>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -198,7 +234,7 @@ export default function PropertyList() {
                 <tr key={property.id} className="border-b hover:bg-gray-50 transition-colors">
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-lg bg-linear-to-br from-blue-100 to-green-100 flex items-center justify-center">
                         <Building className="w-6 h-6 text-gray-600" />
                       </div>
                       <div>
@@ -248,7 +284,7 @@ export default function PropertyList() {
                       </span>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Last: {property.lastBooking ? new Date(property.lastBooking).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Never'}
+                      Last: {property.lastBooking ? new Date(property.lastBooking).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Never'}
                     </div>
                   </td>
                   
@@ -263,12 +299,21 @@ export default function PropertyList() {
                   
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <SharePropertyButton
+                        propertyId={property.id}
+                        title={property.title}
+                        variant="icon"
+                      />
+                      <Link href={`${basePath}/properties/${property.id}`}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                      <Link href={`${basePath}/properties/${property.id}/edit`}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </Link>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -279,8 +324,8 @@ export default function PropertyList() {
                           <DropdownMenuItem onClick={() => togglePropertyStatus(property.id)}>
                             {property.status === "active" ? "Deactivate" : "Activate"}
                           </DropdownMenuItem>
-                          <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                          <DropdownMenuItem>View Analytics</DropdownMenuItem>
+                          {/* <DropdownMenuItem>Duplicate</DropdownMenuItem> */}
+                          {/* <DropdownMenuItem>View Analytics</DropdownMenuItem> */}
                           <DropdownMenuItem className="text-red-600" onClick={() => deleteProperty(property.id)}>
                             Delete
                           </DropdownMenuItem>
@@ -324,6 +369,8 @@ export default function PropertyList() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -1,17 +1,22 @@
 "use client";
 
-import { Heart, Star, BedDouble, Bath, Maximize, MapPin, ChevronRight, Home, Moon, Calendar } from "lucide-react";
-import { useState } from "react";
+import { Heart, Star, BedDouble, Bath, Maximize, MapPin, ChevronRight, Home, Moon, Calendar, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 // In PropertyCard.tsx, update the interface to include the new properties:
 export interface PropertyCardProps {
   id?: number;
   imageUrl: string;
   title: string;
+  slug: string;
   address: string;
   price: string;
+  propertyPrice: string;
   rating: number;
   reviews: number;
   sqft: number;
@@ -25,41 +30,91 @@ export interface PropertyCardProps {
   listingType?: "buy" | "rent";
   priceType?: "nightly" | "monthly" | "total";
   minStay?: number;
-  maxStay?: number;
-  minLease?: number;
+  minTerm?: number;
+  isBoosted?: boolean;
 }
 
 export default function PropertyCard({
-  id = 1,
-  imageUrl = "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
-  title = "Modern Luxury Villa",
-  address = "710 Boyd Dr, Baton Rouge, LA",
-  price = "$5000",
-  rentalType = "short",
-  listingType = "rent",
-  priceType = "monthly",
-  rating = 5.0,
-  reviews = 30,
-  sqft = 8000,
-  beds = 4,
-  baths = 4,
-  propertyType = "Villa",
-  isFeatured = false,
-  isNew = false,
-  minStay = 2,
-  maxStay = 30,
-  minLease = 12
+  id,
+  imageUrl,
+  title,
+  slug,
+  address,
+  price,
+  propertyPrice,
+  rentalType,
+  listingType,
+  priceType,
+  rating,
+  reviews,
+  sqft,
+  beds,
+  baths,
+  propertyType,
+  isFeatured,
+  isNew,
+  minStay,
+  minTerm,
+  isBoosted,
 }: PropertyCardProps) {
+  const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
+  const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
+
+  useEffect(() => {
+    const fetchFavoriteStatus = async () => {
+      if (!id) return;
+      if (typeof window !== "undefined" && !localStorage.getItem("accessToken")) return;
+
+      try {
+        const response = await api.get(`/favorites/check/${id}`);
+        if (response.data?.success && response.data.data) {
+          setIsLiked(!!response.data.data.isFavorite);
+        }
+      } catch (error) {
+        setIsLiked(false);
+      }
+    };
+
+    fetchFavoriteStatus();
+  }, [id]);
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (typeof window !== "undefined" && !localStorage.getItem("accessToken")) {
+      router.push("/login");
+      return;
+    }
+
+    setIsLoadingFavorite(true);
+    try {
+      const response = await api.post("/favorites/toggle", {
+        propertyId: id
+      });
+
+      if (response.data?.success) {
+        const action = response.data.data?.action;
+        setIsLiked(action === "added");
+      }
+    } catch (error: any) {
+      console.error("Error toggling favorite:", error);
+    } finally {
+      setIsLoadingFavorite(false);
+    }
+  };
+
+  const handleViewDetails = () => {
+    router.push(`/property/${id}`);
+  };
+
+  
 
 
   // Function to generate proper slug/URL
   const getPropertySlug = () => {
-    const slugTitle = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-    return `/property/${id}-${slugTitle}`;
+    return `/property/${id}`;
   };
 
   const propertyUrl = getPropertySlug();
@@ -77,15 +132,15 @@ export default function PropertyCard({
   const getRentalTypeBadge = () => {
     if (listingType === "buy") return { text: "For Sale", color: "from-purple-500 to-purple-600" };
     if (rentalType === "short") return { text: "Short Rent", color: "from-blue-500 to-cyan-600" };
-    if (rentalType === "long") return { text: "Long Term", color: "from-orange-500 to-orange-600" };
+    if (rentalType === "long") return { text: "Long Rent", color: "from-orange-500 to-orange-600" };
     return { text: "For Rent", color: "from-green-500 to-emerald-600" };
   };
 
   // Get duration text
   const getDurationText = () => {
     if (listingType === "buy") return "";
-    if (rentalType === "short") return `Min ${minStay} night${minStay > 1 ? 's' : ''}`;
-    if (rentalType === "long") return `Min ${minLease} month${minLease > 1 ? 's' : ''}`;
+    if (rentalType === "short") return `Min ${minStay} night${minStay && minStay > 1 ? 's' : ''}`;
+    if (rentalType === "long") return `Min ${minTerm} month${minTerm && minTerm > 1 ? 's' : ''}`;
     return "";
   };
 
@@ -93,7 +148,7 @@ export default function PropertyCard({
   const durationText = getDurationText();
 
   return (
-    <Link href={propertyUrl} className="block">
+    // <Link href={propertyUrl} className="block">
       <motion.div
         whileHover={{ y: -8 }}
         transition={{ duration: 0.3 }}
@@ -137,6 +192,12 @@ export default function PropertyCard({
                 New
               </span>
             )}
+            {isBoosted && (
+              <span className="bg-amber-500 text-white text-xs font-medium px-3 py-1.5 rounded-full inline-flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                Boosted
+              </span>
+            )}
           </div>
 
           {/* Property Type - Top Right */}
@@ -147,9 +208,10 @@ export default function PropertyCard({
 
           {/* Like Button */}
           <button
-            onClick={() => setIsLiked(!isLiked)}
-            className="absolute top-4 right-4 bg-white p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
-            style={{ top: '4rem' }} // Position below property type badge
+            onClick={handleToggleFavorite}
+            disabled={isLoadingFavorite}
+            className="absolute z-10 bg-white p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 pointer-events-auto hover:scale-110"
+            style={{ top: '5rem', right: '1rem' }}
           >
             <Heart
               className={`w-5 h-5 transition-all duration-300 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-500'}`}
@@ -166,7 +228,7 @@ export default function PropertyCard({
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm text-gray-500 mb-1">Price</p>
-              <h3 className="text-2xl font-bold text-gray-900 font-spartan">{price}
+              <h3 className="text-2xl font-bold text-gray-900 font-spartan">{formatCurrency(listingType === "buy" ? propertyPrice : price)}
                 <span className="text-sm font-normal text-gray-500">/{getPriceSuffix()}</span>
               </h3>
             </div>
@@ -225,12 +287,15 @@ export default function PropertyCard({
           </div>
 
           {/* CTA Button - Different based on business model */}
-          <div className="w-full mt-6 bg-linear-to-r from-green-50 to-emerald-50 text-green-700 group-hover:text-white border border-green-200 group-hover:border-transparent group-hover:from-green-600 group-hover:to-emerald-600 font-medium py-3 rounded-[5px] transition-all duration-300 flex items-center justify-center gap-2">
+          <button
+            onClick={handleViewDetails}
+            className="w-full mt-6 bg-linear-to-r from-green-50 to-emerald-50 text-green-700 group-hover:text-white border border-green-200 group-hover:border-transparent group-hover:from-green-600 group-hover:to-emerald-600 font-medium py-3 rounded-[5px] transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg"
+          >
             View Details
             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </div>
+          </button>
         </div>
       </motion.div>
-    </Link>
+    // </Link>
   );
 }

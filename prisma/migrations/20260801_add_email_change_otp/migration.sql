@@ -1,0 +1,6 @@
+-- Dual-OTP email change flow
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "pendingEmail" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailChangeStep" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailChangeOtpHash" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailChangeOtpExpiresAt" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailChangeLastSentAt" TIMESTAMP(3);

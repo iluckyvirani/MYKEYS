@@ -1,12 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Calendar, Filter, Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BookingTabs from "@/components/dashboard/UserDashboard/BookingTabs";
+import {FilterModal} from "@/components/dashboard/UserDashboard/FilterModal";
 
 export default function BookingsPage() {
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleApplyFilters = (filters: any) => {
+    setAppliedFilters(filters);
+    console.log("Applied filters:", filters);
+  };
+
   return (
     <DashboardLayout defaultRole="user">
       {/* Header */}
@@ -19,10 +30,10 @@ export default function BookingsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline">
+            {/* <Button variant="outline">
               <Calendar className="w-4 h-4 mr-2" />
               Booking Calendar
-            </Button>
+            </Button> */}
             <Button>
               <Download className="w-4 h-4 mr-2" />
               Export Bookings
@@ -40,26 +51,69 @@ export default function BookingsPage() {
               <Input
                 placeholder="Search bookings by property name, booking ID..."
                 className="pl-10 w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <Button variant="outline" className="flex-1 md:flex-none">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
-            <select className="border rounded-lg px-4 py-2 text-sm w-full md:w-auto">
-              <option>All Bookings</option>
-              <option>Upcoming</option>
-              <option>Completed</option>
-              <option>Cancelled</option>
-            </select>
-          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setFilterModalOpen(true)}
+            className="w-full md:w-auto"
+          >
+            <Filter className="w-4 h-4 mr-2" />
+            Advanced Filters
+          </Button>
         </div>
+        
+        {/* Applied Filters Display */}
+        {appliedFilters && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {appliedFilters.status && (
+              <div className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full flex items-center gap-2">
+                Status: {appliedFilters.status}
+                <button 
+                onClick={() => setAppliedFilters({ ...appliedFilters, status: null })} 
+                className="ml-1 cursor-pointer">×</button>
+              </div>
+            )}
+            {appliedFilters.paymentStatus && (
+              <div className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full flex items-center gap-2">
+                Payment: {appliedFilters.paymentStatus}
+                <button onClick={() => setAppliedFilters({ ...appliedFilters, paymentStatus: null })} className="ml-1">×</button>
+              </div>
+            )}
+            {(appliedFilters.fromDate || appliedFilters.toDate) && (
+              <div className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full flex items-center gap-2">
+                Date: {appliedFilters.fromDate || "Any"} to {appliedFilters.toDate || "Any"}
+                <button onClick={() => setAppliedFilters({ ...appliedFilters, fromDate: null, toDate: null })} className="ml-1">×</button>
+              </div>
+            )}
+            {appliedFilters.sortBy && appliedFilters.sortBy !== 'recent' && (
+              <div className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full flex items-center gap-2">
+                Sort: {appliedFilters.sortBy}
+                <button onClick={() => setAppliedFilters({ ...appliedFilters, sortBy: 'recent' })} className="ml-1">×</button>
+              </div>
+            )}
+            <button
+              className="text-xs text-gray-500 underline hover:text-gray-700 cursor-pointer"
+              onClick={() => setAppliedFilters(null)}
+            >
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Booking Tabs Content */}
-      <BookingTabs />
+      <BookingTabs searchQuery={searchQuery} filters={appliedFilters || undefined} />
+
+      {/* Filter Modal */}
+      <FilterModal 
+        isOpen={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        onApply={handleApplyFilters}
+      />
     </DashboardLayout>
   );
 }

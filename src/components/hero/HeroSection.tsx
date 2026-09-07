@@ -3,78 +3,96 @@
 import { motion } from "framer-motion";
 import BuySellRentTabs from "./BuySellRentTabs";
 import PropertySearchBar from "../search/PropertySearchBar";
+import { useState } from "react";
+import { useHomeContent } from "@/hooks/useHomeContent";
 
-export default function HeroSection() {
+function HeroSkeleton() {
   return (
-    <section className="relative h-screen min-h-175 flex items-center justify-center overflow-hidden">
-      {/* Zoom Background Image Effect */}
-      <div className="zoom-image">
-        {/* Background Image with zoom effect */}
-        <div
-          className="absolute inset-0 image-wrap z-1 bg-no-repeat bg-center bg-cover"
-          style={{
-            backgroundImage: "url('https://images.pexels.com/photos/259588/pexels-photo-259588.jpeg')",
-            transform: 'scale(1.1)',
-            transition: 'transform 10s ease-out',
-          }}
-        />
-
-        {/* Black overlay */}
-        {/* <div className="absolute inset-0 bg-black/20 z-2" /> */}
-
-        {/* Gradient overlays for better text readability */}
-        <div className="absolute inset-0 bg-linear-to-b from-black/80 via-black/50 to-black/80 z-3" />
-        <div className="absolute inset-0 bg-linear-to-r from-black/40 to-transparent z-3" />
+    <section className="relative h-screen min-h-175 flex items-center justify-center overflow-hidden bg-white">
+      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-9 animate-pulse">
+          <div className="mx-auto h-12 sm:h-14 md:h-16 w-[min(100%,42rem)] rounded-lg bg-gray-200 mb-3" />
+          <div className="mx-auto h-10 sm:h-12 w-[min(90%,28rem)] rounded-lg bg-gray-100 mb-8" />
+          <div className="mx-auto h-5 w-[min(100%,28rem)] rounded bg-gray-100 mb-2" />
+          <div className="mx-auto h-5 w-[min(90%,22rem)] rounded bg-gray-100 mb-10" />
+        </div>
+        <div className="animate-pulse">
+          <div className="mx-auto flex justify-center gap-3 mb-8">
+            <div className="h-12 w-28 rounded-full bg-gray-200" />
+            <div className="h-12 w-28 rounded-full bg-gray-100" />
+            <div className="h-12 w-36 rounded-full bg-gray-100" />
+          </div>
+          <div className="mx-auto max-w-3xl h-16 rounded-2xl bg-gray-100 shadow-sm border border-gray-100" />
+        </div>
       </div>
+    </section>
+  );
+}
 
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-20">
+export default function HeroSection({
+  selectedTab: propSelectedTab,
+  onTabChange: propOnTabChange,
+}: {
+  selectedTab: "all" | "buy" | "short-rent" | "long-rent";
+  onTabChange: (tab: "all" | "buy" | "short-rent" | "long-rent") => void;
+}) {
+  const [localSelectedTab, setLocalSelectedTab] = useState<
+    "all" | "buy" | "short-rent" | "long-rent"
+  >(propSelectedTab);
+  const { content, loading } = useHomeContent();
+  const hero = content.hero;
+
+  const handleTabChange = (tab: "all" | "buy" | "short-rent" | "long-rent") => {
+    setLocalSelectedTab(tab);
+    propOnTabChange(tab);
+  };
+
+  if (loading) {
+    return <HeroSkeleton />;
+  }
+
+  return (
+    <section className="relative h-screen min-h-175 flex items-center justify-center overflow-hidden bg-white">
+      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="font-spartan text-4xl sm:text-5xl md:text-6xl lg:text-5xl font-bold text-white mb-1 leading-tight tracking-tight">
-              Find Your Perfect
-              <span className="block text-green-400 mt-1">Dream Property</span>
+            <h1 className="font-spartan text-4xl sm:text-5xl md:text-6xl lg:text-5xl font-bold text-gray-900 mb-1 leading-tight tracking-tight">
+              {hero.title}
+              <span className="block text-green-600 mt-1">
+                {hero.titleHighlight}
+              </span>
             </h1>
 
-            <p className="font-spartan text-lg sm:text-xl text-gray-200 max-w-lg mx-auto mb-10 font-light">
-              Discover properties seamlessly. Buy, Short rent (nightly bookings), or Long Term Rent (2+ months minimum).
-              No hidden fees, just transparent real estate solutions.
+            <p className="font-spartan text-lg sm:text-xl text-gray-600 max-w-lg mx-auto mb-10 font-light">
+              {hero.subtitle}
             </p>
           </motion.div>
         </div>
 
-        {/* Tabs Navigation */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.4 }}
         >
-          <BuySellRentTabs />
+          <BuySellRentTabs
+            selectedTab={localSelectedTab}
+            onTabChange={handleTabChange}
+          />
         </motion.div>
 
-        {/* Property Search */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <PropertySearchBar />
-        </motion.div>
-      </div>
-
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-10">
-        <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center"
-        >
-          <div className="w-1 h-3 bg-white/50 rounded-full mt-2" />
-        </motion.div>
+        {localSelectedTab !== "all" && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <PropertySearchBar selectedType={localSelectedTab} />
+          </motion.div>
+        )}
       </div>
     </section>
   );

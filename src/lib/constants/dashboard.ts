@@ -1,4 +1,4 @@
-export const userStats = [
+﻿export const userStats = [
   {
     title: "Active Bookings",
     value: 3,
@@ -22,7 +22,7 @@ export const userStats = [
   },
   {
     title: "Upcoming Payments",
-    value: "₹45,500",
+    value: "£45,500",
     change: "Due in 7 days",
     icon: "credit-card",
     color: "bg-purple-500",
@@ -46,7 +46,7 @@ export const ownerStats = [
   },
   {
     title: "Monthly Revenue",
-    value: "₹2,45,000",
+    value: "£2,45,000",
     change: "+12% from last month",
     icon: "dollar-sign",
     color: "bg-emerald-500",

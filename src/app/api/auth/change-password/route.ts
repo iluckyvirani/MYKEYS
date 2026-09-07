@@ -41,6 +41,14 @@ export async function POST(request: NextRequest) {
       throw createApiError(ErrorCode.USER_NOT_FOUND);
     }
 
+    if (!user.password) {
+      return errorResponse(
+        "This account uses Google Sign-In. Set a password from account security after linking email login, or continue with Google.",
+        400,
+        ErrorCode.INVALID_INPUT
+      );
+    }
+
     // Verify current password
     const isCurrentPasswordValid = await verifyPassword(
       currentPassword,
@@ -70,7 +78,11 @@ export async function POST(request: NextRequest) {
     // Update password
     await prisma.user.update({
       where: { id: authUser.userId },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        authProvider:
+          user.authProvider === "GOOGLE" ? "BOTH" : user.authProvider || "EMAIL",
+      },
     });
 
     return successResponse(null, "Password changed successfully");

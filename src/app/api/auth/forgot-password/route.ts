@@ -1,22 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
 import { forgotPasswordSchema, validateSchema } from "@/lib/auth/validation";
-import { generateResetToken, hashResetToken } from "@/lib/auth/password";
-import { createApiError, ErrorCode } from "@/lib/auth/errors";
+import { ErrorCode } from "@/lib/auth/errors";
 import { ForgotPasswordRequest } from "@/types/auth";
+import { emailService } from "@/lib/email/emailService";
+import {
+  generateOtpCode,
+  hashOtp,
+  otpExpiresAt,
+  secondsUntilResend,
+  OTP_RESEND_COOLDOWN_SECONDS,
+  maskEmail,
+} from "@/lib/auth/otp";
 
 /**
  * POST /api/auth/forgot-password
- * Request password reset - send reset token to user's email
- * Note: In production, you would send an email with the reset link
+ * Send a password-reset OTP to the user's email.
  */
 export async function POST(request: NextRequest) {
   try {
-    // Parse request body
     const body: ForgotPasswordRequest = await request.json();
 
-    // Validate input
     const validation = validateSchema(forgotPasswordSchema, body);
     if (!validation.success) {
       return errorResponse(
@@ -28,53 +33,70 @@ export async function POST(request: NextRequest) {
     }
 
     const { email } = validation.data;
+    const user = await prisma.user.findUnique({ where: { email } });
 
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+    // Always look successful to avoid email enumeration
+    const genericMessage =
+      "If an account with that email exists, we've sent a password reset OTP.";
 
-    // Security: Always return success even if user doesn't exist
-    // This prevents email enumeration attacks
     if (!user) {
       return successResponse(
-        null,
-        "If an account with that email exists, we've sent password reset instructions."
+        {
+          requiresOtp: true,
+          email,
+          maskedEmail: maskEmail(email),
+          resendCooldownSeconds: OTP_RESEND_COOLDOWN_SECONDS,
+        },
+        genericMessage
       );
     }
 
-    // Generate reset token
-    const resetToken = generateResetToken();
-    const hashedToken = await hashResetToken(resetToken);
+    const wait = secondsUntilResend(user.emailOtpLastSentAt);
+    if (wait > 0) {
+      return errorResponse(
+        `Please wait ${wait}s before requesting another OTP`,
+        429,
+        ErrorCode.RATE_LIMIT_EXCEEDED,
+        { retryAfter: [String(wait)] }
+      );
+    }
 
-    // Set token expiry (1 hour from now)
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+    const otp = generateOtpCode();
+    const now = new Date();
 
-    // Store hashed token in database
-    // Note: You need to add these fields to your User model
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        // You'll need to add these fields to the schema:
-        // resetToken: hashedToken,
-        // resetTokenExpiry: resetTokenExpiry,
+        resetToken: hashOtp(otp),
+        resetTokenExpiry: otpExpiresAt(now),
+        emailOtpLastSentAt: now,
       },
     });
 
-    // TODO: Send email with reset link
-    // const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${resetToken}`;
-    // await sendPasswordResetEmail(user.email, resetLink);
-
-    console.log("Password reset token (for development):", resetToken);
-    console.log(
-      "Reset link:",
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`
-    );
+    try {
+      await emailService.sendPasswordResetOtpEmail(
+        user.email,
+        user.firstName || "there",
+        otp
+      );
+    } catch (e) {
+      console.error("Password reset OTP email failed:", e);
+      return errorResponse(
+        "Could not send OTP email. Please try again shortly.",
+        502,
+        ErrorCode.SERVICE_UNAVAILABLE
+      );
+    }
 
     return successResponse(
-      // In development, return token. In production, only return success message
-      process.env.NODE_ENV === "development" ? { resetToken } : null,
-      "If an account with that email exists, we've sent password reset instructions."
+      {
+        requiresOtp: true,
+        email: user.email,
+        maskedEmail: maskEmail(user.email),
+        resendCooldownSeconds: OTP_RESEND_COOLDOWN_SECONDS,
+        expiresInMinutes: 10,
+      },
+      genericMessage
     );
   } catch (error) {
     console.error("Forgot password error:", error);

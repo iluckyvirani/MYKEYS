@@ -2,70 +2,105 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import BookingList from "./BookingList";
+import { ShortBookingDTO, BookingStatus } from "@/types/bookings";
 
-const upcomingBookings = [
-  {
-    id: "BK001",
-    property: "Seaside Villa, Goa",
-    type: "short_term",
-    dates: "Jan 15 - Jan 22, 2024",
-    checkIn: "2024-01-15",
-    checkOut: "2024-01-22",
-    amount: 45000,
-    status: "confirmed",
-    guests: 4,
-    nights: 7,
-    actions: ["cancel", "modify", "view"],
-  },
-  {
-    id: "BK002",
-    property: "Urban Apartment, Mumbai",
-    type: "long_term",
-    dates: "Feb 1 - Jul 31, 2024",
-    checkIn: "2024-02-01",
-    checkOut: "2024-07-31",
-    amount: 150000,
-    status: "pending",
-    guests: 2,
-    nights: 180,
-    actions: ["cancel", "view"],
-  },
-];
+interface BookingTabsProps {
+  searchQuery?: string;
+  filters?: {
+    status?: string;
+    paymentStatus?: string;
+    fromDate?: string;
+    toDate?: string;
+    sortBy?: string;
+  };
+}
 
-const completedBookings = [
-  {
-    id: "BK003",
-    property: "Mountain Cottage, Shimla",
-    type: "short_term",
-    dates: "Dec 20 - Dec 25, 2023",
-    checkIn: "2023-12-20",
-    checkOut: "2023-12-25",
-    amount: 25000,
-    status: "completed",
-    guests: 3,
-    nights: 5,
-    actions: ["review", "rebook", "view"],
-  },
-];
+export default function BookingTabs({ searchQuery = '', filters }: BookingTabsProps) {
+  const [allBookings, setAllBookings] = useState<ShortBookingDTO[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const cancelledBookings = [
-  {
-    id: "BK004",
-    property: "Luxury Penthouse, Delhi",
-    type: "short_term",
-    dates: "Jan 5 - Jan 10, 2024",
-    checkIn: "2024-01-05",
-    checkOut: "2024-01-10",
-    amount: 35000,
-    status: "cancelled",
-    guests: 2,
-    nights: 5,
-    actions: ["rebook", "view"],
-  },
-];
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({ pageSize: '20' });
+      if (searchQuery.trim()) params.append('search', searchQuery.trim());
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
+      if (filters?.fromDate) params.append('from', filters.fromDate);
+      if (filters?.toDate) params.append('to', filters.toDate);
+      if (filters?.sortBy && filters.sortBy !== 'recent') {
+        if (filters.sortBy === 'oldest') { params.append('sortBy', 'createdAt'); params.append('sortOrder', 'asc'); }
+        else if (filters.sortBy === 'amount-high') { params.append('sortBy', 'totalAmount'); params.append('sortOrder', 'desc'); }
+        else if (filters.sortBy === 'amount-low') { params.append('sortBy', 'totalAmount'); params.append('sortOrder', 'asc'); }
+        else if (filters.sortBy === 'checkin') { params.append('sortBy', 'checkIn'); params.append('sortOrder', 'asc'); }
+      }
+      const response = await api.get(`/bookings?${params.toString()}`);
 
-export default function BookingTabs() {
+      if (response.data?.success && response.data.data?.items) {
+        setAllBookings(response.data.data.items);
+        setError(null);
+      } else {
+        setError("Failed to load bookings");
+      }
+    } catch (err: any) {
+      console.error("Error fetching bookings:", err);
+      setError(err.message || "Failed to fetch bookings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, [searchQuery, filters]);
+
+  // Reload bookings when a booking is updated
+  const handleBookingUpdated = () => {
+    fetchBookings();
+  };
+
+  // Categorize bookings by status
+  const upcomingBookings = allBookings.filter(
+    (b) => b.status === BookingStatus.PENDING || b.status === BookingStatus.CONFIRMED
+  );
+
+  const completedBookings = allBookings.filter(
+    (b) => b.status === BookingStatus.COMPLETED
+  );
+
+  const cancelledBookings = allBookings.filter(
+    (b) => b.status === BookingStatus.CANCELLED
+  );
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-[5px] border p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600"></div>
+            <p className="mt-4 text-gray-600">Loading your bookings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-[5px] border p-6">
+        <div className="text-center py-12">
+          <Calendar className="w-16 h-16 text-red-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading bookings</h3>
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-[5px] border">
       <Tabs defaultValue="upcoming" className="w-full">
@@ -93,9 +128,9 @@ export default function BookingTabs() {
           </TabsTrigger>
           <TabsTrigger value="pending" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
             <Clock className="w-4 h-4" />
-            Pending
+            All Bookings
             <span className="ml-1 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
-              0
+              {allBookings.length}
             </span>
           </TabsTrigger>
         </TabsList>
@@ -106,6 +141,7 @@ export default function BookingTabs() {
               bookings={upcomingBookings} 
               emptyMessage="No upcoming bookings. Start exploring properties!"
               emptyAction={{ label: "Browse Properties", href: "/properties" }}
+              onBookingUpdated={handleBookingUpdated}
             />
           </TabsContent>
           
@@ -114,6 +150,7 @@ export default function BookingTabs() {
               bookings={completedBookings} 
               emptyMessage="No completed bookings yet."
               emptyAction={{ label: "View Upcoming", href: "#" }}
+              onBookingUpdated={handleBookingUpdated}
             />
           </TabsContent>
           
@@ -121,16 +158,18 @@ export default function BookingTabs() {
             <BookingList 
               bookings={cancelledBookings} 
               emptyMessage="No cancelled bookings."
-              emptyAction={{ label: "Browse Properties", href: "/properties" }}
+              emptyAction={{ label: "Browse Properties", href: "/" }}
+              onBookingUpdated={handleBookingUpdated}
             />
           </TabsContent>
           
           <TabsContent value="pending" className="m-0">
-            <div className="text-center py-12">
-              <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No pending bookings</h3>
-              <p className="text-gray-500">All your bookings are confirmed!</p>
-            </div>
+            <BookingList 
+              bookings={allBookings} 
+              emptyMessage="No bookings found."
+              emptyAction={{ label: "Browse Properties", href: "/" }}
+              onBookingUpdated={handleBookingUpdated}
+            />
           </TabsContent>
         </div>
       </Tabs>

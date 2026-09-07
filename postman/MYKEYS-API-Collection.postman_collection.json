@@ -475,8 +475,8 @@
 								"exec": [
 									"if (pm.response.code === 201) {",
 									"    const response = pm.response.json();",
-									"    if (response.id) {",
-									"        pm.collectionVariables.set('bookingId', response.id);",
+									"    if (response.data && response.data.id) {",
+									"        pm.collectionVariables.set('bookingId', response.data.id);",
 									"    }",
 									"}"
 								],
@@ -504,7 +504,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"propertyId\": \"property_id_here\",\n  \"guestId\": \"{{userId}}\",\n  \"checkIn\": \"2026-02-01T14:00:00.000Z\",\n  \"checkOut\": \"2026-02-05T11:00:00.000Z\",\n  \"guests\": 2,\n  \"totalAmount\": 8000,\n  \"status\": \"PENDING\"\n}"
+							"raw": "{\n  \"propertyId\": \"PROP-123\",\n  \"checkInDate\": \"2026-02-10\",\n  \"checkOutDate\": \"2026-02-15\",\n  \"numberOfGuests\": 2,\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"specialRequests\": \"Extra pillows please\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/bookings",
@@ -572,7 +572,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"status\": \"CONFIRMED\",\n  \"guests\": 3\n}"
+							"raw": "{\n  \"status\": \"CONFIRMED\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}",
@@ -615,7 +615,7 @@
 								"{{bookingId}}"
 							]
 						},
-						"description": "Delete a booking."
+						"description": "Cancel a booking (guest action)."
 					},
 					"response": []
 				}

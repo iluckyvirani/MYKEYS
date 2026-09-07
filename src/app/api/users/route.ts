@@ -63,10 +63,12 @@ export const GET = withAuth(
       ]);
 
       // Convert to DTOs (exclude passwords)
-      const userDTOs = users.map((u: any) => ({
-        ...toUserDTO(u),
-        counts: u._count,
-      }));
+      const userDTOs = await Promise.all(
+        users.map(async (u: any) => ({
+          ...(await toUserDTO(u)),
+          counts: u._count,
+        }))
+      );
 
       return paginatedResponse(
         userDTOs,

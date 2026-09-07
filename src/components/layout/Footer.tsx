@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
+import {
   Facebook, Twitter, Instagram, Linkedin, Youtube,
   Mail, Phone, MapPin, ChevronRight, Send,
   ShieldCheck, Award, Clock, Users,
@@ -12,67 +12,128 @@ import {
   Key
 } from "lucide-react";
 import Link from "next/link";
+import { api } from "@/lib/api";
+import { DEFAULT_CONTACT_CONTENT } from "@/lib/content/siteDefaults";
+
+const FOOTER_PROPERTY_TYPES = [
+  { value: "APARTMENT", label: "Apartments", icon: Home, href: "/buy?propertyType=APARTMENT" },
+  { value: "VILLA", label: "Villas", icon: Building, href: "/buy?propertyType=VILLA" },
+  { value: "TOWNHOUSE", label: "Townhouses", icon: Castle, href: "/buy?propertyType=TOWNHOUSE" },
+  { value: "HOUSE", label: "Houses", icon: Building2, href: "/buy?propertyType=HOUSE" },
+] as const;
 
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
-  const [particles, setParticles] = useState<Array<{ left: string; top: string; duration: number; delay: number }>>([]);
+  const [subscribeError, setSubscribeError] = useState("");
+  const [subscribing, setSubscribing] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [propertyTypeCounts, setPropertyTypeCounts] = useState<Record<string, number>>({});
+  const [contactInfo, setContactInfo] = useState({
+    phone: DEFAULT_CONTACT_CONTENT.hero.supportPhone,
+    email: DEFAULT_CONTACT_CONTENT.hero.supportEmail,
+    address: DEFAULT_CONTACT_CONTENT.hero.officeAddress,
+  });
 
   useEffect(() => {
-    setParticles(
-      Array.from({ length: 30 }, () => ({
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        duration: 3 + Math.random() * 4,
-        delay: Math.random() * 3,
-      }))
-    );
+    // Handle scroll to show/hide back to top button
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadPropertyTypeCounts = async () => {
+      try {
+        const response = await api.get("/properties/type-counts");
+        if (response.data?.success && response.data.data?.counts) {
+          setPropertyTypeCounts(response.data.data.counts);
+        }
+      } catch {
+        // Footer counts are optional; keep empty when the API is unavailable
+      }
+    };
+
+    loadPropertyTypeCounts();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get("/content/contact");
+        const hero = res.data?.data?.hero;
+        if (!cancelled && hero) {
+          setContactInfo({
+            phone: hero.supportPhone || DEFAULT_CONTACT_CONTENT.hero.supportPhone,
+            email: hero.supportEmail || DEFAULT_CONTACT_CONTENT.hero.supportEmail,
+            address:
+              hero.officeAddress || DEFAULT_CONTACT_CONTENT.hero.officeAddress,
+          });
+        }
+      } catch {
+        // keep defaults
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setSubscribed(true);
-      setTimeout(() => setSubscribed(false), 3000);
-      setEmail("");
+    const trimmed = email.trim();
+    if (!trimmed || subscribing) return;
+
+    setSubscribing(true);
+    setSubscribeError("");
+    try {
+      const response = await api.post("/newsletter/subscribe", { email: trimmed });
+      if (response.data?.success) {
+        setSubscribed(true);
+        setEmail("");
+        setTimeout(() => setSubscribed(false), 5000);
+      } else {
+        setSubscribeError(
+          response.data?.message || "Could not subscribe. Please try again."
+        );
+      }
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Could not subscribe. Please try again.";
+      setSubscribeError(message);
+    } finally {
+      setSubscribing(false);
     }
   };
 
-  const quickLinks = [
-    { label: "Buy Properties", href: "/buy" },
-    { label: "Short Rent Properties", href: "/rent/short-rent" },
-    { label: "Long Rent Properties", href: "/rent/long-rent" },
-    { label: "List property", href: "/how-listing-works" },
-  ];
+  const phoneHref = `tel:${contactInfo.phone.replace(/\s/g, "")}`;
+  const emailHref = `mailto:${contactInfo.email}`;
+  const addressLines = contactInfo.address
+    .split(/\n|,/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-  const propertyTypes = [
-    { icon: <Home className="w-4 h-4" />, label: "Apartments", count: "254" },
-    { icon: <Building className="w-4 h-4" />, label: "Villas", count: "189" },
-    { icon: <Castle className="w-4 h-4" />, label: "Townhouses", count: "76" },
-    { icon: <Building2 className="w-4 h-4" />, label: "Offices", count: "142" },
+  const quickLinks = [
+    { label: "Buy", href: "/buy" },
+    { label: "Rent", href: "/rent/whole-property" },
+    { label: "Short Stay", href: "/rent/short-rent" },
+    { label: "Services", href: "/services" },
+    { label: "List property", href: "/how-listing-works" },
   ];
 
   const companyLinks = [
     { label: "About Us", href: "/about" },
-    // { label: "Careers", href: "/careers" },
-    // { label: "Press & Media", href: "/press" },
-    // { label: "Blog", href: "/blog" },
     { label: "Contact Us", href: "/contact" },
-    // { label: "Help Center", href: "/help" },
-  ];
-
-  const legalLinks = [
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms of Service", href: "/terms" },
     { label: "Cookie Policy", href: "/cookies" },
   ];
 
-  const resources = [
-    { icon: <Download className="w-4 h-4" />, label: "Buyer's Guide", href: "/guide/buyer" },
-    { icon: <FileText className="w-4 h-4" />, label: "Seller's Guide", href: "/guide/seller" },
-    { icon: <Calendar className="w-4 h-4" />, label: "Market Reports", href: "/reports" },
-    { icon: <MessageSquare className="w-4 h-4" />, label: "Community Forum", href: "/forum" },
-  ];
 
   const trustBadges = [
     { icon: <ShieldCheck className="w-5 h-5" />, label: "Secure Transactions" },
@@ -89,47 +150,11 @@ export default function Footer() {
     { icon: <Youtube className="w-5 h-5" />, href: "#", label: "YouTube" },
   ];
 
-  const downloadApps = [
-    { label: "App Store", bg: "bg-black", text: "white" },
-    { label: "Google Play", bg: "bg-white", text: "gray-900" },
-    { label: "Huawei AppGallery", bg: "bg-red-500", text: "white" },
-  ];
-
   return (
-    <footer className="relative bg-linear-to-b from-gray-900 to-black text-white overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-80 h-80 bg-green-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl" />
-      </div>
-
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {particles.map((particle, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-white/20 rounded-full"
-            style={{
-              left: particle.left,
-              top: particle.top,
-            }}
-            animate={{
-              y: [0, -20, 0],
-              opacity: [0.1, 0.3, 0.1],
-            }}
-            transition={{
-              duration: particle.duration,
-              repeat: Infinity,
-              delay: particle.delay,
-            }}
-          />
-        ))}
-      </div>
-
+    <footer className="relative bg-white border-t border-gray-100 text-gray-900 overflow-hidden">
       <div className="relative z-10">
         {/* Top Section - Main Footer */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-16 lg:py-20">
           {/* Main Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 mb-16">
             {/* Left Column - Brand & Newsletter */}
@@ -137,16 +162,14 @@ export default function Footer() {
               {/* Brand */}
               <div className="space-y-4">
                 <Link href="/" className="inline-flex items-center gap-3 group">
-                  <div className="w-12 h-12 bg-linear-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Key className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <span className="font-spartan text-3xl font-bold">MYKEYS</span>
-                    <div className="text-sm text-gray-400">Premium Real Estate</div>
-                  </div>
+                  <img
+                    src="/mykeys-logo-nav.png"
+                    alt="MYKEYS"
+                    className="h-16 w-auto object-contain group-hover:scale-105 transition-transform"
+                  />
                 </Link>
-                <p className="text-gray-400 max-w-md">
-                  Your trusted partner in finding dream properties. With cutting-edge technology 
+                <p className="text-gray-600 max-w-md">
+                  Your trusted partner in finding dream properties. With cutting-edge technology
                   and personalized service, we transform your real estate journey into a seamless experience.
                 </p>
               </div>
@@ -159,10 +182,10 @@ export default function Footer() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="flex items-center gap-3 p-3 bg-white/5 rounded-[5px] backdrop-blur-sm hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-[5px] border border-gray-100 hover:bg-gray-100 transition-colors"
                   >
-                    <div className="text-green-400">{badge.icon}</div>
-                    <span className="text-sm font-medium">{badge.label}</span>
+                    <div className="text-green-600">{badge.icon}</div>
+                    <span className="text-sm font-medium text-gray-800">{badge.label}</span>
                   </motion.div>
                 ))}
               </div>
@@ -171,8 +194,8 @@ export default function Footer() {
             {/* Right Column - Newsletter */}
             <div className="space-y-6">
               <div>
-                <h3 className="text-2xl font-bold mb-2">Stay Updated</h3>
-                <p className="text-gray-400">
+                <h3 className="text-2xl font-bold mb-2 text-gray-900">Stay Updated</h3>
+                <p className="text-gray-600">
                   Get the latest property listings, market insights, and exclusive offers.
                 </p>
               </div>
@@ -185,42 +208,51 @@ export default function Footer() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
-                    className="w-full pl-12 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-[5px] focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-500"
+                    className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-[5px] focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400 text-gray-900"
                     required
                   />
                 </div>
-                
+
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  className="w-full bg-linear-to-r from-green-600 to-emerald-600 text-white font-medium py-3.5 rounded-[5px] cursor-pointer hover:shadow-lg hover:shadow-emerald-500/30 transition-all flex items-center justify-center gap-2"
+                  disabled={subscribing}
+                  className="w-full bg-linear-to-r from-green-600 to-emerald-600 text-white font-medium py-3.5 rounded-[5px] cursor-pointer hover:shadow-lg hover:shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {subscribed ? "Subscribed! 🎉" : "Subscribe Now"}
-                  {!subscribed && <Send className="w-4 h-4" />}
+                  {subscribed
+                    ? "Subscribed!"
+                    : subscribing
+                      ? "Subscribing…"
+                      : "Subscribe Now"}
+                  {!subscribed && !subscribing && <Send className="w-4 h-4" />}
                 </motion.button>
               </form>
+
+              {subscribeError && (
+                <p className="text-red-600 text-sm font-medium">{subscribeError}</p>
+              )}
 
               {subscribed && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-green-400 text-sm"
+                  className="text-green-600 text-sm font-medium"
                 >
-                  Thank you for subscribing! Check your email for confirmation.
+                  Thank you for subscribing! We&apos;ll email you when new properties go live.
                 </motion.div>
               )}
 
               {/* Social Links */}
               <div className="pt-4">
-                <h4 className="text-lg font-medium mb-3">Follow Us</h4>
+                <h4 className="text-lg font-medium mb-3 text-gray-900">Follow Us</h4>
                 <div className="flex gap-3">
                   {socialLinks.map((social, index) => (
                     <motion.a
                       key={index}
                       href={social.href}
                       whileHover={{ y: -3 }}
-                      className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-white/10 hover:text-green-400 transition-all"
+                      className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200 text-gray-700 hover:text-green-600 transition-all border border-gray-100"
                       aria-label={social.label}
                     >
                       {social.icon}
@@ -232,10 +264,10 @@ export default function Footer() {
           </div>
 
           {/* Middle Grid - Links & Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mb-16">
             {/* Quick Links */}
             <div>
-              <h4 className="text-lg font-bold mb-6 pb-2 border-b border-white/10">Quick Links</h4>
+              <h4 className="text-lg font-bold mb-6 pb-2 border-b border-gray-100 text-gray-900">Quick Links</h4>
               <ul className="space-y-3">
                 {quickLinks.map((link, index) => (
                   <motion.li
@@ -246,38 +278,10 @@ export default function Footer() {
                   >
                     <Link
                       href={link.href}
-                      className="flex items-center gap-2 text-gray-400 hover:text-white hover:translate-x-2 transition-all group"
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:translate-x-2 transition-all group"
                     >
-                      <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-green-600" />
                       {link.label}
-                    </Link>
-                  </motion.li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Property Types */}
-            <div>
-              <h4 className="text-lg font-bold mb-6 pb-2 border-b border-white/10">Property Types</h4>
-              <ul className="space-y-3">
-                {propertyTypes.map((type, index) => (
-                  <motion.li
-                    key={index}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 + 0.1 }}
-                  >
-                    <Link
-                      href={`/properties/${type.label.toLowerCase()}`}
-                      className="flex items-center justify-between text-gray-400 hover:text-white transition-colors group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="text-green-400">{type.icon}</div>
-                        {type.label}
-                      </div>
-                      <span className="text-xs bg-white/10 px-2 py-1 rounded-full">
-                        {type.count}
-                      </span>
                     </Link>
                   </motion.li>
                 ))}
@@ -286,7 +290,7 @@ export default function Footer() {
 
             {/* Company */}
             <div>
-              <h4 className="text-lg font-bold mb-6 pb-2 border-b border-white/10">Company</h4>
+              <h4 className="text-lg font-bold mb-6 pb-2 border-b border-gray-100 text-gray-900">Company</h4>
               <ul className="space-y-3">
                 {companyLinks.map((link, index) => (
                   <motion.li
@@ -297,7 +301,7 @@ export default function Footer() {
                   >
                     <Link
                       href={link.href}
-                      className="text-gray-400 hover:text-white hover:translate-x-2 transition-all block"
+                      className="text-gray-600 hover:text-gray-900 hover:translate-x-2 transition-all block"
                     >
                       {link.label}
                     </Link>
@@ -308,18 +312,18 @@ export default function Footer() {
 
             {/* Contact Info */}
             <div>
-              <h4 className="text-lg font-bold mb-6 pb-2 border-b border-white/10">Contact Us</h4>
+              <h4 className="text-lg font-bold mb-6 pb-2 border-b border-gray-100 text-gray-900">Get in Touch</h4>
               <ul className="space-y-4">
                 <motion.li
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="flex items-start gap-3 text-gray-400"
+                  className="flex items-start gap-3"
                 >
-                  <Phone className="w-5 h-5 text-green-400 mt-1" />
+                  <Phone className="w-5 h-5 text-green-600 mt-1" />
                   <div>
-                    <div className="font-medium text-white">Phone</div>
-                    <a href="tel:+11234567890" className="hover:text-white transition-colors">
-                      +1 (123) 456-7890
+                    <div className="font-semibold text-gray-900">Phone</div>
+                    <a href={phoneHref} className="text-gray-600 hover:text-gray-900 transition-colors">
+                      {contactInfo.phone}
                     </a>
                   </div>
                 </motion.li>
@@ -327,13 +331,13 @@ export default function Footer() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="flex items-start gap-3 text-gray-400"
+                  className="flex items-start gap-3"
                 >
-                  <Mail className="w-5 h-5 text-green-400 mt-1" />
+                  <Mail className="w-5 h-5 text-green-600 mt-1" />
                   <div>
-                    <div className="font-medium text-white">Email</div>
-                    <a href="mailto:info@hously.com" className="hover:text-white transition-colors">
-                      info@mykeys.com
+                    <div className="font-semibold text-gray-900">Email</div>
+                    <a href={emailHref} className="text-gray-600 hover:text-gray-900 transition-colors">
+                      {contactInfo.email}
                     </a>
                   </div>
                 </motion.li>
@@ -341,41 +345,30 @@ export default function Footer() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="flex items-start gap-3 text-gray-400"
+                  className="flex items-start gap-3 text-gray-600"
                 >
-                  <MapPin className="w-5 h-5 text-green-400 mt-1" />
+                  <MapPin className="w-5 h-5 text-green-600 mt-1 shrink-0" />
                   <div>
-                    <div className="font-medium text-white">Office</div>
-                    <div>123 Business Street, Suite 100</div>
-                    <div>San Francisco, CA 94107</div>
+                    <div className="font-semibold text-gray-900">Office</div>
+                    {addressLines.length > 1 ? (
+                      addressLines.map((line, i) => <div key={i}>{line}</div>)
+                    ) : (
+                      <div>{contactInfo.address}</div>
+                    )}
                   </div>
                 </motion.li>
               </ul>
             </div>
           </div>
 
-
           {/* Divider */}
-          <div className="h-px bg-linear-to-r from-transparent via-white/20 to-transparent mb-10" />
+          <div className="h-px bg-gray-100 mb-10" />
 
           {/* Bottom Bar */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             {/* Copyright */}
-            <div className="text-gray-400 text-sm">
-              © {new Date().getFullYear()} MYKEY. All rights reserved.
-            </div>
-
-            {/* Legal Links */}
-            <div className="flex flex-wrap justify-center gap-6">
-              {legalLinks.map((link, index) => (
-                <Link
-                  key={index}
-                  href={link.href}
-                  className="text-gray-400 hover:text-white text-sm transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
+            <div className="text-gray-500 text-sm">
+              © {new Date().getFullYear()} MYKEYS. All rights reserved.
             </div>
 
             {/* Ratings */}
@@ -384,51 +377,33 @@ export default function Footer() {
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                 ))}
-                <span className="text-sm ml-1">4.9/5</span>
+                <span className="text-sm font-semibold text-gray-800 ml-1">4.9/5</span>
               </div>
-              <div className="flex items-center gap-1 text-gray-400">
-                <Heart className="w-4 h-4 text-red-400" />
+              <div className="flex items-center gap-1 text-gray-500">
+                <Heart className="w-4 h-4 text-red-500 fill-red-500/20" />
                 <span className="text-sm">Trusted by 10,000+ clients</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Live Chat Widget */}
-        {/* <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-6 right-6 z-50"
-        >
-          <button className="group relative">
-            <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold animate-pulse">
-              3
-            </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-xl hover:shadow-2xl hover:scale-110 transition-all">
-              <MessageSquare className="w-7 h-7 text-white" />
-            </div>
-            <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 rounded-lg p-3 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-              <div className="text-sm font-medium">Live Chat Support</div>
-              <div className="text-xs text-gray-400 mt-1">Available 24/7</div>
-            </div>
-          </button>
-        </motion.div> */}
-
         {/* Back to Top Button */}
-        <motion.button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          whileHover={{ y: -5 }}
-          className="fixed bottom-6 right-6 w-12 h-12 bg-green-600 rounded-full flex items-center justify-center  z-50"
-        >
-          <ChevronRight className="w-5 h-5 rotate-270 " />
-        </motion.button>
-
+        {showBackToTop && (
+          <motion.button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            whileHover={{ y: -5, scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className="fixed bottom-6 right-6 w-12 h-12 bg-green-600 hover:bg-green-700 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl z-50 transition-all cursor-pointer"
+            title="Back to top"
+          >
+            <ChevronRight className="w-5 h-5 text-white -rotate-90" />
+          </motion.button>
+        )}
       </div>
-
-      {/* Glow Effects */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-linear-to-t from-green-500/10 to-transparent pointer-events-none" />
     </footer>
   );
 }

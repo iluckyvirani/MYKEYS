@@ -1,17 +1,7 @@
-import HeroSection from "@/components/hero/HeroSection";
-import Navbar from "@/components/layout/Navbar";
-import FeaturedProperties from "@/components/property/FeaturedProperties";
-import StatsSection from "@/components/sections/StatsSection";
-import Footer from "@/components/layout/Footer";
+import { getHomeContent } from "@/lib/content/homeContent";
+import HomePageClient from "./HomePageClient";
 
-export default function Home() {
-  return (
-    <>
-      <Navbar />
-      <HeroSection />
-      <FeaturedProperties />
-      <StatsSection />
-      <Footer />
-    </>
-  );
+export default async function Home() {
+  const content = await getHomeContent();
+  return <HomePageClient initialContent={content} />;
 }

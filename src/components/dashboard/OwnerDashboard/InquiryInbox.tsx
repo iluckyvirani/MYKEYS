@@ -1,411 +1,195 @@
-// components/dashboard/OwnerDashboard/InquiryInbox.tsx
+﻿// components/dashboard/OwnerDashboard/InquiryInbox.tsx
 "use client";
 
-import { Inbox, User, Clock, Star, Filter, Search, MessageSquare, Phone, Mail, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { formatDate } from "@/lib/utils";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { MessageSquare, Search, Inbox, ExternalLink } from "lucide-react";
+import { api } from "@/lib/api";
+import UserAvatar from "@/components/common/UserAvatar";
+import { timeAgoShort } from "@/lib/inquiries/inquiryDisplay";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
-const mockInquiries = [
-  {
-    id: "INQ001",
-    property: "Seaside Villa",
-    guest: "Rajesh Kumar",
-    email: "rajesh@example.com",
-    phone: "+91 9876543210",
-    message: "Interested in long-term rental starting March 2024 for 12 months.",
-    date: "2024-01-05T10:30:00",
-    status: "new", // new, read, replied, closed
-    priority: "high", // high, medium, low
-    type: "long_term",
-    duration: "12 months",
-    budget: 40000,
-    source: "website",
-    tags: ["serious", "flexible dates"],
-    unread: true,
-  },
-  {
-    id: "INQ002",
-    property: "Urban Apartment",
-    guest: "Priya Sharma",
-    email: "priya@example.com",
-    phone: "+91 8765432109",
-    message: "Can we schedule a viewing next week? Interested in 6-month lease.",
-    date: "2024-01-04T14:20:00",
-    status: "replied",
-    priority: "medium",
-    type: "long_term",
-    duration: "6 months",
-    budget: 28000,
-    source: "mobile_app",
-    tags: ["viewing requested"],
-    unread: false,
-  },
-  {
-    id: "INQ003",
-    property: "Mountain Cottage",
-    guest: "Amit Patel",
-    email: "amit@example.com",
-    phone: "+91 7654321098",
-    message: "Looking for weekend getaway for 4 people. Available next weekend?",
-    date: "2024-01-03T09:15:00",
-    status: "read",
-    priority: "high",
-    type: "short_term",
-    duration: "3 nights",
-    budget: 20000,
-    source: "website",
-    tags: ["urgent", "weekend"],
-    unread: false,
-  },
-  {
-    id: "INQ004",
-    property: "Luxury Penthouse",
-    guest: "Sneha Reddy",
-    email: "sneha@example.com",
-    phone: "+91 6543210987",
-    message: "Interested in purchase. Can you share more details about amenities?",
-    date: "2024-01-02T16:45:00",
-    status: "closed",
-    priority: "low",
-    type: "purchase",
-    duration: null,
-    budget: 80000000,
-    source: "referral",
-    tags: ["purchase", "high value"],
-    unread: false,
-  },
-];
+interface InquiryThread {
+  id: string;
+  propertyTitle: string;
+  guestName: string;
+  guestAvatar?: string | null;
+  lastMessage: string;
+  lastMessageAt: string | null;
+  lastMessageRole: string;
+  status: string;
+  unreadByOwner: number;
+  ownerLabel: string | null;
+  createdAt: string;
+}
 
-const priorityColors = {
-  high: "bg-red-100 text-red-800 border-red-200",
-  medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  low: "bg-green-100 text-green-800 border-green-200",
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  NEW:       { label: "New",       color: "bg-blue-100 text-blue-800" },
+  READ:      { label: "Read",      color: "bg-gray-100 text-gray-700" },
+  REPLIED:   { label: "Replied",   color: "bg-green-100 text-green-800" },
+  CONVERTED: { label: "Converted", color: "bg-indigo-100 text-indigo-800" },
+  CLOSED:    { label: "Closed",    color: "bg-gray-200 text-gray-600" },
 };
 
-const statusColors = {
-  new: "bg-blue-100 text-blue-800",
-  read: "bg-gray-100 text-gray-800",
-  replied: "bg-green-100 text-green-800",
-  closed: "bg-purple-100 text-purple-800",
+const LABEL_COLORS: Record<string, string> = {
+  "Viewing arranged":      "bg-blue-100 text-blue-700",
+  "Viewing completed":     "bg-green-100 text-green-700",
+  "Suitable":              "bg-emerald-100 text-emerald-700",
+  "Maybe":                 "bg-yellow-100 text-yellow-700",
+  "Rejected":              "bg-red-100 text-red-700",
+  "Waiting for paperwork": "bg-purple-100 text-purple-700",
 };
+
+function timeAgo(dateStr: string | null) {
+  return timeAgoShort(dateStr);
+}
 
 export default function InquiryInbox() {
-  const [inquiries, setInquiries] = useState(mockInquiries);
-  const [selectedInquiry, setSelectedInquiry] = useState(mockInquiries[0]);
-  const [filter, setFilter] = useState("all");
+  const { basePath } = useDashboardBase();
+  const [threads, setThreads] = useState<InquiryThread[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  const markAsRead = (id: string) => {
-    setInquiries(
-      inquiries.map((inq) =>
-        inq.id === id ? { ...inq, status: "read", unread: false } : inq
-      )
-    );
-  };
+  const fetchThreads = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/inquiries?forOwner=true&pageSize=100&tab=all");
+      if (res.data?.success) {
+        setThreads(
+          (res.data.data?.items || []).map((inq: any) => ({
+            id: inq.id,
+            propertyTitle: inq.propertyTitle || "Property",
+            guestName: inq.guestName || "Guest",
+            guestAvatar: inq.guestAvatar || null,
+            lastMessage: inq.lastMessage || inq.message || "",
+            lastMessageAt: inq.lastMessageAt || inq.updatedAt || inq.createdAt,
+            lastMessageRole: inq.lastMessageRole || "USER",
+            status: (inq.status || "NEW").toUpperCase(),
+            unreadByOwner: inq.unreadByOwner || 0,
+            ownerLabel: inq.ownerLabel || null,
+            createdAt: inq.createdAt,
+          }))
+        );
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const replyToInquiry = (id: string) => {
-    setInquiries(
-      inquiries.map((inq) =>
-        inq.id === id ? { ...inq, status: "replied" } : inq
-      )
-    );
-  };
+  useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
-  const closeInquiry = (id: string) => {
-    setInquiries(
-      inquiries.map((inq) =>
-        inq.id === id ? { ...inq, status: "closed" } : inq
-      )
-    );
-  };
-
-  const filteredInquiries = inquiries.filter((inq) => {
-    if (filter !== "all" && inq.status !== filter) return false;
-    if (search && !inq.guest.toLowerCase().includes(search.toLowerCase()) && 
-        !inq.property.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
+  const filtered = threads.filter((t) => {
+    const q = search.toLowerCase();
+    return !q || t.guestName.toLowerCase().includes(q) || t.propertyTitle.toLowerCase().includes(q) || t.lastMessage.toLowerCase().includes(q);
   });
 
-  const unreadCount = inquiries.filter((inq) => inq.unread).length;
-  const newCount = inquiries.filter((inq) => inq.status === "new").length;
+  const unreadCount = threads.filter((t) => t.unreadByOwner > 0).length;
+  const notRepliedCount = threads.filter((t) => t.lastMessageRole !== "OWNER" && t.status !== "CLOSED").length;
 
   return (
     <div className="bg-white rounded-[5px] shadow-sm border">
-      <div className="p-5 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50">
-              <Inbox className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Inquiry Inbox</h3>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-sm text-gray-500">
-                  {inquiries.length} total inquiries
-                </span>
-                {unreadCount > 0 && (
-                  <Badge variant="destructive" className="animate-pulse">
-                    {unreadCount} unread
-                  </Badge>
-                )}
-                {newCount > 0 && (
-                  <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                    {newCount} new
-                  </Badge>
-                )}
-              </div>
-            </div>
+      {/* Header */}
+      <div className="px-5 py-4 border-b flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-blue-50">
+            <Inbox className="w-5 h-5 text-blue-600" />
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
-            <Button className="bg-green-600 hover:bg-green-700">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Quick Reply Templates
-            </Button>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Inquiry Inbox</h3>
+            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+              <span className="text-sm text-gray-500">{threads.length} total</span>
+              {unreadCount > 0 && (
+                <span className="text-xs bg-orange-100 text-orange-700 font-semibold px-2 py-0.5 rounded-full">{unreadCount} unread</span>
+              )}
+              {notRepliedCount > 0 && (
+                <span className="text-xs bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded-full">{notRepliedCount} not replied</span>
+              )}
+            </div>
           </div>
         </div>
+        <Link href={`${basePath}/inquiries`} className="flex items-center gap-1.5 text-xs text-green-600 hover:text-green-700 font-medium shrink-0">
+          View All <ExternalLink className="w-3.5 h-3.5" />
+        </Link>
+      </div>
 
-        {/* Filters and Search */}
-        <div className="mt-6 flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search inquiries by guest or property..."
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2">
-            {["all", "new", "replied", "closed"].map((status) => (
-              <Button
-                key={status}
-                variant={filter === status ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter(status)}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-                {status === "new" && newCount > 0 && (
-                  <span className="ml-2 bg-white text-blue-600 text-xs px-1.5 py-0.5 rounded-full">
-                    {newCount}
-                  </span>
-                )}
-              </Button>
-            ))}
-          </div>
+      {/* Search */}
+      <div className="px-5 py-3 border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, property or message..."
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-[5px] focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3">
-        {/* Inquiry List */}
-        <div className="lg:col-span-1 border-r max-h-[600px] overflow-y-auto">
-          {filteredInquiries.map((inquiry) => (
-            <div
-              key={inquiry.id}
-              className={`
-                p-4 border-b cursor-pointer transition-colors hover:bg-gray-50
-                ${selectedInquiry.id === inquiry.id ? "bg-blue-50 border-l-4 border-l-blue-500" : ""}
-                ${inquiry.unread ? "bg-blue-50/50" : ""}
-              `}
-              onClick={() => {
-                setSelectedInquiry(inquiry);
-                markAsRead(inquiry.id);
-              }}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-500" />
-                  <span className="font-medium text-gray-900">{inquiry.guest}</span>
-                  {inquiry.unread && (
-                    <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                  )}
-                </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${priorityColors[inquiry.priority as keyof typeof priorityColors]}`}>
-                  {inquiry.priority}
-                </span>
-              </div>
+      {/* Thread list */}
+      <div className="max-h-[520px] overflow-y-auto divide-y divide-gray-100">
+        {loading ? (
+          <div className="flex items-center justify-center py-14">
+            <div className="animate-spin rounded-full h-7 w-7 border-t-2 border-b-2 border-green-600" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-14">
+            <MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm">{threads.length === 0 ? "No inquiries yet." : "No results found."}</p>
+          </div>
+        ) : (
+          filtered.map((thread) => {
+            const statusCfg = STATUS_CONFIG[thread.status] || STATUS_CONFIG.NEW;
+            const hasUnread = thread.unreadByOwner > 0;
+            return (
+              <div key={thread.id} className={`flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ${hasUnread ? "bg-green-50/40 border-l-4 border-l-green-500" : ""}`}>
+                <UserAvatar
+                  name={thread.guestName}
+                  src={thread.guestAvatar}
+                  size="sm"
+                  ring={hasUnread}
+                  className="mt-0.5"
+                />
 
-              <h4 className="font-semibold text-gray-900 mb-1">{inquiry.property}</h4>
-              <p className="text-sm text-gray-600 line-clamp-2 mb-2">{inquiry.message}</p>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded text-xs ${statusColors[inquiry.status as keyof typeof statusColors]}`}>
-                    {inquiry.status}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {formatDate(inquiry.date)}
-                  </span>
-                </div>
-                <div className="text-xs font-medium text-gray-900">
-                  ₹{inquiry.budget.toLocaleString()}
-                  <span className="text-gray-500 ml-1">
-                    {inquiry.type === "purchase" ? "" : "/" + (inquiry.type === "short_term" ? "night" : "month")}
-                  </span>
-                </div>
-              </div>
-
-              {inquiry.tags && inquiry.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {inquiry.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Inquiry Details */}
-        <div className="lg:col-span-2 p-6">
-          {selectedInquiry ? (
-            <div>
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {selectedInquiry.property}
-                  </h3>
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <User className="w-4 h-4" />
-                      {selectedInquiry.guest}
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      {formatDate(selectedInquiry.date)}
-                    </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${priorityColors[selectedInquiry.priority as keyof typeof priorityColors]}`}>
-                      {selectedInquiry.priority} priority
-                    </div>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={`text-sm font-semibold truncate ${hasUnread ? "text-gray-900" : "text-gray-700"}`}>{thread.guestName}</span>
+                    {hasUnread && (
+                      <span className="text-xs bg-green-600 text-white rounded-full px-1.5 py-0.5 font-semibold shrink-0">{thread.unreadByOwner}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mb-0.5">
+                    <span className="font-semibold text-gray-700">{thread.propertyTitle}</span>
+                  </p>
+                  <p className={`text-sm truncate ${hasUnread ? "text-gray-800 font-medium" : "text-gray-500"}`}>{thread.lastMessage}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
+                    {thread.ownerLabel && thread.ownerLabel !== "No Label" && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LABEL_COLORS[thread.ownerLabel] || "bg-gray-100 text-gray-600"}`}>{thread.ownerLabel}</span>
+                    )}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => replyToInquiry(selectedInquiry.id)}
+
+                {/* Right side */}
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <span className={`text-xs whitespace-nowrap ${hasUnread ? "text-green-700 font-semibold" : "text-gray-400"}`}>
+                    {timeAgo(thread.lastMessageAt || thread.createdAt)}
+                  </span>
+                  <Link
+                    href={`${basePath}/inquiries/${thread.id}?from=dashboard`}
+                    className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium border border-green-200 hover:border-green-400 rounded px-2 py-1 transition-colors"
                   >
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Reply
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => closeInquiry(selectedInquiry.id)}
-                  >
-                    Close
-                  </Button>
+                    <MessageSquare className="w-3 h-3" />
+                    Show Chat
+                  </Link>
                 </div>
               </div>
-
-              {/* Guest Info */}
-              <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Guest Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                    <Mail className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <div className="text-sm text-gray-500">Email</div>
-                      <div className="font-medium">{selectedInquiry.email}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                    <Phone className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <div className="text-sm text-gray-500">Phone</div>
-                      <div className="font-medium">{selectedInquiry.phone}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Inquiry Details */}
-              <div className="mb-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Inquiry Details</h4>
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">Message</div>
-                    <div className="p-4 bg-gray-50 rounded-lg border">
-                      {selectedInquiry.message}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-white rounded-lg border">
-                      <div className="text-sm text-gray-500">Type</div>
-                      <div className="font-medium">{selectedInquiry.type.replace("_", " ")}</div>
-                    </div>
-                    <div className="p-4 bg-white rounded-lg border">
-                      <div className="text-sm text-gray-500">Duration</div>
-                      <div className="font-medium">{selectedInquiry.duration || "N/A"}</div>
-                    </div>
-                    <div className="p-4 bg-white rounded-lg border">
-                      <div className="text-sm text-gray-500">Budget</div>
-                      <div className="font-medium">₹{selectedInquiry.budget.toLocaleString()}</div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-white rounded-lg border">
-                    <div className="text-sm text-gray-500 mb-2">Source</div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                        {selectedInquiry.source}
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        • {formatDate(selectedInquiry.date)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="border-t pt-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Quick Actions</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Button variant="outline" className="justify-start">
-                    <Phone className="w-4 h-4 mr-2" />
-                    Call Guest
-                  </Button>
-                  <Button variant="outline" className="justify-start">
-                    <Mail className="w-4 h-4 mr-2" />
-                    Send Email
-                  </Button>
-                  <Button variant="outline" className="justify-start">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Send SMS
-                  </Button>
-                  <Button className="bg-green-600 hover:bg-green-700">
-                    Create Booking
-                  </Button>
-                  <Button variant="outline">
-                    Send Quotation
-                  </Button>
-                  <Button variant="outline">
-                    Schedule Viewing
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-gray-900 mb-2">Select an inquiry</h4>
-              <p className="text-gray-500">Choose an inquiry from the list to view details</p>
-            </div>
-          )}
-        </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

@@ -5,17 +5,18 @@ import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
 import { toUserDTO } from "@/lib/auth/helpers";
+import { deleteUserAccount } from "@/lib/users/deleteUserAccount";
 
 /**
  * GET /api/users/[id]
  * Get user by ID (Admin only or own profile)
  */
-export const GET = withAuth<{ params: { id: string } }>(
+export const GET = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
+    const { id } = await context!.params;
     try {
       // Check if user is accessing their own profile or is admin
-      if (user.role !== "ADMIN" && user.userId !== params.id) {
+      if (user.role !== "ADMIN" && user.userId !== id) {
         return errorResponse(
           "You don't have permission to view this user",
           403,
@@ -24,7 +25,7 @@ export const GET = withAuth<{ params: { id: string } }>(
       }
 
       const targetUser = await prisma.user.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           _count: {
             select: {
@@ -36,7 +37,7 @@ export const GET = withAuth<{ params: { id: string } }>(
               packages: true,
             },
           },
-          properties: user.role === "ADMIN" || user.userId === params.id ? {
+          properties: user.role === "ADMIN" || user.userId === id ? {
             select: {
               id: true,
               title: true,
@@ -55,8 +56,9 @@ export const GET = withAuth<{ params: { id: string } }>(
       }
 
       // Convert to DTO (exclude password)
+      const userDTOData = await toUserDTO(targetUser);
       const userDTO = {
-        ...toUserDTO(targetUser),
+        ...userDTOData,
         counts: targetUser._count,
         recentProperties: targetUser.properties,
       };
@@ -77,14 +79,14 @@ export const GET = withAuth<{ params: { id: string } }>(
  * PATCH /api/users/[id]
  * Update user (Admin only or self)
  */
-export const PATCH = withAuth<{ params: { id: string } }>(
+export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
+    const { id } = await context!.params;
     try {
       const body = await request.json();
 
       // Check permissions
-      if (user.role !== "ADMIN" && user.userId !== params.id) {
+      if (user.role !== "ADMIN" && user.userId !== id) {
         return errorResponse(
           "You don't have permission to update this user",
           403,
@@ -94,7 +96,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
 
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
-        where: { id: params.id },
+        where: { id },
       });
 
       if (!existingUser) {
@@ -106,7 +108,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
         const existingUserWithPhone = await prisma.user.findFirst({
           where: {
             phone: body.phone,
-            NOT: { id: params.id },
+            NOT: { id },
           },
         });
 
@@ -121,7 +123,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
 
       // Update user
       const updatedUser = await prisma.user.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           ...(body.firstName && { firstName: body.firstName }),
           ...(body.lastName && { lastName: body.lastName }),
@@ -130,6 +132,9 @@ export const PATCH = withAuth<{ params: { id: string } }>(
           // Personal Information
           ...(body.birthDate !== undefined && {
             birthDate: body.birthDate || null,
+          }),
+          ...(body.gender !== undefined && {
+            gender: body.gender || null,
           }),
           // Address Information
           ...(body.address !== undefined && { address: body.address || null }),
@@ -158,7 +163,7 @@ export const PATCH = withAuth<{ params: { id: string } }>(
       });
 
       // Convert to DTO (exclude password)
-      const userDTO = toUserDTO(updatedUser);
+      const userDTO = await toUserDTO(updatedUser);
 
       return successResponse(userDTO, "User updated successfully");
     } catch (error) {
@@ -187,9 +192,9 @@ export const PATCH = withAuth<{ params: { id: string } }>(
  * DELETE /api/users/[id]
  * Delete user (Admin only)
  */
-export const DELETE = withAuth<{ params: { id: string } }>(
+export const DELETE = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
+    const { id } = await context!.params;
     try {
       // Check if user is admin
       if (user.role !== "ADMIN") {
@@ -202,7 +207,10 @@ export const DELETE = withAuth<{ params: { id: string } }>(
 
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
-        where: { id: params.id },
+        where: { id },
+        include: {
+          roles: true,
+        },
       });
 
       if (!existingUser) {
@@ -210,7 +218,7 @@ export const DELETE = withAuth<{ params: { id: string } }>(
       }
 
       // Cannot delete admin
-      if (existingUser.role === "ADMIN") {
+      if (existingUser.roles.some((r) => r.role === "ADMIN")) {
         return errorResponse(
           "Cannot delete admin users",
           400,
@@ -218,17 +226,19 @@ export const DELETE = withAuth<{ params: { id: string } }>(
         );
       }
 
-      // Delete user
-      await prisma.user.delete({
-        where: { id: params.id },
-      });
+      // Delete user and related data
+      await deleteUserAccount(id);
 
       return successResponse(null, "User deleted successfully");
     } catch (error) {
       console.error("Delete user error:", error);
 
+      if (error instanceof Error && error.message.includes("Record to delete does not exist")) {
+        return errorResponse("User not found", 404, ErrorCode.USER_NOT_FOUND);
+      }
+
       return errorResponse(
-        "Failed to delete user",
+        error instanceof Error ? error.message : "Failed to delete user",
         500,
         ErrorCode.INTERNAL_SERVER_ERROR
       );

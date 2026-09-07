@@ -1,4 +1,19 @@
-import { UserRole, UserStatus } from "@prisma/client";
+// import { UserRole, UserStatus } from "@prisma/client";
+
+export enum UserStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  SUSPENDED = "SUSPENDED",
+  PENDING = "PENDING"
+}
+
+export enum UserRole {
+  USER = "USER",
+  OWNER = "OWNER",
+  AGENT = "AGENT",
+  SERVICE = "SERVICE",
+  ADMIN = "ADMIN"
+}
 
 /**
  * User Response DTO (Data Transfer Object)
@@ -11,11 +26,12 @@ export interface UserDTO {
   firstName: string;
   lastName: string;
   avatar: string | null;
-  role: UserRole;
+  roles: string[];
   status: UserStatus;
 
   // Personal Information
   birthDate: string | null;
+  gender: string | null;
 
   // Address Information
   address: string | null;
@@ -32,6 +48,8 @@ export interface UserDTO {
   companyName: string | null;
   taxId: string | null;
   website: string | null;
+  listingSellerType: "AGENT" | "PROPERTY_OWNER" | null;
+  agentLogo: string | null;
 
   createdAt: Date;
   updatedAt: Date;
@@ -51,18 +69,42 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   phone?: string;
-  role?: "USER" | "OWNER";
   companyName?: string;
   website?: string;
+}
+
+/**
+ * Become Owner Request
+ */
+export interface BecomeOwnerRequest {
+  companyName?: string;
+  taxId?: string;
+  website?: string;
+}
+
+/**
+ * Become Owner Response
+ */
+export interface BecomeOwnerResponse {
+  success: boolean;
+  message: string;
+  data: RegisterData;
+}
+
+// resgster response 
+export interface RegisterData {
+  user: UserDTO;
+  accessToken: string;
+  refreshToken: string;
 }
 
 /**
  * Register Response
  */
 export interface RegisterResponse {
-  user: UserDTO;
-  accessToken: string;
-  refreshToken: string;
+  success: boolean;
+  message: string;
+  data: RegisterData;
 }
 
 /**
@@ -123,6 +165,7 @@ export interface UpdateProfileRequest {
   phone?: string;
   avatar?: string;
   birthDate?: string;
+  gender?: string;
   address?: string;
   city?: string;
   state?: string;
@@ -133,6 +176,8 @@ export interface UpdateProfileRequest {
   companyName?: string;
   taxId?: string;
   website?: string;
+  listingSellerType?: "AGENT" | "PROPERTY_OWNER" | "";
+  agentLogo?: string;
 }
 
 /**

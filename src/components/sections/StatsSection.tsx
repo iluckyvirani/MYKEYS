@@ -1,262 +1,145 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Award, Building2, Users, ShieldCheck, Clock, Star, Home, Globe } from "lucide-react";
+import {
+  Award,
+  Building2,
+  Users,
+  ShieldCheck,
+  Clock,
+  Star,
+  Home,
+  Globe,
+  type LucideIcon,
+} from "lucide-react";
+import { useHomeContent } from "@/hooks/useHomeContent";
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Award,
+  Building2,
+  Users,
+  ShieldCheck,
+  Clock,
+  Star,
+  Home,
+  Globe,
+};
 
 export default function StatsSection() {
-  const [particles, setParticles] = useState<Array<{ left: string; top: string; duration: number; delay: number }>>([]);
-
-  useEffect(() => {
-    setParticles(
-      Array.from({ length: 20 }, () => ({
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        duration: 2 + Math.random() * 3,
-        delay: Math.random() * 2,
-      }))
-    );
-  }, []);
-
-  const stats = [
-    {
-      id: 1,
-      icon: <Building2 className="w-8 h-8" />,
-      value: "1,548+",
-      label: "Properties Sold",
-      color: "from-green-500 to-emerald-600",
-      description: "Successful transactions"
-    },
-    {
-      id: 2,
-      icon: <Award className="w-8 h-8" />,
-      value: "25+",
-      label: "Awards Gained",
-      color: "from-blue-500 to-cyan-600",
-      description: "Industry recognition"
-    },
-    {
-      id: 3,
-      icon: <Clock className="w-8 h-8" />,
-      value: "9+",
-      label: "Years Experience",
-      color: "from-purple-500 to-violet-600",
-      description: "Trusted expertise"
-    },
-    {
-      id: 4,
-      icon: <Users className="w-8 h-8" />,
-      value: "98%",
-      label: "Client Satisfaction",
-      color: "from-amber-500 to-orange-600",
-      description: "Happy customers"
-    }
-  ];
-
-  const additionalStats = [
-    {
-      icon: <Home className="w-6 h-6" />,
-      value: "500+",
-      label: "Properties Listed"
-    },
-    {
-      icon: <ShieldCheck className="w-6 h-6" />,
-      value: "24/7",
-      label: "Support Available"
-    },
-    {
-      icon: <Star className="w-6 h-6" />,
-      value: "4.9",
-      label: "Average Rating"
-    },
-    {
-      icon: <Globe className="w-6 h-6" />,
-      value: "50+",
-      label: "Cities Covered"
-    }
-  ];
+  const { content } = useHomeContent();
+  const { badge, title, titleHighlight, subtitle, items, additionalStats } =
+    content.stats;
 
   return (
     <>
-      {/* Main Stats Section with Parallax */}
-      <section className="relative overflow-hidden py-24 md:py-32">
-        {/* Background with Parallax Effect */}
-        <div className="absolute inset-0 z-0">
-          <div 
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2070')",
-              backgroundAttachment: 'fixed',
-            }}
-          />
-          <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/60 to-black/80" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-transparent via-black/20 to-black/80" />
-        </div>
-
-        {/* Animated Orbs */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        </div>
-
+      <section className="relative overflow-hidden py-24 md:py-32 bg-white border-t border-b border-gray-100">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-16"
           >
-            <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-500/20 to-emerald-500/20 text-green-400 px-4 py-2 rounded-full mb-4 border border-green-500/30">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-              <span className="text-sm font-medium">Our Achievements</span>
+            <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-500/10 to-emerald-500/10 text-green-700 px-4 py-2 rounded-full mb-4 border border-green-500/20">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span className="text-sm font-medium">{badge}</span>
             </div>
-            
-            <h2 className="font-spartan text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
-              Trusted by Thousands
-              <span className="block text-transparent bg-clip-text bg-linear-to-r from-green-400 to-emerald-400">
-                of Happy Clients
+
+            <h2 className="font-spartan text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
+              {title}
+              <span className="block text-transparent bg-clip-text bg-linear-to-r from-green-600 to-emerald-600 mt-1">
+                {titleHighlight}
               </span>
             </h2>
-            
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Years of excellence in delivering premium real estate solutions with unmatched customer satisfaction.
+
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              {subtitle}
             </p>
           </motion.div>
 
-          {/* Main Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -8 }}
-                className="group relative"
-              >
-                {/* Card */}
-                <div className="relative bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl shadow-black/30 overflow-hidden">
-                  {/* Gradient Background */}
-                  <div className={`absolute inset-0 bg-linear-to-br ${stat.color}/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                  
-                  {/* Content */}
-                  <div className="relative z-10 text-center">
-                    {/* Icon */}
-                    <div className={`inline-flex p-4 rounded-2xl bg-linear-to-br ${stat.color} mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                      <div className="text-white">
-                        {stat.icon}
-                      </div>
-                    </div>
-                    
-                    {/* Value */}
-                    <div className="mb-2">
-                      <motion.span 
-                        className="font-spartan text-5xl md:text-6xl font-bold text-white"
-                        initial={{ scale: 0.5 }}
-                        animate={{ scale: 1 }}
-                        transition={{ 
-                          delay: 0.5 + (index * 0.1),
-                          type: "spring",
-                          stiffness: 200
-                        }}
-                      >
-                        {stat.value}
-                      </motion.span>
-                    </div>
-                    
-                    {/* Label */}
-                    <h4 className="text-xl font-semibold text-white mb-2">{stat.label}</h4>
-                    
-                    {/* Description */}
-                    <p className="text-sm text-gray-300">{stat.description}</p>
-                  </div>
+            {items.map((stat, index) => {
+              const Icon = ICON_MAP[stat.icon] || Building2;
+              return (
+                <motion.div
+                  key={stat.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -8 }}
+                  className="group relative"
+                >
+                  <div className="relative bg-gray-50 rounded-3xl p-8 border border-gray-100 shadow-xs overflow-hidden transition-all duration-300 group-hover:shadow-md">
+                    <div
+                      className={`absolute inset-0 bg-linear-to-br ${stat.color}/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
+                    />
 
-                  {/* Decorative Elements */}
-                  <div className="absolute -top-4 -right-4 w-20 h-20 bg-linear-to-br from-white/5 to-transparent rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
-                  <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-linear-to-tr from-white/5 to-transparent rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
-                </div>
-              </motion.div>
-            ))}
+                    <div className="relative z-10 text-center">
+                      <div
+                        className={`inline-flex p-4 rounded-2xl bg-linear-to-br ${stat.color} mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm`}
+                      >
+                        <div className="text-white">
+                          <Icon className="w-8 h-8" />
+                        </div>
+                      </div>
+
+                      <div className="mb-2">
+                        <motion.span
+                          className="font-spartan text-5xl md:text-6xl font-bold text-gray-900"
+                          initial={{ scale: 0.5 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            delay: 0.5 + index * 0.1,
+                            type: "spring",
+                            stiffness: 200,
+                          }}
+                        >
+                          {stat.value}
+                        </motion.span>
+                      </div>
+
+                      <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                        {stat.label}
+                      </h4>
+                      <p className="text-sm text-gray-600">{stat.description}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
 
-          {/* Additional Stats Bar */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-linear-to-r from-white/10 to-white/5 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl"
+            className="bg-gray-50 rounded-3xl p-8 border border-gray-100 shadow-xs"
           >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {additionalStats.map((stat, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.6 + (index * 0.1) }}
-                  whileHover={{ scale: 1.05 }}
-                  className="group"
-                >
-                  <div className="text-center p-6 bg-white/5 rounded-2xl hover:bg-white/10 transition-all duration-300">
-                    {/* Icon */}
-                    <div className="inline-flex p-3 rounded-xl bg-linear-to-br from-green-500/20 to-emerald-500/20 text-green-400 mb-4 group-hover:scale-110 transition-transform">
-                      {stat.icon}
+              {(additionalStats || []).map((stat, index) => {
+                const Icon = ICON_MAP[stat.icon] || Home;
+                return (
+                  <motion.div
+                    key={`${stat.label}-${index}`}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.6 + index * 0.1 }}
+                    whileHover={{ scale: 1.05 }}
+                    className="group"
+                  >
+                    <div className="text-center p-6 bg-white rounded-2xl border border-gray-100 hover:bg-gray-100/50 hover:shadow-xs transition-all duration-300">
+                      <div className="inline-flex p-3 rounded-xl bg-linear-to-br from-green-500/10 to-emerald-500/10 text-green-600 mb-4 group-hover:scale-110 transition-transform">
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div className="text-3xl font-bold text-gray-900 mb-2">
+                        {stat.value}
+                      </div>
+                      <p className="text-sm text-gray-600">{stat.label}</p>
                     </div>
-                    
-                    {/* Value */}
-                    <div className="text-3xl font-bold text-white mb-2">{stat.value}</div>
-                    
-                    {/* Label */}
-                    <p className="text-sm text-gray-300">{stat.label}</p>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.div>
-
-          {/* Trust Badges */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="mt-12 flex flex-wrap justify-center items-center gap-8"
-          >
-            {['Forbes', 'Business Insider', 'TechCrunch', 'Bloomberg', 'WSJ'].map((company, index) => (
-              <motion.div
-                key={company}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 + (index * 0.1) }}
-                whileHover={{ y: -4 }}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <div className="text-sm opacity-60 mb-1">Featured in</div>
-                <div className="text-xl font-semibold">{company}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-
-        {/* Floating Particles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {particles.map((particle, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 bg-white/30 rounded-full"
-              style={{
-                left: particle.left,
-                top: particle.top,
-              }}
-              animate={{
-                y: [0, -20, 0],
-                opacity: [0.3, 0.8, 0.3],
-              }}
-              transition={{
-                duration: particle.duration,
-                repeat: Infinity,
-                delay: particle.delay,
-              }}
-            />
-          ))}
         </div>
       </section>
     </>

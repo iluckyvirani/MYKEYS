@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Calendar, Wallet, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -99,7 +99,7 @@ export default function PayoutsOverview() {
             {formatCurrency(upcomingPayout.amount)}
           </div>
           <div className="text-sm text-gray-600 mb-4">
-            Scheduled for {new Date(upcomingPayout.date).toLocaleDateString('en-IN', { 
+            Scheduled for {new Date(upcomingPayout.date).toLocaleDateString('en-GB', { 
               day: 'numeric',
               month: 'long'
             })}
@@ -141,7 +141,7 @@ export default function PayoutsOverview() {
               </div>
               
               <div className="text-sm text-gray-600 mb-2">
-                {new Date(payout.date).toLocaleDateString('en-IN', {
+                {new Date(payout.date).toLocaleDateString('en-GB', {
                   weekday: 'short',
                   day: 'numeric',
                   month: 'short',
@@ -172,7 +172,7 @@ export default function PayoutsOverview() {
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Minimum Balance</span>
-            <span className="font-medium">₹10,000</span>
+            <span className="font-medium">£10,000</span>
           </div>
           <Button variant="outline" className="w-full mt-2">
             Edit Payout Settings

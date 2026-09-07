@@ -1,48 +1,26 @@
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-// import LongRentHero from "@/components/Rent/LongRentHero";
-import BuyFilters from "@/components/search/BuyFilters"; // Reuse or create LongRentFilters
-import PropertyGrid from "@/components/property/PropertyGrid";
-import LongRentHero from "@/components/Rent/LongRentHero";
-import HowLongRentWorks from "@/components/Rent/HowLongRentWorks";
-// import HowLongRentWorks from "@/components/Rent/HowLongRentWorks";
+import { redirect } from "next/navigation";
 
-export default function LongRentPage() {
-  return (
-    <>
-      <Navbar />
-      <main className="min-h-screen">
-        {/* Hero Banner with search */}
-        <LongRentHero />
-        
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Left Sidebar - Filters (25%) */}
-            <div className="lg:w-1/4">
-              <BuyFilters /> {/* You can create a specific LongRentFilters component */}
-            </div>
-            
-            {/* Right Content - Property Grid (75%) */}
-            <div className="lg:w-3/4">
-              <div className="mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                  Long Term Rentals
-                </h2>
-                <p className="text-gray-600">
-                  <span className="font-medium">2,347</span> properties available for long term rent in London
-                </p>
-              </div>
-              
-              <PropertyGrid />
-            </div>
-          </div>
-        </div>
-        
-        {/* How It Works Section */}
-        <HowLongRentWorks />
-      </main>
-      <Footer />
-    </>
-  );
+/** Legacy route — redirects to the new Whole Property rent flow */
+export default async function LongRentRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const qs = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string" && value) qs.set(key, value);
+    else if (Array.isArray(value) && value[0]) qs.set(key, value[0]);
+  }
+
+  // Map old city/zip into location for the new flow
+  const city = typeof params.city === "string" ? params.city : "";
+  const zip = typeof params.zipCode === "string" ? params.zipCode : "";
+  const location =
+    (typeof params.location === "string" ? params.location : "") || zip || city;
+  if (location) qs.set("location", location);
+
+  const query = qs.toString();
+  redirect(query ? `/rent/whole-property?${query}` : "/rent/whole-property");
 }

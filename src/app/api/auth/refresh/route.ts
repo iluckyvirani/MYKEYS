@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
 import { refreshTokenSchema, validateSchema } from "@/lib/auth/validation";
 import { verifyRefreshToken, generateTokenPair } from "@/lib/auth/jwt";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
 import { RefreshTokenRequest, RefreshTokenResponse } from "@/types/auth";
+import { primaryRoleFromAssignments, authUserSelect } from "@/lib/auth/helpers";
 
 /**
  * POST /api/auth/refresh
@@ -50,9 +52,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate new token pair
+    // Fetch user's current roles from database (to pick up any role changes)
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: authUserSelect,
+    });
+
+    if (!user) {
+      throw createApiError(ErrorCode.USER_NOT_FOUND, "User not found");
+    }
+
+    const primaryRole = primaryRoleFromAssignments(user.roles);
+
+    // Generate new token pair with current role
     const { accessToken, refreshToken: newRefreshToken } =
-      await generateTokenPair(payload.userId, payload.email, payload.role);
+      await generateTokenPair(payload.userId, payload.email, primaryRole);
 
     // Prepare response
     const response: RefreshTokenResponse = {

@@ -1,96 +1,87 @@
 "use client";
 
-import { Search, Home, DollarSign, Calendar } from "lucide-react";
+import { Search, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { looksLikePostcode } from "@/lib/buySearch";
+import { normalizeSearchLocation } from "@/lib/ukPostcode";
 
-export default function PropertySearchBar() {
-  const [propertyType, setPropertyType] = useState("");
-  const [rentalType, setRentalType] = useState(""); // "short" or "long"
+export default function PropertySearchBar({
+  selectedType,
+}: {
+  selectedType: "all" | "buy" | "short-rent" | "long-rent";
+}) {
+  const router = useRouter();
+  const [location, setLocation] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSearch = () => {
+    if (selectedType === "all") return;
+
+    const trimmed = normalizeSearchLocation(location);
+    if (!trimmed) {
+      setError("Enter a city or postcode to search");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    setLocation(trimmed);
+
+    const q = encodeURIComponent(trimmed);
+
+    if (selectedType === "buy") {
+      router.push(`/buy/search?location=${q}`);
+    } else if (selectedType === "long-rent") {
+      router.push(`/rent/whole-property/search?location=${q}`);
+    } else if (selectedType === "short-rent") {
+      router.push(`/rent/short-rent/search?location=${q}`);
+    }
+
+    setLoading(false);
+  };
+
+  if (selectedType === "all") return null;
 
   return (
-    <div className="max-w-7xl mx-auto bg-white/5 rounded-lg shadow-xl p-4">
-      {/* Labels - UPDATED for better clarity */}
-      <div className="grid grid-cols-12 gap-4 text-sm font-bold text-green-500 mb-2">
-        <div className="col-span-3">Search</div>
-        <div className="col-span-3">Property Type</div>
-        <div className="col-span-2">Rental Type</div>
-        <div className="col-span-2">Min Price</div>
-        <div className="col-span-2">Max Price</div>
-      </div>
-
-      {/* Inputs */}
-      <div className="grid grid-cols-12 gap-4 items-center">
-        {/* Keyword */}
-        <div className="col-span-3 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+    <div className="max-w-3xl mx-auto bg-white/10 backdrop-blur-sm rounded-xl shadow-2xl p-4">
+      <p className="text-sm font-semibold text-green-400 mb-2">
+        City or Postcode
+      </p>
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Location or keywords"
-            className="input-field bg-gray-50"
+            placeholder="e.g., London  or  SW1A 1AA"
+            value={location}
+            disabled={loading}
+            onChange={(e) => {
+              setLocation(e.target.value);
+              if (error) setError("");
+            }}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="bg-white w-full pl-9 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500 transition text-gray-900 text-sm placeholder:text-gray-400"
           />
+          {location.trim() && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-700">
+              {looksLikePostcode(location) ? "Postcode" : "City"}
+            </span>
+          )}
         </div>
-
-        {/* Property Type */}
-        <div className="col-span-3 relative">
-          <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
-          <select
-            className="input-field appearance-none bg-white"
-            value={propertyType}
-            onChange={(e) => setPropertyType(e.target.value)}
-          >
-            <option value="">Property Type</option>
-            <option value="apartment">Apartment</option>
-            <option value="villa">Villa</option>
-            <option value="house">House</option>
-            <option value="flat">Flat</option>
-            <option value="commercial">Commercial</option>
-          </select>
-        </div>
-
-        {/* Rental Type - NEW: For filtering Short vs Long term */}
-        <div className="col-span-2 relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
-          <select
-            className="input-field appearance-none bg-white"
-            value={rentalType}
-            onChange={(e) => setRentalType(e.target.value)}
-          >
-            <option value="">Rental Duration</option>
-            <option value="short">Short Rent (Nightly)</option>
-            <option value="long">Long Term (Monthly)</option>
-          </select>
-        </div>
-
-        {/* Min Price */}
-        <div className="col-span-2 relative">
-          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
-          <input
-            type="number"
-            placeholder="Min Price"
-            className="input-field bg-gray-50"
-          />
-        </div>
-
-        {/* Max Price */}
-        <div className="col-span-2 relative">
-          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
-          <input
-            type="number"
-            placeholder="Max Price"
-            className="input-field bg-gray-50"
-          />
-        </div>
-
-        {/* Search Button */}
-
-      </div>
-      <div className="flex items-center justify-center mt-1">
-        <Button className="w-100 rounded-tr-none rounded-tl-none h-12 bg-green-600 hover:bg-green-700 text-white">
+        <Button
+          type="button"
+          onClick={handleSearch}
+          disabled={loading}
+          className="h-12 px-6 bg-green-600 hover:bg-green-700 text-white rounded-lg shrink-0 cursor-pointer"
+        >
           <Search className="w-4 h-4 mr-2" />
-          Search
+          {loading ? "Searching..." : "Search"}
         </Button>
       </div>
+      {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
     </div>
   );
 }

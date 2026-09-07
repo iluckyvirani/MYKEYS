@@ -7,7 +7,6 @@ import { Mail, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { ForgotPasswordRequest } from "@/types/auth";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -15,7 +14,6 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   const handleForgotPassword = async () => {
     if (!email) {
@@ -27,15 +25,20 @@ export default function ForgotPasswordPage() {
     setError("");
 
     try {
-      const data: ForgotPasswordRequest = {
-        email,
-      };
-
-      await api.post("/auth/forgot-password", data);
-
-      setSuccess(true);
-      setEmail("");
+      await api.post("/auth/forgot-password", {
+        email: email.trim().toLowerCase(),
+      });
+      router.push(
+        `/reset-password?email=${encodeURIComponent(email.trim().toLowerCase())}`
+      );
     } catch (err: any) {
+      if (err.response?.status === 429) {
+        // Still take them to reset page so they can wait / use existing OTP
+        router.push(
+          `/reset-password?email=${encodeURIComponent(email.trim().toLowerCase())}`
+        );
+        return;
+      }
       const message =
         err.response?.data?.message ||
         err.message ||
@@ -48,60 +51,17 @@ export default function ForgotPasswordPage() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleForgotPassword();
-    }
+    if (e.key === "Enter") handleForgotPassword();
   };
-
-  if (success) {
-    return (
-      <AuthLayout>
-        <div className="text-center space-y-6">
-          <div className="bg-green-50 border border-green-200 rounded-[5px] p-6">
-            <div className="text-green-600 mb-4 flex justify-center">
-              <svg
-                className="w-16 h-16"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-spartan font-bold mb-2 text-green-600">
-              Check Your Email
-            </h2>
-            <p className="text-gray-600 text-sm mb-4">
-              We've sent password reset instructions to your email address. 
-              Please check your inbox and follow the link to reset your password.
-            </p>
-            <p className="text-gray-500 text-xs">
-              If you don't see the email, please check your spam folder.
-            </p>
-          </div>
-
-          <button
-            onClick={() => router.push("/login")}
-            className="flex items-center justify-center gap-2 text-green-600 hover:text-green-700 font-semibold text-sm"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Login
-          </button>
-        </div>
-      </AuthLayout>
-    );
-  }
 
   return (
     <AuthLayout>
-      <h2 className="text-2xl font-spartan font-bold mb-2">Forgot Password?</h2>
+      <h2 className="text-2xl font-spartan font-bold mb-2 text-[#0f172a]">
+        Forgot Password?
+      </h2>
       <p className="text-gray-600 text-sm mb-6">
-        Enter your email address and we'll send you instructions to reset your password.
+        Enter your email and we&apos;ll send a 6-digit OTP to reset your
+        password.
       </p>
 
       <div className="space-y-4">
@@ -112,7 +72,7 @@ export default function ForgotPasswordPage() {
         )}
 
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#339390]" />
           <input
             type="email"
             placeholder="Email Address"
@@ -126,19 +86,19 @@ export default function ForgotPasswordPage() {
 
         <Button
           onClick={handleForgotPassword}
-          disabled={loading}
-          className="w-full bg-green-600 hover:bg-green-700 rounded-[5px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading || !email}
+          className="w-full bg-[#339390] hover:bg-[#2a7a78] text-white rounded-[5px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Sending..." : "Send Reset Link"}
+          {loading ? "Sending OTP…" : "Send OTP"}
         </Button>
 
-        <button
-          onClick={() => router.push("/login")}
-          className="flex items-center justify-center gap-2 w-full text-green-600 hover:text-green-700 font-semibold text-sm mt-6"
+        <Link
+          href="/login"
+          className="flex items-center justify-center gap-2 w-full text-[#339390] hover:underline font-semibold text-sm mt-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Login
-        </button>
+        </Link>
       </div>
     </AuthLayout>
   );

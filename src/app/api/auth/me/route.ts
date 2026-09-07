@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
 import { requireAuth } from "@/lib/auth/middleware";
-import { toUserDTO } from "@/lib/auth/helpers";
+import { toUserDTO, authUserSelect } from "@/lib/auth/helpers";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
 
 /**
@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     // Fetch fresh user data from database
     const user = await prisma.user.findUnique({
       where: { id: authUser.userId },
+      select: authUserSelect,
     });
 
     if (!user) {
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Convert to DTO (exclude password)
-    const userDTO = toUserDTO(user);
+    const userDTO = await toUserDTO(user);
 
     return successResponse(userDTO, "User profile retrieved successfully");
   } catch (error) {

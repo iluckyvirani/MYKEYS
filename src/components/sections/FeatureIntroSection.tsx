@@ -30,10 +30,10 @@ export default function FeatureIntroSection() {
         </h2>
 
         <p className="mt-6 text-gray-500 leading-relaxed">
-          Hously developed a platform for the Real Estate marketplace that allows
-          buyers and sellers to easily execute a transaction on their own. The
-          platform drives efficiency, cost transparency and control into the
-          hands of the consumers. Hously is Real Estate Redefined.
+          MYKEYS is a UK property marketplace that lets buyers, renters, and
+          owners complete a transaction in one place. The platform puts
+          efficiency, clear pricing, and control in your hands — from first
+          search through to completion.
         </p>
 
         <Button className="mt-8 bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg rounded-[5px] cursor-pointer">

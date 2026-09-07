@@ -6,23 +6,17 @@ import StatsCards from "@/components/dashboard/UserDashboard/StatsCards";
 import RecentBookings from "@/components/dashboard/UserDashboard/RecentBookings";
 import ActiveInquiries from "@/components/dashboard/UserDashboard/ActiveInquiries";
 import FavoriteProperties from "@/components/dashboard/UserDashboard/FavoriteProperties";
-import UpcomingPayments from "@/components/dashboard/UserDashboard/UpcomingPayments";
+import RecentPayments from "@/components/dashboard/UserDashboard/RecentPayments";
 import QuickActions from "@/components/dashboard/UserDashboard/QuickActions";
 import Notifications from "@/components/dashboard/UserDashboard/Notifications";
 import BookingTrendChart from "@/components/dashboard/charts/BookingTrendChart";
+import DashboardGreeting from "@/components/dashboard/DashboardGreeting";
+import DynamicFAQSection from "@/components/faq/DynamicFAQSection";
 
 export default function UserDashboardPage() {
   return (
     <DashboardLayout defaultRole="user">
-      {/* Welcome Section */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, John! 👋
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Here's what's happening with your bookings and inquiries today.
-        </p>
-      </div>
+      <DashboardGreeting subtitle="Here's what's happening with your bookings and inquiries today." />
 
       {/* Stats Cards */}
       <div className="mb-5">
@@ -30,34 +24,37 @@ export default function UserDashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-5">
+      <div className="mb-6">
         <QuickActions />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-        {/* Left Column */}
-        <div className="lg:col-span-3 space-y-5">
-          {/* Recent Bookings */}
+      {/* Main Dashboard Grid */}
+      <div className="space-y-6">
+        {/* Top Row - Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RecentBookings />
-
-          {/* Active Inquiries */}
           <ActiveInquiries />
-
-          {/* Favorite Properties */}
-          <FavoriteProperties />
         </div>
 
-        {/* Right Column */}
-        <div className="space-y-5 col-span-3">
-          {/* Upcoming Payments */}
-          <UpcomingPayments />
+        {/* Favorite Properties - Full Width */}
+        <FavoriteProperties />
 
-          {/* Notifications */}
-          <Notifications />
-
-          {/* Booking Trend Chart */}
-          <BookingTrendChart />
+        {/* Middle Row - Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+          <RecentPayments />
         </div>
+
+        {/* Bottom Row - Chart Full Width */}
+        <BookingTrendChart />
+
+        <DynamicFAQSection
+          categories={["USER"]}
+          limit={4}
+          compact
+          showViewAll
+          viewAllHref="/faq?category=USER"
+          title="Help & FAQs"
+        />
       </div>
     </DashboardLayout>
   );

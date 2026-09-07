@@ -52,13 +52,18 @@ export async function PATCH(request: NextRequest) {
       data: {
         ...(validatedData.firstName && { firstName: validatedData.firstName }),
         ...(validatedData.lastName && { lastName: validatedData.lastName }),
-        ...(validatedData.phone !== undefined && { phone: validatedData.phone }),
+        ...(validatedData.phone !== undefined && {
+          phone: validatedData.phone || null,
+        }),
         ...(validatedData.avatar !== undefined && {
           avatar: validatedData.avatar || null,
         }),
         // Personal Information
         ...(validatedData.birthDate !== undefined && {
           birthDate: validatedData.birthDate || null,
+        }),
+        ...(validatedData.gender !== undefined && {
+          gender: validatedData.gender || null,
         }),
         // Address Information
         ...(validatedData.address !== undefined && {
@@ -93,11 +98,14 @@ export async function PATCH(request: NextRequest) {
         ...(validatedData.taxId !== undefined && {
           taxId: validatedData.taxId || null,
         }),
+        ...(validatedData.agentLogo !== undefined && {
+          agentLogo: validatedData.agentLogo || null,
+        }),
       },
     });
 
     // Convert to DTO (exclude password)
-    const userDTO = toUserDTO(updatedUser);
+    const userDTO = await toUserDTO(updatedUser);
 
     return successResponse(userDTO, "Profile updated successfully");
   } catch (error) {

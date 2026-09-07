@@ -2,9 +2,15 @@ import { prisma } from '../prisma';
 import { InquiryInput } from '@/types/inquiry';
 
 export const inquiryService = {
-  async create(data: InquiryInput) {
+  async create(data: InquiryInput & { propertyId: string; name: string; email: string; type: string }) {
     return prisma.inquiry.create({
-      data,
+      data: {
+        message: data.message || '',
+        type: data.type,
+        name: data.name,
+        email: data.email,
+        propertyId: data.propertyId,
+      },
     });
   },
 

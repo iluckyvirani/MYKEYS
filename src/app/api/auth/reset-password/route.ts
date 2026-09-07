@@ -1,23 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
-import { resetPasswordSchema, validateSchema } from "@/lib/auth/validation";
-import { verifyPassword, hashPassword } from "@/lib/auth/password";
+import {
+  emailSchema,
+  passwordSchema,
+  validateSchema,
+} from "@/lib/auth/validation";
+import { hashPassword } from "@/lib/auth/password";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
-import { ResetPasswordRequest } from "@/types/auth";
+import { hashOtp } from "@/lib/auth/otp";
+
+const resetWithOtpSchema = z
+  .object({
+    email: emailSchema,
+    otp: z
+      .string()
+      .trim()
+      .regex(/^\d{6}$/, "OTP must be a 6-digit code"),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(1, "Confirm password is required"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 /**
  * POST /api/auth/reset-password
- * Reset password using reset token
- * Note: This implementation assumes you've added resetToken and resetTokenExpiry fields to User model
+ * Reset password using email + OTP.
  */
 export async function POST(request: NextRequest) {
   try {
-    // Parse request body
-    const body: ResetPasswordRequest = await request.json();
-
-    // Validate input
-    const validation = validateSchema(resetPasswordSchema, body);
+    const body = await request.json();
+    const validation = validateSchema(resetWithOtpSchema, body);
     if (!validation.success) {
       return errorResponse(
         "Validation failed",
@@ -27,48 +43,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { token, newPassword } = validation.data;
+    const { email, otp, newPassword } = validation.data;
+    const user = await prisma.user.findUnique({ where: { email } });
 
-    // Find user with matching reset token and valid expiry
-    // Note: You need to add resetToken and resetTokenExpiry fields to your User model
-    const users = await prisma.user.findMany({
-      where: {
-        // resetTokenExpiry: {
-        //   gte: new Date(),
-        // },
-      },
-    });
-
-    // Verify token for each user (since we can't query hashed tokens directly)
-    let matchedUser = null;
-    for (const user of users) {
-      // You'll need to retrieve the stored hashed token
-      // const isValidToken = await verifyPassword(token, user.resetToken);
-      // if (isValidToken) {
-      //   matchedUser = user;
-      //   break;
-      // }
+    if (!user || !user.resetToken || !user.resetTokenExpiry) {
+      throw createApiError(ErrorCode.INVALID_OTP);
     }
 
-    // For now, without the schema changes, we'll return an error
-    // Remove this when you add the fields to the schema
-    throw createApiError(
-      ErrorCode.INVALID_RESET_TOKEN,
-      "Password reset functionality requires schema updates. Please add resetToken and resetTokenExpiry fields to User model."
-    );
-
-    // Uncomment below when schema is updated:
-    /*
-    if (!matchedUser) {
-      throw createApiError(ErrorCode.INVALID_RESET_TOKEN);
+    if (user.resetTokenExpiry.getTime() < Date.now()) {
+      throw createApiError(ErrorCode.OTP_EXPIRED);
     }
 
-    // Hash new password
+    if (user.resetToken !== hashOtp(otp)) {
+      throw createApiError(ErrorCode.INVALID_OTP);
+    }
+
     const hashedPassword = await hashPassword(newPassword);
 
-    // Update password and clear reset token
     await prisma.user.update({
-      where: { id: matchedUser.id },
+      where: { id: user.id },
       data: {
         password: hashedPassword,
         resetToken: null,
@@ -80,7 +73,6 @@ export async function POST(request: NextRequest) {
       null,
       "Password reset successful. You can now login with your new password."
     );
-    */
   } catch (error) {
     console.error("Reset password error:", error);
 

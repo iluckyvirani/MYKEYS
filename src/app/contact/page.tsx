@@ -1,19 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
     Phone,
+    Mail,
     MapPin,
     Clock,
     MessageSquare,
     Building2,
     Users,
     Shield,
-    Headphones,
     Globe,
-    TrendingUp,
-    Hotel
+    Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ContactForm from "@/components/contact/ContactForm";
@@ -21,70 +20,57 @@ import ContactCards from "@/components/contact/ContactCards";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import FAQSection from "@/components/contact/FAQSection";
-
-
-const departments = [
-    {
-        name: "Short Rent Support",
-        icon: <Hotel className="w-5 h-5" />,
-        email: "shortstay@propertyplatform.com",
-        phone: "+44 20 1234 5670",
-        description: "Instant bookings, payments, stay issues"
-    },
-    {
-        name: "Long Term Rentals",
-        icon: <Clock className="w-5 h-5" />,
-        email: "longterm@propertyplatform.com",
-        phone: "+44 20 1234 5671",
-        description: "Rental inquiries, agreements, management"
-    },
-    {
-        name: "Property Sales",
-        icon: <TrendingUp className="w-5 h-5" />,
-        email: "sales@propertyplatform.com",
-        phone: "+44 20 1234 5672",
-        description: "Purchase inquiries, viewing, negotiations"
-    },
-    {
-        name: "Owner Support",
-        icon: <Building2 className="w-5 h-5" />,
-        email: "owners@propertyplatform.com",
-        phone: "+44 20 1234 5673",
-        description: "Listing, management, payments"
-    },
-    {
-        name: "Verification & Safety",
-        icon: <Shield className="w-5 h-5" />,
-        email: "safety@propertyplatform.com",
-        phone: "+44 20 1234 5674",
-        description: "Account verification, disputes, security"
-    },
-    {
-        name: "Business Partnerships",
-        icon: <Users className="w-5 h-5" />,
-        email: "partners@propertyplatform.com",
-        phone: "+44 20 1234 5675",
-        description: "Corporate accounts, partnerships"
-    },
-];
+import { api } from "@/lib/api";
+import { getContactDepartmentIcon } from "@/lib/contact/departmentIcons";
+import { ContactDepartmentItem } from "@/types/contactDepartment";
+import { DEFAULT_CONTACT_CONTENT } from "@/lib/content/siteDefaults";
 
 
 export default function ContactPage() {
     const [activeTab, setActiveTab] = useState("general");
+    const [hero, setHero] = useState(DEFAULT_CONTACT_CONTENT.hero);
+    const [departments, setDepartments] = useState<ContactDepartmentItem[]>([]);
+    const [departmentsLoading, setDepartmentsLoading] = useState(true);
+
+    const supportPhone = hero.supportPhone;
+    const supportEmail = hero.supportEmail;
+    const supportDescription = hero.subtitle;
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const contentRes = await api.get("/content/contact").catch(() => null);
+                const heroData = contentRes?.data?.data?.hero;
+                setHero({
+                    ...DEFAULT_CONTACT_CONTENT.hero,
+                    ...(heroData || {}),
+                });
+            } catch {
+                // keep defaults
+            }
+        };
+
+        const fetchDepartments = async () => {
+            try {
+                const res = await api.get("/contact-departments");
+                setDepartments(res.data?.data ?? []);
+            } catch {
+                setDepartments([]);
+            } finally {
+                setDepartmentsLoading(false);
+            }
+        };
+
+        load();
+        fetchDepartments();
+    }, []);
 
     return (
         <>
             <Navbar />
             <main className="min-h-screen mb-10">
                 {/* Hero Section */}
-                <section className="relative py-20 md:py-28 overflow-hidden bg-linear-to-br from-gray-900 via-green-900 to-violet-800">
-                    {/* Background Elements */}
-                    <div className="absolute inset-0 overflow-hidden">
-                        <div className="absolute top-10 left-10 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-                        <div className="absolute bottom-10 right-10 w-80 h-80 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                    </div>
-
+                <section className="relative py-20 md:py-28 overflow-hidden bg-white border-b border-gray-100">
                     <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -92,34 +78,37 @@ export default function ContactPage() {
                             transition={{ duration: 0.8 }}
                             className="text-center"
                         >
-                            <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-white mb-1 leading-tight tracking-tight">
-                                Get In Touch
-                                <span className="block text-green-400 mt-1">
-                                    We're Here to Help
+                            <h1 className="font-spartan text-4xl sm:text-5xl md:text-5xl font-bold text-gray-900 mb-1 leading-tight tracking-tight">
+                                {hero.title}
+                                <span className="block text-green-600 mt-1">
+                                    {hero.titleHighlight}
                                 </span>
                             </h1>
 
-                            <p className="font-spartan text-lg sm:text-md text-gray-200 max-w-lg mx-auto mb-10 font-light">
-                                Whether you're looking for a property, listing yours, or need support,
-                                our team is ready to assist you with our three-tier platform.
+                            <p className="font-spartan text-lg sm:text-md text-gray-600 max-w-lg mx-auto mb-10 font-light">
+                                {supportDescription}
                             </p>
 
                             <div className="flex flex-wrap justify-center gap-4">
-                                <Button
-                                    size="lg"
-                                    className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-6 rounded-[5px] text-lg"
-                                >
-                                    <Headphones className="w-5 h-5 mr-2" />
-                                    Live Chat Support
-                                </Button>
-                                <Button
-                                    size="lg"
-                                    variant="outline"
-                                    className="bg-white/10 border-white text-white hover:bg-white/10 px-8 py-6 rounded-[5px] text-lg"
-                                >
-                                    <Phone className="w-5 h-5 mr-2" />
-                                    Call Now: +44 20 1234 5678
-                                </Button>
+                                <a href={`tel:${supportPhone.replace(/\s/g, "")}`}>
+                                    <Button
+                                        size="lg"
+                                        className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-6 rounded-[5px] text-lg cursor-pointer"
+                                    >
+                                        <Phone className="w-5 h-5 mr-2" />
+                                        Call Now: {supportPhone}
+                                    </Button>
+                                </a>
+                                <a href={`mailto:${supportEmail}`}>
+                                    <Button
+                                        size="lg"
+                                        variant="outline"
+                                        className="border-gray-200 text-gray-700 hover:bg-gray-50 px-8 py-6 rounded-[5px] text-lg cursor-pointer"
+                                    >
+                                        <Mail className="w-5 h-5 mr-2" />
+                                        Email: {supportEmail}
+                                    </Button>
+                                </a>
                             </div>
                         </motion.div>
                     </div>
@@ -130,7 +119,13 @@ export default function ContactPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column - Contact Cards */}
                         <div className="lg:col-span-1">
-                            <ContactCards />
+                            <ContactCards
+                                supportPhone={supportPhone}
+                                supportEmail={supportEmail}
+                                supportDescription={supportDescription}
+                                emergencyPhone={hero.emergencyPhone}
+                                emergencyNote={hero.emergencyNote}
+                            />
                         </div>
 
                         {/* Right Column - Contact Form & Tabs */}
@@ -141,8 +136,8 @@ export default function ContactPage() {
                                     <nav className="flex flex-wrap -mb-px">
                                         {[
                                             { id: "general", label: "General Inquiry", icon: <MessageSquare className="w-4 h-4" /> },
-                                            { id: "short", label: "Short Rent", icon: <Building2 className="w-4 h-4" /> },
-                                            { id: "long", label: "Long Term", icon: <Clock className="w-4 h-4" /> },
+                                            { id: "short", label: "Short Stay", icon: <Building2 className="w-4 h-4" /> },
+                                            { id: "long", label: "Rent", icon: <Clock className="w-4 h-4" /> },
                                             { id: "buy", label: "Property Purchase", icon: <Shield className="w-4 h-4" /> },
                                             { id: "owner", label: "For Owners", icon: <Users className="w-4 h-4" /> },
                                         ].map((tab) => (
@@ -174,18 +169,18 @@ export default function ContactPage() {
                                     )}
                                     {activeTab === "short" && (
                                         <div>
-                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Short rent Support</h3>
+                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Short Stay Support</h3>
                                             <p className="text-gray-600 mb-6">
                                                 Need help with instant bookings, payment issues, or short-term stay questions?
-                                                Our dedicated short rent team can assist you.
+                                                Our dedicated short stay team can assist you.
                                             </p>
                                         </div>
                                     )}
                                     {activeTab === "long" && (
                                         <div>
-                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Long Term Rental Support</h3>
+                                            <h3 className="text-xl font-bold text-gray-900 mb-4">Rental Support</h3>
                                             <p className="text-gray-600 mb-6">
-                                                Questions about long-term rentals, inquiries, or rental agreements?
+                                                Questions about rentals, inquiries, or rental agreements?
                                                 We'll connect you with the right specialist.
                                             </p>
                                         </div>
@@ -204,7 +199,7 @@ export default function ContactPage() {
                                             <h3 className="text-xl font-bold text-gray-900 mb-4">For Property Owners</h3>
                                             <p className="text-gray-600 mb-6">
                                                 Need help listing your property, managing bookings, or understanding owner packages?
-                                                We're here to support you.
+                                                Contact us at {supportEmail} or {supportPhone}.
                                             </p>
                                         </div>
                                     )}
@@ -217,6 +212,7 @@ export default function ContactPage() {
                     </div>
 
                     {/* Departments Card */}
+                    {(departmentsLoading || departments.length > 0) && (
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -224,13 +220,18 @@ export default function ContactPage() {
                         className="bg-linear-to-br from-gray-900 to-black rounded-[5px] p-6 mt-10"
                     >
                         <h3 className="text-xl font-bold text-white mb-6">Specialized Departments</h3>
-                        <div className="grid grid-cols-3 gap-6">
-                            {departments.map((dept, index) => (
-                                <div key={index} className="bg-white/10 backdrop-blur-sm rounded-[5px] p-4 hover:bg-white/20 transition-colors">
+                        {departmentsLoading ? (
+                            <div className="flex justify-center py-8">
+                                <Loader2 className="w-8 h-8 animate-spin text-white/70" />
+                            </div>
+                        ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {departments.map((dept) => (
+                                <div key={dept.id} className="bg-white/10 backdrop-blur-sm rounded-[5px] p-4 hover:bg-white/20 transition-colors">
                                     <div className="flex items-start gap-3">
                                         <div className="p-2 bg-white/20 rounded-lg">
                                             <div className="text-white">
-                                                {dept.icon}
+                                                {getContactDepartmentIcon(dept.icon)}
                                             </div>
                                         </div>
                                         <div className="flex-1">
@@ -249,7 +250,9 @@ export default function ContactPage() {
                                 </div>
                             ))}
                         </div>
+                        )}
                     </motion.div>
+                    )}
                     {/* FAQ Section */}
                     <div className="mt-10">
                         <FAQSection />

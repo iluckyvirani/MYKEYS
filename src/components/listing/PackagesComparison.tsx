@@ -25,6 +25,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface PackagesComparisonProps {
   propertyId: number;
@@ -385,20 +386,20 @@ export default function PackagesComparison({
       {pricing.shortRent && (
         <div className="bg-gray-50 rounded-[5px] p-4 space-y-2">
           <div className="flex justify-between text-sm">
-            <span>£{pricing.shortRent.pricePerNight} × {nights} nights</span>
-            <span>£{(pricing.shortRent.pricePerNight * nights).toFixed(2)}</span>
+            <span>{formatCurrency(pricing.shortRent.pricePerNight)} × {nights} nights</span>
+            <span>{formatCurrency(pricing.shortRent.pricePerNight * nights)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Cleaning fee</span>
-            <span>£{pricing.shortRent.cleaningFee}</span>
+            <span>{formatCurrency(pricing.shortRent.cleaningFee)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Service fee</span>
-            <span>£{pricing.shortRent.serviceFee}</span>
+            <span>{formatCurrency(pricing.shortRent.serviceFee)}</span>
           </div>
           <div className="border-t pt-2 flex justify-between font-semibold">
             <span>Total</span>
-            <span>£{calculateShortTermTotal().toFixed(2)}</span>
+            <span>{formatCurrency(calculateShortTermTotal())}</span>
           </div>
         </div>
       )}
@@ -457,11 +458,11 @@ export default function PackagesComparison({
         <div className="bg-gray-50 rounded-[5px] p-4 space-y-2">
           <div className="flex justify-between text-sm">
             <span>Monthly rent</span>
-            <span>£{pricing.longRent.monthlyRent}/month</span>
+            <span>{formatCurrency(pricing.longRent.monthlyRent)}/month</span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Security deposit</span>
-            <span>£{pricing.longRent.securityDeposit}</span>
+            <span>{formatCurrency(pricing.longRent.securityDeposit)}</span>
           </div>
           {!pricing.longRent.billsIncluded && (
             <div className="flex justify-between text-sm">
@@ -471,7 +472,7 @@ export default function PackagesComparison({
           )}
           <div className="border-t pt-2 flex justify-between font-semibold">
             <span>First payment</span>
-            <span>£{(pricing.longRent.monthlyRent + pricing.longRent.securityDeposit).toFixed(2)}</span>
+            <span>{formatCurrency(pricing.longRent.monthlyRent + pricing.longRent.securityDeposit)}</span>
           </div>
         </div>
       )}
@@ -521,11 +522,11 @@ export default function PackagesComparison({
         <div className="bg-gray-50 rounded-[5px] p-4 space-y-2">
           <div className="flex justify-between text-sm">
             <span>Property price</span>
-            <span>£{pricing.purchase.totalPrice.toLocaleString()}</span>
+            <span>{formatCurrency(pricing.purchase.totalPrice)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Stamp duty (estimated)</span>
-            <span>£{(pricing.purchase.totalPrice * 0.05).toLocaleString()}</span>
+            <span>{formatCurrency(pricing.purchase.totalPrice * 0.05)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Legal fees (estimated)</span>
@@ -533,7 +534,7 @@ export default function PackagesComparison({
           </div>
           <div className="border-t pt-2 flex justify-between font-semibold">
             <span>Total initial cost</span>
-            <span>£{(pricing.purchase.totalPrice * 1.07).toLocaleString()}</span>
+            <span>{formatCurrency(pricing.purchase.totalPrice * 1.07)}</span>
           </div>
         </div>
       )}
@@ -626,7 +627,7 @@ export default function PackagesComparison({
                     </div>
                   </div>
                   <span className="text-lg font-bold text-blue-700">
-                    £{pricing.shortRent?.pricePerNight}/night
+                    {formatCurrency(pricing.shortRent?.pricePerNight)}/night
                   </span>
                 </div>
 
@@ -636,7 +637,7 @@ export default function PackagesComparison({
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Total {comparisonYears} year cost:</span>
-                      <span className="font-semibold">£{costs.shortTerm.cost.toLocaleString()}</span>
+                      <span className="font-semibold">{formatCurrency(costs.shortTerm.cost)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Equity built:</span>
@@ -676,7 +677,7 @@ export default function PackagesComparison({
                     </div>
                   </div>
                   <span className="text-lg font-bold text-orange-700">
-                    £{pricing.longRent?.monthlyRent}/month
+                    {formatCurrency(pricing.longRent?.monthlyRent)}/month
                   </span>
                 </div>
 
@@ -686,7 +687,7 @@ export default function PackagesComparison({
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Total {comparisonYears} year cost:</span>
-                      <span className="font-semibold">£{costs.longTerm.cost.toLocaleString()}</span>
+                      <span className="font-semibold">{formatCurrency(costs.longTerm.cost)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Equity built:</span>
@@ -726,7 +727,7 @@ export default function PackagesComparison({
                     </div>
                   </div>
                   <span className="text-lg font-bold text-purple-700">
-                    £{pricing.purchase?.totalPrice.toLocaleString()}
+                    {formatCurrency(pricing.purchase?.totalPrice)}
                   </span>
                 </div>
 
@@ -736,12 +737,12 @@ export default function PackagesComparison({
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Total investment:</span>
-                      <span className="font-semibold">£{costs.purchase.cost.toLocaleString()}</span>
+                      <span className="font-semibold">{formatCurrency(costs.purchase.cost)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Equity built ({comparisonYears} years):</span>
                       <span className="font-semibold text-green-600">
-                        +£{costs.purchase.equity.toLocaleString()}
+                        +{formatCurrency(costs.purchase.equity)}
                       </span>
                     </div>
                   </div>

@@ -1,0 +1,34 @@
+{
+  "buildCommand": "prisma generate && next build",
+  "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/cron/expire-packages",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/expire-documents",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/expire-bids",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/saved-search-alerts",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/rent-due-reminders",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/diary-reminders",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/expire-pending-payments",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

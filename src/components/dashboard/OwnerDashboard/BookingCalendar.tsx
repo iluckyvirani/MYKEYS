@@ -1,82 +1,91 @@
-// components/dashboard/OwnerDashboard/BookingCalendar.tsx
+﻿// components/dashboard/OwnerDashboard/BookingCalendar.tsx
 "use client";
 
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Home, Users, Clock, CheckCircle, XCircle, DollarSign } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Home, Users, Clock, CheckCircle, XCircle, DollarSign, PoundSterling } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
+import { api } from "@/lib/api";
+import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
 
-const mockBookings = [
-  {
-    id: "BOOK001",
-    property: "Seaside Villa",
-    guest: "Rajesh Kumar",
-    checkIn: new Date(2024, 0, 15),
-    checkOut: new Date(2024, 0, 22),
-    status: "confirmed",
-    type: "short_term",
-    amount: 45000,
-    guests: 4,
-  },
-  {
-    id: "BOOK002",
-    property: "Urban Apartment",
-    guest: "Priya Sharma",
-    checkIn: new Date(2024, 0, 5),
-    checkOut: new Date(2024, 0, 12),
-    status: "confirmed",
-    type: "short_term",
-    amount: 35000,
-    guests: 2,
-  },
-  {
-    id: "BOOK003",
-    property: "Mountain Cottage",
-    guest: "Amit Patel",
-    checkIn: new Date(2024, 0, 20),
-    checkOut: new Date(2024, 0, 25),
-    status: "pending",
-    type: "short_term",
-    amount: 25000,
-    guests: 3,
-  },
-  {
-    id: "BOOK004",
-    property: "Urban Apartment",
-    guest: "Sneha Reddy",
-    checkIn: new Date(2024, 0, 25),
-    checkOut: new Date(2024, 1, 25),
-    status: "confirmed",
-    type: "long_term",
-    amount: 250000,
-    guests: 2,
-  },
-];
+interface Booking {
+  id: string;
+  property: string;
+  guest: string;
+  checkIn: Date;
+  checkOut: Date;
+  status: string;
+  type: string;
+  amount: number;
+  guests: number;
+}
 
 const getStatusConfig = (status: string) => {
   switch (status) {
     case "confirmed":
+    case "CONFIRMED":
       return { color: "bg-green-100 text-green-800", icon: CheckCircle };
     case "pending":
+    case "PENDING":
       return { color: "bg-yellow-100 text-yellow-800", icon: Clock };
     case "cancelled":
+    case "CANCELLED":
       return { color: "bg-red-100 text-red-800", icon: XCircle };
     default:
       return { color: "bg-gray-100 text-gray-800", icon: Clock };
   }
 };
 
-const getDayBookings = (date: Date) => {
-  return mockBookings.filter(booking => {
-    const checkIn = new Date(booking.checkIn);
-    const checkOut = new Date(booking.checkOut);
-    return date >= checkIn && date <= checkOut;
-  });
-};
-
 export default function BookingCalendar() {
+  const router = useRouter();
+  const { basePath } = useDashboardBase();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get("/owner/bookings?pageSize=100");
+      if (response.data?.success && response.data.data?.items) {
+        // Transform API response to component format
+        const transformedBookings = response.data.data.items.map((b: any) => ({
+          id: b.id,
+          property: b.propertyTitle,
+          guest: b.guestName,
+          checkIn: new Date(b.checkInDate),
+          checkOut: new Date(b.checkOutDate),
+          status: b.status?.toLowerCase() || "pending",
+          type: b.bookingType || "short_term",
+          amount: b.totalAmount || 0,
+          guests: b.numberOfGuests || 1,
+        }));
+        setBookings(transformedBookings);
+      }
+    } catch (err) {
+      console.error("Error fetching bookings:", err);
+      setError("Failed to fetch bookings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDayBookings = (date: Date) => {
+    return bookings.filter(booking => {
+      const checkIn = new Date(booking.checkIn);
+      const checkOut = new Date(booking.checkOut);
+      return date >= checkIn && date <= checkOut;
+    });
+  };
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -86,6 +95,33 @@ export default function BookingCalendar() {
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
   const selectedDateBookings = getDayBookings(selectedDate);
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-[5px] shadow-sm border p-5">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-[5px] text-red-700">
+          <p className="font-semibold">Error</p>
+          <p className="text-sm">{error}</p>
+          <Button size="sm" onClick={fetchBookings} className="mt-2">
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-[5px] shadow-sm border p-5">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3 animate-spin" />
+            <p className="text-gray-500">Loading bookings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-[5px] shadow-sm border p-5">
@@ -255,10 +291,10 @@ export default function BookingCalendar() {
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1 text-gray-600">
-                          <DollarSign className="w-4 h-4" />
+                          <PoundSterling  className="w-4 h-4" />
                           Amount
                         </div>
-                        <div className="font-medium">₹{booking.amount.toLocaleString()}</div>
+                        <div className="font-medium">£{booking.amount.toLocaleString()}</div>
                       </div>
                     </div>
 
@@ -271,12 +307,21 @@ export default function BookingCalendar() {
                     )}
 
                     <div className="flex gap-2 mt-4">
-                      <Button size="sm" variant="outline" className="flex-1">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => router.push(`${basePath}/bookings/${booking.id}`)}
+                      >
                         View Details
                       </Button>
-                      <Button size="sm" className="flex-1">
+                      {/* <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => router.push(`${basePath}/bookings/${booking.id}`)}
+                      >
                         {isCheckIn ? "Check-in" : isCheckOut ? "Check-out" : "Manage"}
-                      </Button>
+                      </Button> */}
                     </div>
                   </div>
                 );
@@ -285,9 +330,9 @@ export default function BookingCalendar() {
               <div className="text-center py-8">
                 <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">No bookings on this day</p>
-                <Button variant="outline" className="mt-4">
+                {/* <Button variant="outline" className="mt-4">
                   Create Booking
-                </Button>
+                </Button> */}
               </div>
             )}
           </div>
@@ -316,7 +361,7 @@ export default function BookingCalendar() {
               </div>
               <div className="bg-white p-3 rounded-lg border">
                 <div className="text-2xl font-bold text-gray-900">
-                  ₹{selectedDateBookings.reduce((sum, b) => sum + b.amount, 0).toLocaleString()}
+                  £{selectedDateBookings.reduce((sum, b) => sum + b.amount, 0).toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-600">Total Revenue</div>
               </div>

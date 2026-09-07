@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   BarChart,
@@ -121,9 +121,9 @@ export default function AdPerformance() {
             </div>
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            ₹{avgCPC.toFixed(2)}
+            £{avgCPC.toFixed(2)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">-₹2.50 from last month</div>
+          <div className="text-xs text-gray-500 mt-1">-£2.50 from last month</div>
         </div>
       </div>
 

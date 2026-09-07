@@ -1,13 +1,23 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
-import { withAuth } from "@/lib/auth/middleware";
+import { withAuth, authenticate } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { packageService } from "@/lib/packages/packageService";
+import {
+  getPropertyDocumentVerificationState,
+  documentVerificationBlockMessage,
+} from "@/lib/documents/documentService";
+import { getBlockedDateRanges } from "@/lib/bookings/bookingAvailabilityQueries";
+import { maybeNotifyNewListing } from "@/lib/newsletter/service";
+import { formatUkPostcode, isLikelyUkPostcode } from "@/lib/ukPostcode";
 
 /**
  * GET /api/properties/[id]
- * Get property by ID
+ * Get property by ID.
+ * Public: ACTIVE listings only.
+ * Owner/Admin (authenticated): can load their own listing in any status (draft, etc.).
  */
 export async function GET(
   request: NextRequest,
@@ -28,6 +38,10 @@ export async function GET(
             companyName: true,
             avatar: true,
             website: true,
+            city: true,
+            address: true,
+            agentLogo: true,
+            roles: { select: { role: true } },
           },
         },
         images: {
@@ -55,23 +69,81 @@ export async function GET(
             createdAt: "desc",
           },
         },
-        bookings: {
-          where: {
-            status: {
-              in: ["CONFIRMED", "CHECKED_IN"],
-            },
-          },
-          select: {
-            checkIn: true,
-            checkOut: true,
-          },
-        },
       },
     });
 
     if (!property) {
       return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
     }
+
+    const authUser = await authenticate(request);
+    const isOwnerOrAdmin =
+      !!authUser &&
+      (authUser.userId === property.ownerId || authUser.role === "ADMIN");
+
+    // Align with list API: ACTIVE listings stay publicly viewable unless docs were rejected.
+    // Pending verification should not blank the detail page after a search result click.
+    // Owners/admins can still open draft / inactive listings for edit.
+    if (!isOwnerOrAdmin) {
+      if (property.status === "ACTIVE") {
+        const docState = await getPropertyDocumentVerificationState(
+          property.id,
+          property.listingType,
+          property.rentalType
+        );
+        if (docState.hasRejected) {
+          return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
+        }
+      } else {
+        return errorResponse("Property not found", 404, ErrorCode.RESOURCE_NOT_FOUND);
+      }
+    }
+
+    // Fetch owner's active package to determine contact visibility
+    const ownerSub = await prisma.ownerPackage.findFirst({
+      where: { ownerId: property.ownerId, status: 'ACTIVE', endDate: { gt: new Date() } },
+      select: { package: { select: { showOwnerName: true, showOwnerPhone: true } } },
+    });
+
+    const ownerVisibility = {
+      showName:  ownerSub?.package?.showOwnerName  ?? false,
+      showPhone: ownerSub?.package?.showOwnerPhone ?? false,
+    };
+
+    const isAgentLister = Boolean(
+      property.owner?.roles?.some((r) => r.role === "AGENT")
+    );
+    const maskedOwner = property.owner
+      ? isOwnerOrAdmin
+        ? {
+            ...property.owner,
+            isAgentLister,
+            roles: property.owner.roles?.map((r) => r.role) ?? [],
+          }
+        : {
+            id: property.owner.id,
+            avatar: property.owner.avatar,
+            agentLogo: property.owner.agentLogo,
+            isAgentLister,
+            companyName: property.owner.companyName,
+            website: property.owner.website,
+            city: property.owner.city,
+            address: property.owner.address,
+            firstName:
+              ownerVisibility.showName || isAgentLister
+                ? property.owner.firstName
+                : undefined,
+            lastName:
+              ownerVisibility.showName || isAgentLister
+                ? property.owner.lastName
+                : undefined,
+            email: ownerVisibility.showName ? property.owner.email : undefined,
+            phone:
+              ownerVisibility.showPhone || isAgentLister
+                ? property.owner.phone
+                : undefined,
+          }
+      : null;
 
     // Calculate average rating
     const avgRating =
@@ -80,10 +152,15 @@ export async function GET(
           property.reviews.length
         : 0;
 
+    const blockedDateRanges = await getBlockedDateRanges(id);
+
     const propertyWithRating = {
       ...property,
+      owner: maskedOwner,
+      ownerVisibility,
       averageRating: Math.round(avgRating * 10) / 10,
       reviewCount: property.reviews.length,
+      blockedDateRanges,
     };
 
     return successResponse(propertyWithRating, "Property retrieved successfully");
@@ -101,10 +178,9 @@ export async function GET(
  * PATCH /api/properties/[id]
  * Update property (Owner/Admin only)
  */
-export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
+export const PATCH = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
-    const { id } = await params;
+    const id = context!.params.id;
     try {
       // Check if property exists and user owns it
       const existingProperty = await prisma.property.findUnique({
@@ -129,6 +205,75 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
 
       const body = await request.json();
 
+      // ─── Publishing gate ────────────────────────────────────────────────
+      // LONG_RENT and BUY properties require an active package to go ACTIVE.
+      // SHORT_TERM (rentalType = SHORT_TERM) can publish freely.
+      if (body.status === 'ACTIVE' && user.role !== 'ADMIN') {
+        const effectiveListingType = body.listingType ?? existingProperty.listingType;
+        const effectiveRentalType  = body.rentalType  ?? existingProperty.rentalType;
+
+        const docState = await getPropertyDocumentVerificationState(
+          id,
+          effectiveListingType,
+          effectiveRentalType
+        );
+        if (!docState.canActivate) {
+          return errorResponse(
+            documentVerificationBlockMessage(docState),
+            403,
+            ErrorCode.FORBIDDEN
+          );
+        }
+
+        const needsPackage =
+          effectiveListingType === 'BUY' ||
+          (effectiveListingType === 'RENT' && effectiveRentalType !== 'SHORT_TERM');
+
+        if (needsPackage) {
+          const { allowed, reason } = await packageService.canPublish(
+            existingProperty.ownerId,
+            {
+              listingType: effectiveListingType,
+              rentalType: effectiveRentalType,
+            }
+          );
+          if (!allowed) {
+            return errorResponse(reason!, 403, ErrorCode.FORBIDDEN);
+          }
+          if (existingProperty.status !== 'ACTIVE') {
+            const category =
+              effectiveListingType === 'BUY' ? 'SALE' : 'RENT';
+            await packageService.incrementPropertyUsage(
+              existingProperty.ownerId,
+              category
+            );
+          }
+        }
+      }
+
+      // If an ACTIVE property is being deactivated, decrement package usage
+      if (
+        body.status &&
+        body.status !== 'ACTIVE' &&
+        existingProperty.status === 'ACTIVE' &&
+        user.role !== 'ADMIN'
+      ) {
+        const effectiveListingType = existingProperty.listingType;
+        const effectiveRentalType  = existingProperty.rentalType;
+        const hadPackageGate =
+          effectiveListingType === 'BUY' ||
+          (effectiveListingType === 'RENT' && effectiveRentalType !== 'SHORT_TERM');
+        if (hadPackageGate) {
+          const category =
+            effectiveListingType === 'BUY' ? 'SALE' : 'RENT';
+          await packageService.decrementPropertyUsage(
+            existingProperty.ownerId,
+            category
+          );
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
+
       // Update property
       const property = await prisma.property.update({
         where: { id },
@@ -139,21 +284,84 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
           ...(body.city && { city: body.city }),
           ...(body.state && { state: body.state }),
           ...(body.country && { country: body.country }),
-          ...(body.zipCode && { zipCode: body.zipCode }),
+          ...(body.zipCode && {
+            zipCode: isLikelyUkPostcode(body.zipCode)
+              ? formatUkPostcode(body.zipCode)
+              : String(body.zipCode).trim(),
+          }),
           ...(body.latitude && { latitude: body.latitude }),
           ...(body.longitude && { longitude: body.longitude }),
           ...(body.price !== undefined && { price: body.price }),
+          ...(body.originalPrice !== undefined && { originalPrice: body.originalPrice }),
+          ...(body.priceType && { priceType: body.priceType }),
           ...(body.propertyType && { propertyType: body.propertyType }),
           ...(body.listingType && { listingType: body.listingType }),
           ...(body.rentalType && { rentalType: body.rentalType }),
           ...(body.bedrooms !== undefined && { bedrooms: body.bedrooms }),
           ...(body.bathrooms !== undefined && { bathrooms: body.bathrooms }),
-          ...(body.area !== undefined && { area: body.area }),
-          ...(body.furnished !== undefined && { furnished: body.furnished }),
+          ...(body.sqft !== undefined && { sqft: body.sqft }),
+          ...(body.guests !== undefined && { guests: body.guests }),
+          ...(body.minStay !== undefined && { minStay: body.minStay }),
+          ...(body.maxStay !== undefined && { maxStay: body.maxStay }),
           ...(body.parking !== undefined && { parking: body.parking }),
-          ...(body.petFriendly !== undefined && { petFriendly: body.petFriendly }),
+          ...(body.cleaningFee !== undefined && { cleaningFee: body.cleaningFee }),
+          ...(body.serviceFee !== undefined && { serviceFee: body.serviceFee }),
+          ...(body.securityDeposit !== undefined && { securityDeposit: body.securityDeposit }),
+          ...(body.yearBuilt !== undefined && { yearBuilt: body.yearBuilt }),
+          ...(body.checkInTime !== undefined && { checkInTime: body.checkInTime }),
+          ...(body.checkOutTime !== undefined && { checkOutTime: body.checkOutTime }),
+          ...(body.selfCheckIn !== undefined && { selfCheckIn: body.selfCheckIn }),
+          ...(body.availableFrom !== undefined && {
+            availableFrom: body.availableFrom ? new Date(body.availableFrom) : null,
+          }),
+          ...(body.minTerm !== undefined && { minTerm: body.minTerm }),
+          ...(body.maxTerm !== undefined && { maxTerm: body.maxTerm }),
+          ...(body.billsIncluded !== undefined && { billsIncluded: body.billsIncluded }),
+          ...(body.occupancyType !== undefined && {
+            occupancyType:
+              body.occupancyType === "ROOM"
+                ? "ROOM"
+                : body.occupancyType === "WHOLE_PROPERTY"
+                ? "WHOLE_PROPERTY"
+                : null,
+          }),
+          ...(body.councilTaxBand !== undefined && { councilTaxBand: body.councilTaxBand || null }),
+          ...(body.epcRating !== undefined && { epcRating: body.epcRating || null }),
+          ...(body.epcCurrentScore !== undefined && {
+            epcCurrentScore:
+              body.epcCurrentScore === "" || body.epcCurrentScore == null
+                ? null
+                : parseInt(body.epcCurrentScore, 10),
+          }),
+          ...(body.epcPotentialScore !== undefined && {
+            epcPotentialScore:
+              body.epcPotentialScore === "" || body.epcPotentialScore == null
+                ? null
+                : parseInt(body.epcPotentialScore, 10),
+          }),
+          ...(body.furnishType !== undefined && { furnishType: body.furnishType || null }),
+          ...(body.garden !== undefined && { garden: body.garden || null }),
+          ...(body.parkingType !== undefined && { parkingType: body.parkingType || null }),
+          ...(body.accessibility !== undefined && { accessibility: body.accessibility || null }),
+          ...(body.keyFeatures !== undefined && {
+            keyFeatures: Array.isArray(body.keyFeatures)
+              ? body.keyFeatures.filter((f: string) => String(f).trim())
+              : [],
+          }),
+          ...(body.utilities !== undefined && { utilities: body.utilities }),
+          ...(body.broadbandSpeed !== undefined && {
+            broadbandSpeed: body.broadbandSpeed || null,
+          }),
+          ...(body.floodRisk !== undefined && { floodRisk: body.floodRisk || null }),
+          ...(body.propertyPrice !== undefined && { propertyPrice: body.propertyPrice }),
+          ...(body.propertyTax !== undefined && { propertyTax: body.propertyTax }),
+          ...(body.hoaFee !== undefined && { hoaFee: body.hoaFee }),
+          ...(body.leasehold !== undefined && { leasehold: body.leasehold }),
+          ...(body.leaseYears !== undefined && { leaseYears: body.leaseYears }),
+          ...(body.groundRent !== undefined && { groundRent: body.groundRent }),
+          ...(body.occupancy !== undefined && { occupancy: body.occupancy }),
+          ...(body.revenue !== undefined && { revenue: body.revenue }),
           ...(body.status && { status: body.status }),
-          ...(body.availableFrom && { availableFrom: new Date(body.availableFrom) }),
         },
         include: {
           images: true,
@@ -163,6 +371,12 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
             },
           },
         },
+      });
+
+      maybeNotifyNewListing({
+        previousStatus: existingProperty.status,
+        nextStatus: property.status,
+        propertyId: property.id,
       });
 
       return successResponse(property, "Property updated successfully");
@@ -175,17 +389,16 @@ export const PATCH = withAuth<{ params: Promise<{ id: string }> }>(
       );
     }
   },
-  { roles: ["OWNER" as any, "ADMIN" as any] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );
 
 /**
  * DELETE /api/properties/[id]
  * Delete property (Owner/Admin only)
  */
-export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
+export const DELETE = withAuth<{ id: string }>(
   async (request: NextRequest, user: JWTPayload, context) => {
-    const { params } = context!;
-    const { id } = await params;
+    const id = context!.params.id;
     try {
       // Check if property exists and user owns it
       const existingProperty = await prisma.property.findUnique({
@@ -223,5 +436,5 @@ export const DELETE = withAuth<{ params: Promise<{ id: string }> }>(
       );
     }
   },
-  { roles: ["OWNER" as any, "ADMIN" as any] }
+  { roles: ["OWNER", "AGENT", "ADMIN"] }
 );

@@ -1,17 +1,27 @@
 "use client";
 
-import { Bell, Search, Menu, User, LogOut } from "lucide-react";
+import { Bell, Search, Menu, User, Home, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { MeResponse, UserDTO } from "@/types/auth";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Notifications from "@/components/dashboard/UserDashboard/Notifications";
+
+import type { DashboardPanelRole } from "@/lib/dashboard/DashboardContext";
 
 interface HeaderProps {
-  role: "user" | "owner";
+  role: DashboardPanelRole | "admin";
   onMenuClick: () => void;
-  onRoleChange: (role: "user" | "owner") => void;
+  onRoleChange: (role: DashboardPanelRole) => void;
+}
+
+interface Notification {
+  id: string;
+  isRead?: boolean;
+  read?: boolean;
 }
 
 export default function Header({ role, onMenuClick }: HeaderProps) {
@@ -19,18 +29,39 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
   const [user, setUser] = useState<UserDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     fetchUserProfile();
+    fetchUnreadNotifications();
+    
+    // Refresh unread count every 30 seconds
+    const interval = setInterval(fetchUnreadNotifications, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
+      // Use cached user data from localStorage to avoid calling /auth/me on every page navigation
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          const userData = parsed.data ? parsed.data : parsed;
+          if (userData?.firstName) {
+            setUser(userData);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // fall through to API call
+        }
+      }
       const response = await api.get<MeResponse>("/auth/me");
       if (response.data) {
         setUser(response.data.data);
-        localStorage.setItem("user", JSON.stringify(response.data));
+        localStorage.setItem("user", JSON.stringify(response.data.data));
       }
     } catch (error) {
       console.error("Failed to fetch user profile:", error);
@@ -43,35 +74,74 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("user");
-    router.push("/login");
+  const NOTIF_CACHE_KEY = "notif_last_fetch";
+  const NOTIF_CACHE_TTL = 30000; // 30 seconds
+
+  const fetchUnreadNotifications = async () => {
+    try {
+      // Skip if fetched within the last 30 seconds (avoids spam on remount)
+      const lastFetch = sessionStorage.getItem(NOTIF_CACHE_KEY);
+      if (lastFetch && Date.now() - parseInt(lastFetch) < NOTIF_CACHE_TTL) {
+        return;
+      }
+      const response = await api.get("/notifications?limit=100");
+      sessionStorage.setItem(NOTIF_CACHE_KEY, String(Date.now()));
+      const notifications: Notification[] =
+        response.data?.notifications || response.data?.data?.items || [];
+      if (notifications.length > 0) {
+        const unread = notifications.filter((n) => !n.isRead && !n.read).length;
+        setUnreadCount(unread);
+      } else {
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
   };
-  
+
+
 
   const displayName = user
     ? `${user.firstName} ${user.lastName}`
     : "Loading...";
-  const userRole = user?.role === "OWNER" ? "Property Owner" : "Tenant";
+  const userRole =
+    role === "admin"
+      ? "Admin"
+      : role === "owner"
+        ? "Seller/Landlord"
+        : role === "service"
+          ? "Professional/Associates"
+          : "Tenant";
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b shadow-sm">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <div className="px-3 sm:px-4 lg:px-5">
+        <div className="flex items-center justify-between h-14 min-w-0">
           {/* Left: Menu button and Search */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Button
               variant="ghost"
               size="icon"
               onClick={onMenuClick}
-              className="lg:hidden"
+              className="xl:hidden shrink-0"
             >
               <Menu className="w-5 h-5" />
             </Button>
 
-            <div className="relative max-w-md w-full hidden md:block">
+            {!user?.roles?.includes("ADMIN") && (
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                title="Go to home page"
+              >
+                <Link href="/">
+                  <Home className="w-5 h-5" />
+                </Link>
+              </Button>
+            )}
+
+            <div className="relative max-w-md w-full hidden xl:block min-w-0">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder="Search bookings, properties, or inquiries..."
@@ -81,10 +151,25 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
           </div>
 
           {/* Right: Notifications and User */}
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative cursor-pointer"
+              onClick={() => {
+                if (role === "admin") {
+                  router.push("/admin/dashboard/notifications");
+                } else {
+                  router.push(`/${role}/dashboard/notifications`);
+                }
+              }}
+            >
               <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-500 text-white text-xs font-semibold rounded-full flex items-center justify-center">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Button>
 
             <div className="h-8 w-px bg-gray-200"></div>
@@ -111,26 +196,10 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
               {/* User Dropdown Menu */}
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
-                  <button
-                    onClick={() => {
-                      router.push("/dashboard/profile");
-                      setShowUserMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                  >
-                    <User className="w-4 h-4" />
-                    View Profile
-                  </button>
-
-                  <div className="border-t border-gray-200 my-2" />
-
-                  <button
-                    onClick={handleLogout}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
+                  <div className="px-4 py-2 border-b">
+                    <p className="text-sm font-medium text-gray-900">{displayName}</p>
+                    <p className="text-xs text-gray-500">{userRole}</p>
+                  </div>
                 </div>
               )}
             </div>

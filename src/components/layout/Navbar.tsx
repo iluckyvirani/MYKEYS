@@ -1,240 +1,857 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Home, User, LogIn, LogOut, Menu, X, ChevronDown, LayoutDashboard, User as UserIcon, Building2, HelpCircle, Key } from "lucide-react";
+import {
+  User,
+  LogIn,
+  LogOut,
+  Menu,
+  X,
+  ChevronDown,
+  User as UserIcon,
+  Building2,
+  CheckCircle,
+  Wrench,
+  Briefcase,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { UserDTO } from "@/types/auth";
+import { api } from "@/lib/api";
+import {
+  getStoredUserFromLocalStorage,
+  setStoredUser,
+  userHasRole,
+} from "@/lib/auth/storedUser";
+
+type MegaMenu = "rent" | "inspire" | "dashboard" | null;
+
+const rentLinks = [
+  { href: "/rent/whole-property", label: "Whole Property" },
+  { href: "/rent/room-to-rent", label: "Room to Rent" },
+];
+
+const inspireColumns = [
+  [
+    { href: "/inspire/moving-stories", label: "Moving stories" },
+    { href: "/inspire/property-news", label: "Property news" },
+    { href: "/inspire/energy-efficiency", label: "Energy efficiency" },
+  ],
+  [
+    { href: "/inspire/property-guides", label: "Property guides" },
+    { href: "/inspire/housing-trends", label: "Housing trends" },
+    { href: "/inspire/mortgage-guides", label: "Mortgage guides" },
+  ],
+  [
+    { href: "/inspire/overseas-blog", label: "Overseas blog" },
+    { href: "/inspire/country-guides", label: "Country guides" },
+    { href: "/inspire/find-agent", label: "Find agent" },
+  ],
+];
+
+const inspireLinks = inspireColumns.flat();
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileRentOpen, setMobileRentOpen] = useState(false);
+  const [mobileInspireOpen, setMobileInspireOpen] = useState(false);
+  const [mobileDashboardOpen, setMobileDashboardOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState("user");
-  const [showDashboardDropdown, setShowDashboardDropdown] = useState(false);
+  const [user, setUser] = useState<UserDTO | null>(null);
+  const [openMenu, setOpenMenu] = useState<MegaMenu>(null);
+  const [showBecomeOwnerModal, setShowBecomeOwnerModal] = useState(false);
+  const [becomingOwner, setBecomingOwner] = useState(false);
+  const [showBecomeAgentModal, setShowBecomeAgentModal] = useState(false);
+  const [becomingAgent, setBecomingAgent] = useState(false);
+  const [showBecomeServiceModal, setShowBecomeServiceModal] = useState(false);
+  const [becomingService, setBecomingService] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const navRef = useRef<HTMLElement>(null);
+  const rentTriggerRef = useRef<HTMLButtonElement>(null);
+  const inspireTriggerRef = useRef<HTMLButtonElement>(null);
+  const navLinksRef = useRef<HTMLDivElement>(null);
+  const megaCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [megaOffsetLeft, setMegaOffsetLeft] = useState(24);
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Fixed: Improved scroll detection
+  const updateMegaOffset = (menu: MegaMenu) => {
+    // Rent: align links under the Rent tab.
+    // Inspire: align columns with the start of the nav links (like the reference).
+    const el =
+      menu === "rent"
+        ? rentTriggerRef.current
+        : menu === "inspire"
+          ? navLinksRef.current
+          : null;
+    if (!el) return;
+    const left = Math.max(16, Math.round(el.getBoundingClientRect().left));
+    setMegaOffsetLeft(left);
+  };
+
+  const openMega = (menu: MegaMenu) => {
+    if (megaCloseTimer.current) {
+      clearTimeout(megaCloseTimer.current);
+      megaCloseTimer.current = null;
+    }
+    if (menu === "rent" || menu === "inspire") {
+      updateMegaOffset(menu);
+    }
+    setOpenMenu(menu);
+  };
+
+  const scheduleCloseMega = () => {
+    if (megaCloseTimer.current) clearTimeout(megaCloseTimer.current);
+    megaCloseTimer.current = setTimeout(() => setOpenMenu(null), 120);
+  };
+
   useEffect(() => {
-    const handleScroll = () => {
-      const isScrolled = window.scrollY > 50; // Changed from 10 to 50 for better UX
-      if (isScrolled !== scrolled) {
-        setScrolled(isScrolled);
-      }
+    return () => {
+      if (megaCloseTimer.current) clearTimeout(megaCloseTimer.current);
     };
+  }, []);
 
-    // Set initial state
+  useEffect(() => {
+    if (openMenu !== "rent" && openMenu !== "inspire") return;
+    const sync = () => updateMegaOffset(openMenu);
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, [openMenu]);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     handleScroll();
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [scrolled]);
+  }, []);
 
-  // Simulating authentication check
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("auth_token");
-      setIsLoggedIn(!!token);
-
-      const role = localStorage.getItem("user_role") || "user";
-      setUserRole(role);
+    const checkAuth = async () => {
+      const token = localStorage.getItem("accessToken");
+      const stored = getStoredUserFromLocalStorage();
+      if (token && stored) {
+        setIsLoggedIn(true);
+        setUser(stored);
+        // Refresh roles from DB so OWNER/USER multi-role stays in sync
+        try {
+          const res = await api.get("/auth/me");
+          const me = res.data?.data;
+          if (me?.roles) {
+            setStoredUser(me);
+            setUser(me);
+          }
+        } catch {
+          // keep stored user
+        }
+      } else if (token) {
+        setIsLoggedIn(true);
+        try {
+          const res = await api.get("/auth/me");
+          const me = res.data?.data;
+          if (me) {
+            setStoredUser(me);
+            setUser(me);
+          }
+        } catch {
+          setIsLoggedIn(false);
+          setUser(null);
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUser(null);
+      }
     };
-
     checkAuth();
+    const onUserUpdated = () => {
+      const stored = getStoredUserFromLocalStorage();
+      if (stored) {
+        setIsLoggedIn(true);
+        setUser(stored);
+      }
+    };
+    window.addEventListener("mykeys:user-updated", onUserUpdated);
+    return () => window.removeEventListener("mykeys:user-updated", onUserUpdated);
+  }, [pathname]);
+
+  useEffect(() => {
+    setOpenMenu(null);
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onPointerDown = (e: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_role");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
     setIsLoggedIn(false);
-    setUserRole("user");
+    setUser(null);
+    setOpenMenu(null);
+    router.push("/");
   };
 
-  const switchDashboard = (role: "user" | "owner") => {
-    setUserRole(role);
-    localStorage.setItem("user_role", role);
-    setShowDashboardDropdown(false);
-
-    // ✅ role-based navigation
-    router.push(`/${role}/dashboard`);
+  const handleBecomeOwner = async () => {
+    setBecomingOwner(true);
+    setErrorMessage("");
+    try {
+      const response = await api.post("/users/become-owner");
+      const payload = response.data?.data;
+      if (payload?.accessToken) {
+        localStorage.setItem("accessToken", payload.accessToken);
+      }
+      if (payload?.refreshToken) {
+        localStorage.setItem("refreshToken", payload.refreshToken);
+      }
+      if (payload?.user) {
+        setStoredUser(payload.user);
+        setUser(payload.user);
+      }
+      setShowBecomeOwnerModal(false);
+      setSuccessMessage(
+        payload?.alreadyOwner
+          ? "Seller/Landlord is ready — opening your owner dashboard."
+          : "You are now a Seller/Landlord! You can start listing properties."
+      );
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        router.push("/owner/dashboard");
+      }, 1200);
+    } catch (error: any) {
+      setErrorMessage(
+        error.response?.data?.message || "Failed to become owner. Please try again."
+      );
+    } finally {
+      setBecomingOwner(false);
+    }
   };
 
-  const navItems = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/buy", label: "Buy" },
-    { href: "/rent/short-rent", label: "Short Rent" },
-    { href: "/rent/long-rent", label: "Long Rent" },
-    { href: "/how-listing-works", label: "List Property", icon: HelpCircle },
-    { href: "/about", label: "About" },
-    { href: "/contact", label: "Contact" },
-  ];
+  const handleBecomeService = async () => {
+    router.push("/services?register=true");
+    setShowBecomeServiceModal(false);
+  };
+
+  const handleBecomeAgent = async () => {
+    setBecomingAgent(true);
+    setErrorMessage("");
+    try {
+      const response = await api.post("/users/become-agent");
+      const payload = response.data?.data;
+      if (payload?.accessToken) {
+        localStorage.setItem("accessToken", payload.accessToken);
+      }
+      if (payload?.refreshToken) {
+        localStorage.setItem("refreshToken", payload.refreshToken);
+      }
+      if (payload?.user) {
+        setStoredUser(payload.user);
+        setUser(payload.user);
+      }
+      setShowBecomeAgentModal(false);
+      setSuccessMessage(
+        payload?.alreadyAgent
+          ? "Agent role synced — opening your agent dashboard."
+          : "You are now an estate agent! You can start listing properties."
+      );
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        router.push("/agent/dashboard");
+      }, 1200);
+    } catch (error: any) {
+      setErrorMessage(
+        error.response?.data?.message || "Failed to become agent. Please try again."
+      );
+    } finally {
+      setBecomingAgent(false);
+    }
+  };
+
+  const hasOwnerRole = userHasRole(user, "OWNER");
+  const hasAgentRole = userHasRole(user, "AGENT");
+  const hasServiceRole = userHasRole(user, "SERVICE");
+
+  const MEGA_BG = "#F2F4F5";
+  const NAV_INK = "#010E28";
+
+  const linkClass = (active: boolean, menuOpen = false) =>
+    `relative px-3.5 py-2.5 text-sm font-bold transition-colors ${
+      menuOpen
+        ? "bg-[#F2F4F5] text-[#010E28] rounded-t-lg"
+        : active
+          ? "bg-gray-100 text-[#010E28] rounded-md"
+          : "text-[#010E28] hover:bg-gray-100 hover:text-[#010E28] rounded-md"
+    }`;
+
+  const underlineClass = (active: boolean) =>
+    `absolute left-3.5 right-3.5 bottom-1.5 h-[3px] bg-[#010E28] transition-opacity ${
+      active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+    }`;
+
+  const MegaCaret = () => (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute left-1/2 top-full z-[60] -mt-px -translate-x-1/2"
+      style={{
+        width: 0,
+        height: 0,
+        borderLeft: "8px solid transparent",
+        borderRight: "8px solid transparent",
+        borderTop: `8px solid ${MEGA_BG}`,
+      }}
+    />
+  );
 
   return (
     <>
       <nav
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled
-          ? "bg-white shadow-lg py-3" // Changed to solid white when scrolled
-          : "bg-transparent py-5"
+        ref={navRef}
+        className={`fixed top-0 w-full z-50 transition-shadow duration-300 bg-white ${scrolled || openMenu ? "shadow-md" : "shadow-sm"
           }`}
-        style={{
-          backdropFilter: scrolled ? "blur(8px)" : "none",
-          backgroundColor: scrolled ? "rgba(255, 255, 255, 0.95)" : "transparent",
-        }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="flex items-center gap-2"
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300 ${scrolled
-                  ? "bg-linear-to-br from-green-500 to-emerald-600"
-                  : "bg-white/10 backdrop-blur-sm"
-                  }`}>
-                  <Key className={`w-5 h-5 ${scrolled ? 'text-white' : 'text-white'}`} />
-                </div>
-                <span
-                  className={`text-2xl font-bold transition-colors duration-300 ${scrolled ? "text-gray-900" : "text-white"
-                    }`}
-                >
-                  MYKEYS
-                </span>
-              </motion.div>
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12">
+          <div className="flex items-center justify-between h-[72px] md:h-[80px]">
+            <Link
+              href="/"
+              className="flex items-center shrink-0"
+              onClick={() => setOpenMenu(null)}
+              aria-label="MYKEYS home"
+            >
+              <img
+                src="/mykeys-logo-nav.png"
+                alt="MYKEYS"
+                width={492}
+                height={94}
+                className="h-[52px] w-auto object-contain"
+              />
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`relative text-sm font-medium transition-colors hover:text-green-600 ${scrolled ? "text-gray-700" : "text-white/90"
-                    }`}
+            {/* Desktop nav */}
+            <div
+              ref={navLinksRef}
+              className="hidden lg:flex items-center gap-0.5 ml-auto mr-4 self-stretch"
+            >
+              <Link
+                href="/buy"
+                className={`group self-center ${linkClass(pathname === "/buy")}`}
+              >
+                Buy
+                <span className={underlineClass(pathname === "/buy")} />
+              </Link>
+
+              <div
+                className="relative flex items-end self-stretch"
+                onMouseEnter={() => openMega("rent")}
+                onMouseLeave={scheduleCloseMega}
+              >
+                <button
+                  ref={rentTriggerRef}
+                  type="button"
+                  className={`group self-center ${linkClass(
+                    pathname.startsWith("/rent/whole-property") ||
+                      pathname.startsWith("/rent/room-to-rent") ||
+                      pathname.startsWith("/rent/long-rent"),
+                    openMenu === "rent"
+                  )}`}
+                  onClick={() =>
+                    openMenu === "rent" ? setOpenMenu(null) : openMega("rent")
+                  }
+                  aria-expanded={openMenu === "rent"}
                 >
-                  {item.label}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 transition-all group-hover:w-full" />
-                </Link>
-              ))}
+                  Rent
+                  <span
+                    className={underlineClass(
+                      openMenu === "rent" ||
+                        pathname.startsWith("/rent/whole-property") ||
+                        pathname.startsWith("/rent/room-to-rent") ||
+                        pathname.startsWith("/rent/long-rent")
+                    )}
+                  />
+                  {openMenu === "rent" && <MegaCaret />}
+                </button>
+              </div>
+
+              <Link
+                href="/rent/short-rent"
+                className={`group self-center ${linkClass(pathname.startsWith("/rent/short-rent"))}`}
+              >
+                Short Stay
+                <span className={underlineClass(pathname.startsWith("/rent/short-rent"))} />
+              </Link>
+
+              <Link
+                href="/services"
+                className={`group self-center ${linkClass(pathname.startsWith("/services"))}`}
+              >
+                Services
+                <span className={underlineClass(pathname.startsWith("/services"))} />
+              </Link>
+
+              <Link
+                href="/how-listing-works"
+                className={`group self-center ${linkClass(pathname.startsWith("/how-listing-works"))}`}
+              >
+                List Property
+                <span className={underlineClass(pathname.startsWith("/how-listing-works"))} />
+              </Link>
+
+              <div
+                className="relative flex items-end self-stretch"
+                onMouseEnter={() => openMega("inspire")}
+                onMouseLeave={scheduleCloseMega}
+              >
+                <button
+                  ref={inspireTriggerRef}
+                  type="button"
+                  className={`group self-center ${linkClass(
+                    pathname.startsWith("/inspire"),
+                    openMenu === "inspire"
+                  )}`}
+                  onClick={() =>
+                    openMenu === "inspire"
+                      ? setOpenMenu(null)
+                      : openMega("inspire")
+                  }
+                  aria-expanded={openMenu === "inspire"}
+                >
+                  Inspire
+                  <span
+                    className={underlineClass(
+                      openMenu === "inspire" || pathname.startsWith("/inspire")
+                    )}
+                  />
+                  {openMenu === "inspire" && <MegaCaret />}
+                </button>
+              </div>
             </div>
 
-            {/* Right side buttons */}
-            <div className="flex items-center gap-4">
-              {/* FIXED: Corrected conditional logic */}
-              {isLoggedIn ? (
-                <div className="flex items-center gap-4">
-                  {/* Dashboard Dropdown */}
-                  <div className="relative">
-                    <Button
-                      variant={scrolled ? "outline" : "ghost"}
-                      className={`flex items-center gap-2 cursor-pointer ${scrolled
-                        ? "text-gray-700 border-gray-300 hover:bg-gray-100"
-                        : "text-white/90 hover:bg-white/30"
+            {/* Right actions */}
+            <div className="flex items-center gap-3">
+              {isLoggedIn && user ? (
+                <div className="relative hidden sm:block">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenMenu(openMenu === "dashboard" ? null : "dashboard")
+                    }
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-800 border border-green-500 rounded-full hover:bg-green-50 transition-colors"
+                  >
+                    <UserIcon className="w-4 h-4" />
+                    MYKEYS Dashboard
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${openMenu === "dashboard" ? "rotate-180" : ""
                         }`}
-                      onClick={() => setShowDashboardDropdown(!showDashboardDropdown)}
-                    >
-                      <LayoutDashboard className="w-4 h-4" />
-                      Dashboard
-                      <ChevronDown className={`w-4 h-4 transition-transform ${showDashboardDropdown ? "rotate-180" : ""
-                        }`} />
-                    </Button>
+                    />
+                  </button>
 
-                    {/* Dropdown Menu */}
-                    <AnimatePresence>
-                      {showDashboardDropdown && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="absolute right-0 mt-2 w-50 bg-white rounded-[5px] shadow-lg border border-gray-200 overflow-hidden z-50"
-                          onMouseLeave={() => setShowDashboardDropdown(false)}
+                  <AnimatePresence>
+                    {openMenu === "dashboard" && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50"
+                      >
+                        <Link
+                          href="/user/dashboard"
+                          className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-100"
+                          onClick={() => setOpenMenu(null)}
                         >
-                          <button
-                            onClick={() => switchDashboard("user")}
-                            className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer ${userRole === "user" ? "bg-green-100 text-green-600" : "text-gray-700"
-                              }`}
-                          >
-                            <UserIcon className="w-4 h-4" />
-                            <div>
-                              <p className="font-medium">User Dashboard</p>
-                              <p className="text-xs text-gray-500">Bookings & Inquiries</p>
-                            </div>
-                          </button>
+                          <UserIcon className="w-4 h-4 text-green-600" />
+                          <div>
+                            <p className="font-medium text-slate-900">Tenant</p>
+                            <p className="text-xs text-gray-500">Bookings & inquiries</p>
+                          </div>
+                        </Link>
 
+                        {hasOwnerRole ? (
+                          <Link
+                            href="/owner/dashboard"
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-100"
+                            onClick={() => setOpenMenu(null)}
+                          >
+                            <Building2 className="w-4 h-4 text-blue-600" />
+                            <div>
+                              <p className="font-medium text-slate-900">Seller/Landlord</p>
+                              <p className="text-xs text-gray-500">Manage properties</p>
+                            </div>
+                          </Link>
+                        ) : (
                           <button
-                            onClick={() => switchDashboard("owner")}
-                            className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer ${userRole === "owner" ? "bg-green-50 text-green-600" : "text-gray-700"
-                              }`}
+                            type="button"
+                            onClick={() => {
+                              setShowBecomeOwnerModal(true);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-green-50 text-green-700 border-b border-gray-100"
                           >
                             <Building2 className="w-4 h-4" />
                             <div>
-                              <p className="font-medium">Owner Dashboard</p>
-                              <p className="text-xs text-gray-500">Manage Properties</p>
+                              <p className="font-medium">Become Seller/Landlord</p>
+                              <p className="text-xs">Start listing properties</p>
                             </div>
                           </button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                        )}
 
-                  {/* Logout */}
-                  <Button
-                    onClick={handleLogout}
-                    variant="ghost"
-                    className={`hidden sm:flex items-center gap-2 rounded-[5px] cursor-pointer ${scrolled
-                      ? "text-gray-700 hover:bg-gray-50"
-                      : "text-white hover:bg-white"
-                      }`}
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </Button>
+                        {hasAgentRole ? (
+                          <Link
+                            href="/agent/dashboard"
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-100"
+                            onClick={() => setOpenMenu(null)}
+                          >
+                            <Briefcase className="w-4 h-4 text-amber-600" />
+                            <div>
+                              <p className="font-medium text-slate-900">Estate Agent</p>
+                              <p className="text-xs text-gray-500">Manage agency listings</p>
+                            </div>
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowBecomeAgentModal(true);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-amber-50 text-amber-800 border-b border-gray-100"
+                          >
+                            <Briefcase className="w-4 h-4" />
+                            <div>
+                              <p className="font-medium">Become Estate Agent</p>
+                              <p className="text-xs">List properties as an agent</p>
+                            </div>
+                          </button>
+                        )}
+
+                        {hasServiceRole ? (
+                          <Link
+                            href="/service/dashboard"
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50"
+                            onClick={() => setOpenMenu(null)}
+                          >
+                            <Wrench className="w-4 h-4 text-purple-600" />
+                            <div>
+                              <p className="font-medium text-slate-900">Professional/Associates</p>
+                              <p className="text-xs text-gray-500">Manage services</p>
+                            </div>
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowBecomeServiceModal(true);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-purple-50 text-purple-700"
+                          >
+                            <Wrench className="w-4 h-4" />
+                            <div>
+                              <p className="font-medium">Become Professional/Associate</p>
+                              <p className="text-xs">Offer your services</p>
+                            </div>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-red-50 text-red-600 border-t border-gray-100"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span className="font-medium">Logout</span>
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ) : (
-                <>
-                  {/* Login and Signup buttons */}
-                  <Link href="/login">
+                <div className="hidden sm:flex items-center gap-2">
+                  <Link href="/login" className="cursor-pointer">
                     <Button
-                      variant={scrolled ? "outline" : "ghost"}
-                      className={`hidden sm:flex items-center gap-2 cursor-pointer rounded-[5px] ${scrolled
-                        ? "text-gray-700 border-gray-300 hover:bg-gray-50"
-                        : "text-white/90 hover:bg-white"
-                        }`}
+                      variant="outline"
+                      className="cursor-pointer rounded-full border-green-500 text-slate-800 hover:bg-green-50"
                     >
-                      <LogIn className="w-4 h-4" />
+                      <LogIn className="w-4 h-4 mr-2" />
                       Login
                     </Button>
                   </Link>
-                  <Link href="/signup">
-                    <Button className="hidden sm:flex bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 rounded-[5px]">
+                  <Link href="/signup" className="cursor-pointer">
+                    <Button className="cursor-pointer rounded-full bg-green-600 hover:bg-green-700 text-white">
                       <User className="w-4 h-4 mr-2" />
                       Sign Up
                     </Button>
                   </Link>
-                </>
+                </div>
               )}
 
-              {/* Mobile menu button */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden"
+                className="lg:hidden"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle menu"
               >
                 {mobileMenuOpen ? (
-                  <X className={`w-6 h-6 ${scrolled ? "text-gray-700" : "text-white"}`} />
+                  <X className="w-6 h-6 text-slate-800" />
                 ) : (
-                  <Menu className={`w-6 h-6 ${scrolled ? "text-gray-700" : "text-white"}`} />
+                  <Menu className="w-6 h-6 text-slate-800" />
                 )}
               </Button>
             </div>
           </div>
         </div>
+
+        {/* Desktop mega menus — full-width panel matching reference nav */}
+        <AnimatePresence>
+          {(openMenu === "rent" || openMenu === "inspire") && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              className="hidden lg:block absolute left-0 right-0 top-full z-40"
+              style={{
+                backgroundColor: MEGA_BG,
+                boxShadow: "0 10px 24px rgba(1, 14, 40, 0.1)",
+              }}
+              onMouseEnter={() => openMega(openMenu)}
+              onMouseLeave={scheduleCloseMega}
+            >
+              <div className="w-full">
+                {openMenu === "rent" && (
+                  <div
+                    className="flex flex-col gap-6 py-8 pr-6"
+                    style={{ paddingLeft: megaOffsetLeft }}
+                  >
+                    {rentLinks.map((item) => (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        className="text-[15px] font-bold hover:underline underline-offset-4 transition-colors cursor-pointer w-fit whitespace-nowrap"
+                        style={{ color: NAV_INK }}
+                        onClick={() => setOpenMenu(null)}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+                {openMenu === "inspire" && (
+                  <div
+                    className="py-3 pr-8"
+                    style={{ paddingLeft: megaOffsetLeft }}
+                  >
+                    <div className="grid grid-cols-3 gap-x-6 xl:gap-x-8 gap-y-4 max-w-xl">
+                      {inspireColumns.map((column, colIndex) => (
+                        <div
+                          key={colIndex}
+                          className="flex flex-col gap-9 min-w-0"
+                        >
+                          {column.map((item) => (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              className="text-[15px] font-bold hover:underline underline-offset-4 transition-colors cursor-pointer w-fit whitespace-nowrap"
+                              style={{ color: NAV_INK }}
+                              onClick={() => setOpenMenu(null)}
+                            >
+                              {item.label}
+                            </Link>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Become Owner Modal */}
+      <AnimatePresence>
+        {showBecomeOwnerModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBecomeOwnerModal(false)}
+              className="fixed inset-0 bg-black/50 z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 max-w-sm w-full mx-4"
+            >
+              <h3 className="text-xl font-bold mb-2">Become a Seller/Landlord</h3>
+              <p className="text-gray-600 mb-6">
+                Unlock the ability to list properties and grow your business.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowBecomeOwnerModal(false)}
+                  variant="outline"
+                  className="flex-1 rounded-[5px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBecomeOwner}
+                  disabled={becomingOwner}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
+                >
+                  {becomingOwner ? "Processing..." : "Continue"}
+                </Button>
+              </div>
+              {errorMessage && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-[5px]">
+                  {errorMessage}
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Become Agent Modal */}
+      <AnimatePresence>
+        {showBecomeAgentModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBecomeAgentModal(false)}
+              className="fixed inset-0 bg-black/50 z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 max-w-sm w-full mx-4"
+            >
+              <h3 className="text-xl font-bold mb-2">Become an Estate Agent</h3>
+              <p className="text-gray-600 mb-6">
+                List properties as an agency with direct phone contact on every listing.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowBecomeAgentModal(false)}
+                  variant="outline"
+                  className="flex-1 rounded-[5px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBecomeAgent}
+                  disabled={becomingAgent}
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white rounded-[5px]"
+                >
+                  {becomingAgent ? "Processing..." : "Continue"}
+                </Button>
+              </div>
+              {errorMessage && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-[5px]">
+                  {errorMessage}
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Become Service Modal */}
+      <AnimatePresence>
+        {showBecomeServiceModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBecomeServiceModal(false)}
+              className="fixed inset-0 bg-black/50 z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 max-w-sm w-full mx-4"
+            >
+              <h3 className="text-xl font-bold mb-2">Become a Professional/Associate</h3>
+              <p className="text-gray-600 mb-6">
+                Offer your professional services and connect with customers on MYKEYS.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowBecomeServiceModal(false)}
+                  variant="outline"
+                  className="flex-1 rounded-[5px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBecomeService}
+                  disabled={becomingService}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-[5px]"
+                >
+                  {becomingService ? "Processing..." : "Register Now"}
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Success Modal */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSuccessModal(false)}
+              className="fixed inset-0 bg-black/50 z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 max-w-sm w-full mx-4"
+            >
+              <div className="flex flex-col items-center text-center">
+                <CheckCircle className="w-12 h-12 text-green-600 mb-4" />
+                <h3 className="text-xl font-bold mb-2">Success!</h3>
+                <p className="text-gray-600 mb-6">{successMessage}</p>
+                <Button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white rounded-[5px]"
+                >
+                  Got it!
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
@@ -242,99 +859,206 @@ export default function Navbar() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
               onClick={() => setMobileMenuOpen(false)}
             />
-
-            {/* Mobile Menu Panel */}
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "tween", duration: 0.3 }}
-              className="fixed top-0 right-0 h-full w-64 bg-white shadow-xl z-50 md:hidden"
+              transition={{ type: "tween", duration: 0.25 }}
+              className="fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-white shadow-xl z-50 lg:hidden"
             >
-              <div className="flex flex-col h-full pt-20 pb-6">
-                <div className="flex-1 overflow-y-auto px-4">
-                  {/* Mobile Navigation Items */}
-                  <div className="space-y-2">
-                    {navItems.map((item) => (
+              <div className="flex flex-col h-full pt-20 pb-6 overflow-y-auto">
+                <div className="px-4 space-y-1">
+                  <Link
+                    href="/buy"
+                    className="block py-3 px-4 rounded-lg font-semibold text-slate-800 hover:bg-gray-100"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Buy
+                  </Link>
+
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between py-3 px-4 rounded-lg font-semibold text-slate-800 hover:bg-gray-100"
+                    onClick={() => setMobileRentOpen(!mobileRentOpen)}
+                  >
+                    Rent
+                    <ChevronDown className={`w-4 h-4 transition-transform ${mobileRentOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {mobileRentOpen && (
+                    <div className="ml-3 pl-3 border-l border-gray-200 space-y-1">
+                      {rentLinks.map((item) => (
+                        <Link
+                          key={item.label}
+                          href={item.href}
+                          className="block py-2 px-3 text-sm text-slate-700 hover:text-green-600"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  <Link
+                    href="/rent/short-rent"
+                    className="block py-3 px-4 rounded-lg font-semibold text-slate-800 hover:bg-gray-100"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Short Stay
+                  </Link>
+                  <Link
+                    href="/services"
+                    className="block py-3 px-4 rounded-lg font-semibold text-slate-800 hover:bg-gray-100"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Services
+                  </Link>
+                  <Link
+                    href="/how-listing-works"
+                    className="block py-3 px-4 rounded-lg font-semibold text-slate-800 hover:bg-gray-100"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    List Property
+                  </Link>
+
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between py-3 px-4 rounded-lg font-semibold text-slate-800 hover:bg-gray-100"
+                    onClick={() => setMobileInspireOpen(!mobileInspireOpen)}
+                  >
+                    Inspire
+                    <ChevronDown className={`w-4 h-4 transition-transform ${mobileInspireOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {mobileInspireOpen && (
+                    <div className="ml-3 pl-3 border-l border-gray-200 space-y-1">
+                      {inspireLinks.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block py-2 px-3 text-sm text-slate-700 hover:text-green-600"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6 border-t px-4 pt-4">
+                  {isLoggedIn && user ? (
+                    <>
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between py-3 px-4 rounded-lg font-semibold text-slate-800 bg-green-50 border border-green-200"
+                        onClick={() => setMobileDashboardOpen(!mobileDashboardOpen)}
+                      >
+                        MYKEYS Dashboard
+                        <ChevronDown className={`w-4 h-4 transition-transform ${mobileDashboardOpen ? "rotate-180" : ""}`} />
+                      </button>
+                      {mobileDashboardOpen && (
+                        <div className="mt-2 space-y-1">
+                          <Link
+                            href="/user/dashboard"
+                            className="block py-3 px-4 rounded-lg text-slate-800 hover:bg-gray-50"
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            Tenant
+                          </Link>
+                          {hasOwnerRole ? (
+                            <Link
+                              href="/owner/dashboard"
+                              className="block py-3 px-4 rounded-lg text-slate-800 hover:bg-gray-50"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              Seller/Landlord
+                            </Link>
+                          ) : (
+                            <button
+                              type="button"
+                              className="w-full text-left py-3 px-4 rounded-lg text-green-700 hover:bg-green-50"
+                              onClick={() => {
+                                setShowBecomeOwnerModal(true);
+                                setMobileMenuOpen(false);
+                              }}
+                            >
+                              Become Seller/Landlord
+                            </button>
+                          )}
+                          {hasAgentRole ? (
+                            <Link
+                              href="/agent/dashboard"
+                              className="block py-3 px-4 rounded-lg text-slate-800 hover:bg-gray-50"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              Estate Agent
+                            </Link>
+                          ) : (
+                            <button
+                              type="button"
+                              className="w-full text-left py-3 px-4 rounded-lg text-amber-800 hover:bg-amber-50"
+                              onClick={() => {
+                                setShowBecomeAgentModal(true);
+                                setMobileMenuOpen(false);
+                              }}
+                            >
+                              Become Estate Agent
+                            </button>
+                          )}
+                          {hasServiceRole ? (
+                            <Link
+                              href="/service/dashboard"
+                              className="block py-3 px-4 rounded-lg text-slate-800 hover:bg-gray-50"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              Professional/Associates
+                            </Link>
+                          ) : (
+                            <button
+                              type="button"
+                              className="w-full text-left py-3 px-4 rounded-lg text-purple-700 hover:bg-purple-50"
+                              onClick={() => {
+                                setShowBecomeServiceModal(true);
+                                setMobileMenuOpen(false);
+                              }}
+                            >
+                              Become Professional/Associate
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleLogout();
+                          setMobileMenuOpen(false);
+                        }}
+                        className="mt-3 w-full text-left py-3 px-4 rounded-lg text-red-600 hover:bg-red-50"
+                      >
+                        Logout
+                      </button>
+                    </>
+                  ) : (
+                    <>
                       <Link
-                        key={item.href}
-                        href={item.href}
-                        className="block py-3 px-4 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
+                        href="/login"
+                        className="block py-3 px-4 rounded-lg text-slate-800 hover:bg-gray-100 mb-2 cursor-pointer"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        {item.label}
+                        Login
                       </Link>
-                    ))}
-                  </div>
-
-                  {/* Mobile Auth Buttons */}
-                  <div className="mt-8 border-t pt-6">
-                    {!isLoggedIn ? (
-                      <>
-                        <div className="mb-4">
-                          <p className="text-xs font-medium text-gray-500 mb-2">DASHBOARD</p>
-                          <Link
-                            href="user/dashboard"
-                            className="block py-3 px-4 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors mb-2"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            <div className="flex items-center gap-3">
-                              <UserIcon className="w-4 h-4" />
-                              User Dashboard
-                            </div>
-                          </Link>
-                          <Link
-                            href="owner/dashboard"
-                            className="block py-3 px-4 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Building2 className="w-4 h-4" />
-                              Owner Dashboard
-                            </div>
-                          </Link>
-                        </div>
-
-                        <Link
-                          href="/profile"
-                          className="block py-3 px-4 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors mb-2"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          Profile Settings
-                        </Link>
-
-                        <button
-                          onClick={() => {
-                            handleLogout();
-                            setMobileMenuOpen(false);
-                          }}
-                          className="block w-full text-left py-3 px-4 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
-                        >
-                          Logout
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <Link
-                          href="/login"
-                          className="block py-3 px-4 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors mb-2"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          Login
-                        </Link>
-                        <Link
-                          href="/signup"
-                          className="block py-3 px-4 rounded-lg bg-linear-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          Sign Up
-                        </Link>
-                      </>
-                    )}
-                  </div>
+                      <Link
+                        href="/signup"
+                        className="block py-3 px-4 rounded-lg bg-green-600 text-white text-center font-medium cursor-pointer"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Sign Up
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>

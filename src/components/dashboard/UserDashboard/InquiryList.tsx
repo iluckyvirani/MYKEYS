@@ -1,7 +1,7 @@
 // components/dashboard/UserDashboard/InquiryList.tsx
 "use client";
 
-import { MessageSquare, User, Calendar, Clock, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { MessageSquare, User, Calendar, Clock, CheckCircle, XCircle, ArrowRight, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { useState } from "react";
@@ -9,6 +9,7 @@ import Link from "next/link";
 
 interface Inquiry {
   id: string;
+  propertyId?: string;
   property: string;
   owner: string;
   sent: string;
@@ -19,6 +20,7 @@ interface Inquiry {
   budget: number;
   message: string;
   unread: number;
+  response?: string | null;
 }
 
 interface InquiryListProps {
@@ -34,34 +36,52 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
   const [selectedInquiry, setSelectedInquiry] = useState<string | null>(inquiries[0]?.id || null);
 
   const getStatusConfig = (status: string) => {
-    switch (status) {
-      case "responded":
-        return { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Responded" };
+    const normalized = (status || "").toLowerCase();
+
+    switch (normalized) {
+      case "new":
+      case "read":
       case "pending":
         return { color: "bg-yellow-100 text-yellow-800", icon: Clock, label: "Pending" };
-      case "approved":
-        return { color: "bg-blue-100 text-blue-800", icon: CheckCircle, label: "Approved" };
+      case "replied":
+        return { color: "bg-blue-100 text-blue-800", icon: MessageSquare, label: "Replied" };
+      case "converted":
+        return { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Converted" };
+      case "reviewed":
+        return { color: "bg-blue-100 text-blue-800", icon: CheckCircle, label: "Reviewed" };
+      case "interested":
+        return { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Interested" };
       case "rejected":
         return { color: "bg-red-100 text-red-800", icon: XCircle, label: "Rejected" };
-      case "negotiating":
-        return { color: "bg-purple-100 text-purple-800", icon: MessageSquare, label: "Negotiating" };
+      case "closed":
+        return { color: "bg-gray-100 text-gray-800", icon: Archive, label: "Closed" };
       default:
-        return { color: "bg-gray-100 text-gray-800", icon: Clock, label: "Pending" };
+        return { color: "bg-gray-100 text-gray-800", icon: Clock, label: "Unknown" };
     }
   };
 
   const getTimeAgo = (date: string) => {
-    const now = new Date();
-    const past = new Date(date);
-    const diffMs = now.getTime() - past.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffHours < 1) return "Just now";
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return formatDate(date);
+    try {
+      const now = new Date();
+      const past = new Date(date);
+      
+      // Check if date is valid
+      if (isNaN(past.getTime())) {
+        return "Recently";
+      }
+      
+      const diffMs = now.getTime() - past.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffHours < 1) return "Just now";
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays === 1) return "Yesterday";
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return formatDate(date);
+    } catch (error) {
+      return "Recently";
+    }
   };
 
   if (inquiries.length === 0) {
@@ -123,10 +143,12 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
 
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium text-gray-900">
-                    {formatCurrency(inquiry.budget)}
-                    <span className="text-gray-500 text-xs ml-1">
-                      /{inquiry.type === "short_term" ? "night" : "month"}
-                    </span>
+                    {inquiry.budget > 0 ? formatCurrency(inquiry.budget) : "Price not available"}
+                    {inquiry.budget > 0 && (
+                      <span className="text-gray-500 text-xs ml-1">
+                        {inquiry.type === "buy" ? "total" : "/month"}
+                      </span>
+                    )}
                   </div>
                   {inquiry.duration && (
                     <div className="text-sm text-gray-600">{inquiry.duration}</div>
@@ -181,10 +203,12 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                       </span>
                     </div>
                   </div>
-                  <Button variant="outline">
-                    View Property
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <Link href={inquiry.propertyId ? `/property/${inquiry.propertyId}` : "#"} className="ml-4">
+                    <Button variant="outline">
+                      View Property
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
                 </div>
 
                 {/* Inquiry Details */}
@@ -198,7 +222,7 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                     <div className="font-medium">{inquiry.duration || "Flexible"}</div>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="text-sm text-gray-600 mb-1">Budget</div>
+                    <div className="text-sm text-gray-600 mb-1">Property Rent</div>
                     <div className="font-medium">{formatCurrency(inquiry.budget)}</div>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
@@ -215,48 +239,18 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                   </div>
                 </div>
 
-                {/* Conversation Thread */}
-                {/* <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 mb-3">Conversation</h4>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <User className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="bg-gray-100 rounded-lg p-4">
-                          <p className="text-gray-700">Hi, I'm interested in your property. Can you share more details about availability?</p>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">You • {getTimeAgo(inquiry.sent)}</div>
-                      </div>
+                {/* Owner's Response */}
+                {inquiry.response && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-3">Owner's Response</h4>
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-gray-700">{inquiry.response}</p>
                     </div>
-                    
-                    {inquiry.status === "responded" && (
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                          <User className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-                            <p className="text-gray-700">Hello! Thanks for your interest. The property is available for your requested dates. Would you like to schedule a virtual tour?</p>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">{inquiry.owner} • 2 hours ago</div>
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </div> */}
+                )}
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-3 pt-6 border-t">
-                  {/* <Button className="flex-1">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Send Message
-                  </Button> */}
-                  <Button variant="outline" className="flex-1 cursor-pointer rounded-[5px]">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Schedule Tour
-                  </Button>
                   {inquiry.status === "pending" && (
                     <Button variant="outline" className="text-red-600 hover:text-red-700 cursor-pointer rounded-[5px]">
                       Withdraw Inquiry

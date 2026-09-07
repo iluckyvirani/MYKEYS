@@ -1,5 +1,4 @@
 import { SignJWT, jwtVerify } from "jose";
-import { UserRole } from "@prisma/client";
 
 // JWT Configuration
 const JWT_SECRET = new TextEncoder().encode(
@@ -17,7 +16,7 @@ const REFRESH_TOKEN_EXPIRY = "7d"; // 7 days
 export interface JWTPayload {
   userId: string;
   email: string;
-  role: UserRole;
+  role: string; // Changed from UserRole enum to string
   type: "access" | "refresh";
 }
 
@@ -28,7 +27,7 @@ export interface JWTPayload {
 export async function generateAccessToken(
   userId: string,
   email: string,
-  role: UserRole
+  role: string
 ): Promise<string> {
   const token = await new SignJWT({
     userId,
@@ -53,7 +52,7 @@ export async function generateAccessToken(
 export async function generateRefreshToken(
   userId: string,
   email: string,
-  role: UserRole
+  role: string
 ): Promise<string> {
   const token = await new SignJWT({
     userId,
@@ -123,7 +122,7 @@ export async function verifyRefreshToken(
 export async function generateTokenPair(
   userId: string,
   email: string,
-  role: UserRole
+  role: string
 ): Promise<{ accessToken: string; refreshToken: string }> {
   const [accessToken, refreshToken] = await Promise.all([
     generateAccessToken(userId, email, role),
