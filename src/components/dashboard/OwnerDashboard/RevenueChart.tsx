@@ -12,7 +12,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from "recharts";
 import { DollarSign, TrendingUp, TrendingDown, Percent } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -73,6 +72,7 @@ export default function RevenueChart() {
         value: p.revenue,
         color: PIE_COLORS[i % PIE_COLORS.length],
       })) ?? [];
+  const propertyRevenueTotal = propertyData.reduce((sum, p) => sum + p.value, 0);
 
   const lastMonthRevenue =
     monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].revenue : 0;
@@ -225,45 +225,85 @@ export default function RevenueChart() {
         </div>
 
         {/* Revenue by Property */}
-        <div>
+        <div className="min-w-0">
           <h4 className="font-medium text-gray-900 mb-4">Revenue by Property</h4>
-          <div className="h-64">
-            {loading ? (
-              <div className="h-full animate-pulse rounded-[5px] bg-gray-100" />
-            ) : propertyData.length === 0 ? (
-              <p className="text-sm text-gray-500 py-16 text-center">
-                No property revenue for this period yet.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={propertyData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name}: ${Number((percent ?? 0) * 100).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {propertyData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value) => [
-                      `£${Number(value).toLocaleString()}`,
-                      "Revenue",
-                    ]}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+          {loading ? (
+            <div className="h-64 animate-pulse rounded-[5px] bg-gray-100" />
+          ) : propertyData.length === 0 ? (
+            <p className="text-sm text-gray-500 py-16 text-center">
+              No property revenue for this period yet.
+            </p>
+          ) : (
+            <>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                    <Pie
+                      data={propertyData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                        if ((percent ?? 0) < 0.08 || cx == null || cy == null) return null;
+                        const radius =
+                          Number(innerRadius) +
+                          (Number(outerRadius) - Number(innerRadius)) * 0.55;
+                        const angle = (-(midAngle ?? 0) * Math.PI) / 180;
+                        return (
+                          <text
+                            x={Number(cx) + radius * Math.cos(angle)}
+                            y={Number(cy) + radius * Math.sin(angle)}
+                            fill="#ffffff"
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fontSize={12}
+                            fontWeight={600}
+                          >
+                            {`${Number((percent ?? 0) * 100).toFixed(0)}%`}
+                          </text>
+                        );
+                      }}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {propertyData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, _name, item) => [
+                        formatCurrency(Number(value)),
+                        item?.payload?.name || "Revenue",
+                      ]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <ul className="mt-3 space-y-2">
+                {propertyData.map((entry) => {
+                  const share =
+                    propertyRevenueTotal > 0
+                      ? Math.round((entry.value / propertyRevenueTotal) * 100)
+                      : 0;
+                  return (
+                    <li key={entry.name} className="flex items-start gap-2 text-sm">
+                      <span
+                        className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-sm"
+                        style={{ backgroundColor: entry.color }}
+                      />
+                      <span className="min-w-0 flex-1 break-words text-gray-700">
+                        {entry.name}
+                      </span>
+                      <span className="shrink-0 font-medium text-gray-900">
+                        {share}% · {formatCurrency(entry.value)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
         </div>
       </div>
     </div>

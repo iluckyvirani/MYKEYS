@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Pencil, Trash2, Package, Users, CheckCircle, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 interface PackageRow {
   id: string;
@@ -22,6 +23,7 @@ interface PackageRow {
   category?: "SALE" | "RENT";
   audience?: "OWNER" | "AGENT";
   shortDescription?: string;
+  accentColor?: string;
   showOwnerName: boolean;
   showOwnerPhone: boolean;
   directInquiryToOwner: boolean;
@@ -179,7 +181,13 @@ export default function AdminPackagesPage() {
                     return (
                       <tr key={pkg.id} className="hover:bg-gray-50">
                         <td className="py-3 pr-4">
-                          <p className="font-medium text-gray-900">{pkg.name}</p>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-3.5 w-3.5 rounded-full border border-white shadow shrink-0"
+                              style={{ backgroundColor: pkg.accentColor || "#16a34a" }}
+                            />
+                            <p className="font-medium text-gray-900">{pkg.name}</p>
+                          </div>
                           {pkg.shortDescription && (
                             <p className="text-xs text-gray-500 truncate max-w-[180px]">{pkg.shortDescription}</p>
                           )}
@@ -196,7 +204,7 @@ export default function AdminPackagesPage() {
                           </Badge>
                         </td>
                         <td className="py-3 pr-4 font-semibold text-gray-900">
-                          £{pkg.price}
+                          {formatCurrency(pkg.price)}
                         </td>
                         <td className="py-3 pr-4 text-gray-600">
                           {formatDuration(pkg.durationValue, pkg.durationUnit)}

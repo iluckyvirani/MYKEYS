@@ -49,13 +49,16 @@ export async function getOrCreateStripeCustomer(userId: string): Promise<string>
 /** Attach customer + save-for-future flag to PaymentIntent creation. */
 export async function withStripeCustomerForPayment(
   userId: string,
-  params: Stripe.PaymentIntentCreateParams
+  params: Stripe.PaymentIntentCreateParams,
+  opts?: { saveForFuture?: boolean }
 ): Promise<Stripe.PaymentIntentCreateParams> {
   const customerId = await getOrCreateStripeCustomer(userId);
   return {
     ...params,
     customer: customerId,
-    setup_future_usage: "off_session",
+    ...(opts?.saveForFuture === false
+      ? {}
+      : { setup_future_usage: "off_session" }),
   };
 }
 

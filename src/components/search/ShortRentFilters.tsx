@@ -3,6 +3,7 @@
 import { Filter, Star, Home, Bath, Bed, PoundSterling, Users, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/utils";
 
 export interface ShortRentFiltersState {
   priceRange: [number, number];
@@ -116,8 +117,8 @@ export default function ShortRentFilters({ filters, onFilterChange }: ShortRentF
           </h4>
           <div className="space-y-4">
             <div className="flex justify-between text-sm text-gray-600">
-              <span>£{localFilters.priceRange[0].toLocaleString()}</span>
-              <span>£{localFilters.priceRange[1].toLocaleString()}</span>
+              <span>{formatCurrency(localFilters.priceRange[0])}</span>
+              <span>{formatCurrency(localFilters.priceRange[1])}</span>
             </div>
             <input
               type="range"

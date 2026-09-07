@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { Crown, CheckCircle, Clock, Home, TrendingUp, AlertCircle, Calendar, RefreshCw, Check } from "lucide-react";
+import { resolvePackageColor, withAlpha } from "@/lib/packages/packageColors";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -85,6 +86,7 @@ export default function CurrentPackage({
     }
   };
 
+  const accent = resolvePackageColor(pkg.accentColor);
   const statusConfig = getStatusConfig(packageUsage.status);
   const StatusIcon = statusConfig.icon;
   const propertiesRemaining = Math.max(0, pkg.propertiesLimit - packageUsage.propertiesUsed);
@@ -94,7 +96,7 @@ export default function CurrentPackage({
     <div className="space-y-5">
       {/* Main Package Card */}
       <Card className="overflow-hidden">
-        <div className="bg-linear-to-r from-green-500 to-green-600 p-6 text-white">
+        <div className="p-6 text-white" style={{ background: `linear-gradient(135deg, ${accent} 0%, ${withAlpha(accent, 0.82)} 100%)` }}>
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
@@ -102,7 +104,7 @@ export default function CurrentPackage({
               </div>
               <div>
                 <h2 className="text-xl font-bold">{pkg.packageName}</h2>
-                <p className="text-green-100 text-sm">
+                <p className="text-white/80 text-sm">
                   {categoryLabel} package ·{" "}
                   {categoryLabel === "Sale" ? "Buy listings" : "Long Rent listings"}
                 </p>
@@ -116,7 +118,7 @@ export default function CurrentPackage({
 
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold">{formatCurrency(pkg.price)}</span>
-            <span className="text-green-100">/ {pkg.durationValue} {getUnitLabel(pkg.durationUnit)}</span>
+            <span className="text-white/80">/ {pkg.durationValue} {getUnitLabel(pkg.durationUnit)}</span>
           </div>
         </div>
 

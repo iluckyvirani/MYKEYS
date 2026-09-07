@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { User, Lock, Bell, Save, Camera, Shield } from "lucide-react";
+import { User, Lock, Bell, Save, Camera, Shield, Landmark } from "lucide-react";
+import BankDetailsForm from "@/components/dashboard/BankDetailsForm";
 import { api } from "@/lib/api";
 
 interface AdminProfile {
@@ -260,6 +261,10 @@ export default function AdminProfilePage() {
               <Shield className="w-4 h-4" />
               Security
             </TabsTrigger>
+            <TabsTrigger value="bank" className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer">
+              <Landmark className="w-4 h-4" />
+              Bank Details
+            </TabsTrigger>
           </TabsList>
 
           <div className="p-6">
@@ -446,6 +451,10 @@ export default function AdminProfilePage() {
                   </ul>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="bank" className="m-0">
+              <BankDetailsForm />
             </TabsContent>
 
           </div>

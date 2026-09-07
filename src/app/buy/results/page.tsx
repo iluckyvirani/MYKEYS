@@ -28,6 +28,7 @@ import {
 } from "@/lib/listingCard";
 import { sortResultListings } from "@/lib/resultsSort";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 function BuyResultsContent() {
   const router = useRouter();
@@ -97,8 +98,8 @@ function BuyResultsContent() {
             address: [property.address, property.city, property.zipCode]
               .filter(Boolean)
               .join(", "),
-            price: `£${salePrice?.toLocaleString() || "0"}`,
-            propertyPrice: `£${salePrice?.toLocaleString() || "0"}`,
+            price: formatCurrency(salePrice),
+            propertyPrice: formatCurrency(salePrice),
             beds: property.bedrooms || 0,
             baths: property.bathrooms || 0,
             propertyType: property.propertyType || "Property",
@@ -127,7 +128,7 @@ function BuyResultsContent() {
           items.map((property: any) => ({
             id: String(property.id),
             title: property.title,
-            price: `£${(property.propertyPrice || property.price)?.toLocaleString() || "0"}`,
+            price: formatCurrency(property.propertyPrice || property.price),
             latitude:
               typeof property.latitude === "number" ? property.latitude : null,
             longitude:

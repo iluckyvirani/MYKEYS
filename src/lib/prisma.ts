@@ -133,11 +133,58 @@ const globalForPrisma = global as unknown as {
   prismaVersion: string | undefined;
 };
 
-const PRISMA_CLIENT_VERSION = "20260829-neon-tcp-probe-v4";
+const PRISMA_CLIENT_VERSION = "20260905-ensure-pending-columns-v2";
+
+/**
+ * Columns added in 20260905 migrations that may not exist on Neon yet.
+ * Omit them from default SELECTs so login and other User reads keep working.
+ * Explicit `select` (e.g. bank-details) still queries them once the migration is applied.
+ */
+const OMIT_UNMIGRATED_COLUMNS = {
+  package: {
+    accentColor: true,
+  },
+  adminSettings: {
+    serviceTaxPercent: true,
+    serviceBookingFee: true,
+    serviceExtraFeeLabel: true,
+    serviceExtraFeeAmount: true,
+  },
+  catalogService: {
+    morningSurcharge: true,
+    afternoonSurcharge: true,
+    eveningSurcharge: true,
+  },
+} as const;
+
+async function ensurePendingColumns(client: PrismaClient) {
+  const statements = [
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bankAccountHolder" TEXT`,
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bankSortCode" TEXT`,
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bankAccountNumber" TEXT`,
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bankName" TEXT`,
+    `ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "accentColor" TEXT NOT NULL DEFAULT '#16a34a'`,
+    `ALTER TABLE "AdminSettings" ADD COLUMN IF NOT EXISTS "serviceTaxPercent" DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE "AdminSettings" ADD COLUMN IF NOT EXISTS "serviceBookingFee" DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE "AdminSettings" ADD COLUMN IF NOT EXISTS "serviceExtraFeeLabel" TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE "AdminSettings" ADD COLUMN IF NOT EXISTS "serviceExtraFeeAmount" DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE "CatalogService" ADD COLUMN IF NOT EXISTS "morningSurcharge" DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE "CatalogService" ADD COLUMN IF NOT EXISTS "afternoonSurcharge" DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE "CatalogService" ADD COLUMN IF NOT EXISTS "eveningSurcharge" DOUBLE PRECISION NOT NULL DEFAULT 0`,
+  ];
+  for (const sql of statements) {
+    try {
+      await client.$executeRawUnsafe(sql);
+    } catch (error) {
+      console.warn("[prisma] Could not ensure column:", sql, error);
+    }
+  }
+}
 
 function createPrismaClient(pool: Pool) {
   return new PrismaClient({
     adapter: new PrismaPg(pool),
+    omit: OMIT_UNMIGRATED_COLUMNS,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 }
@@ -161,6 +208,7 @@ async function initPrisma(): Promise<PrismaClient> {
 
   const pool = await createPgPool(connectionString);
   const client = createPrismaClient(pool);
+  await ensurePendingColumns(client);
 
   if (process.env.NODE_ENV !== "production") {
     globalForPrisma.prisma = client;

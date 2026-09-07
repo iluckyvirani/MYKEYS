@@ -18,6 +18,7 @@ import {
   labelOrAsk,
   type PropertyUtilities,
 } from "@/lib/propertyDetails";
+import { formatCurrency } from "@/lib/utils";
 
 export type PropertyListingDetailsData = {
   title: string;
@@ -272,7 +273,7 @@ export default function PropertyListingDetails({
                 <Ask
                   value={
                     property.pricePerNight
-                      ? `£${property.pricePerNight.toLocaleString()} / night`
+                      ? `${formatCurrency(property.pricePerNight)} / night`
                       : property.priceLabel
                   }
                 />

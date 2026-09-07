@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Home, Calculator } from "lucide-react";
+import { Home } from "lucide-react";
+import MortgageCalculator from "@/components/inspire/MortgageCalculator";
 
 export default function MortgagesPage() {
   return (
@@ -17,29 +20,12 @@ export default function MortgagesPage() {
             Mortgages
           </h1>
           <p className="text-lg text-slate-600 mb-10 max-w-2xl">
-            Explore mortgage guidance and tools to help you buy with confidence.
-            Compare options and get ready for your next property move.
+            Work out what you could pay each month, then explore MYKEYS guides
+            and homes for sale.
           </p>
 
-          <div className="grid sm:grid-cols-2 gap-6 mb-12">
-            <div className="p-6 rounded-lg bg-gray-50 border border-gray-100">
-              <Calculator className="w-8 h-8 text-green-600 mb-3" />
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
-                Plan your budget
-              </h2>
-              <p className="text-slate-600 text-sm">
-                Understand deposits, monthly payments, and what you can afford before you make an offer.
-              </p>
-            </div>
-            <div className="p-6 rounded-lg bg-gray-50 border border-gray-100">
-              <Home className="w-8 h-8 text-green-600 mb-3" />
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
-                Ready to buy?
-              </h2>
-              <p className="text-slate-600 text-sm">
-                Browse homes for sale on MYKEYS and find a property that fits your mortgage plans.
-              </p>
-            </div>
+          <div className="mb-12">
+            <MortgageCalculator />
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -53,6 +39,7 @@ export default function MortgagesPage() {
                 variant="outline"
                 className="rounded-[5px] border-green-500 text-slate-800"
               >
+                <Home className="w-4 h-4 mr-2" />
                 Browse properties for sale
               </Button>
             </Link>

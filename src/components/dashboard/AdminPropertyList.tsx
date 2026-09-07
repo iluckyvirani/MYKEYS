@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Eye, Edit, Trash2, MapPin, Star, DollarSign } from "lucide-react";
 import SharePropertyButton from "@/components/property/SharePropertyButton";
+import { formatCurrency } from "@/lib/utils";
 
 interface Property {
   id: string;
@@ -45,13 +46,6 @@ const getStatusColor = (status: string) => {
     default:
       return "bg-gray-100 text-gray-800 border-gray-200";
   }
-};
-
-const formatCurrency = (amount: number) => {
-  if (amount >= 100000) {
-    return `£${(amount / 100000).toFixed(1)} L`;
-  }
-  return `£${amount.toLocaleString()}`;
 };
 
 const getPrimaryImage = (images?: Array<{ url: string; isPrimary: boolean }>) => {

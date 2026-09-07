@@ -6,13 +6,27 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 
-export function formatCurrency(amount: number, currency: string = "GBP") {
+export function parseMoney(value: number | string | null | undefined): number | null {
+  if (value == null || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const cleaned = String(value).replace(/[^0-9.-]/g, "");
+  if (!cleaned || cleaned === "-" || cleaned === ".") return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** GBP with standard comma separators, e.g. £1,500 */
+export function formatCurrency(
+  amount: number | string | null | undefined,
+  currency: string = "GBP"
+) {
+  const n = parseMoney(amount) ?? 0;
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(n);
 }
 
 export function formatDate(date: string | Date) {

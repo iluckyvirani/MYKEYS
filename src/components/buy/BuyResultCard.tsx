@@ -5,6 +5,7 @@ import { BedDouble, Bath, Heart, Mail, Camera, ChevronLeft, ChevronRight, X } fr
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 export interface BuyResultCardProperty {
   id: string | number;
@@ -218,7 +219,7 @@ export default function BuyResultCard({
                   : "text-[20px] font-bold text-slate-900"
               }`}
             >
-              {displayPrice}
+              {formatCurrency(displayPrice)}
             </span>
             {property.priceSecondary && (
               <span

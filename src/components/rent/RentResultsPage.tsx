@@ -30,19 +30,19 @@ import {
 } from "@/lib/listingCard";
 import { sortResultListings } from "@/lib/resultsSort";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 function formatRentPrice(
   amount: number | undefined | null,
   kind: RentKind
 ) {
-  const n = typeof amount === "number" ? amount : 0;
-  if (kind === "short-rent") return `£${n.toLocaleString()} / night`;
-  return `£${n.toLocaleString()} pcm`;
+  if (kind === "short-rent") return `${formatCurrency(amount)} / night`;
+  return `${formatCurrency(amount)} pcm`;
 }
 
 function formatWeeklyFromMonthly(amount: number) {
   const weekly = Math.round(amount * 12 / 52);
-  return `£${weekly.toLocaleString()} pw`;
+  return `${formatCurrency(weekly)} pw`;
 }
 
 function RentResultsContent({ kind }: { kind: RentKind }) {

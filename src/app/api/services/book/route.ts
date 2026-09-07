@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { verifyAccessToken } from "@/lib/auth/jwt";
 import { serviceService } from "@/lib/services/serviceService";
 import { catalogService, splitCatalogPrice } from "@/lib/services/catalogService";
+import {
+  computeServicePaymentSummary,
+  getSlotSurcharge,
+  parseSlotPeriod,
+} from "@/lib/services/serviceCheckoutFees";
+import { loadServiceCheckoutFees } from "@/lib/services/loadServiceCheckoutFees";
 import { readStripePublishableKey } from "@/lib/stripe-config";
 import { STRIPE_MIN_AMOUNT_GBP } from "@/lib/stripe";
 
@@ -30,6 +36,9 @@ export async function POST(request: NextRequest) {
       scheduledDate,
       scheduledTime,
       location,
+      bookingType,
+      slotPeriod: slotPeriodRaw,
+      tipAmount: tipAmountRaw,
     } = body;
 
     if (!catalogServiceId || !providerId) {
@@ -58,37 +67,60 @@ export async function POST(request: NextRequest) {
     }
 
     const price = catalog.price;
-    if (price > 0 && price < STRIPE_MIN_AMOUNT_GBP) {
+    const slotPeriod = parseSlotPeriod(slotPeriodRaw);
+    const slotSurcharge = getSlotSurcharge(catalog, slotPeriod);
+    const tipAmount = Math.max(0, parseFloat(Number(tipAmountRaw || 0).toFixed(2)));
+    const fees = await loadServiceCheckoutFees();
+    const summary = computeServicePaymentSummary(price, fees, {
+      basePrice: price,
+      slotSurcharge,
+      slotPeriod,
+      tip: tipAmount,
+    });
+    const amountToPay = summary.amountToPay;
+    const commissionBase = summary.itemTotal;
+
+    if (amountToPay > 0 && amountToPay < STRIPE_MIN_AMOUNT_GBP) {
       return errorResponse(
-        `Service price must be at least £${STRIPE_MIN_AMOUNT_GBP.toFixed(2)} for card payment`,
+        `Amount to pay must be at least £${STRIPE_MIN_AMOUNT_GBP.toFixed(2)} for card payment`,
         400
       );
     }
 
-    const { commissionAmount, providerEarnings } = splitCatalogPrice(
-      price,
+    const { commissionAmount, providerEarnings: splitEarnings } = splitCatalogPrice(
+      commissionBase,
       catalog.commissionPercent
     );
+    const providerEarnings = parseFloat((splitEarnings + tipAmount).toFixed(2));
 
     let stripeClientSecret: string | null = null;
     let stripePaymentIntentId: string | null = null;
 
-    if (price > 0) {
+    if (amountToPay > 0) {
       try {
         const { stripe, toPence } = await import("@/lib/stripe");
         const { withStripeCustomerForPayment } = await import("@/lib/stripe/customer");
         const intent = await stripe.paymentIntents.create(
-          await withStripeCustomerForPayment(payload.userId, {
-            amount: toPence(price),
-            currency: "gbp",
-            automatic_payment_methods: { enabled: true },
-            metadata: {
-              type: "service_booking",
-              catalogServiceId,
-              providerId,
-              clientId: payload.userId,
+          await withStripeCustomerForPayment(
+            payload.userId,
+            {
+              amount: toPence(amountToPay),
+              currency: "gbp",
+              payment_method_types: ["card"],
+              metadata: {
+                type: "service_booking",
+                catalogServiceId,
+                providerId,
+                clientId: payload.userId,
+                itemTotal: String(summary.itemTotal),
+                taxesAndFee: String(summary.taxesAndFee),
+                slotPeriod: slotPeriod || "",
+                slotSurcharge: String(slotSurcharge),
+                tipAmount: String(tipAmount),
+              },
             },
-          })
+            { saveForFuture: false }
+          )
         );
         stripeClientSecret = intent.client_secret;
         stripePaymentIntentId = intent.id;
@@ -103,13 +135,21 @@ export async function POST(request: NextRequest) {
       catalogServiceId,
       service: catalog.name,
       category: catalog.categoryId,
-      bookingType: "SCHEDULED",
-      description,
+      bookingType: bookingType === "instant" ? "instant" : "scheduled",
+      description: [
+        description,
+        slotPeriod
+          ? `Slot: ${slotPeriod}${scheduledTime ? ` ${scheduledTime}` : ""} (+£${slotSurcharge.toFixed(2)})`
+          : "",
+        tipAmount > 0 ? `Tip for professional: £${tipAmount.toFixed(2)}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
       scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
       scheduledTime,
       location,
-      totalAmount: price,
-      price,
+      totalAmount: amountToPay,
+      price: commissionBase,
       commissionPercent: catalog.commissionPercent,
       commissionAmount,
       providerEarnings,
@@ -117,7 +157,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Free services: mark paid immediately
-    if (price === 0) {
+    if (amountToPay === 0) {
       await serviceService.markBookingPaid(booking.id, payload.userId);
     }
 
@@ -133,7 +173,8 @@ export async function POST(request: NextRequest) {
         booking,
         clientSecret: stripeClientSecret,
         publishableKey,
-        amount: price,
+        amount: amountToPay,
+        paymentSummary: summary,
       },
       "Booking created",
       201

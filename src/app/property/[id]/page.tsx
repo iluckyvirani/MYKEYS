@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 import PropertyShortStayBooking from "@/components/property/PropertyShortStayBooking";
 import PropertyListingDetails from "@/components/property/PropertyListingDetails";
 import PropertyLocationMap from "@/components/property/PropertyLocationMap";
@@ -155,10 +156,10 @@ export default function PropertyDetailsPage() {
             apiData.listingType === "RENT" && apiData.rentalType === "LONG_TERM";
           const saleOrRent = apiData.propertyPrice || apiData.price || 0;
           const displayPrice = isShortStay
-            ? `£${(apiData.price || 0).toLocaleString()} / night`
+            ? `${formatCurrency(apiData.price)} / night`
             : isLongRent
-            ? `£${(apiData.price || 0).toLocaleString()} pcm`
-            : `£${saleOrRent.toLocaleString()}`;
+            ? `${formatCurrency(apiData.price)} pcm`
+            : formatCurrency(saleOrRent);
 
           const activity = formatListingActivity({
             createdAt: apiData.createdAt,

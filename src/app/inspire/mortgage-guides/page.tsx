@@ -24,6 +24,7 @@ import {
 import { useInspirePageContent } from "@/hooks/useInspirePageContent";
 import { useInspireItems } from "@/hooks/useInspireItems";
 import type { MortgageItemsContent } from "@/lib/content/inspireItems";
+import MortgageCalculator from "@/components/inspire/MortgageCalculator";
 
 function QuickIcon({ type }: { type: "home" | "calculator" | "bolt" }) {
   if (type === "home") return <Home className="w-4 h-4 text-[#0f3d36]" />;
@@ -90,7 +91,7 @@ function GuideSectionBlock({
     <section id={section.id} className="scroll-mt-28 mb-12 md:mb-14">
       {showCalculatorBanner && (
         <Link
-          href="/inspire/mortgages"
+          href="#mortgage-calculator"
           className="mb-10 flex items-center overflow-hidden rounded-2xl cursor-pointer group"
         >
           <div className="flex-1 bg-[#0f3d36] text-white px-6 py-5 sm:px-8 sm:py-6">
@@ -260,6 +261,10 @@ export default function MortgageGuidesPage() {
                 ))}
               </ul>
             </div>
+          </div>
+
+          <div className="mb-10">
+            <MortgageCalculator />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-10 lg:gap-12 items-start">

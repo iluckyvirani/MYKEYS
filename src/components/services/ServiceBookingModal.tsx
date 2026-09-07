@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Calendar, Clock, MapPin, FileText, Zap, CheckCircle, AlertCircle } from "lucide-react";
 import { SERVICE_CATEGORIES, INSTANT_BOOKING_PRICES, ServiceCategory, ServiceProvider } from "@/types/service";
+import { formatCurrency } from "@/lib/utils";
 
 interface ServiceBookingModalProps {
   isOpen: boolean;
@@ -163,7 +164,7 @@ export default function ServiceBookingModal({
                                 Service professional arrives immediately
                               </p>
                               <Badge className="bg-yellow-100 text-yellow-800">
-                                £{provider.instantBookingPrice}
+                                {formatCurrency(provider.instantBookingPrice)}
                               </Badge>
                             </div>
                           </div>

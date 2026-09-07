@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { SettlementStatus, SettlementType } from "@prisma/client";
+import { Prisma, SettlementStatus, SettlementType } from "@prisma/client";
 import { notificationService } from "@/lib/notifications/notificationService";
 import {
   NotificationType,
@@ -63,41 +63,94 @@ export const settlementService = {
       ...(opts.status ? { status: opts.status } : {}),
     };
 
-    const [items, total] = await Promise.all([
-      prisma.settlement.findMany({
-        where,
-        include: {
-          beneficiary: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          serviceBooking: {
-            select: {
-              id: true,
-              service: true,
-              totalAmount: true,
-              providerEarnings: true,
-              completedAt: true,
-            },
-          },
-          payment: {
-            select: {
-              id: true,
-              amount: true,
-              ownerEarnings: true,
-              commissionAmount: true,
-              bookingId: true,
-              createdAt: true,
-            },
-          },
+    const bookingInclude = {
+      serviceBooking: {
+        select: {
+          id: true,
+          service: true,
+          totalAmount: true,
+          providerEarnings: true,
+          completedAt: true,
         },
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.settlement.count({ where }),
-    ]);
+      },
+      payment: {
+        select: {
+          id: true,
+          amount: true,
+          ownerEarnings: true,
+          commissionAmount: true,
+          bookingId: true,
+          createdAt: true,
+        },
+      },
+    } as const;
 
-    return { items, total, page, limit };
+    const query = (beneficiarySelect: Record<string, boolean>) =>
+      Promise.all([
+        prisma.settlement.findMany({
+          where,
+          include: {
+            beneficiary: { select: beneficiarySelect },
+            ...bookingInclude,
+          },
+          orderBy: { createdAt: "desc" },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.settlement.count({ where }),
+      ]);
+
+    const [items, total] = await query({
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+    });
+
+    const beneficiaryIds = [
+      ...new Set(items.map((item) => item.beneficiaryUserId).filter(Boolean)),
+    ];
+    const emptyBank = {
+      bankAccountHolder: null as string | null,
+      bankSortCode: null as string | null,
+      bankAccountNumber: null as string | null,
+      bankName: null as string | null,
+    };
+    const bankByUser = new Map<string, typeof emptyBank>();
+    if (beneficiaryIds.length > 0) {
+      try {
+        const rows = await prisma.$queryRaw<
+          ({ id: string } & typeof emptyBank)[]
+        >`
+          SELECT id, "bankAccountHolder", "bankSortCode", "bankAccountNumber", "bankName"
+          FROM "User"
+          WHERE id IN (${Prisma.join(beneficiaryIds)})
+        `;
+        for (const row of rows) {
+          bankByUser.set(row.id, {
+            bankAccountHolder: row.bankAccountHolder,
+            bankSortCode: row.bankSortCode,
+            bankAccountNumber: row.bankAccountNumber,
+            bankName: row.bankName,
+          });
+        }
+      } catch {
+        // Columns not migrated yet
+      }
+    }
+
+    return {
+      items: items.map((item) => ({
+        ...item,
+        beneficiary: {
+          ...item.beneficiary,
+          ...(bankByUser.get(item.beneficiaryUserId) ?? emptyBank),
+        },
+      })),
+      total,
+      page,
+      limit,
+    };
   },
 
   async markSettled(opts: {
@@ -168,56 +221,158 @@ export const settlementService = {
     return updated;
   },
 
-  /** Sync pending short-stay settlements from paid payments missing a settlement row */
-  async syncShortStayPendings() {
-    const payments = await prisma.payment.findMany({
-      where: {
-        status: "PAID",
-        bookingId: { not: null },
-        ownerEarnings: { gt: 0 },
-        OR: [
-          { settleStatus: "PENDING" },
-          { settleStatus: "NOT_APPLICABLE" },
-        ],
-        settlements: { none: {} },
-      },
+  async queuePaidShortStayByPaymentId(paymentId: string) {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
       include: {
         booking: {
           select: {
             ownerId: true,
-            property: { select: { ownerId: true, rentalType: true, listingType: true } },
+            property: {
+              select: { ownerId: true, rentalType: true, listingType: true },
+            },
           },
         },
       },
-      take: 200,
     });
+    if (!payment) return null;
+    return this.queuePaidShortStayPayment(payment);
+  },
 
-    let created = 0;
-    for (const p of payments) {
-      const booking = p.booking;
-      if (!booking) continue;
-      if (
-        booking.property.listingType !== "RENT" ||
-        booking.property.rentalType !== "SHORT_TERM"
-      ) {
-        continue;
+  /**
+   * Create / backfill a short-stay settlement from a paid booking payment.
+   * Computes ownerEarnings from AdminSettings.shortRentCommissionPercent when missing.
+   */
+  async queuePaidShortStayPayment(payment: {
+    id: string;
+    amount: number;
+    status: string;
+    ownerEarnings?: number | null;
+    commissionAmount?: number | null;
+    commissionPercent?: number | null;
+    settleStatus?: string | null;
+    booking?: {
+      ownerId?: string | null;
+      property: { ownerId: string; rentalType?: string | null; listingType?: string | null };
+    } | null;
+  }) {
+    if (payment.status !== "PAID") return null;
+    if (payment.settleStatus === "SETTLED") return null;
+    const booking = payment.booking;
+    if (!booking?.property) return null;
+    if (
+      booking.property.listingType !== "RENT" ||
+      booking.property.rentalType !== "SHORT_TERM"
+    ) {
+      return null;
+    }
+
+    const ownerId = booking.ownerId || booking.property.ownerId;
+    if (!ownerId) return null;
+
+    let ownerEarnings = payment.ownerEarnings ?? null;
+    let commissionAmount = payment.commissionAmount ?? null;
+    let commissionPercent = payment.commissionPercent ?? null;
+
+    if (ownerEarnings == null || ownerEarnings <= 0) {
+      if (commissionAmount != null) {
+        ownerEarnings = Math.max(0, parseFloat((payment.amount - commissionAmount).toFixed(2)));
+      } else {
+        if (commissionPercent == null) {
+          try {
+            const settings = await prisma.adminSettings.findUnique({
+              where: { id: "singleton" },
+              select: { shortRentCommissionPercent: true },
+            });
+            commissionPercent = settings?.shortRentCommissionPercent ?? 0;
+          } catch {
+            commissionPercent = 0;
+          }
+        }
+        const pct = Math.min(100, Math.max(0, Number(commissionPercent) || 0));
+        commissionPercent = pct;
+        commissionAmount = parseFloat(((payment.amount * pct) / 100).toFixed(2));
+        ownerEarnings = parseFloat((payment.amount - commissionAmount).toFixed(2));
       }
 
-      const ownerId = booking.ownerId || booking.property.ownerId;
-      if (!ownerId || !p.ownerEarnings) continue;
-
-      await prisma.payment.update({
-        where: { id: p.id },
-        data: { settleStatus: "PENDING" },
-      });
-
-      await this.ensureShortStaySettlement({
-        paymentId: p.id,
-        beneficiaryUserId: ownerId,
-        amount: p.ownerEarnings,
-      });
-      created += 1;
+      try {
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            ownerEarnings,
+            commissionAmount,
+            commissionPercent,
+            settleStatus: "PENDING",
+          },
+        });
+      } catch {
+        await prisma.payment
+          .update({
+            where: { id: payment.id },
+            data: { ownerEarnings, commissionAmount, commissionPercent },
+          })
+          .catch(() => undefined);
+      }
+    } else if (payment.settleStatus !== "PENDING") {
+      await prisma.payment
+        .update({
+          where: { id: payment.id },
+          data: { settleStatus: "PENDING" },
+        })
+        .catch(() => undefined);
     }
-    return { created };
+
+    if (!ownerEarnings || ownerEarnings <= 0) return null;
+
+    return this.ensureShortStaySettlement({
+      paymentId: payment.id,
+      beneficiaryUserId: ownerId,
+      amount: ownerEarnings,
+    });
+  },
+
+  /** Sync pending short-stay settlements from paid booking payments. */
+  async syncShortStayPendings() {
+    const include = {
+      booking: {
+        select: {
+          ownerId: true,
+          property: { select: { ownerId: true, rentalType: true, listingType: true } },
+        },
+      },
+    } as const;
+
+    let payments;
+    try {
+      payments = await prisma.payment.findMany({
+        where: {
+          status: "PAID",
+          bookingId: { not: null },
+          packageId: null,
+          settleStatus: { not: "SETTLED" },
+          settlements: { none: {} },
+        },
+        include,
+        take: 500,
+      });
+    } catch {
+      payments = await prisma.payment.findMany({
+        where: {
+          status: "PAID",
+          bookingId: { not: null },
+          packageId: null,
+          settlements: { none: {} },
+        },
+        include,
+        take: 500,
+      });
+    }
+
+    let created = 0;
+    for (const payment of payments) {
+      const row = await this.queuePaidShortStayPayment(payment);
+      if (row) created += 1;
+    }
+    return { created, scanned: payments.length };
   },
 };

@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, Percent, Save, CheckCircle, Zap } from "lucide-react";
+import { Settings, Percent, Save, CheckCircle, Zap, Receipt } from "lucide-react";
 import { api } from "@/lib/api";
 
 export default function AdminSettingsPage() {
@@ -15,9 +15,13 @@ export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [commission, setCommission] = useState<number>(0);
-  const [minBid, setMinBid] = useState<number>(1);
+  const [minBid, setMinBid] = useState<number>(0.01);
   const [maxDuration, setMaxDuration] = useState<number>(30);
   const [maxSlots, setMaxSlots] = useState<number>(3);
+  const [serviceTaxPercent, setServiceTaxPercent] = useState<number>(0);
+  const [serviceBookingFee, setServiceBookingFee] = useState<number>(0);
+  const [serviceExtraFeeLabel, setServiceExtraFeeLabel] = useState("");
+  const [serviceExtraFeeAmount, setServiceExtraFeeAmount] = useState<number>(0);
 
   useEffect(() => {
     api
@@ -25,9 +29,13 @@ export default function AdminSettingsPage() {
       .then((res) => {
         const data = res.data?.data ?? res.data;
         setCommission(data?.shortRentCommissionPercent ?? 0);
-        setMinBid(data?.minBidAmountPerDay ?? 1);
+        setMinBid(data?.minBidAmountPerDay ?? 0.01);
         setMaxDuration(data?.maxBidDurationDays ?? 30);
         setMaxSlots(data?.maxBoostedSlotsPerZip ?? 3);
+        setServiceTaxPercent(data?.serviceTaxPercent ?? 0);
+        setServiceBookingFee(data?.serviceBookingFee ?? 0);
+        setServiceExtraFeeLabel(data?.serviceExtraFeeLabel ?? "");
+        setServiceExtraFeeAmount(data?.serviceExtraFeeAmount ?? 0);
       })
       .catch(() => setError("Failed to load settings"))
       .finally(() => setLoading(false));
@@ -44,6 +52,10 @@ export default function AdminSettingsPage() {
         minBidAmountPerDay: minBid,
         maxBidDurationDays: maxDuration,
         maxBoostedSlotsPerZip: maxSlots,
+        serviceTaxPercent,
+        serviceBookingFee,
+        serviceExtraFeeLabel,
+        serviceExtraFeeAmount,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -166,6 +178,78 @@ export default function AdminSettingsPage() {
                   <p className="text-xs text-gray-400">
                     Maximum boosted properties shown at the top of search results for any zip code.
                   </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-green-600" /> Service checkout fees
+              </h2>
+              <p className="text-sm text-gray-500 mb-6">
+                These amounts appear on the tenant payment summary and are added
+                on top of the catalog item price. Commission is still taken from
+                the item price only — extra fees go to MYKEYS.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-1">
+                  <Label htmlFor="serviceTax">Tax (%)</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="serviceTax"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      value={serviceTaxPercent}
+                      onChange={(e) =>
+                        setServiceTaxPercent(parseFloat(e.target.value) || 0)
+                      }
+                      className="w-32"
+                    />
+                    <span className="text-gray-500 text-sm">% of item total</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="serviceBookingFee">Booking fee (£)</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="serviceBookingFee"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={serviceBookingFee}
+                      onChange={(e) =>
+                        setServiceBookingFee(parseFloat(e.target.value) || 0)
+                      }
+                      className="w-32"
+                    />
+                    <span className="text-gray-500 text-sm">flat amount</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="extraFeeLabel">Extra line item (optional)</Label>
+                  <Input
+                    id="extraFeeLabel"
+                    value={serviceExtraFeeLabel}
+                    onChange={(e) => setServiceExtraFeeLabel(e.target.value)}
+                    placeholder="e.g. Convenience fee"
+                    maxLength={80}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="extraFeeAmount">Extra line amount (£)</Label>
+                  <Input
+                    id="extraFeeAmount"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={serviceExtraFeeAmount}
+                    onChange={(e) =>
+                      setServiceExtraFeeAmount(parseFloat(e.target.value) || 0)
+                    }
+                    className="w-32"
+                  />
                 </div>
               </div>
             </Card>

@@ -19,6 +19,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import {
+  PaymentDocumentDialog,
+  downloadPaymentReceipt,
+  type PaymentDocumentData,
+} from "@/components/payments/PaymentDocumentDialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -123,6 +128,7 @@ const subStatusColor = (s: string) => {
 
 export default function OwnerPaymentList({ searchQuery = "", filters }: OwnerPaymentListProps) {
   const [activeTab, setActiveTab] = useState<"booking_income" | "packages">("booking_income");
+  const [invoice, setInvoice] = useState<PaymentDocumentData | null>(null);
 
   // Booking income state
   const [bookings, setBookings] = useState<BookingIncomeItem[]>([]);
@@ -191,7 +197,6 @@ export default function OwnerPaymentList({ searchQuery = "", filters }: OwnerPay
     return (
       p.id.toLowerCase().includes(q) ||
       p.transactionId?.toLowerCase().includes(q) ||
-      p.stripePaymentIntentId?.toLowerCase().includes(q) ||
       p.booking?.id.toLowerCase().includes(q) ||
       p.booking?.property.title.toLowerCase().includes(q) ||
       p.booking?.guest.email.toLowerCase().includes(q) ||
@@ -205,7 +210,6 @@ export default function OwnerPaymentList({ searchQuery = "", filters }: OwnerPay
     return (
       p.id.toLowerCase().includes(q) ||
       p.transactionId?.toLowerCase().includes(q) ||
-      p.stripePaymentIntentId?.toLowerCase().includes(q) ||
       p.package?.name?.toLowerCase().includes(q)
     );
   });
@@ -282,11 +286,66 @@ export default function OwnerPaymentList({ searchQuery = "", filters }: OwnerPay
                   )}
                 </div>
                 <div className="bg-gray-50 rounded p-2.5 grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs text-gray-600">
-                  <IdField label="Payment ID" value={p.id} />
                   {p.booking?.id && <IdField label="Booking ID" value={p.booking.id} />}
-                  {p.stripePaymentIntentId && <IdField label="Stripe Intent" value={p.stripePaymentIntentId} />}
                   {p.transactionId && <IdField label="Transaction ID" value={p.transactionId} />}
                   <div><span className="text-gray-400">Method: </span>{p.paymentMethod?.replace("_", " ")}</div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-[5px]"
+                    onClick={() =>
+                      setInvoice({
+                        id: p.id,
+                        title: "Booking Payment",
+                        propertyTitle: p.booking?.property.title,
+                        city: p.booking?.property.city,
+                        amount: p.amount,
+                        currency: p.currency,
+                        status: p.status,
+                        paymentMethod: p.paymentMethod,
+                        bookingId: p.booking?.id,
+                        transactionId: p.transactionId,
+                        stripePaymentIntentId: p.stripePaymentIntentId,
+                        createdAt: p.createdAt,
+                        checkIn: p.booking?.checkIn,
+                        checkOut: p.booking?.checkOut,
+                      })
+                    }
+                  >
+                    View Invoice
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-[5px]"
+                    onClick={() =>
+                      downloadPaymentReceipt(
+                        {
+                          id: p.id,
+                          title: "Booking Payment",
+                          propertyTitle: p.booking?.property.title,
+                          city: p.booking?.property.city,
+                          amount: p.amount,
+                          currency: p.currency,
+                          status: p.status,
+                          paymentMethod: p.paymentMethod,
+                          bookingId: p.booking?.id,
+                          transactionId: p.transactionId,
+                          stripePaymentIntentId: p.stripePaymentIntentId,
+                          createdAt: p.createdAt,
+                          checkIn: p.booking?.checkIn,
+                          checkOut: p.booking?.checkOut,
+                        },
+                        false
+                      )
+                    }
+                  >
+                    Download Receipt
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -336,11 +395,56 @@ export default function OwnerPaymentList({ searchQuery = "", filters }: OwnerPay
                   </div>
                 )}
                 <div className="bg-gray-50 rounded p-2.5 grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs text-gray-600">
-                  <IdField label="Payment ID" value={p.id} />
                   {p.package?.ownerPackageId && <IdField label="Subscription ID" value={p.package.ownerPackageId} />}
-                  {p.stripePaymentIntentId && <IdField label="Stripe Intent" value={p.stripePaymentIntentId} />}
                   {p.transactionId && <IdField label="Transaction ID" value={p.transactionId} />}
                   <div><span className="text-gray-400">Method: </span>{p.paymentMethod?.replace("_", " ")}</div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-[5px]"
+                    onClick={() =>
+                      setInvoice({
+                        id: p.id,
+                        title: p.package?.name ?? "Package Subscription",
+                        amount: p.amount,
+                        currency: p.currency,
+                        status: p.status,
+                        paymentMethod: p.paymentMethod,
+                        transactionId: p.transactionId,
+                        stripePaymentIntentId: p.stripePaymentIntentId,
+                        createdAt: p.createdAt,
+                      })
+                    }
+                  >
+                    View Invoice
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-[5px]"
+                    onClick={() =>
+                      downloadPaymentReceipt(
+                        {
+                          id: p.id,
+                          title: p.package?.name ?? "Package Subscription",
+                          amount: p.amount,
+                          currency: p.currency,
+                          status: p.status,
+                          paymentMethod: p.paymentMethod,
+                          transactionId: p.transactionId,
+                          stripePaymentIntentId: p.stripePaymentIntentId,
+                          createdAt: p.createdAt,
+                        },
+                        false
+                      )
+                    }
+                  >
+                    Download Receipt
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -368,6 +472,14 @@ export default function OwnerPaymentList({ searchQuery = "", filters }: OwnerPay
         <TabsContent value="booking_income" className="p-5 m-0">{renderBookingIncome()}</TabsContent>
         <TabsContent value="packages" className="p-5 m-0">{renderPackages()}</TabsContent>
       </Tabs>
+      <PaymentDocumentDialog
+        open={Boolean(invoice)}
+        onOpenChange={(open) => {
+          if (!open) setInvoice(null);
+        }}
+        data={invoice}
+        showStripeIds={false}
+      />
     </div>
   );
 }

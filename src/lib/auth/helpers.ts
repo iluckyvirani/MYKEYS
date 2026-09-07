@@ -2,6 +2,40 @@ import { User } from "@prisma/client";
 import { UserDTO, UserRole, UserStatus } from "@/types/auth";
 import { prisma } from "@/lib/prisma";
 
+/** Scalar + roles only — never select UK bank columns (they may not be migrated yet). */
+export const authUserSelect = {
+  id: true,
+  email: true,
+  phone: true,
+  password: true,
+  firstName: true,
+  lastName: true,
+  avatar: true,
+  status: true,
+  authProvider: true,
+  googleId: true,
+  birthDate: true,
+  gender: true,
+  address: true,
+  city: true,
+  state: true,
+  country: true,
+  zipCode: true,
+  emergencyName: true,
+  emergencyContact: true,
+  companyName: true,
+  taxId: true,
+  website: true,
+  listingSellerType: true,
+  agentLogo: true,
+  stripeCustomerId: true,
+  emailVerified: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+  roles: true,
+} as const;
+
 /**
  * Convert Prisma User model to UserDTO (exclude password)
  */

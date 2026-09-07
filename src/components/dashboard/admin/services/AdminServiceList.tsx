@@ -3,6 +3,7 @@
 import { Eye, Edit, Trash2, Star, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
 
 interface ServiceListing {
   id: string;
@@ -106,7 +107,7 @@ export function AdminServiceList({
                 </Badge>
               </td>
               <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                £{service.basePrice}
+                {formatCurrency(service.basePrice)}
               </td>
               <td className="px-6 py-4 text-sm text-gray-600">{service.bookings}</td>
               <td className="px-6 py-4 text-sm">

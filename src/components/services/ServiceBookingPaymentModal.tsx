@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { getStripePromise } from "@/lib/stripe-client";
 import {
+  buildCompactStripeConfirmParams,
   buildStripeElementsOptions,
-  stripePaymentElementOptions,
+  compactStripePaymentElementOptions,
 } from "@/lib/stripe/elementsOptions";
 
 function PaymentForm({
@@ -40,6 +41,7 @@ function PaymentForm({
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         redirect: "if_required",
+        confirmParams: buildCompactStripeConfirmParams(),
       });
       if (error) {
         onError(error.message || "Payment failed");
@@ -58,11 +60,11 @@ function PaymentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement options={stripePaymentElementOptions} />
+      <PaymentElement options={compactStripePaymentElementOptions} />
       <Button
         type="submit"
         disabled={!stripe || submitting}
-        className="w-full bg-teal-700 hover:bg-teal-800 text-white"
+        className="w-full h-11 rounded-xl bg-green-600 hover:bg-green-700 text-white cursor-pointer"
       >
         {submitting ? (
           <>
@@ -111,8 +113,8 @@ export default function ServiceBookingPaymentModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between">
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="shrink-0 bg-white border-b px-5 py-3.5 flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-gray-900">Pay MYKEYS</h3>
             <p className="text-sm text-gray-500">{serviceName}</p>
@@ -125,7 +127,7 @@ export default function ServiceBookingPaymentModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="p-5">
+        <div className="p-5 overflow-y-auto">
           {done ? (
             <div className="text-center py-8">
               <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />

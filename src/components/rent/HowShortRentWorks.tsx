@@ -20,7 +20,7 @@ const DEFAULT_STATS: ListingStatItem[] = [
 export default function HowShortRentWorks({
   title = "How Short Stays Work",
   subtitle = "Easy booking process from search to check-out",
-  whyTitle = "Why Book Short Rents with Hously?",
+  whyTitle = "Why Book Short Rents with MYKEYS?",
   benefits = DEFAULT_BENEFITS,
   stats = DEFAULT_STATS,
 }: {

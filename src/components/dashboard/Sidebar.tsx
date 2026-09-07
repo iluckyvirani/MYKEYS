@@ -137,20 +137,21 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white">
+      <div className="hidden xl:fixed xl:inset-y-0 xl:flex xl:w-64 xl:flex-col xl:border-r xl:border-gray-200 xl:bg-white">
         {/* Logo */}
-        <div className="shrink-0 flex items-center justify-center px-5 py-5">
+        <div className="shrink-0 w-full px-4 py-5">
           <Link
             href="/"
-            className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
+            className="mx-auto flex w-full min-w-0 justify-center hover:opacity-90 transition-opacity"
             aria-label="MYKEYS home"
           >
-            <div className="w-9 h-9 rounded-lg bg-linear-to-r from-green-600 to-emerald-500 flex items-center justify-center">
-              <Key className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold font-spartan text-gray-900">
-              MYKEYS
-            </span>
+            <img
+              src="/mykeys-logo-nav.png"
+              alt="MYKEYS"
+              width={492}
+              height={94}
+              className="mx-auto block h-[52px] w-auto max-w-[210px] object-contain object-center"
+            />
           </Link>
         </div>
 
@@ -192,27 +193,29 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       {/* Mobile Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white border-r transition-transform duration-300 ease-in-out lg:hidden",
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white border-r transition-transform duration-300 ease-in-out xl:hidden",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="shrink-0 flex items-center justify-between p-4 border-b">
+        <div className="shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-1 p-4 border-b">
+          <span />
           <Link
             href="/"
             onClick={onClose}
-            className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
+            className="flex min-w-0 justify-center hover:opacity-90 transition-opacity"
             aria-label="MYKEYS home"
           >
-            <div className="w-9 h-9 rounded-lg bg-linear-to-r from-green-600 to-emerald-500 flex items-center justify-center">
-              <Home className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold font-spartan text-gray-900">
-              MYKEYS
-            </span>
+            <img
+              src="/mykeys-logo-nav.png"
+              alt="MYKEYS"
+              width={492}
+              height={94}
+              className="mx-auto block h-[52px] w-auto max-w-full object-contain object-center"
+            />
           </Link>
           <button
             onClick={onClose}
-            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 justify-self-end"
           >
             ✕
           </button>

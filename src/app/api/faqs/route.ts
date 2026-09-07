@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { isDatabaseConnectionError, prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
 import { ErrorCode } from "@/lib/auth/errors";
 import { FaqCategory } from "@prisma/client";
@@ -38,6 +38,10 @@ export async function GET(request: NextRequest) {
 
     return successResponse(faqs, "FAQs retrieved successfully");
   } catch (error) {
+    if (isDatabaseConnectionError(error)) {
+      console.warn("[faqs] Database unreachable — returning empty list");
+      return successResponse([], "FAQs temporarily unavailable");
+    }
     console.error("Get FAQs error:", error);
     return errorResponse("Failed to retrieve FAQs", 500, ErrorCode.INTERNAL_SERVER_ERROR);
   }

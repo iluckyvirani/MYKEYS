@@ -7,6 +7,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { Download, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 interface EarningsData {
   stats: {
@@ -184,7 +185,7 @@ export default function EarningsPage() {
                   </td>
                   <td className="py-3 px-4 text-gray-600">{txn.description}</td>
                   <td className="py-3 px-4 text-right font-semibold text-gray-900">
-                    £{txn.amount}
+                    {formatCurrency(txn.amount)}
                   </td>
                   <td className="py-3 px-4">
                     <span

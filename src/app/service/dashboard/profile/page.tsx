@@ -19,9 +19,11 @@ import {
   Clock,
   XCircle,
   Star,
-  PoundSterling,
+  Zap,
   MapPin,
+  Landmark,
 } from "lucide-react";
+import BankDetailsForm from "@/components/dashboard/BankDetailsForm";
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { DOCUMENT_TYPE_LABELS, DocumentType } from "@/types/document";
@@ -192,7 +194,6 @@ export default function ServiceProfilePage() {
         specializations: form.specializations, certifications: form.certifications,
         serviceAreas: form.serviceAreas,
         instantBookingEnabled: form.instantBookingEnabled,
-        instantBookingPrice: form.instantBookingEnabled ? form.instantBookingPrice : null,
       });
       const updated: ProfileData = res.data?.data;
       if (updated) { setProfile(updated); setForm(updated); }
@@ -283,6 +284,9 @@ export default function ServiceProfilePage() {
           </TabsTrigger>
           <TabsTrigger value="professional" className="flex items-center gap-2 py-2.5 rounded-[5px] cursor-pointer flex-1 data-[state=active]:bg-green-50 data-[state=active]:text-green-700">
             <Briefcase className="w-4 h-4" /> Professional Info
+          </TabsTrigger>
+          <TabsTrigger value="bank" className="flex items-center gap-2 py-2.5 rounded-[5px] cursor-pointer flex-1 data-[state=active]:bg-green-50 data-[state=active]:text-green-700">
+            <Landmark className="w-4 h-4" /> Bank Details
           </TabsTrigger>
           <TabsTrigger value="documents" className="flex items-center gap-2 py-2.5 rounded-[5px] cursor-pointer flex-1 data-[state=active]:bg-green-50 data-[state=active]:text-green-700">
             <FileText className="w-4 h-4" /> Documents
@@ -403,7 +407,7 @@ export default function ServiceProfilePage() {
             </div>
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <PoundSterling className="w-4 h-4 text-green-600" /> Instant Booking
+                <Zap className="w-4 h-4 text-green-600" /> Instant Booking
               </h4>
               <div className={`rounded-[5px] border p-4 transition-colors ${form.instantBookingEnabled ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
                 <label className="flex items-center gap-3 cursor-pointer select-none">
@@ -412,33 +416,23 @@ export default function ServiceProfilePage() {
                     disabled={saving} className="w-4 h-4 accent-green-600" />
                   <div>
                     <span className="font-medium text-gray-900">Enable instant booking</span>
-                    <p className="text-sm text-gray-500">Clients can book you immediately without waiting for your approval.</p>
+                    <p className="text-sm text-gray-500">Clients can book you immediately without waiting for your approval. Prices are set by MYKEYS admin.</p>
                   </div>
                 </label>
-                {form.instantBookingEnabled && (
-                  <div className="mt-4">
-                    <Label htmlFor="instantPrice">Instant Booking Fee (£)</Label>
-                    <div className="relative mt-1 max-w-xs">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">£</span>
-                      <Input id="instantPrice" type="number" min="0" step="0.01"
-                        value={form.instantBookingPrice ?? ""}
-                        onChange={(e) => setForm((p) => ({ ...p, instantBookingPrice: e.target.value ? parseFloat(e.target.value) : null }))}
-                        placeholder="0.00" disabled={saving}
-                        className={`pl-7 ${form.instantBookingEnabled && !form.instantBookingPrice ? "border-red-400 focus:ring-red-400" : ""}`} />
-                    </div>
-                    {form.instantBookingEnabled && !form.instantBookingPrice && (
-                      <p className="text-red-500 text-xs mt-1">Please enter a fee to enable instant booking.</p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
             <div className="flex gap-3 pt-2 border-t">
-              <Button onClick={handleSave} disabled={saving || (form.instantBookingEnabled && !form.instantBookingPrice)} className="bg-green-600 hover:bg-green-700 text-white">
+              <Button onClick={handleSave} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white">
                 {saving ? "Saving…" : "Save Changes"}
               </Button>
               <Button variant="outline" onClick={() => setForm(profile)} disabled={saving}>Discard</Button>
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="bank" className="m-0">
+          <div className="bg-white rounded-[5px] border p-6">
+            <BankDetailsForm />
           </div>
         </TabsContent>
 

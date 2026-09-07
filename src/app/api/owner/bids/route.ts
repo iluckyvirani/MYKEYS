@@ -55,6 +55,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
 
     // Same-day boost: total cost = bid amount for today
     const totalCost = parseFloat(Number(amount).toFixed(2));
+    const { STRIPE_MIN_AMOUNT_GBP } = await import("@/lib/stripe");
+    const chargeAmount = Math.max(totalCost, STRIPE_MIN_AMOUNT_GBP);
 
     // Create Stripe PaymentIntent
     let stripeClientSecret: string | null = null;
@@ -63,23 +65,41 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       const { stripe, toPence } = await import("@/lib/stripe");
       const { withStripeCustomerForPayment } = await import("@/lib/stripe/customer");
       const intent = await stripe.paymentIntents.create(
-        await withStripeCustomerForPayment(user.userId, {
-          amount: toPence(totalCost),
-          currency: "gbp",
-          automatic_payment_methods: { enabled: true },
-          metadata: {
-            propertyId,
-            zipCode,
-            ownerId: user.userId,
-            bidType: "property_boost",
-            duration: "same_day",
+        await withStripeCustomerForPayment(
+          user.userId,
+          {
+            amount: toPence(chargeAmount),
+            currency: "gbp",
+            payment_method_types: ["card"],
+            metadata: {
+              propertyId,
+              zipCode,
+              ownerId: user.userId,
+              bidType: "property_boost",
+              duration: "same_day",
+              bidAmount: String(totalCost),
+            },
           },
-        })
+          { saveForFuture: false }
+        )
       );
       stripeClientSecret = intent.client_secret;
       stripePaymentIntentId = intent.id;
-    } catch {
-      // Stripe unavailable in dev — proceed without intent
+    } catch (err) {
+      console.error("Stripe intent for boost bid failed:", err);
+      return errorResponse(
+        "Payment gateway is not available. Please try again.",
+        503,
+        ErrorCode.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    if (!stripeClientSecret) {
+      return errorResponse(
+        "Could not start card payment. Check Stripe is connected.",
+        503,
+        ErrorCode.INTERNAL_SERVER_ERROR
+      );
     }
 
     // Create bid record (always today only)

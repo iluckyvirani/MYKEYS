@@ -17,6 +17,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import ServiceRatingModal from "./ServiceRatingModal";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface ServiceBooking {
   id: string;
@@ -40,7 +42,7 @@ interface ServiceBooking {
 
 interface ServiceBookingCardProps {
   booking: ServiceBooking;
-  onBookingUpdated: () => void;
+  onBookingUpdated: (notice?: string) => void;
 }
 
 export default function ServiceBookingCard({
@@ -52,9 +54,11 @@ export default function ServiceBookingCard({
   const [showContactModal, setShowContactModal] = useState(false);
   const [showModifyModal, setShowModifyModal] = useState(false);
   const [modifyLoading, setModifyLoading] = useState(false);
+  const { toast } = useToast();
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState("");
+  const [otpSuccess, setOtpSuccess] = useState("");
   const [newScheduledDate, setNewScheduledDate] = useState(booking.scheduledDate || "");
   const [newScheduledTime, setNewScheduledTime] = useState(booking.scheduledTime || "");
   const [newLocation, setNewLocation] = useState((booking as any).location || "");
@@ -92,8 +96,19 @@ export default function ServiceBookingCard({
         { otp: otp.trim() }
       );
       if (response.data?.success) {
-        onBookingUpdated();
+        const completed = pendingAction === "COMPLETE";
+        const successMessage =
+          response.data.message ||
+          (completed
+            ? "Your service was completed successfully"
+            : "Your booking was cancelled successfully");
+        setOtpSuccess(successMessage);
+        toast({
+          title: completed ? "Service completed" : "Booking cancelled",
+          description: successMessage,
+        });
         setOtp("");
+        onBookingUpdated(successMessage);
       } else {
         throw new Error(response.data?.message || "Verification failed");
       }
@@ -194,8 +209,8 @@ export default function ServiceBookingCard({
                 </p>
               </div>
               <Badge className={`${getStatusColor(booking.status)} font-medium`}>
-                {booking.status.charAt(0).toUpperCase() +
-                  booking.status.slice(1)}
+                {(booking.status || "pending").charAt(0).toUpperCase() +
+                  (booking.status || "pending").slice(1)}
               </Badge>
             </div>
 
@@ -217,10 +232,14 @@ export default function ServiceBookingCard({
 
             {/* Pricing */}
             <div className="text-lg font-semibold text-gray-900 mb-4">
-              £{booking.totalAmount}
+              {formatCurrency(booking.totalAmount)}
             </div>
 
-            {pendingAction && (
+            {otpSuccess ? (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm font-semibold text-green-800">{otpSuccess}</p>
+              </div>
+            ) : pendingAction ? (
               <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-sm font-medium text-amber-900 mb-1">
                   Provider requested{" "}
@@ -253,7 +272,7 @@ export default function ServiceBookingCard({
                   <p className="text-sm text-red-600 mt-2">{otpError}</p>
                 )}
               </div>
-            )}
+            ) : null}
 
             {/* Rating for completed bookings */}
             {booking.status === "completed" && (

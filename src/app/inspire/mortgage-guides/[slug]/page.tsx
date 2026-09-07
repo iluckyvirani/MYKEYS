@@ -35,7 +35,7 @@ export default async function MortgageGuideArticlePage({
     <>
       <Navbar />
       <main className="min-h-screen bg-white pt-[72px] md:pt-[80px]">
-        <article className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+        <article className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-10 md:py-14">
           <Link
             href="/inspire/mortgage-guides"
             className="inline-flex items-center gap-1 text-sm font-semibold text-green-700 hover:text-green-800 mb-6 cursor-pointer"

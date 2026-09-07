@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, FileUp, AlertCircle, Upload, X, Loader2 } from "lucide-react";
 import { DocumentType, DOCUMENT_TYPE_LABELS, SERVICE_REQUIRED_DOCUMENTS, SERVICE_OPTIONAL_DOCUMENTS } from "@/types/document";
 import { api } from "@/lib/api";
+import { uploadFileToCloudinary } from "@/lib/upload/clientUpload";
 import {
   Dialog,
   DialogContent,
@@ -126,16 +127,6 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
     }));
   };
 
-  // Convert file to base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  };
-
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -178,22 +169,14 @@ export default function ServiceRegistrationForm({ open, onOpenChange, onSubmit, 
     }]);
 
     try {
-      // Step 1: Convert to base64 and upload to Cloudinary
-      const base64 = await fileToBase64(file);
-      const uploadResponse = await api.post("/upload", {
-        image: base64,
-        folder: "mykeys/service-documents",
-      });
+      const uploaded = await uploadFileToCloudinary(file, "mykeys/service-documents");
 
-      const documentUrl = uploadResponse.data.data.url;
-
-      // Step 2: Create document record
       const response = await api.post("/documents", {
         documentType: selectedDocType,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        documentUrl,
+        fileName: uploaded.file.name,
+        fileSize: uploaded.file.size,
+        mimeType: uploaded.file.type,
+        documentUrl: uploaded.url,
       });
 
       // Update status to uploaded

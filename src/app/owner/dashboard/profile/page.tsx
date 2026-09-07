@@ -1,7 +1,8 @@
 "use client";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { User, Shield, FileText, Upload, CheckCircle, Clock, AlertCircle, Camera } from "lucide-react";
+import { User, Shield, FileText, Upload, CheckCircle, Clock, AlertCircle, Camera, Landmark } from "lucide-react";
+import BankDetailsForm from "@/components/dashboard/BankDetailsForm";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileForm from "@/components/dashboard/UserDashboard/ProfileForm";
@@ -231,6 +232,13 @@ export default function OwnerProfilePage() {
               Security
             </TabsTrigger>
             <TabsTrigger
+              value="bank"
+              className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer"
+            >
+              <Landmark className="w-4 h-4" />
+              Bank Details
+            </TabsTrigger>
+            <TabsTrigger
               value="documents"
               className="flex items-center gap-2 py-5 rounded-[5px] cursor-pointer"
             >
@@ -247,6 +255,10 @@ export default function OwnerProfilePage() {
 
             <TabsContent value="security" className="m-0">
               <SecuritySettings />
+            </TabsContent>
+
+            <TabsContent value="bank" className="m-0">
+              <BankDetailsForm />
             </TabsContent>
 
             <TabsContent value="documents" className="m-0">

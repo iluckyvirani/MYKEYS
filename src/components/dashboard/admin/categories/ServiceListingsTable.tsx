@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2, User, DollarSign, Clock } from "lucide-react";
 
@@ -74,7 +75,7 @@ export function ServiceListingsTable({ listings, loading }: ServiceListingsTable
               <td className="py-4 px-4">
                 <div className="flex items-center gap-1 text-gray-900 font-medium">
                   <DollarSign className="w-4 h-4" />
-                  £{listing.basePrice.toLocaleString()}
+                  {formatCurrency(listing.basePrice)}
                 </div>
               </td>
               <td className="py-4 px-4">

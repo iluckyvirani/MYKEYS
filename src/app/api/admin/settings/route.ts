@@ -23,7 +23,7 @@ export const GET = withAuth(
 /**
  * PATCH /api/admin/settings
  * Update admin settings (admin only)
- * Accepts: shortRentCommissionPercent, minBidAmountPerDay, maxBidDurationDays, maxBoostedSlotsPerZip
+ * Accepts: shortRentCommissionPercent, service checkout fees, minBidAmountPerDay, maxBidDurationDays, maxBoostedSlotsPerZip
  */
 export const PATCH = withAuth(
   async (req: NextRequest) => {
@@ -33,6 +33,10 @@ export const PATCH = withAuth(
       contactSupportEmail?: string;
       contactSupportPhone?: string;
       contactSupportDescription?: string;
+      serviceTaxPercent?: number;
+      serviceBookingFee?: number;
+      serviceExtraFeeLabel?: string;
+      serviceExtraFeeAmount?: number;
     } = {};
 
     if (data.shortRentCommissionPercent !== undefined) {
@@ -69,6 +73,38 @@ export const PATCH = withAuth(
         return errorResponse("contactSupportDescription is required", 400, ErrorCode.VALIDATION_ERROR);
       }
       adminSettingsUpdate.contactSupportDescription = description;
+    }
+
+    if (data.serviceTaxPercent !== undefined) {
+      const val = Number(data.serviceTaxPercent);
+      if (isNaN(val) || val < 0 || val > 100) {
+        return errorResponse(
+          "serviceTaxPercent must be a number between 0 and 100",
+          400,
+          ErrorCode.VALIDATION_ERROR
+        );
+      }
+      adminSettingsUpdate.serviceTaxPercent = val;
+    }
+
+    if (data.serviceBookingFee !== undefined) {
+      const val = Number(data.serviceBookingFee);
+      if (isNaN(val) || val < 0) {
+        return errorResponse("serviceBookingFee must be 0 or more", 400, ErrorCode.VALIDATION_ERROR);
+      }
+      adminSettingsUpdate.serviceBookingFee = val;
+    }
+
+    if (data.serviceExtraFeeLabel !== undefined) {
+      adminSettingsUpdate.serviceExtraFeeLabel = String(data.serviceExtraFeeLabel).trim().slice(0, 80);
+    }
+
+    if (data.serviceExtraFeeAmount !== undefined) {
+      const val = Number(data.serviceExtraFeeAmount);
+      if (isNaN(val) || val < 0) {
+        return errorResponse("serviceExtraFeeAmount must be 0 or more", 400, ErrorCode.VALIDATION_ERROR);
+      }
+      adminSettingsUpdate.serviceExtraFeeAmount = val;
     }
 
     if (Object.keys(adminSettingsUpdate).length > 0) {

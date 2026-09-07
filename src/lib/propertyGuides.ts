@@ -160,7 +160,7 @@ export const GUIDE_SIDEBAR_ACCORDIONS: SidebarAccordion[] = [
     id: "calculators",
     title: "Calculators & Tools",
     links: [
-      { label: "Mortgage Calculator", href: "/inspire/mortgages" },
+      { label: "Mortgage Calculator", href: "/inspire/mortgage-guides#mortgage-calculator" },
       {
         label: "Mortgage in Principle",
         href: "/inspire/mortgage-guides/getting-a-mortgage-in-principle",
@@ -169,7 +169,7 @@ export const GUIDE_SIDEBAR_ACCORDIONS: SidebarAccordion[] = [
         label: "Stamp Duty Calculator",
         href: "/inspire/mortgage-guides",
       },
-      { label: "Remortgage Calculator", href: "/inspire/mortgages" },
+      { label: "Remortgage Calculator", href: "/inspire/mortgage-guides#remortgage-calculator" },
       { label: "Buyer guides", href: "/inspire/property-guides#buyer" },
     ],
   },

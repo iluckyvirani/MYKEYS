@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 // In PropertyCard.tsx, update the interface to include the new properties:
 export interface PropertyCardProps {
@@ -227,7 +228,7 @@ export default function PropertyCard({
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm text-gray-500 mb-1">Price</p>
-              <h3 className="text-2xl font-bold text-gray-900 font-spartan">{listingType === "buy" ? propertyPrice : price}
+              <h3 className="text-2xl font-bold text-gray-900 font-spartan">{formatCurrency(listingType === "buy" ? propertyPrice : price)}
                 <span className="text-sm font-normal text-gray-500">/{getPriceSuffix()}</span>
               </h3>
             </div>

@@ -6,7 +6,10 @@ import BookServicesMarketplace from "@/components/services/BookServicesMarketpla
 export default function OwnerServicesPage() {
   return (
     <DashboardLayout defaultRole="agent">
-      <BookServicesMarketplace roleLabel="your properties" />
+      <BookServicesMarketplace
+        roleLabel="your properties"
+        checkoutPath="/agent/dashboard/services/checkout"
+      />
     </DashboardLayout>
   );
 }

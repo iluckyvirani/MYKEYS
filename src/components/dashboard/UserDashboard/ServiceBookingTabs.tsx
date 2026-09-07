@@ -45,6 +45,7 @@ export default function ServiceBookingTabs({
   const [allBookings, setAllBookings] = useState<ServiceBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [completionNotice, setCompletionNotice] = useState<string | null>(null);
 
   const fetchBookings = async () => {
     try {
@@ -104,7 +105,8 @@ export default function ServiceBookingTabs({
     fetchBookings();
   }, [searchQuery, filters]);
 
-  const handleBookingUpdated = () => {
+  const handleBookingUpdated = (notice?: string) => {
+    if (notice) setCompletionNotice(notice);
     fetchBookings();
     onBookingUpdated?.();
   };
@@ -146,6 +148,11 @@ export default function ServiceBookingTabs({
 
   return (
     <div className="bg-white rounded-[5px] border">
+      {completionNotice && (
+        <div className="mx-6 mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm font-semibold text-green-800">{completionNotice}</p>
+        </div>
+      )}
       <Tabs defaultValue="upcoming" className="w-full">
         <TabsList className="w-full justify-start border-b rounded-none px-6 pt-2 py-6">
           <TabsTrigger

@@ -834,6 +834,68 @@ export const emailService = {
     console.log(`Listing restored email sent to ${opts.to}`);
   },
 
+  async sendDocumentExpiringSoonEmail(opts: {
+    to: string;
+    firstName: string;
+    propertyTitle: string;
+    documentName: string;
+    expiryDate: Date;
+    documentsUrl: string;
+  }) {
+    const expiryLabel = opts.expiryDate.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const mailOptions = {
+      ...baseMailOptions(opts.to),
+      subject: `${opts.documentName} expires on ${expiryLabel}`,
+      html: renderStandardEmail({
+        title: "Document expiring soon",
+        greetingName: opts.firstName,
+        paragraphs: [
+          `Your <strong>${escapeEmailHtml(opts.documentName)}</strong> for <strong>${escapeEmailHtml(opts.propertyTitle)}</strong> expires on <strong>${expiryLabel}</strong>.`,
+          "Upload a replacement document to keep this listing active on MYKEYS.",
+        ],
+        cta: {
+          href: siteUrl(opts.documentsUrl),
+          label: "Update document",
+        },
+        preheader: `${opts.documentName} expires ${expiryLabel}`,
+      }),
+    };
+    await transporter.sendMail(mailOptions);
+    console.log(`Document expiry warning sent to ${opts.to}`);
+  },
+
+  async sendDocumentExpiredEmail(opts: {
+    to: string;
+    firstName: string;
+    propertyTitle: string;
+    documentName: string;
+    documentsUrl: string;
+  }) {
+    const mailOptions = {
+      ...baseMailOptions(opts.to),
+      subject: `Listing paused — ${opts.documentName} has expired`,
+      html: renderStandardEmail({
+        title: "Listing paused",
+        greetingName: opts.firstName,
+        paragraphs: [
+          `Your listing <strong>${escapeEmailHtml(opts.propertyTitle)}</strong> has been paused because <strong>${escapeEmailHtml(opts.documentName)}</strong> has expired.`,
+          "Upload a new document to re-activate the listing.",
+        ],
+        cta: {
+          href: siteUrl(opts.documentsUrl),
+          label: "Upload document",
+        },
+        preheader: `${opts.propertyTitle} paused — expired document`,
+      }),
+    };
+    await transporter.sendMail(mailOptions);
+    console.log(`Document expired email sent to ${opts.to}`);
+  },
+
   async sendDiaryReminderEmail(opts: {
     to: string;
     firstName: string;

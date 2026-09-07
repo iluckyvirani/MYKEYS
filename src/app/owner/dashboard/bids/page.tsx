@@ -297,7 +297,7 @@ export default function OwnerBidsPage() {
                 <h2 className="font-semibold text-gray-900">Select a Property to Boost</h2>
                 <p className="text-xs text-gray-500 mt-0.5">All active properties can be boosted</p>
               </div>
-              <button onClick={() => setShowPicker(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowPicker(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -328,9 +328,9 @@ export default function OwnerBidsPage() {
                       key={p.id}
                       onClick={() => {
                         setShowPicker(false);
-                        router.push(`/owner/dashboard/properties/${p.id}/boost`);
+                        router.push(`/owner/dashboard/properties/${p.id}/boost?from=boosts`);
                       }}
-                      className="w-full text-left flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-colors group"
+                      className="w-full text-left flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-colors group cursor-pointer"
                     >
                       <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
                         <Home className="w-4 h-4 text-amber-600" />
@@ -416,7 +416,7 @@ function BidCard({
             )}
           </Button>
         )}
-        <Link href={`/owner/dashboard/properties/${bid.propertyId}/boost`}>
+        <Link href={`/owner/dashboard/properties/${bid.propertyId}/boost?from=boosts`}>
           <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs gap-1">
             <Zap className="w-3 h-3" />
             Re-Boost

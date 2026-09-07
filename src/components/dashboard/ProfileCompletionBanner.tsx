@@ -111,14 +111,14 @@ export default function ProfileCompletionBanner({
             <div className="flex items-center gap-2">
               <Link
                 href={getProfileHref(role)}
-                className="inline-flex items-center rounded-[5px] bg-[#339390] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#2a7a78]"
+                className="inline-flex items-center rounded-[5px] bg-[#339390] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#2a7a78] cursor-pointer"
               >
                 Complete profile
               </Link>
               <button
                 type="button"
                 onClick={dismiss}
-                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
                 aria-label="Dismiss"
               >
                 <X className="h-4 w-4" />

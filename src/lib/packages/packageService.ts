@@ -59,15 +59,29 @@ function resolveAudiences(
 
 // ─── Package CRUD (admin) ─────────────────────────────────────────────────────
 
+let pendingPackageColumnsEnsured = false;
+
+async function ensurePackageAccentColorColumn() {
+  if (pendingPackageColumnsEnsured) return;
+  try {
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "accentColor" TEXT NOT NULL DEFAULT '#16a34a'`
+    );
+    pendingPackageColumnsEnsured = true;
+  } catch (error) {
+    console.warn('[packages] could not add Package.accentColor', error);
+  }
+}
+
 export const packageService = {
   async create(data: PackageInput) {
-    const category = data.category === 'SALE' ? 'SALE' : 'RENT';
-    const audience = data.audience === 'AGENT' ? 'AGENT' : 'OWNER';
-    return prisma.package.create({
-      data: {
+    const category = (data.category === 'SALE' ? 'SALE' : 'RENT') as 'SALE' | 'RENT';
+    const audience = (data.audience === 'AGENT' ? 'AGENT' : 'OWNER') as 'AGENT' | 'OWNER';
+    const payload = {
         name: data.name,
         description: data.description,
         shortDescription: data.shortDescription,
+        accentColor: data.accentColor || '#16a34a',
         price: data.price,
         durationValue: data.durationValue,
         durationUnit: data.durationUnit,
@@ -82,8 +96,13 @@ export const packageService = {
         adminCCOnInquiry: data.adminCCOnInquiry ?? false,
         fullAdminSupport: data.fullAdminSupport ?? false,
         docExpiryAlert: data.docExpiryAlert ?? false,
-      },
-    });
+    };
+    try {
+      return await prisma.package.create({ data: payload });
+    } catch {
+      const { accentColor: _c, ...withoutColor } = payload;
+      return prisma.package.create({ data: withoutColor });
+    }
   },
 
   async getAll(
@@ -91,18 +110,38 @@ export const packageService = {
     category?: PackageCategory,
     audience?: PackageAudience
   ) {
-    return prisma.package.findMany({
-      where: {
-        ...(activeOnly ? { isActive: true } : {}),
-        ...(category ? { category } : {}),
-        ...(audience ? { audience } : {}),
-      },
-      orderBy: [{ audience: 'asc' }, { category: 'asc' }, { price: 'asc' }],
-    });
+    const where = {
+      ...(activeOnly ? { isActive: true } : {}),
+      ...(category ? { category } : {}),
+      ...(audience ? { audience } : {}),
+    };
+    await ensurePackageAccentColorColumn();
+    try {
+      return await prisma.package.findMany({
+        where,
+        orderBy: [{ audience: 'asc' }, { category: 'asc' }, { price: 'asc' }],
+      });
+    } catch (error) {
+      console.warn('[packages] findMany with accentColor failed; retrying without it', error);
+      const rows = await prisma.package.findMany({
+        where,
+        orderBy: [{ audience: 'asc' }, { category: 'asc' }, { price: 'asc' }],
+        omit: { accentColor: true },
+      });
+      return rows.map((row) => ({ ...row, accentColor: '#16a34a' }));
+    }
   },
 
   async getById(id: string) {
-    return prisma.package.findUnique({ where: { id } });
+    try {
+      return await prisma.package.findUnique({ where: { id } });
+    } catch {
+      const row = await prisma.package.findUnique({
+        where: { id },
+        omit: { accentColor: true },
+      });
+      return row ? { ...row, accentColor: '#16a34a' } : null;
+    }
   },
 
   async update(id: string, data: Partial<PackageInput>) {
@@ -678,11 +717,55 @@ export const packageService = {
   },
 
   async getAdminSettings() {
-    return prisma.adminSettings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', shortRentCommissionPercent: 0 },
-      update: {},
-    });
+    try {
+      return await prisma.adminSettings.upsert({
+        where: { id: 'singleton' },
+        create: { id: 'singleton', shortRentCommissionPercent: 0 },
+        update: {},
+      });
+    } catch (err) {
+      console.warn('getAdminSettings failed, using fallback:', err);
+      try {
+        const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+          `SELECT * FROM "AdminSettings" WHERE id = 'singleton' LIMIT 1`
+        );
+        if (rows?.[0]) {
+          return {
+            id: 'singleton',
+            shortRentCommissionPercent: 0,
+            contactSupportEmail: '',
+            contactSupportPhone: '',
+            contactSupportDescription: '',
+            minBidAmountPerDay: 0.01,
+            maxBidDurationDays: 30,
+            maxBoostedSlotsPerZip: 3,
+            serviceTaxPercent: 0,
+            serviceBookingFee: 0,
+            serviceExtraFeeLabel: '',
+            serviceExtraFeeAmount: 0,
+            updatedAt: new Date(),
+            ...rows[0],
+          } as Awaited<ReturnType<typeof prisma.adminSettings.findUnique>> & Record<string, unknown>;
+        }
+      } catch {
+        // columns may not exist yet
+      }
+      return {
+        id: 'singleton',
+        shortRentCommissionPercent: 0,
+        contactSupportEmail: '',
+        contactSupportPhone: '',
+        contactSupportDescription: '',
+        minBidAmountPerDay: 0.01,
+        maxBidDurationDays: 30,
+        maxBoostedSlotsPerZip: 3,
+        serviceTaxPercent: 0,
+        serviceBookingFee: 0,
+        serviceExtraFeeLabel: '',
+        serviceExtraFeeAmount: 0,
+        updatedAt: new Date(),
+      } as Awaited<ReturnType<typeof prisma.adminSettings.findUnique>> & Record<string, unknown>;
+    }
   },
 
   async updateAdminSettings(data: {
@@ -690,6 +773,10 @@ export const packageService = {
     contactSupportEmail?: string;
     contactSupportPhone?: string;
     contactSupportDescription?: string;
+    serviceTaxPercent?: number;
+    serviceBookingFee?: number;
+    serviceExtraFeeLabel?: string;
+    serviceExtraFeeAmount?: number;
   }) {
     return prisma.adminSettings.upsert({
       where: { id: 'singleton' },
@@ -719,6 +806,7 @@ function mapOwnerPackage(sub: any): OwnerPackageWithUsage {
     featuredLimit: pkg.featuredLimit,
 
     packageName: pkg.name,
+    accentColor: pkg.accentColor ?? undefined,
     price: pkg.price,
     durationValue: pkg.durationValue,
     durationUnit: pkg.durationUnit as DurationUnit,

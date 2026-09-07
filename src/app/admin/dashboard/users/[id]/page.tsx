@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import AdminDashboardLayout from "@/components/dashboard/AdminDashboardLayout";
 import { Card } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 interface UserDetailPageProps {
   params: Promise<{ id: string }>;
@@ -322,7 +323,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-green-600">£{property.price.toLocaleString("en-GB")}</p>
+                          <p className="text-lg font-bold text-green-600">{formatCurrency(property.price)}</p>
                           <p className={`text-xs font-medium ${
                             property.status === "ACTIVE" ? "text-green-600" : "text-yellow-600"
                           }`}>

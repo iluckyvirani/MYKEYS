@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 const LABELS = [
@@ -440,7 +441,7 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
                       <li key={p.id}>
                         <Link href={`/property/${p.id}`} className="flex items-center justify-between p-2 rounded-[5px] border hover:bg-gray-50 text-sm">
                           <span className="truncate text-gray-900">{p.title}</span>
-                          <span className="text-xs text-green-600 shrink-0 ml-2">£{p.price.toLocaleString()}</span>
+                          <span className="text-xs text-green-600 shrink-0 ml-2">{formatCurrency(p.price)}</span>
                         </Link>
                       </li>
                     ))}

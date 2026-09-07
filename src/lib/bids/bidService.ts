@@ -91,7 +91,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     create: {
       id: "singleton",
       shortRentCommissionPercent: 0,
-      minBidAmountPerDay: 1,
+      minBidAmountPerDay: 0.01,
       maxBidDurationDays: 30,
       maxBoostedSlotsPerZip: 3,
     },

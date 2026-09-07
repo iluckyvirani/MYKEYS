@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { emailService } from "@/lib/email/emailService";
+import { formatCurrency } from "@/lib/utils";
 import { savedSearchResultsHref } from "@/lib/savedSearches/resultsUrl";
 import type { AlertFrequency, Prisma } from "@prisma/client";
 
@@ -191,10 +192,10 @@ export async function processSavedSearchAlerts() {
           priceLabel:
             search.listingType === "BUY"
               ? m.propertyPrice != null
-                ? `£${m.propertyPrice.toLocaleString()}`
+                ? formatCurrency(m.propertyPrice)
                 : ""
               : m.price != null
-                ? `£${m.price.toLocaleString()}`
+                ? formatCurrency(m.price)
                 : "",
         })),
         resultsUrl

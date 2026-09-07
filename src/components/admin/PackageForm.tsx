@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { PackageInput, DurationUnit, PackageCategory, PackageAudience } from "@/types/package";
+import { PACKAGE_COLOR_PRESETS, resolvePackageColor } from "@/lib/packages/packageColors";
 
 interface PackageFormProps {
   initialData?: Partial<PackageInput & { id: string }>;
@@ -76,6 +77,7 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
     name: initialData?.name ?? "",
     description: initialData?.description ?? "",
     shortDescription: initialData?.shortDescription ?? "",
+    accentColor: initialData?.accentColor ?? "#16a34a",
     price: initialData?.price ?? 0,
     durationValue: initialData?.durationValue ?? 1,
     durationUnit: (initialData?.durationUnit as DurationUnit) ?? "months",
@@ -176,6 +178,38 @@ export default function PackageForm({ initialData, mode }: PackageFormProps) {
                 <SelectItem value="AGENT">Agent (estate agent)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="text-sm font-medium text-gray-700">Card colour</Label>
+            <p className="text-xs text-gray-500">
+              Shown on the owner/agent packages page so each plan looks different.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {PACKAGE_COLOR_PRESETS.map((preset) => {
+                const selected = resolvePackageColor(form.accentColor) === preset.value;
+                return (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    title={preset.label}
+                    onClick={() => set("accentColor", preset.value)}
+                    className={`h-8 w-8 rounded-full border-2 cursor-pointer ${
+                      selected ? "border-gray-900 scale-110" : "border-white shadow"
+                    }`}
+                    style={{ backgroundColor: preset.value }}
+                  />
+                );
+              })}
+              <label className="flex items-center gap-2 text-xs text-gray-600">
+                Custom
+                <input
+                  type="color"
+                  value={resolvePackageColor(form.accentColor)}
+                  onChange={(e) => set("accentColor", e.target.value)}
+                  className="h-8 w-10 rounded border cursor-pointer bg-white"
+                />
+              </label>
+            </div>
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="shortDescription" className="text-sm font-medium text-gray-700">Short Description</Label>

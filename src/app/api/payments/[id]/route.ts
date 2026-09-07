@@ -4,6 +4,7 @@ import { withAuth } from '@/lib/auth/middleware';
 import { successResponse, errorResponse } from '@/lib/response';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { ErrorCode } from '@/lib/auth/errors';
+import { hideStripeIds } from '@/lib/payments/hideStripeIds';
 
 /**
  * GET /api/payments/:id
@@ -19,8 +20,12 @@ export const GET = withAuth<{ id: string }>(
       }
 
       const payment = await paymentService.getPaymentById(id, user.userId);
+      const payload =
+        user.role === "ADMIN"
+          ? payment
+          : hideStripeIds(payment);
 
-      return successResponse(payment, 'Payment retrieved successfully');
+      return successResponse(payload, 'Payment retrieved successfully');
     } catch (error: any) {
       console.error('GET /api/payments/:id error:', error);
       if (error.message === 'Payment not found') {

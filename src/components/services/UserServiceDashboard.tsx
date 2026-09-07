@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatCurrency } from "@/lib/utils";
 import {
   Clock,
   MapPin,
@@ -147,7 +148,7 @@ export default function UserServiceDashboard() {
             },
             {
               label: "Total Amount Spent",
-              value: `£${mockBookings.reduce((sum, b) => sum + b.amount, 0)}`,
+              value: formatCurrency(mockBookings.reduce((sum, b) => sum + b.amount, 0)),
               color: "purple",
             },
           ].map((stat, idx) => (
@@ -239,7 +240,7 @@ export default function UserServiceDashboard() {
                             {getStatusIcon(booking.status)}
                             <span className="capitalize">{booking.status}</span>
                           </Badge>
-                          <p className="font-bold text-lg text-gray-900">£{booking.amount}</p>
+                          <p className="font-bold text-lg text-gray-900">{formatCurrency(booking.amount)}</p>
                           <Badge className="w-fit bg-gray-100 text-gray-800 capitalize">
                             {booking.bookingType}
                           </Badge>

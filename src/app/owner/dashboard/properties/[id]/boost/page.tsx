@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { ChevronLeft, Zap, TrendingUp, Info } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import BoostPaymentModal from "@/components/owner/BoostPaymentModal";
+
+const CARD_MIN_GBP = 0.3;
 
 interface HighestBid {
   amount: number;
@@ -37,10 +40,15 @@ export default function BoostPropertyPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const backHref =
+    searchParams.get("from") === "property"
+      ? `/owner/dashboard/properties/${id}`
+      : "/owner/dashboard/bids";
 
   const [property, setProperty] = useState<PropertyInfo | null>(null);
   const [settings, setSettings] = useState<BidSettings>({
-    minBidAmountPerDay: 1,
+    minBidAmountPerDay: 0.01,
     maxBidDurationDays: 30,
     maxBoostedSlotsPerZip: 3,
   });
@@ -52,10 +60,20 @@ export default function BoostPropertyPage({
   const [success, setSuccess] = useState(false);
 
   const [zipCode, setZipCode] = useState("");
-  const [amount, setAmount] = useState("1.00");
+  const [amount, setAmount] = useState("0.30");
+  const [payment, setPayment] = useState<{
+    bidId: string;
+    clientSecret: string;
+    amount: number;
+  } | null>(null);
 
+  const minBidAmount = Math.max(
+    CARD_MIN_GBP,
+    settings.minBidAmountPerDay,
+    ownActiveBid != null ? ownActiveBid + 0.01 : 0
+  );
   const bidAmount = parseFloat(amount || "0") || 0;
-  const totalCost = parseFloat(bidAmount.toFixed(2));
+  const totalCost = parseFloat(Math.max(bidAmount, minBidAmount).toFixed(2));
 
   useEffect(() => {
     (async () => {
@@ -115,7 +133,14 @@ export default function BoostPropertyPage({
           const minFromHighest =
             payload.highest != null ? payload.highest.amount + 0.01 : minFromSettings;
           setAmount(
-            String(Math.max(minFromSettings, minFromOwn, minFromHighest).toFixed(2))
+            String(
+              Math.max(
+                CARD_MIN_GBP,
+                minFromSettings,
+                minFromOwn,
+                minFromHighest
+              ).toFixed(2)
+            )
           );
         }
       }
@@ -129,43 +154,21 @@ export default function BoostPropertyPage({
     setError("");
     setSubmitting(true);
     try {
-      const res = await api.post<{ bid: { id: string }; razorpayOrder?: { id: string }; keyId: string }>(
-        "/owner/bids",
-        {
-          propertyId: id,
-          zipCode: zipCode.trim(),
-          amount: bidAmount,
-        }
-      );
-
-      if (res.data?.razorpayOrder && res.data.keyId) {
-        const Razorpay = (window as any).Razorpay;
-        if (Razorpay) {
-          const options = {
-            key: res.data.keyId,
-            order_id: res.data.razorpayOrder.id,
-            amount: Math.round(totalCost * 100),
-            currency: "GBP",
-            name: "MYKEYS — Property Boost",
-            description: `Same-day boost for ${property?.title} in ${zipCode}`,
-            handler: async (payment: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-              await api.post(`/owner/bids/${res.data!.bid.id}/payment/verify`, {
-                razorpayOrderId: payment.razorpay_order_id,
-                razorpayPaymentId: payment.razorpay_payment_id,
-                razorpaySignature: payment.razorpay_signature,
-              });
-              setSuccess(true);
-              setTimeout(() => router.push("/owner/dashboard/bids"), 2000);
-            },
-            theme: { color: "#16a34a" },
-          };
-          new Razorpay(options).open();
-          return;
-        }
+      const res = await api.post("/owner/bids", {
+        propertyId: id,
+        zipCode: zipCode.trim(),
+        amount: totalCost,
+      });
+      const data = res.data?.data ?? res.data;
+      if (!data?.clientSecret || !data?.bid?.id) {
+        setError("Could not connect the payment gateway. Please try again.");
+        return;
       }
-
-      setSuccess(true);
-      setTimeout(() => router.push("/owner/dashboard/bids"), 1500);
+      setPayment({
+        bidId: data.bid.id,
+        clientSecret: data.clientSecret,
+        amount: totalCost,
+      });
     } catch (err: unknown) {
       const axiosErr = err as any;
       const msg =
@@ -220,14 +223,14 @@ export default function BoostPropertyPage({
 
   return (
     <DashboardLayout defaultRole="owner">
-      <script src="https://checkout.razorpay.com/v1/checkout.js" async />
-
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <Link href={`/owner/dashboard/properties/${id}`}>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
+          <Link
+            href={backHref}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -332,11 +335,7 @@ export default function BoostPropertyPage({
                 </Label>
                 <Input
                   type="number"
-                  min={
-                    ownActiveBid != null
-                      ? (ownActiveBid + 0.01).toFixed(2)
-                      : settings.minBidAmountPerDay
-                  }
+                  min={minBidAmount.toFixed(2)}
                   step="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -344,7 +343,7 @@ export default function BoostPropertyPage({
                   required
                 />
                 <p className="text-xs text-gray-400">
-                  Minimum £{settings.minBidAmountPerDay.toFixed(2)}.
+                  Minimum £{minBidAmount.toFixed(2)}. Card payments start at £{CARD_MIN_GBP.toFixed(2)}.
                   {ownActiveBid != null
                     ? ` Raise above your current £${ownActiveBid.toFixed(2)}.`
                     : highest
@@ -370,7 +369,7 @@ export default function BoostPropertyPage({
           <div className="flex gap-3 pt-1">
             <Button
               type="submit"
-              disabled={submitting || bidAmount < settings.minBidAmountPerDay}
+              disabled={submitting || bidAmount < minBidAmount}
               className="bg-amber-500 hover:bg-amber-600 text-white px-6"
             >
               <Zap className="w-4 h-4 mr-2" />
@@ -380,7 +379,7 @@ export default function BoostPropertyPage({
                   ? `Raise Bid — £${totalCost.toFixed(2)}`
                   : `Boost Today — £${totalCost.toFixed(2)}`}
             </Button>
-            <Link href={`/owner/dashboard/properties/${id}`}>
+            <Link href={backHref}>
               <Button type="button" variant="outline" className="border-gray-300 text-gray-700">
                 Cancel
               </Button>
@@ -388,6 +387,22 @@ export default function BoostPropertyPage({
           </div>
         </form>
       </div>
+
+      {payment && (
+        <BoostPaymentModal
+          isOpen
+          bidId={payment.bidId}
+          amount={payment.amount}
+          title={property.title}
+          clientSecret={payment.clientSecret}
+          onClose={() => setPayment(null)}
+          onSuccess={() => {
+            setPayment(null);
+            setSuccess(true);
+            setTimeout(() => router.push("/owner/dashboard/bids"), 1500);
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }

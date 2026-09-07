@@ -6,6 +6,7 @@ import { CalendarDays, Users, Loader2 } from "lucide-react";
 import { DatePickerInput } from "@/components/property/DatePickerInput";
 import { StripePaymentModal } from "@/components/StripePaymentModal";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 import type { BlockedDateRange } from "@/lib/bookings/bookingAvailability";
 
 interface PropertyShortStayBookingProps {
@@ -112,7 +113,7 @@ export default function PropertyShortStayBooking({
         <div>
           <div className="flex items-baseline gap-1">
             <span className="text-[22px] font-extrabold text-[#0f172a]">
-              £{pricePerNight.toLocaleString()}
+              {formatCurrency(pricePerNight)}
             </span>
             <span className="text-[14px] text-gray-500 font-medium">/ night</span>
           </div>
@@ -181,26 +182,26 @@ export default function PropertyShortStayBooking({
           <div className="space-y-2 text-[13px] border-t border-gray-100 pt-3">
             <div className="flex justify-between text-gray-700">
               <span>
-                £{pricePerNight.toLocaleString()} × {nights} night
+                {formatCurrency(pricePerNight)} × {nights} night
                 {nights === 1 ? "" : "s"}
               </span>
-              <span>£{subtotal.toLocaleString()}</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
             {cleaningFee > 0 && (
               <div className="flex justify-between text-gray-700">
                 <span>Cleaning fee</span>
-                <span>£{cleaningFee.toLocaleString()}</span>
+                <span>{formatCurrency(cleaningFee)}</span>
               </div>
             )}
             {serviceFee > 0 && (
               <div className="flex justify-between text-gray-700">
                 <span>Service fee</span>
-                <span>£{serviceFee.toLocaleString()}</span>
+                <span>{formatCurrency(serviceFee)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-[#0f172a] text-[15px] pt-1 border-t border-gray-100">
               <span>Total</span>
-              <span>£{total.toLocaleString()}</span>
+              <span>{formatCurrency(total)}</span>
             </div>
           </div>
         )}

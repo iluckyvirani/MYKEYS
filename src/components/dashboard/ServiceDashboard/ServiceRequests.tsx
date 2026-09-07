@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 interface ServiceRequest {
   id: string;
@@ -14,8 +15,13 @@ interface ServiceRequest {
   requestDate: string;
   description: string;
   budget: number;
-  urgency: "low" | "medium" | "high";
+  urgency?: "low" | "medium" | "high" | string | null;
   status: string;
+}
+
+function formatUrgency(urgency?: string | null) {
+  const value = (urgency || "medium").toLowerCase();
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 export default function ServiceRequests() {
@@ -25,9 +31,9 @@ export default function ServiceRequests() {
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const res = await api.get("/service/bookings?status=pending&limit=3&sortBy=createdAt&sortOrder=desc");
+        const res = await api.get("/service/requests?status=pending&limit=3");
         const data = res.data?.data?.items;
-        if (data) {
+        if (Array.isArray(data)) {
           setRequests(data);
         }
       } catch (err) {
@@ -48,8 +54,8 @@ export default function ServiceRequests() {
     }
   };
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
+  const getUrgencyColor = (urgency?: string | null) => {
+    switch ((urgency || "medium").toLowerCase()) {
       case "high":
         return "bg-red-100 text-red-800";
       case "medium":
@@ -99,7 +105,7 @@ export default function ServiceRequests() {
                   request.urgency
                 )}`}
               >
-                {request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1)}
+                {formatUrgency(request.urgency)}
               </span>
             </div>
 
@@ -117,7 +123,7 @@ export default function ServiceRequests() {
             </div>
 
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-gray-900">Budget: £{request.budget}</p>
+              <p className="font-semibold text-gray-900">Budget: {formatCurrency(request.budget)}</p>
               <div className="flex gap-2">
                 <Button
                   size="sm"

@@ -31,6 +31,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 interface PropertyData {
   id: string;
@@ -195,12 +196,6 @@ export default function PropertyDetailsPage() {
     };
   };
 
-  const formatCurrency = (amount: number) => {
-    if (amount >= 10000000) return `£${(amount / 10000000).toFixed(2)} Cr`;
-    if (amount >= 100000) return `£${(amount / 100000).toFixed(1)} L`;
-    return `£${amount.toLocaleString()}`;
-  };
-
   const getStatusBadge = () => {
     switch (property.status?.toUpperCase()) {
       case "ACTIVE":
@@ -303,7 +298,7 @@ export default function PropertyDetailsPage() {
               </Button>
             </Link>
             {property.listingType === "RENT" && property.rentalType === "SHORT_TERM" && (
-              <Link href={`/owner/dashboard/properties/${property.id}/boost`}>
+              <Link href={`/owner/dashboard/properties/${property.id}/boost?from=property`}>
                 <Button className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-white">
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Boost

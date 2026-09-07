@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { emailService } from "@/lib/email/emailService";
+import { formatCurrency } from "@/lib/utils";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -74,13 +75,11 @@ function listingLabel(p: LiveProperty) {
 
 function priceLabel(p: LiveProperty) {
   if (p.listingType === "BUY") {
-    return p.propertyPrice != null
-      ? `£${Number(p.propertyPrice).toLocaleString()}`
-      : p.price != null
-        ? `£${Number(p.price).toLocaleString()}`
-        : "";
+    if (p.propertyPrice != null) return formatCurrency(p.propertyPrice);
+    if (p.price != null) return formatCurrency(p.price);
+    return "";
   }
-  return p.price != null ? `£${Number(p.price).toLocaleString()}` : "";
+  return p.price != null ? formatCurrency(p.price) : "";
 }
 
 /**

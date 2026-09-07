@@ -16,31 +16,25 @@ export default function AdminDashboardLayout({
 
   return (
     <ProtectAdminRoute>
-      <div className="min-h-screen bg-gray-100">
-        {/* Mobile sidebar backdrop */}
+      <div className="dashboard-app min-h-screen bg-gray-100 overflow-x-clip">
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+            className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 xl:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
-        {/* Sidebar */}
         <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        {/* Main Content */}
-        <div className="lg:pl-64">
-          {/* Header */}
+        <div className="min-w-0 xl:pl-64">
           <Header
             role="admin"
             onMenuClick={() => setSidebarOpen(true)}
             onRoleChange={() => {}}
           />
 
-          {/* Main Content Area */}
-          <main className="py-5">
-            <div className="mx-auto max-w-7xl px-4 sm:px-4 lg:px-8">
-              {/* Page Content */}
+          <main className="py-4 sm:py-5">
+            <div className="mx-auto w-full max-w-7xl min-w-0 px-3 sm:px-4 lg:px-5">
               {children}
             </div>
           </main>

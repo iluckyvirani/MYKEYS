@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertCircle, RefreshCw, Check, X, Clock, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 interface PackageUsage {
   ownerId: string;
@@ -141,7 +142,7 @@ export default function PackageDashboard({ onUpgrade, onViewDetails }: Props) {
             </div>
             <h3 className="font-semibold text-gray-900">Price</h3>
           </div>
-          <p className="text-3xl font-bold text-gray-900">£{packageData.price}</p>
+          <p className="text-3xl font-bold text-gray-900">{formatCurrency(packageData.price)}</p>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-6">

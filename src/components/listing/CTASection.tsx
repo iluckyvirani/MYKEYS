@@ -20,7 +20,7 @@ export default function CTASection() {
             Ready to Start Earning More?
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Join 15,000+ property owners who are maximizing their income with Hously
+            Join 15,000+ property owners who are maximizing their income with MYKEYS
           </p>
         </div>
 
@@ -69,7 +69,7 @@ export default function CTASection() {
                   <div>
                     <p className="font-bold text-gray-900">Average Monthly Earnings</p>
                     <p className="text-2xl font-bold text-emerald-600">£1,850+</p>
-                    <p className="text-sm text-gray-600">Per property listed on Hously</p>
+                    <p className="text-sm text-gray-600">Per property listed on MYKEYS</p>
                   </div>
                   <Users className="w-12 h-12 text-emerald-400" />
                 </div>

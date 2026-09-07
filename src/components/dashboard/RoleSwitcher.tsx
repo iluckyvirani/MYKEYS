@@ -118,11 +118,11 @@ export default function RoleSwitcher({
   const isService = currentRole === "service";
 
   return (
-    <div className="mb-5 p-4 bg-white rounded-[5px] shadow-sm border">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <div className="mb-4 p-3 sm:p-4 bg-white rounded-[5px] shadow-sm border">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
           <div
-            className={`p-2 rounded-lg ${
+            className={`p-2 rounded-lg shrink-0 ${
               isOwner
                 ? "bg-blue-100"
                 : isAgent
@@ -135,22 +135,21 @@ export default function RoleSwitcher({
             {getRoleIcon(currentRole)}
           </div>
 
-          <div>
-            <h3 className="font-semibold">{getRoleLabel(currentRole)}</h3>
-            <p className="text-sm text-gray-500">
+          <div className="min-w-0">
+            <h3 className="font-semibold truncate">{getRoleLabel(currentRole)}</h3>
+            <p className="text-sm text-gray-500 hidden sm:block">
               {getRoleDescription(currentRole)}
             </p>
           </div>
         </div>
 
         {availableRoles.length > 1 && (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 space-x-3 flex-wrap justify-end">
+          <div className="flex flex-wrap items-center gap-2">
               {hasUserRole && (
                 <button
                   type="button"
                   onClick={() => handleRoleChange("user")}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                     currentRole === "user"
                       ? "bg-green-100 text-green-700 border border-green-300"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -163,7 +162,7 @@ export default function RoleSwitcher({
                 <button
                   type="button"
                   onClick={() => handleRoleChange("owner")}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                     currentRole === "owner"
                       ? "bg-blue-100 text-blue-700 border border-blue-300"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -176,7 +175,7 @@ export default function RoleSwitcher({
                 <button
                   type="button"
                   onClick={() => handleRoleChange("agent")}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                     currentRole === "agent"
                       ? "bg-amber-100 text-amber-800 border border-amber-300"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -189,7 +188,7 @@ export default function RoleSwitcher({
                 <button
                   type="button"
                   onClick={() => handleRoleChange("service")}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                     currentRole === "service"
                       ? "bg-purple-100 text-purple-700 border border-purple-300"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -198,7 +197,6 @@ export default function RoleSwitcher({
                   Professional
                 </button>
               )}
-            </div>
           </div>
         )}
       </div>

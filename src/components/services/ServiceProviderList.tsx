@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, MapPin, Clock, Phone, MessageSquare, Zap } from "lucide-react";
 import { ServiceProvider, ServiceCategory } from "@/types/service";
+import { formatCurrency } from "@/lib/utils";
 
 interface ServiceProviderListProps {
   category?: ServiceCategory;
@@ -209,7 +210,7 @@ export default function ServiceProviderList({
                   {provider.instantBookingEnabled && (
                     <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                       <p className="text-sm font-medium text-yellow-800">
-                        Instant Booking: £{provider.instantBookingPrice}
+                        Instant Booking: {formatCurrency(provider.instantBookingPrice)}
                       </p>
                     </div>
                   )}

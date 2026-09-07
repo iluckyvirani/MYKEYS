@@ -5,7 +5,7 @@ import { refreshTokenSchema, validateSchema } from "@/lib/auth/validation";
 import { verifyRefreshToken, generateTokenPair } from "@/lib/auth/jwt";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
 import { RefreshTokenRequest, RefreshTokenResponse } from "@/types/auth";
-import { primaryRoleFromAssignments } from "@/lib/auth/helpers";
+import { primaryRoleFromAssignments, authUserSelect } from "@/lib/auth/helpers";
 
 /**
  * POST /api/auth/refresh
@@ -55,9 +55,7 @@ export async function POST(request: NextRequest) {
     // Fetch user's current roles from database (to pick up any role changes)
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      include: {
-        roles: true,
-      },
+      select: authUserSelect,
     });
 
     if (!user) {

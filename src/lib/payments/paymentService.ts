@@ -16,6 +16,24 @@ import {
 import { PaymentStatus, BookingStatus } from '@prisma/client';
 import { confirmPaidBooking } from '@/lib/bookings/bookingAvailabilityQueries';
 
+/** Pending checkout / PaymentIntent is abandoned after this. */
+export const PENDING_TRANSACTION_TIMEOUT_MS = 5 * 60 * 1000;
+
+async function cancelStripeIntentIfOpen(intentId: string | null | undefined) {
+  if (!intentId || !process.env.STRIPE_SECRET_KEY) return "skipped";
+  try {
+    const intent = await stripe.paymentIntents.retrieve(intentId);
+    if (intent.status === "succeeded") return "succeeded";
+    if (intent.status === "processing") return "processing";
+    if (intent.status !== "canceled") {
+      await stripe.paymentIntents.cancel(intentId).catch(() => undefined);
+    }
+    return "canceled";
+  } catch {
+    return "unknown";
+  }
+}
+
 /**
  * Payment Service
  * Handles payment operations using Stripe and manages payment records.
@@ -50,6 +68,10 @@ export const paymentService = {
     }
 
     try {
+      await this.expireStalePendingTransactions().catch((e) =>
+        console.error("expireStalePendingTransactions:", e)
+      );
+
       const amountInPence = toPence(data.amount);
       const currency = (data.currency || 'GBP').toLowerCase();
 
@@ -191,6 +213,10 @@ export const paymentService = {
 
       // Already confirmed — treat as success (Stripe return / double-submit safe)
       if (payment.status === PaymentStatus.PAID) {
+        const { settlementService } = await import('@/lib/services/settlementService');
+        await settlementService.queuePaidShortStayByPaymentId(payment.id).catch((e) =>
+          console.error('Short-stay settlement queue failed:', e)
+        );
         return {
           success: true,
           paymentId: payment.id,
@@ -275,24 +301,10 @@ export const paymentService = {
               );
             }
 
-            // Queue short-stay owner settle-up
-            if (
-              updatedPayment.ownerEarnings != null &&
-              updatedPayment.ownerEarnings > 0
-            ) {
-              await prisma.payment.update({
-                where: { id: updatedPayment.id },
-                data: { settleStatus: 'PENDING' },
-              });
-              const { settlementService } = await import(
-                '@/lib/services/settlementService'
-              );
-              await settlementService.ensureShortStaySettlement({
-                paymentId: updatedPayment.id,
-                beneficiaryUserId: booking.property.ownerId,
-                amount: updatedPayment.ownerEarnings,
-              });
-            }
+            const { settlementService } = await import(
+              '@/lib/services/settlementService'
+            );
+            await settlementService.queuePaidShortStayByPaymentId(updatedPayment.id);
           }
         } catch (mailErr) {
           console.error('Post-payment booking emails failed (non-fatal):', mailErr);
@@ -410,7 +422,151 @@ export const paymentService = {
   /**
    * Get all payments with filtering and pagination.
    */
+  /**
+   * Fail any pending payment / unpaid checkout older than 5 minutes.
+   * Succeeded Stripe intents are confirmed instead of cancelled.
+   */
+  async expireStalePendingTransactions(timeoutMs = PENDING_TRANSACTION_TIMEOUT_MS) {
+    const cutoff = new Date(Date.now() - timeoutMs);
+    const now = new Date();
+    let paymentsFailed = 0;
+    let bookingsCancelled = 0;
+    let serviceBookingsFailed = 0;
+    let stripeIntentsCancelled = 0;
+
+    const stalePayments = await prisma.payment.findMany({
+      where: {
+        status: PaymentStatus.PENDING,
+        updatedAt: { lt: cutoff },
+      },
+      select: {
+        id: true,
+        bookingId: true,
+        stripePaymentIntentId: true,
+      },
+    });
+
+    for (const payment of stalePayments) {
+      const stripeState = await cancelStripeIntentIfOpen(payment.stripePaymentIntentId);
+      if (stripeState === "processing") continue;
+      if (stripeState === "succeeded") {
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: { status: PaymentStatus.PAID, updatedAt: now },
+        });
+        if (payment.bookingId) {
+          await prisma.booking
+            .update({
+              where: { id: payment.bookingId },
+              data: { paymentStatus: PaymentStatus.PAID },
+            })
+            .catch(() => undefined);
+        }
+        continue;
+      }
+
+      if (stripeState === "canceled") stripeIntentsCancelled += 1;
+
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: PaymentStatus.FAILED, updatedAt: now },
+      });
+      paymentsFailed += 1;
+
+      if (payment.bookingId) {
+        const booking = await prisma.booking.findUnique({
+          where: { id: payment.bookingId },
+          select: { id: true, status: true },
+        });
+        if (!booking) continue;
+        const cancelUnpaidHold = booking.status === BookingStatus.PENDING;
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: {
+            paymentStatus: PaymentStatus.FAILED,
+            ...(cancelUnpaidHold
+              ? { status: BookingStatus.CANCELLED, cancelledAt: now }
+              : {}),
+          },
+        });
+        if (cancelUnpaidHold) bookingsCancelled += 1;
+      }
+    }
+
+    const staleServiceBookings = await prisma.serviceBooking.findMany({
+      where: {
+        paymentStatus: "PENDING",
+        updatedAt: { lt: cutoff },
+        OR: [
+          { stripePaymentIntentId: { not: null } },
+          { paymentId: { not: null } },
+        ],
+      },
+      select: {
+        id: true,
+        status: true,
+        stripePaymentIntentId: true,
+      },
+    });
+
+    for (const booking of staleServiceBookings) {
+      const stripeState = await cancelStripeIntentIfOpen(booking.stripePaymentIntentId);
+      if (stripeState === "processing") continue;
+      if (stripeState === "succeeded") {
+        await prisma.serviceBooking.update({
+          where: { id: booking.id },
+          data: {
+            paymentStatus: "COMPLETED",
+            status: booking.status === "PENDING" ? "CONFIRMED" : booking.status,
+          },
+        });
+        continue;
+      }
+      if (stripeState === "canceled") stripeIntentsCancelled += 1;
+
+      const cancelJob = booking.status === "PENDING";
+      await prisma.serviceBooking.update({
+        where: { id: booking.id },
+        data: {
+          paymentStatus: "FAILED",
+          ...(cancelJob
+            ? { status: "CANCELLED", cancelledAt: now, settleStatus: "NOT_APPLICABLE" }
+            : {}),
+        },
+      });
+      serviceBookingsFailed += 1;
+      if (cancelJob) bookingsCancelled += 1;
+    }
+
+    const staleBids = await prisma.propertyBid.findMany({
+      where: {
+        stripePaymentIntentId: { not: null },
+        stripeChargeId: null,
+        updatedAt: { lt: cutoff },
+        status: "ACTIVE",
+      },
+      select: { id: true, stripePaymentIntentId: true },
+    });
+
+    for (const bid of staleBids) {
+      const stripeState = await cancelStripeIntentIfOpen(bid.stripePaymentIntentId);
+      if (stripeState === "processing" || stripeState === "succeeded") continue;
+      if (stripeState === "canceled") stripeIntentsCancelled += 1;
+    }
+
+    return {
+      paymentsFailed,
+      bookingsCancelled,
+      serviceBookingsFailed,
+      stripeIntentsCancelled,
+    };
+  },
+
   async getPayments(filters: PaymentFilter = {}): Promise<PaymentListResponse> {
+    await this.expireStalePendingTransactions().catch((e) =>
+      console.error("expireStalePendingTransactions:", e)
+    );
+
     const {
       userId,
       status,

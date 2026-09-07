@@ -26,7 +26,7 @@ export const MORTGAGE_NAV_LINKS = [
 export const MORTGAGE_QUICK_LINKS = [
   { href: "/inspire/mortgages", label: "Mortgages", icon: "home" as const },
   {
-    href: "/inspire/mortgages",
+    href: "/inspire/mortgage-guides#mortgage-calculator",
     label: "Mortgage Calculator",
     icon: "calculator" as const,
   },
@@ -36,7 +36,7 @@ export const MORTGAGE_QUICK_LINKS = [
     icon: "bolt" as const,
   },
   {
-    href: "/inspire/mortgages",
+    href: "/inspire/mortgage-guides#remortgage-calculator",
     label: "Remortgage Calculator",
     icon: "calculator" as const,
   },

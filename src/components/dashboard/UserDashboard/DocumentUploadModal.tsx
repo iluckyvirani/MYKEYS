@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Upload, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { uploadFileToCloudinary } from "@/lib/upload/clientUpload";
 import { DocumentType, DOCUMENT_TYPE_LABELS, USER_REQUIRED_DOCUMENTS, USER_OPTIONAL_DOCUMENTS, SERVICE_REQUIRED_DOCUMENTS, SERVICE_OPTIONAL_DOCUMENTS } from "@/types/document";
 
 interface DocumentUploadModalProps {
@@ -56,15 +57,6 @@ export default function DocumentUploadModal({
     setFile(selectedFile);
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  };
-
   const handleUpload = async () => {
     if (!file) {
       setError("Please select a file");
@@ -75,23 +67,16 @@ export default function DocumentUploadModal({
       setLoading(true);
       setError("");
 
-      // Convert file to base64
-      const base64 = await fileToBase64(file);
+      const folder =
+        userRole === "SERVICE" ? "mykeys/service-documents" : "mykeys/user-documents";
+      const uploaded = await uploadFileToCloudinary(file, folder);
 
-      const uploadResponse = await api.post("/upload", {
-        image: base64,
-        folder: "mykeys/user-documents",
-      });
-
-      const documentUrl = uploadResponse.data.data.url;
-
-      // Step 2: Create document record with Cloudinary URL
       const response = await api.post("/documents", {
         documentType,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        documentUrl,
+        fileName: uploaded.file.name,
+        fileSize: uploaded.file.size,
+        mimeType: uploaded.file.type,
+        documentUrl: uploaded.url,
       });
 
       if (response.data) {

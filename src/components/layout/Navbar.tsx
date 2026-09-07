@@ -334,9 +334,9 @@ export default function Navbar() {
               <img
                 src="/mykeys-logo-nav.png"
                 alt="MYKEYS"
-                width={310}
-                height={128}
-                className="h-[45px] w-auto object-contain"
+                width={492}
+                height={94}
+                className="h-[52px] w-auto object-contain"
               />
             </Link>
 

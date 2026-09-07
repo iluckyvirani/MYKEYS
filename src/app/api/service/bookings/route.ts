@@ -3,6 +3,7 @@ import { withAuth } from '@/lib/auth/middleware';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { successResponse, errorResponse, paginatedResponse } from '@/lib/response';
 import { serviceService } from '@/lib/services/serviceService';
+import { paymentService } from '@/lib/payments/paymentService';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -12,6 +13,10 @@ import { prisma } from '@/lib/prisma';
  */
 export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
+    await paymentService.expireStalePendingTransactions().catch((e) =>
+      console.error("expireStalePendingTransactions:", e)
+    );
+
     const provider = await prisma.serviceProvider.findUnique({
       where: { userId: user.userId },
     });

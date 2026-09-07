@@ -107,7 +107,7 @@ export default function HowLongRentWorks({
                 </div>
                 <div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-700">Hously Direct Rental</span>
+                    <span className="text-gray-700">MYKEYS Direct Rental</span>
                     <span className="font-bold text-green-600">£0</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">

@@ -1,0 +1,158 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
+import type { Stripe } from "@stripe/stripe-js";
+import { X, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
+import { getStripePromise } from "@/lib/stripe-client";
+import {
+  buildCompactStripeConfirmParams,
+  buildStripeElementsOptions,
+  compactStripePaymentElementOptions,
+} from "@/lib/stripe/elementsOptions";
+
+function PaymentForm({
+  bidId,
+  amount,
+  onSuccess,
+  onError,
+}: {
+  bidId: string;
+  amount: number;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setSubmitting(true);
+    try {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+        confirmParams: buildCompactStripeConfirmParams(),
+      });
+      if (error) {
+        onError(error.message || "Payment failed");
+        return;
+      }
+      await api.post(`/owner/bids/${bidId}/payment/verify`, {
+        stripePaymentIntentId: paymentIntent?.id,
+      });
+      onSuccess();
+    } catch (err: unknown) {
+      onError(
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Payment failed"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement options={compactStripePaymentElementOptions} />
+      <Button
+        type="submit"
+        disabled={!stripe || submitting}
+        className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white cursor-pointer"
+      >
+        {submitting ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing…
+          </>
+        ) : (
+          `Pay £${amount.toFixed(2)}`
+        )}
+      </Button>
+    </form>
+  );
+}
+
+export default function BoostPaymentModal({
+  isOpen,
+  bidId,
+  amount,
+  title,
+  clientSecret,
+  onClose,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  bidId: string;
+  amount: number;
+  title: string;
+  clientSecret: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(
+    null
+  );
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setError("");
+    setStripePromise(getStripePromise());
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="shrink-0 border-b px-5 py-3.5 flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-gray-900">Pay to boost</h3>
+            <p className="text-sm text-gray-500 truncate">{title}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-full border flex items-center justify-center hover:bg-gray-50 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-5 overflow-y-auto">
+          {error && (
+            <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+              {error}
+            </div>
+          )}
+          {stripePromise && clientSecret ? (
+            <Elements
+              stripe={stripePromise}
+              options={buildStripeElementsOptions(clientSecret)}
+            >
+              <PaymentForm
+                bidId={bidId}
+                amount={amount}
+                onSuccess={onSuccess}
+                onError={setError}
+              />
+            </Elements>
+          ) : (
+            <div className="py-10 flex justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

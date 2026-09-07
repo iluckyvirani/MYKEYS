@@ -3,6 +3,7 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -128,7 +129,7 @@ export default function ServiceManagementPage() {
                   </div>
                   <div className="flex flex-wrap gap-3 text-sm text-gray-600 pt-2 border-t">
                     <span>
-                      Tenant pays <strong>£{item.price.toFixed(2)}</strong>
+                      Tenant pays <strong>{formatCurrency(item.price)}</strong>
                     </span>
                     <span>
                       You earn ~<strong>£{youEarn.toFixed(2)}</strong>

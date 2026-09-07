@@ -19,6 +19,7 @@ import {
   Zap,
   Star,
 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface PackageData {
   id: string;
@@ -119,7 +120,7 @@ export default function AdminPackageList({
                 {/* Price */}
                 <div className="mb-6 pb-6 border-b border-gray-200">
                   <p className={`text-4xl font-bold ${colors.text}`}>
-                    £{pkg.price}
+                    {formatCurrency(pkg.price)}
                   </p>
                   <p className="text-gray-600 text-sm mt-1">per {pkg.duration}</p>
                 </div>
@@ -259,7 +260,7 @@ export default function AdminPackageList({
             <div className="hidden md:flex items-center gap-8 px-4">
               <div className="text-center">
                 <p className="text-xs text-gray-600">Price</p>
-                <p className="font-bold text-gray-900">£{pkg.price}</p>
+                <p className="font-bold text-gray-900">{formatCurrency(pkg.price)}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-gray-600">Properties</p>

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { isDatabaseConnectionError, prisma } from "@/lib/prisma";
 import { successResponse, errorResponse, paginatedResponse } from "@/lib/response";
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
@@ -378,6 +378,19 @@ export async function GET(request: NextRequest) {
       "Properties retrieved successfully"
     );
   } catch (error: any) {
+    if (isDatabaseConnectionError(error)) {
+      console.warn("[properties] Database unreachable — returning empty list");
+      const { searchParams } = new URL(request.url);
+      const page = parseInt(searchParams.get("page") || "1");
+      const pageSize = parseInt(searchParams.get("pageSize") || "10");
+      return paginatedResponse(
+        [],
+        0,
+        page,
+        pageSize,
+        "Properties temporarily unavailable"
+      );
+    }
     console.error("Get properties error:", error);
     const detail =
       process.env.NODE_ENV === "development"

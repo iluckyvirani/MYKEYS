@@ -119,7 +119,7 @@ export default function CurrentPlan() {
           {/* Price */}
           <div className="mb-4">
             <div className="text-3xl font-bold text-gray-900">
-              £{currentPlan.price.toLocaleString()}
+              {formatCurrency(currentPlan.price)}
               <span className="text-lg text-gray-600">/{currentPlan.billing}</span>
             </div>
             <div className="text-sm text-gray-600">

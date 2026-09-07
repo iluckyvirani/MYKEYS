@@ -11,6 +11,7 @@ export type PackageInput = {
   name: string;
   description?: string;
   shortDescription?: string;
+  accentColor?: string;
   price: number;
   durationValue: number;  // e.g. 10, 1, 6
   durationUnit: DurationUnit; // "days" | "months" | "years"
@@ -57,6 +58,7 @@ export type OwnerPackageWithUsage = {
 
   // Package Details
   packageName: string;
+  accentColor?: string;
   price: number;
   durationValue: number;
   durationUnit: DurationUnit;

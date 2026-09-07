@@ -27,6 +27,7 @@ interface ServiceBooking {
   description: string;
   paymentStatus: string;
   bookingType?: "instant" | "scheduled";
+  pendingAction?: "COMPLETE" | "CANCEL" | null;
   createdAt: string;
   reviewRating?: number | null;
   reviewComment?: string | null;
@@ -72,16 +73,20 @@ export default function ServiceBookingsPage() {
     setActionLoading(id + status);
     try {
       const booking = allBookings.find((b) => b.id === id);
-      const paid =
-        booking?.paymentStatus === "paid" ||
-        booking?.paymentStatus === "completed";
+      const jobStarted =
+        booking?.status === "confirmed" || booking?.status === "in-progress";
 
-      if (status === "completed" || (status === "cancelled" && paid)) {
+      // Complete always needs OTP. Cancel after accept/start also needs OTP
+      // (unpaid pending decline can still cancel directly).
+      if (status === "completed" || (status === "cancelled" && jobStarted)) {
         const action = status === "completed" ? "COMPLETE" : "CANCEL";
         const res = await api.post(`/service/bookings/${id}/request-action`, { action });
         const data = res.data?.data;
+        setAllBookings((prev) =>
+          prev.map((b) => (b.id === id ? { ...b, pendingAction: action } : b))
+        );
         toast({
-          title: "OTP sent to client",
+          title: action === "CANCEL" ? "Cancel OTP sent to client" : "OTP sent to client",
           description: data?.clientEmailMasked
             ? `Ask the client to enter the code sent to ${data.clientEmailMasked}`
             : "Client must confirm with the email OTP",
@@ -194,6 +199,13 @@ export default function ServiceBookingsPage() {
                     </div>
 
                     <h3 className="font-semibold text-gray-900">{booking.service}</h3>
+                    {booking.pendingAction && (
+                      <p className="mt-2 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 inline-block">
+                        {booking.pendingAction === "CANCEL"
+                          ? "Cancel OTP sent — waiting for the client to confirm"
+                          : "Complete OTP sent — waiting for the client to confirm"}
+                      </p>
+                    )}
 
                     {/* Info row */}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-gray-500">
@@ -321,9 +333,7 @@ export default function ServiceBookingsPage() {
                         <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
                           disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "cancelled")}>
                           {isActing("cancelled") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                          {(booking.paymentStatus === "paid" || booking.paymentStatus === "completed")
-                            ? "Request Cancel (OTP)"
-                            : "Cancel"}
+                          Request Cancel (OTP)
                         </Button>
                       </>
                     )}

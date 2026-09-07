@@ -6,12 +6,14 @@ import { ChevronRight } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { useHomeContent } from "@/hooks/useHomeContent";
+import { formatCurrency } from "@/lib/utils";
 
 export default function FeaturedProperties({ selectedTab = "all" }: { selectedTab?: string }) {
   const [activeFilter, setActiveFilter] = useState<string>(selectedTab || "all");
   const [visibleCount, setVisibleCount] = useState(3);
   const [properties, setProperties] = useState<PropertyCardProps[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const { content } = useHomeContent();
   const featured = content.featured;
 
@@ -25,6 +27,7 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
 
   const fetchProperties = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const params = new URLSearchParams({
         status: "ACTIVE",
@@ -54,8 +57,8 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
           title: property.title,
           slug: property.slug,
           address: `${property.address} ${property.city}`,
-          price: `£${property.price}`,
-          propertyPrice: `£${property.propertyPrice}`,
+          price: formatCurrency(property.price),
+          propertyPrice: formatCurrency(property.propertyPrice),
           rentalType: property.rentalType?.toLowerCase() === "short_term" ? "short" : "long",
           listingType: property.listingType?.toLowerCase() === "buy" ? "buy" : "rent",
           priceType: property.priceType?.toLowerCase() || "monthly",
@@ -71,9 +74,17 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
           minTerm: property.minTerm || 1,
         }));
         setProperties(mappedProperties);
+        setLoadError(
+          mappedProperties.length === 0 &&
+            response.data.message === "Properties temporarily unavailable"
+        );
+      } else {
+        setProperties([]);
+        setLoadError(true);
       }
-    } catch (error) {
-      console.error("Error fetching properties:", error);
+    } catch {
+      setProperties([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -154,8 +165,23 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
         </div>
       )}
 
+      {/* Load failure (e.g. database unreachable) */}
+      {!loading && loadError && (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">
+            Unable to load properties right now. Please try again shortly.
+          </p>
+          <button
+            onClick={fetchProperties}
+            className="mt-4 text-green-600 hover:text-green-700 font-medium"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Properties Grid */}
-      {!loading && filteredProperties.length > 0 && (
+      {!loading && !loadError && filteredProperties.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProperties.slice(0, visibleCount).map((property, index) => (
             <motion.div
@@ -171,7 +197,7 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
       )}
 
       {/* Load More / View All */}
-      {!loading && visibleCount < filteredProperties.length && (
+      {!loading && !loadError && visibleCount < filteredProperties.length && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -188,7 +214,7 @@ export default function FeaturedProperties({ selectedTab = "all" }: { selectedTa
       )}
 
       {/* No Results Message */}
-      {!loading && filteredProperties.length === 0 && (
+      {!loading && !loadError && filteredProperties.length === 0 && (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">No properties found matching your criteria.</p>
           <button

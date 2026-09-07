@@ -6,10 +6,10 @@ import {
   useJsApiLoader,
   OverlayView,
   DrawingManager,
-  InfoWindow,
 } from "@react-google-maps/api";
 import { ChevronLeft, RotateCcw, Edit2, Save, Eye, MapPin } from "lucide-react";
 import { GOOGLE_MAPS_API_KEY, hasGoogleMapsApiKey } from "@/lib/googleMaps";
+import { MapPricePin, MapPropertyPopup } from "@/components/property/MapPropertyCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,15 +56,6 @@ const MAP_STYLES = [
 const DEFAULT_CENTER = { lat: 51.515, lng: -0.035 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatPriceCompact(priceStr: string): string {
-  const n = parseFloat(priceStr.replace(/[^0-9.]/g, ""));
-  if (!n) return priceStr;
-  if (n >= 1_000_000)
-    return `£${(n / 1_000_000) % 1 === 0 ? n / 1_000_000 : (n / 1_000_000).toFixed(1)}m`;
-  if (n >= 1_000) return `£${Math.round(n / 1_000)}k`;
-  return priceStr;
-}
 
 // ─── SVG Icons (matching reference DrawIcon / ClearIcon pattern) ──────────────
 
@@ -154,7 +145,6 @@ function PropertyMapViewInner({
 
   // Refs
   const mapRef = useRef<google.maps.Map | null>(null);
-  const searchRectRef = useRef<google.maps.Rectangle | null>(null);
   const drawnPolygonRef = useRef<google.maps.Polygon | null>(null);
   const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null);
   const livePolylineRef = useRef<google.maps.Polyline | null>(null);
@@ -169,9 +159,6 @@ function PropertyMapViewInner({
   const [showModeSelector, setShowModeSelector] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<MapProperty | null>(null);
   const [drawnPropertyIds, setDrawnPropertyIds] = useState<string[]>([]);
-  const [searchBounds, setSearchBounds] = useState<{
-    north: number; south: number; east: number; west: number;
-  } | null>(null);
 
   // Properties with valid coordinates AND valid longitude range (-180 to 180)
   const validProperties = properties.filter(
@@ -188,54 +175,18 @@ function PropertyMapViewInner({
       ? validProperties.filter((p) => drawnPropertyIds.includes(p.id))
       : validProperties;
 
-  // ── Geocode searchLocation → center map + draw boundary rectangle ─────────
+  // ── Geocode searchLocation → fit map to that area (no search rectangle) ──
   useEffect(() => {
     if (!isLoaded || !searchLocation) return;
-
-    // Remove any previous search rectangle
-    searchRectRef.current?.setMap(null);
-    searchRectRef.current = null;
-    setSearchBounds(null);
 
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ address: searchLocation }, (results, status) => {
       if (status === "OK" && results?.[0]) {
         const b = results[0].geometry.bounds ?? results[0].geometry.viewport;
         mapRef.current?.fitBounds(b);
-
-        const bounds = {
-          north: b.getNorthEast().lat(),
-          east:  b.getNorthEast().lng(),
-          south: b.getSouthWest().lat(),
-          west:  b.getSouthWest().lng(),
-        };
-        setSearchBounds(bounds);
-
-        // Draw imperatively so it always shows regardless of React render timing
-        if (mapRef.current) {
-          searchRectRef.current = new google.maps.Rectangle({
-            bounds,
-            map: mapRef.current,
-            strokeColor: "#4F46E5",
-            strokeOpacity: 0.9,
-            strokeWeight: 2.5,
-            fillColor: "#4F46E5",
-            fillOpacity: 0.1,
-            zIndex: 1,
-          });
-        }
       }
     });
   }, [isLoaded, searchLocation]);
-
-  // Remove rectangle when user starts drawing
-  useEffect(() => {
-    if (isDrawing && searchRectRef.current) {
-      searchRectRef.current.setVisible(false);
-    } else if (!isDrawing && searchRectRef.current) {
-      searchRectRef.current.setVisible(true);
-    }
-  }, [isDrawing]);
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -579,8 +530,6 @@ function PropertyMapViewInner({
           clickableIcons: false,
         }}
       >
-        {/* Search area boundary is drawn imperatively via searchRectRef in geocode effect */}
-
         {/* DrawingManager for polygon / rectangle modes */}
         {isDrawing && drawMode !== "freehand" && (
           <DrawingManager
@@ -609,94 +558,39 @@ function PropertyMapViewInner({
           />
         )}
 
-        {/* Price bubble OverlayViews (same as reference price-pin) */}
-        {displayedProperties.map((property) => (
-          <OverlayView
-            key={property.id}
-            position={{ lat: property.latitude, lng: property.longitude }}
-            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-            getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -(h / 2) })}
-          >
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedProperty(selectedProperty?.id === property.id ? null : property);
-              }}
-              style={{
-                cursor: "pointer",
-                padding: "4px 10px",
-                borderRadius: "6px",
-                fontSize: "12px",
-                fontWeight: "bold",
-                whiteSpace: "nowrap",
-                userSelect: "none",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.18)",
-                border: "2px solid",
-                transition: "transform 0.1s",
-                background: selectedProperty?.id === property.id ? "#4F46E5" : "#ffffff",
-                color: selectedProperty?.id === property.id ? "#ffffff" : "#1a1a1a",
-                borderColor: selectedProperty?.id === property.id ? "#4F46E5" : "#ffffff",
-                transform: selectedProperty?.id === property.id ? "scale(1.1)" : "scale(1)",
-              }}
+        {displayedProperties.map((property) =>
+          selectedProperty?.id === property.id ? (
+            <OverlayView
+              key={`card-${property.id}`}
+              position={{ lat: property.latitude, lng: property.longitude }}
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              getPixelPositionOffset={() => ({ x: 0, y: 0 })}
             >
-              {formatPriceCompact(property.price)}
-            </div>
-          </OverlayView>
-        ))}
-
-        {/* InfoWindow for selected property (same pattern as reference InfoWindow) */}
-        {selectedProperty &&
-          typeof selectedProperty.latitude === "number" &&
-          typeof selectedProperty.longitude === "number" && (
-            <InfoWindow
-              position={{ lat: selectedProperty.latitude, lng: selectedProperty.longitude }}
-              onCloseClick={() => setSelectedProperty(null)}
+              <MapPropertyPopup
+                property={property}
+                onClose={() => setSelectedProperty(null)}
+              />
+            </OverlayView>
+          ) : (
+            <OverlayView
+              key={property.id}
+              position={{ lat: property.latitude, lng: property.longitude }}
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              getPixelPositionOffset={() => ({ x: 0, y: 0 })}
             >
-              {/* InfoWindow renders into Google Maps DOM — use inline styles */}
-              <div style={{ width: "210px", fontFamily: "system-ui, sans-serif" }}>
-                <img
-                  src={
-                    selectedProperty.imageUrl ||
-                    "https://images.pexels.com/photos/259588/pexels-photo-259588.jpeg?auto=compress&cs=tinysrgb&w=400"
-                  }
-                  alt={selectedProperty.title}
-                  style={{ width: "100%", height: "120px", objectFit: "cover", borderRadius: "8px", marginBottom: "8px", display: "block" }}
-                />
-                <div style={{ padding: "0 2px" }}>
-                  <p style={{ fontWeight: 700, fontSize: "15px", margin: "0 0 3px" }}>
-                    {selectedProperty.price}
-                  </p>
-                  <p style={{ fontWeight: 600, fontSize: "12px", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#1a1a1a" }}>
-                    {selectedProperty.title}
-                  </p>
-                  <p style={{ fontSize: "11px", color: "#666", margin: "0 0 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {selectedProperty.address}
-                  </p>
-                  <div style={{ display: "flex", gap: "8px", fontSize: "11px", color: "#444", marginBottom: "10px" }}>
-                    <span>🛏 {selectedProperty.beds}</span>
-                    <span>🛁 {selectedProperty.baths}</span>
-                    <span style={{ textTransform: "capitalize" }}>
-                      {selectedProperty.propertyType?.toLowerCase().replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <a
-                    href={`/property/${selectedProperty.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ display: "block", textAlign: "center", background: "#4F46E5", color: "#fff", fontSize: "12px", fontWeight: 600, padding: "7px 12px", borderRadius: "6px", textDecoration: "none" }}
-                  >
-                    View Property
-                  </a>
-                </div>
-              </div>
-            </InfoWindow>
-          )}
+              <MapPricePin
+                price={property.price}
+                onClick={() => setSelectedProperty(property)}
+              />
+            </OverlayView>
+          )
+        )}
       </GoogleMap>
 
       {/* ── Bad coordinates warning ──────────────────────────────────────── */}
       {properties.length > 0 && validProperties.length < properties.length && view === "map" && (
         <div className="absolute bottom-6 left-3 z-20 bg-amber-50 border border-amber-300 text-amber-800 rounded-lg px-4 py-2.5 text-xs font-medium shadow-md max-w-xs">
-          ⚠ {properties.length - validProperties.length} of {properties.length} properties
+          {properties.length - validProperties.length} of {properties.length} properties
           are missing valid coordinates and won't appear on the map.
           Please update their latitude/longitude in the database.
         </div>

@@ -5,8 +5,8 @@ import { ErrorCode } from '@/lib/auth/errors';
 import { PackageAudience } from '@/types/package';
 
 /**
- * GET /api/packages?audience=OWNER|AGENT
- * Public list of active packages (for seller purchase page)
+ * GET /api/packages?audience=OWNER|AGENT|ALL
+ * Public list of active packages. Defaults to OWNER. ALL returns owner + agent.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     const audience =
       audienceParam === 'AGENT' || audienceParam === 'OWNER'
         ? (audienceParam as PackageAudience)
-        : 'OWNER';
+        : audienceParam === 'ALL'
+          ? undefined
+          : 'OWNER';
     const packages = await packageService.getAll(true, undefined, audience);
     return successResponse(packages, 'Packages retrieved successfully', 200);
   } catch (err: any) {

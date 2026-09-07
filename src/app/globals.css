@@ -152,6 +152,25 @@
   }
 }
 
+/* Dashboard: fit 13–14" laptops at 100% zoom without horizontal page scroll */
+.dashboard-app {
+  overflow-x: clip;
+  max-width: 100vw;
+}
+.dashboard-app main {
+  min-width: 0;
+}
+.dashboard-app table {
+  max-width: 100%;
+}
+.dashboard-app img,
+.dashboard-app video {
+  max-width: 100%;
+}
+.dashboard-app .bg-white {
+  max-width: 100%;
+}
+
 
 
 /* me css  */

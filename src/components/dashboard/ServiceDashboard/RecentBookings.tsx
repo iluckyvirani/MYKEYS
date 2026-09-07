@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin, User, Eye } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 interface ServiceBooking {
   id: string;
@@ -90,7 +91,8 @@ export default function RecentBookings() {
                   booking.status
                 )}`}
               >
-                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                {(booking.status || "pending").charAt(0).toUpperCase() +
+                  (booking.status || "pending").slice(1)}
               </span>
             </div>
 
@@ -110,7 +112,7 @@ export default function RecentBookings() {
             </div>
 
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-gray-900">£{booking.amount}</p>
+              <p className="font-semibold text-gray-900">{formatCurrency(booking.amount)}</p>
               <Link
                 href={`/service/dashboard/bookings/${booking.id}`}
                 className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1"

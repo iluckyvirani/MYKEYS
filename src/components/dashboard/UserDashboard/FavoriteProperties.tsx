@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { FavoriteWithProperty } from "@/types/favorite";
+import { formatCurrency } from "@/lib/utils";
 
 const getListingTypeBadge = (listingType: string, rentalType?: string | null) => {
   if (listingType === "BUY") {
@@ -217,7 +218,7 @@ export default function FavoriteProperties() {
                   </div>
 
                   <div className="flex items-baseline gap-2 mb-3">
-                    <span className="font-bold text-lg text-gray-900">£{property.price?.toLocaleString('en-GB')}</span>
+                    <span className="font-bold text-lg text-gray-900">{formatCurrency(property.price)}</span>
                     {property.priceType && (
                       <span className="text-sm text-gray-600">
                         {property.priceType === 'NIGHTLY' && '/ night'}

@@ -40,7 +40,6 @@ export const PUT = withAuth(async (request: NextRequest, user: JWTPayload) => {
       certifications: body.certifications,
       serviceAreas: body.serviceAreas,
       instantBookingEnabled: body.instantBookingEnabled,
-      instantBookingPrice: body.instantBookingPrice,
     });
 
     return successResponse(updatedProfile, 'Profile updated successfully');

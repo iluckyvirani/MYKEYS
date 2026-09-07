@@ -4,6 +4,7 @@ import { successResponse, errorResponse, paginatedResponse } from "@/lib/respons
 import { withAuth } from "@/lib/auth/middleware";
 import { ErrorCode } from "@/lib/auth/errors";
 import { JWTPayload } from "@/lib/auth/jwt";
+import { paymentService } from "@/lib/payments/paymentService";
 
 /**
  * GET /api/admin/payments
@@ -14,6 +15,10 @@ import { JWTPayload } from "@/lib/auth/jwt";
 export const GET = withAuth(
   async (request: NextRequest, user: JWTPayload) => {
     try {
+      await paymentService.expireStalePendingTransactions().catch((e) =>
+        console.error("expireStalePendingTransactions:", e)
+      );
+
       const { searchParams } = new URL(request.url);
 
       // Pagination

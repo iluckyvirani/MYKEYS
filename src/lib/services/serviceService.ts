@@ -160,8 +160,8 @@ function mapRequestStatusToFrontend(status: string): string {
   return mapping[status] || status.toLowerCase();
 }
 
-function mapUrgencyToFrontend(urgency: string): string {
-  return urgency.toLowerCase();
+function mapUrgencyToFrontend(urgency?: string | null): string {
+  return (urgency || "MEDIUM").toLowerCase();
 }
 
 function mapPaymentStatusToFrontend(status: string): string {
@@ -634,14 +634,52 @@ export const serviceService = {
     });
 
     const { emailService } = await import('@/lib/email/emailService');
-    await emailService.sendServiceActionOtpEmail({
-      to: booking.client.email,
-      firstName: booking.client.firstName,
-      serviceName: booking.service,
-      action,
-      otp,
-      providerName: `${booking.provider.user.firstName} ${booking.provider.user.lastName}`.trim(),
-    });
+    try {
+      await emailService.sendServiceActionOtpEmail({
+        to: booking.client.email,
+        firstName: booking.client.firstName,
+        serviceName: booking.service,
+        action,
+        otp,
+        providerName: `${booking.provider.user.firstName} ${booking.provider.user.lastName}`.trim(),
+      });
+    } catch (emailErr) {
+      console.error("Service action OTP email failed:", emailErr);
+      throw new Error(
+        action === "CANCEL"
+          ? "Could not send the cancel OTP email. Please try again."
+          : "Could not send the completion OTP email. Please try again."
+      );
+    }
+
+    try {
+      const { notificationService } = await import(
+        "@/lib/notifications/notificationService"
+      );
+      const {
+        NotificationType,
+        NotificationPriority,
+        NotificationCategory,
+      } = await import("@/types/notification");
+      await notificationService.create({
+        userId: booking.client.id,
+        type: NotificationType.BOOKING,
+        title:
+          action === "CANCEL"
+            ? "Confirm service cancellation"
+            : "Confirm service completion",
+        message:
+          action === "CANCEL"
+            ? `Your provider requested to cancel "${booking.service}". Enter the OTP we emailed you.`
+            : `Your provider marked "${booking.service}" as done. Enter the OTP we emailed you.`,
+        priority: NotificationPriority.HIGH,
+        category: NotificationCategory.ACTION_REQUIRED,
+        actionUrl: "/user/dashboard/service-bookings",
+        data: { serviceBookingId: id, pendingAction: action },
+      });
+    } catch (notifyErr) {
+      console.error("Service action OTP notification failed:", notifyErr);
+    }
 
     return {
       pendingAction: action,
@@ -700,20 +738,28 @@ export const serviceService = {
         },
       });
 
-      await prisma.serviceProvider.update({
-        where: { id: booking.providerId },
-        data: {
-          completedBookings: { increment: 1 },
-          totalEarnings: { increment: earnings },
-        },
-      });
+      try {
+        await prisma.serviceProvider.update({
+          where: { id: booking.providerId },
+          data: {
+            completedBookings: { increment: 1 },
+            totalEarnings: { increment: earnings },
+          },
+        });
+      } catch (e) {
+        console.error("Failed to increment provider stats after completion:", e);
+      }
 
-      const { settlementService } = await import('@/lib/services/settlementService');
-      await settlementService.ensureServiceSettlement({
-        serviceBookingId: id,
-        beneficiaryUserId: booking.provider.userId,
-        amount: earnings,
-      });
+      try {
+        const { settlementService } = await import('@/lib/services/settlementService');
+        await settlementService.ensureServiceSettlement({
+          serviceBookingId: id,
+          beneficiaryUserId: booking.provider.userId,
+          amount: earnings,
+        });
+      } catch (e) {
+        console.error("Failed to create settlement after completion:", e);
+      }
 
       const { notificationService } = await import(
         '@/lib/notifications/notificationService'

@@ -1,8 +1,14 @@
 ﻿// components/dashboard/UserDashboard/PaymentList.tsx
 "use client";
 
+import { useState } from "react";
 import { CreditCard, Calendar, CheckCircle, XCircle, RefreshCw, MapPin, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  PaymentDocumentDialog,
+  downloadPaymentReceipt,
+  type PaymentDocumentData,
+} from "@/components/payments/PaymentDocumentDialog";
 
 interface Payment {
   id: string;
@@ -76,7 +82,27 @@ const getPaymentTypeLabel = (type: string) => {
   }
 };
 
+function toDocumentData(payment: Payment): PaymentDocumentData {
+  return {
+    id: payment.id,
+    title: getPaymentTypeLabel(payment.paymentType),
+    propertyTitle: payment.booking?.property?.title ?? payment.propertyTitle,
+    city: payment.booking?.property?.city,
+    amount: payment.amount,
+    status: payment.status,
+    paymentMethod: payment.paymentMethod,
+    bookingId: payment.bookingId || payment.booking?.id,
+    transactionId: payment.transactionId,
+    stripePaymentIntentId: payment.stripePaymentIntentId,
+    createdAt: payment.createdAt,
+    checkIn: payment.booking?.checkIn,
+    checkOut: payment.booking?.checkOut,
+  };
+}
+
 export default function PaymentList({ payments, type, emptyMessage }: PaymentListProps) {
+  const [invoice, setInvoice] = useState<PaymentDocumentData | null>(null);
+
   if (payments.length === 0) {
     return (
       <div className="text-center py-12">
@@ -170,13 +196,6 @@ export default function PaymentList({ payments, type, emptyMessage }: PaymentLis
                       <span className="font-mono truncate" title={payment.bookingId}>{payment.bookingId}</span>
                     </div>
                   )}
-                  {payment.stripePaymentIntentId && (
-                    <div className="flex items-center gap-1">
-                      <Hash className="w-3 h-3 text-gray-400" />
-                      <span className="text-gray-400">Stripe Intent:</span>
-                      <span className="font-mono truncate" title={payment.stripePaymentIntentId}>{payment.stripePaymentIntentId}</span>
-                    </div>
-                  )}
                   {payment.transactionId && (
                     <div className="flex items-center gap-1">
                       <Hash className="w-3 h-3 text-gray-400" />
@@ -203,10 +222,20 @@ export default function PaymentList({ payments, type, emptyMessage }: PaymentLis
                       Retry Payment
                     </Button>
                   )}
-                  <Button variant="outline" className="w-full rounded-[5px]">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full rounded-[5px]"
+                    onClick={() => setInvoice(toDocumentData(payment))}
+                  >
                     View Invoice
                   </Button>
-                  <Button variant="outline" className="w-full rounded-[5px]">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full rounded-[5px]"
+                    onClick={() => downloadPaymentReceipt(toDocumentData(payment), false)}
+                  >
                     Download Receipt
                   </Button>
                 </div>
@@ -215,6 +244,15 @@ export default function PaymentList({ payments, type, emptyMessage }: PaymentLis
           </div>
         );
       })}
+
+      <PaymentDocumentDialog
+        open={Boolean(invoice)}
+        onOpenChange={(open) => {
+          if (!open) setInvoice(null);
+        }}
+        data={invoice}
+        showStripeIds={false}
+      />
     </div>
   );
 }

@@ -31,7 +31,14 @@ export async function POST(
       payload.userId,
       otp
     );
-    return successResponse(booking, "Action confirmed");
+    const status = String(booking.status || "").toUpperCase();
+    const message =
+      status === "COMPLETED"
+        ? "Your service was completed successfully"
+        : status === "CANCELLED"
+          ? "Your booking was cancelled successfully"
+          : "Action confirmed";
+    return successResponse(booking, message);
   } catch (err: any) {
     return errorResponse(err.message || "Failed", 400);
   }

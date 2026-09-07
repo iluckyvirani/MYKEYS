@@ -20,6 +20,15 @@ export const PATCH = withAuth<{ id: string }>(
         ...(body.commissionPercent !== undefined
           ? { commissionPercent: Number(body.commissionPercent) }
           : {}),
+        ...(body.morningSurcharge !== undefined
+          ? { morningSurcharge: Number(body.morningSurcharge) }
+          : {}),
+        ...(body.afternoonSurcharge !== undefined
+          ? { afternoonSurcharge: Number(body.afternoonSurcharge) }
+          : {}),
+        ...(body.eveningSurcharge !== undefined
+          ? { eveningSurcharge: Number(body.eveningSurcharge) }
+          : {}),
         ...(body.categoryId !== undefined ? { categoryId: body.categoryId } : {}),
         ...(body.isActive !== undefined ? { isActive: Boolean(body.isActive) } : {}),
         ...(body.sortOrder !== undefined ? { sortOrder: Number(body.sortOrder) } : {}),

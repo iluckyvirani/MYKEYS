@@ -223,7 +223,7 @@ export default function InquiryList({ inquiries, emptyMessage, emptyAction }: In
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <div className="text-sm text-gray-600 mb-1">Property Rent</div>
-                    <div className="font-medium">£{inquiry.budget}</div>
+                    <div className="font-medium">{formatCurrency(inquiry.budget)}</div>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <div className="text-sm text-gray-600 mb-1">Last Updated</div>

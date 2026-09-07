@@ -317,6 +317,12 @@ model User {
   /// Stripe Customer ID for saved payment methods
   stripeCustomerId String? @unique
 
+  /// UK bank details (sort code + 8-digit account number)
+  bankAccountHolder String?
+  bankSortCode      String?
+  bankAccountNumber String?
+  bankName          String?
+
   // Relations
   properties      Property[]
   bookingsAsGuest Booking[]      @relation("GuestBookings")
@@ -863,6 +869,9 @@ model Package {
   // Short Description for package card
   shortDescription String?
 
+  /// Hex color for owner/agent package cards, e.g. #16a34a
+  accentColor String @default("#16a34a")
+
   // Timestamps
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -926,9 +935,13 @@ model AdminSettings {
   contactSupportPhone        String   @default("+44 20 1234 5678")
   contactSupportDescription  String   @default("Whether you're looking for a property, listing yours, or need support, our team is ready to assist you.")
   // Bid / Boost configuration (Phase 3)
-  minBidAmountPerDay         Float    @default(1)  // min £/day an owner can bid
+  minBidAmountPerDay         Float    @default(0.01)  // min £/day an owner can bid
   maxBidDurationDays         Int      @default(30) // max days a bid can run
   maxBoostedSlotsPerZip      Int      @default(3)  // max boosted listings per zip code page
+  serviceTaxPercent          Float    @default(0)
+  serviceBookingFee          Float    @default(0)
+  serviceExtraFeeLabel       String   @default("")
+  serviceExtraFeeAmount      Float    @default(0)
   updatedAt                  DateTime @updatedAt
 }
 
@@ -1173,6 +1186,9 @@ model CatalogService {
   image             String?
   price             Float // Amount tenant pays (GBP)
   commissionPercent Float   @default(10) // MYKEYS cut, e.g. 10 = 10%
+  morningSurcharge   Float  @default(0)
+  afternoonSurcharge Float  @default(0)
+  eveningSurcharge   Float  @default(0)
   isActive          Boolean @default(true)
   sortOrder         Int     @default(0)
 

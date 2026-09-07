@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 
 interface PropertyDetailPageProps {
   params: Promise<{ id: string }>;
@@ -435,7 +436,7 @@ export default function PropertyDetailPage({ params }: PropertyDetailPageProps) 
                         <span className="ml-2 font-bold text-gray-900">{propertyData.avgRating}</span>
                       </div>
                     )}
-                    <p className="text-lg font-bold text-orange-600">£{propertyData.property.price.toLocaleString("en-GB")}</p>
+                    <p className="text-lg font-bold text-orange-600">{formatCurrency(propertyData.property.price)}</p>
                     <p className="text-xs text-gray-600">{propertyData.property.priceType}</p>
                   </div>
                 </div>

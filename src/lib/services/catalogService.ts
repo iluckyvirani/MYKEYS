@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { createHash, randomInt } from "crypto";
 
+function moneyOrZero(value: unknown) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return parseFloat(n.toFixed(2));
+}
+
 export type CatalogServiceInput = {
   name: string;
   description?: string;
@@ -10,6 +16,9 @@ export type CatalogServiceInput = {
   categoryId: string;
   isActive?: boolean;
   sortOrder?: number;
+  morningSurcharge?: number;
+  afternoonSurcharge?: number;
+  eveningSurcharge?: number;
 };
 
 function hashOtp(otp: string): string {
@@ -33,28 +42,81 @@ export function splitCatalogPrice(price: number, commissionPercent: number) {
   return { commissionAmount, providerEarnings };
 }
 
+const SLOT_DEFAULTS = {
+  morningSurcharge: 0,
+  afternoonSurcharge: 0,
+  eveningSurcharge: 0,
+};
+
 export const catalogService = {
   async list(opts?: { activeOnly?: boolean; categoryId?: string }) {
-    return prisma.catalogService.findMany({
-      where: {
-        ...(opts?.activeOnly ? { isActive: true } : {}),
-        ...(opts?.categoryId ? { categoryId: opts.categoryId } : {}),
-      },
-      include: {
-        category: { select: { id: true, name: true, icon: true } },
-        _count: { select: { offeredBy: true, bookings: true } },
-      },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    });
+    const where = {
+      ...(opts?.activeOnly ? { isActive: true } : {}),
+      ...(opts?.categoryId ? { categoryId: opts.categoryId } : {}),
+    };
+    try {
+      return await prisma.catalogService.findMany({
+        where,
+        include: {
+          category: { select: { id: true, name: true, icon: true } },
+          _count: { select: { offeredBy: true, bookings: true } },
+        },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      });
+    } catch (err) {
+      console.warn("Catalog list with slot extras failed, retrying without them:", err);
+      const rows = await prisma.catalogService.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          image: true,
+          price: true,
+          commissionPercent: true,
+          isActive: true,
+          sortOrder: true,
+          categoryId: true,
+          createdAt: true,
+          updatedAt: true,
+          category: { select: { id: true, name: true, icon: true } },
+          _count: { select: { offeredBy: true, bookings: true } },
+        },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      });
+      return rows.map((row) => ({ ...row, ...SLOT_DEFAULTS }));
+    }
   },
 
   async getById(id: string) {
-    return prisma.catalogService.findUnique({
-      where: { id },
-      include: {
-        category: { select: { id: true, name: true, icon: true } },
-      },
-    });
+    try {
+      return await prisma.catalogService.findUnique({
+        where: { id },
+        include: {
+          category: { select: { id: true, name: true, icon: true } },
+        },
+      });
+    } catch (err) {
+      console.warn("Catalog getById with slot extras failed, retrying without them:", err);
+      const row = await prisma.catalogService.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          image: true,
+          price: true,
+          commissionPercent: true,
+          isActive: true,
+          sortOrder: true,
+          categoryId: true,
+          createdAt: true,
+          updatedAt: true,
+          category: { select: { id: true, name: true, icon: true } },
+        },
+      });
+      return row ? { ...row, ...SLOT_DEFAULTS } : null;
+    }
   },
 
   async create(data: CatalogServiceInput) {
@@ -81,6 +143,9 @@ export const catalogService = {
         image: data.image || null,
         price: data.price,
         commissionPercent: data.commissionPercent,
+        morningSurcharge: moneyOrZero(data.morningSurcharge),
+        afternoonSurcharge: moneyOrZero(data.afternoonSurcharge),
+        eveningSurcharge: moneyOrZero(data.eveningSurcharge),
         categoryId: data.categoryId,
         isActive: data.isActive ?? true,
         sortOrder: data.sortOrder ?? 0,
@@ -119,6 +184,15 @@ export const catalogService = {
         ...(data.commissionPercent !== undefined
           ? { commissionPercent: data.commissionPercent }
           : {}),
+        ...(data.morningSurcharge !== undefined
+          ? { morningSurcharge: moneyOrZero(data.morningSurcharge) }
+          : {}),
+        ...(data.afternoonSurcharge !== undefined
+          ? { afternoonSurcharge: moneyOrZero(data.afternoonSurcharge) }
+          : {}),
+        ...(data.eveningSurcharge !== undefined
+          ? { eveningSurcharge: moneyOrZero(data.eveningSurcharge) }
+          : {}),
         ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
         ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
         ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
@@ -154,17 +228,38 @@ export const catalogService = {
       new Set([...(provider.categories || []), provider.category].filter(Boolean))
     );
 
-    const [catalog, offered] = await Promise.all([
-      prisma.catalogService.findMany({
+    let catalog;
+    try {
+      catalog = await prisma.catalogService.findMany({
         where: { isActive: true, categoryId: { in: categoryIds } },
         include: { category: { select: { id: true, name: true } } },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      }),
-      prisma.providerOfferedService.findMany({
-        where: { providerId },
-        select: { catalogServiceId: true },
-      }),
-    ]);
+      });
+    } catch {
+      const rows = await prisma.catalogService.findMany({
+        where: { isActive: true, categoryId: { in: categoryIds } },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          image: true,
+          price: true,
+          commissionPercent: true,
+          isActive: true,
+          sortOrder: true,
+          categoryId: true,
+          createdAt: true,
+          updatedAt: true,
+          category: { select: { id: true, name: true } },
+        },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      });
+      catalog = rows.map((row) => ({ ...row, ...SLOT_DEFAULTS }));
+    }
+    const offered = await prisma.providerOfferedService.findMany({
+      where: { providerId },
+      select: { catalogServiceId: true },
+    });
 
     const offeredSet = new Set(offered.map((o) => o.catalogServiceId));
     return catalog.map((s) => ({

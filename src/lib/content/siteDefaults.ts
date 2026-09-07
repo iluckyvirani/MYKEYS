@@ -262,7 +262,7 @@ export const DEFAULT_SHORT_STAY_CONTENT: ListingPageContent = {
   howItWorks: {
     title: "How Short Stays Work",
     subtitle: "Easy booking process from search to check-out",
-    ctaTitle: "Why Book Short Rents with Hously?",
+    ctaTitle: "Why Book Short Rents with MYKEYS?",
     benefits: [
       "Secure payment protection",
       "Verified hosts & properties",

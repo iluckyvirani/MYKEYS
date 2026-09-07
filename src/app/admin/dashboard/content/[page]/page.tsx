@@ -647,7 +647,7 @@ function ListingEditor({
             value={listing.howItWorks.ctaTitle || ""}
             hint={
               isShortStay
-                ? 'e.g. "Why Book Short Rents with Hously?"'
+                ? 'e.g. "Why Book Short Rents with MYKEYS?"'
                 : 'e.g. "Ready to find your dream home?"'
             }
             onChange={(v) =>

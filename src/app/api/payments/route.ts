@@ -7,6 +7,7 @@ import { InitiatePaymentRequest, PaymentFilter } from '@/types/payment';
 import { notificationService } from '@/lib/notifications/notificationService';
 import { emailService } from '@/lib/email/emailService';
 import { prisma } from '@/lib/prisma';
+import { hideStripeIds } from '@/lib/payments/hideStripeIds';
 
 /**
  * GET /api/payments
@@ -36,8 +37,12 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
     };
 
     const result = await paymentService.getPayments(filters);
+    const payments =
+      user.role === "ADMIN"
+        ? result.payments
+        : result.payments.map((payment) => hideStripeIds(payment));
     return paginatedResponse(
-      result.payments,
+      payments,
       result.pagination.total,
       result.pagination.page,
       result.pagination.limit,

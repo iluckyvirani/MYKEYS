@@ -1,5 +1,7 @@
 /** Shared options + helpers for Rightmove-style property detail fields */
 
+import { formatCurrency } from "@/lib/utils";
+
 export const FURNISH_TYPE_OPTIONS = [
   { value: "", label: "Ask agent / not set" },
   { value: "UNFURNISHED", label: "Unfurnished" },
@@ -99,7 +101,7 @@ export const PARKING_LABELS: Record<string, string> = {
 
 export function formatWeeklyFromMonthly(amount: number) {
   if (!amount) return "";
-  return `£${Math.round((amount * 12) / 52).toLocaleString()} pw`;
+  return `${formatCurrency(Math.round((amount * 12) / 52))} pw`;
 }
 
 export function formatUkDate(date?: string | Date | null) {

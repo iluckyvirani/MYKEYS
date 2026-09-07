@@ -26,8 +26,12 @@ export const GET = withAuth(
           ? (statusParam as SettlementStatus)
           : undefined;
 
-      if (type === SettlementType.SHORT_STAY || !type) {
-        await settlementService.syncShortStayPendings().catch(() => undefined);
+      const sync = await settlementService.syncShortStayPendings().catch((err) => {
+        console.error("syncShortStayPendings failed:", err);
+        return { created: 0 };
+      });
+      if (sync.created > 0) {
+        console.log(`Synced ${sync.created} short-stay settlements`);
       }
 
       const result = await settlementService.list({ type, status, page, limit });

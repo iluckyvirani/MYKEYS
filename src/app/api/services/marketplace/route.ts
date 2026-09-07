@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { catalogService } from "@/lib/services/catalogService";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
+import { loadServiceCheckoutFees } from "@/lib/services/loadServiceCheckoutFees";
 
 /**
  * GET /api/services/marketplace
@@ -12,12 +13,13 @@ export async function GET(request: NextRequest) {
   try {
     const catalogServiceId = request.nextUrl.searchParams.get("catalogServiceId");
 
-    const [categories, catalog] = await Promise.all([
+    const [categories, catalog, checkoutFees] = await Promise.all([
       prisma.serviceCategoryInfo.findMany({
         where: { status: "active" },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       }),
       catalogService.list({ activeOnly: true }),
+      loadServiceCheckoutFees(),
     ]);
 
     const categoriesWithCounts = categories.map((c) => ({
@@ -76,6 +78,7 @@ export async function GET(request: NextRequest) {
           documentVerified: p.documentVerified,
           user: p.user,
         })),
+        checkoutFees,
       },
       "Marketplace data"
     );

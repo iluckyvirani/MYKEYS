@@ -4,12 +4,11 @@ import { useMemo, useState } from "react";
 import {
   GoogleMap,
   useJsApiLoader,
-  Marker,
-  InfoWindow,
+  OverlayView,
 } from "@react-google-maps/api";
-import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { GOOGLE_MAPS_API_KEY, hasGoogleMapsApiKey } from "@/lib/googleMaps";
+import { MapPricePin, MapPropertyPopup } from "@/components/property/MapPropertyCard";
 
 export interface ResultsMapProperty {
   id: string;
@@ -106,8 +105,6 @@ function GoogleResultsMap({
     return { lat, lng };
   }, [withCoords]);
 
-  const selected = withCoords.find((p) => p.id === selectedId);
-
   if (loadError) {
     return <NoMapKeyPanel locationLabel={locationLabel} tall={tall} />;
   }
@@ -132,52 +129,51 @@ function GoogleResultsMap({
             mapContainerStyle={{ width: "100%", height: "100%" }}
             center={center}
             zoom={withCoords.length ? 11 : 10}
+            onClick={() => setSelectedId(null)}
             options={{
               disableDefaultUI: true,
               zoomControl: true,
               fullscreenControl: true,
+              clickableIcons: false,
             }}
           >
-            {withCoords.map((p) => (
-              <Marker
-                key={p.id}
-                position={{
-                  lat: p.latitude as number,
-                  lng: p.longitude as number,
-                }}
-                onClick={() => setSelectedId(p.id)}
-              />
-            ))}
-            {selected && (
-              <InfoWindow
-                position={{
-                  lat: selected.latitude as number,
-                  lng: selected.longitude as number,
-                }}
-                onCloseClick={() => setSelectedId(null)}
-              >
-                <div className="max-w-[180px]">
-                  {selected.imageUrl ? (
-                    <img
-                      src={selected.imageUrl}
-                      alt=""
-                      className="w-full h-20 object-cover rounded mb-2"
-                    />
-                  ) : null}
-                  <p className="font-bold text-sm text-slate-900">
-                    {selected.price}
-                  </p>
-                  <p className="text-xs text-slate-600 line-clamp-2">
-                    {selected.address}
-                  </p>
-                  <Link
-                    href={`/property/${selected.id}`}
-                    className="text-xs text-green-700 font-semibold mt-1 inline-block cursor-pointer"
-                  >
-                    View
-                  </Link>
-                </div>
-              </InfoWindow>
+            {withCoords.map((p) =>
+              selectedId === p.id ? (
+                <OverlayView
+                  key={`card-${p.id}`}
+                  position={{ lat: p.latitude as number, lng: p.longitude as number }}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                  getPixelPositionOffset={() => ({ x: 0, y: 0 })}
+                >
+                  <MapPropertyPopup
+                    property={{
+                      id: p.id,
+                      title: p.title,
+                      price: p.price,
+                      address: p.address,
+                      beds: p.beds ?? 0,
+                      baths: p.baths ?? 0,
+                      propertyType: p.propertyType || "Property",
+                      imageUrl: p.imageUrl,
+                      listingType: p.listingType,
+                      priceType: p.priceType,
+                    }}
+                    onClose={() => setSelectedId(null)}
+                  />
+                </OverlayView>
+              ) : (
+                <OverlayView
+                  key={p.id}
+                  position={{ lat: p.latitude as number, lng: p.longitude as number }}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                  getPixelPositionOffset={() => ({ x: 0, y: 0 })}
+                >
+                  <MapPricePin
+                    price={p.price}
+                    onClick={() => setSelectedId(p.id)}
+                  />
+                </OverlayView>
+              )
             )}
           </GoogleMap>
         )}

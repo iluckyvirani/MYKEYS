@@ -52,8 +52,8 @@ export default function Footer() {
         if (response.data?.success && response.data.data?.counts) {
           setPropertyTypeCounts(response.data.data.counts);
         }
-      } catch (error) {
-        console.error("Failed to load footer property counts:", error);
+      } catch {
+        // Footer counts are optional; keep empty when the API is unavailable
       }
     };
 

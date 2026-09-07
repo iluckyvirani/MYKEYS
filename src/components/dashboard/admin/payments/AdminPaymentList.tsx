@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { CheckCircle, Clock, XCircle, ChevronDown, ChevronRight, Hash, User, MapPin, Package, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  PaymentDocumentDialog,
+  downloadPaymentReceipt,
+  type PaymentDocumentData,
+} from "@/components/payments/PaymentDocumentDialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,8 +106,28 @@ function IdChip({ label, value }: { label: string; value: string | null | undefi
 
 // ─── Row ──────────────────────────────────────────────────────────────────────
 
+function toDocumentData(p: AdminPayment): PaymentDocumentData {
+  return {
+    id: p.id,
+    title: p.paymentType === "PACKAGE" ? p.packageName || "Package Payment" : "Booking Payment",
+    propertyTitle: p.propertyTitle,
+    city: p.propertyCity,
+    amount: p.amount,
+    currency: p.currency,
+    status: p.status,
+    paymentMethod: p.paymentMethod,
+    bookingId: p.bookingId,
+    transactionId: p.transactionId,
+    stripePaymentIntentId: p.stripePaymentIntentId,
+    createdAt: p.createdAt,
+    checkIn: p.checkIn,
+    checkOut: p.checkOut,
+  };
+}
+
 function PaymentRow({ p }: { p: AdminPayment }) {
   const [expanded, setExpanded] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
   const isBooking = p.paymentType === "BOOKING" || !!p.bookingId;
 
   return (
@@ -270,8 +296,40 @@ function PaymentRow({ p }: { p: AdminPayment }) {
                     )}
                   </div>
                 )}
+                <div className="flex flex-wrap gap-2 pt-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-[5px]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setInvoiceOpen(true);
+                    }}
+                  >
+                    View Invoice
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-[5px]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadPaymentReceipt(toDocumentData(p), true);
+                    }}
+                  >
+                    Download Receipt
+                  </Button>
+                </div>
               </div>
             </div>
+            <PaymentDocumentDialog
+              open={invoiceOpen}
+              onOpenChange={setInvoiceOpen}
+              data={toDocumentData(p)}
+              showStripeIds
+            />
           </td>
         </tr>
       )}

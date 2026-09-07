@@ -8,6 +8,7 @@ import { Check, Clock, Building2, Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { PackageCategory } from "@/types/package";
 import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
+import { formatCurrency } from "@/lib/utils";
 
 interface PackageRecord {
   id: string;
@@ -141,7 +142,7 @@ export default function PackageBrowser({
                 )}
 
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-extrabold text-gray-900">£{pkg.price}</span>
+                  <span className="text-3xl font-extrabold text-gray-900">{formatCurrency(pkg.price)}</span>
                   <span className="text-gray-400 text-sm">
                     / {formatDuration(pkg.durationValue, pkg.durationUnit)}
                   </span>

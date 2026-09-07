@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Grid, List, Map } from "lucide-react";
 import PropertyCard, { PropertyCardProps } from "./PropertyCard";
 import PropertyMapView, { MapProperty } from "./PropertyMapView";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 import { BuyFiltersState } from "@/app/buy/page";
 
 interface PropertyGridProps {
@@ -120,8 +121,8 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
           title: property.title,
           slug: property.slug,
           address: `${property.address || ""} ${property.city || ""}`.trim(),
-          price: `£${property.price?.toLocaleString() || "0"}`,
-          propertyPrice: `£${property.propertyPrice?.toLocaleString() || "0"}`,
+          price: formatCurrency(property.price),
+          propertyPrice: formatCurrency(property.propertyPrice),
           rentalType: property.rentalType?.toLowerCase() === "short_term" ? "short" : "long",
           listingType: property.listingType?.toLowerCase() === "buy" ? "buy" : "rent",
           priceType: property.priceType?.toLowerCase() || "monthly",
@@ -144,7 +145,7 @@ export default function PropertyGrid({ filters, searchQuery = "", onCountChange,
         const mappedMapData: MapProperty[] = response.data.data.items.map((property: any) => ({
           id: property.id,
           title: property.title,
-          price: `£${property.price?.toLocaleString() || "0"}`,
+          price: formatCurrency(property.price),
           latitude: typeof property.latitude === "number" ? property.latitude : null,
           longitude: typeof property.longitude === "number" ? property.longitude : null,
           address: `${property.address || ""} ${property.city || ""}`.trim(),

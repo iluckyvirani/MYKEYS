@@ -97,7 +97,6 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
         ownerEarnings: p.ownerEarnings,
         paymentMethod: p.paymentMethod,
         transactionId: p.transactionId,
-        stripePaymentIntentId: p.stripePaymentIntentId,
         createdAt: p.createdAt.toISOString(),
         booking: p.booking
           ? {
@@ -177,7 +176,6 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
         currency: p.currency,
         paymentMethod: p.paymentMethod,
         transactionId: p.transactionId,
-        stripePaymentIntentId: p.stripePaymentIntentId,
         createdAt: p.createdAt.toISOString(),
         package: p.package
           ? {

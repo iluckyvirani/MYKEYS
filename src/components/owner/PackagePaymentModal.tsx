@@ -22,9 +22,12 @@ import { api } from "@/lib/api";
 import { getStripePromise } from "@/lib/stripe-client";
 import {
   buildStripeElementsOptions,
-  stripePaymentElementOptions,
+  compactStripePaymentElementOptions,
+  buildCompactStripeConfirmParams,
 } from "@/lib/stripe/elementsOptions";
 import { useDashboardBase } from "@/lib/dashboard/DashboardContext";
+import type { PurchasePackageDetails } from "@/components/dashboard/OwnerDashboard/Packages/AvailablePackages";
+import { resolvePackageColor } from "@/lib/packages/packageColors";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +36,7 @@ interface PackagePaymentModalProps {
   ownerPackageId: string;
   packageName: string;
   amount: number;
+  details?: PurchasePackageDetails;
   onClose: () => void;
   onSuccess?: () => void;
   onError?: (error: string) => void;
@@ -48,7 +52,14 @@ interface PaymentFormProps {
 
 // ─── Inner form ───────────────────────────────────────────────────────────────
 
-function PaymentForm({ paymentId, packageName, amount, onSuccess, onError }: PaymentFormProps) {
+function PaymentForm({
+  paymentId,
+  packageName,
+  amount,
+  details,
+  onSuccess,
+  onError,
+}: PaymentFormProps & { details?: PurchasePackageDetails }) {
   const stripe = useStripe();
   const elements = useElements();
   const { basePath } = useDashboardBase();
@@ -72,9 +83,7 @@ function PaymentForm({ paymentId, packageName, amount, onSuccess, onError }: Pay
       const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
         elements,
         redirect: "if_required",
-        confirmParams: {
-          return_url: returnUrl,
-        },
+        confirmParams: buildCompactStripeConfirmParams(returnUrl),
       });
 
       if (stripeError) {
@@ -110,25 +119,14 @@ function PaymentForm({ paymentId, packageName, amount, onSuccess, onError }: Pay
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="p-4 bg-gray-50 rounded-lg space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Package:</span>
-          <span className="font-medium text-gray-900">{packageName}</span>
-        </div>
-        <div className="flex justify-between text-sm border-t pt-2">
-          <span className="text-gray-600 font-semibold">Total:</span>
-          <span className="font-bold text-gray-900 text-base">
-            £{amount.toLocaleString()}
-          </span>
-        </div>
-      </div>
-
-      <p className="text-xs text-gray-500">
-        Saved cards appear automatically. Tick save in Stripe to store your card for future payments.
-      </p>
+      <PurchaseSummary
+        packageName={packageName}
+        amount={amount}
+        details={details}
+      />
 
       <PaymentElement
-        options={stripePaymentElementOptions}
+        options={compactStripePaymentElementOptions}
         onReady={() => setElementsReady(true)}
       />
 
@@ -159,11 +157,79 @@ function PaymentForm({ paymentId, packageName, amount, onSuccess, onError }: Pay
 
 // ─── Outer modal ──────────────────────────────────────────────────────────────
 
+function PurchaseSummary({
+  packageName,
+  amount,
+  details,
+}: {
+  packageName: string;
+  amount: number;
+  details?: PurchasePackageDetails;
+}) {
+  const color = resolvePackageColor(details?.accentColor);
+  const duration =
+    details != null
+      ? `${details.durationValue} ${details.durationUnit}`
+      : null;
+  const extras = [
+    details?.showOwnerName && "Name on listing",
+    details?.showOwnerPhone && "Phone on listing",
+    details?.directInquiryToOwner && "Direct inquiries",
+    details?.fullAdminSupport && "Admin support",
+    details?.docExpiryAlert && "Doc expiry alerts",
+  ].filter(Boolean);
+
+  return (
+    <div className="rounded-xl border border-gray-200 overflow-hidden">
+      <div className="h-1.5" style={{ backgroundColor: color }} />
+      <div className="p-4 space-y-2.5 text-sm">
+        <div className="flex justify-between gap-3">
+          <span className="text-gray-500">Package</span>
+          <span className="font-semibold text-gray-900 text-right">{packageName}</span>
+        </div>
+        {details?.shortDescription && (
+          <p className="text-xs text-gray-500">{details.shortDescription}</p>
+        )}
+        {duration && (
+          <div className="flex justify-between">
+            <span className="text-gray-500">Duration</span>
+            <span className="text-gray-900">{duration}</span>
+          </div>
+        )}
+        {details && (
+          <>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Listings</span>
+              <span className="text-gray-900">
+                {details.propertyLimit === 0 ? "Unlimited" : details.propertyLimit}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Featured slots</span>
+              <span className="text-gray-900">
+                {details.featuredLimit === 0 ? "None" : details.featuredLimit}
+              </span>
+            </div>
+          </>
+        )}
+        {extras.length > 0 && (
+          <p className="text-xs text-gray-500 pt-1">{extras.join(" · ")}</p>
+        )}
+        <div className="flex justify-between border-t pt-2 font-semibold">
+          <span>Amount to pay</span>
+          <span>£{amount.toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PackagePaymentModal({
   isOpen,
   ownerPackageId,
   packageName,
   amount,
+  details,
   onClose,
   onSuccess,
   onError,
@@ -313,6 +379,7 @@ export default function PackagePaymentModal({
               paymentId={paymentId}
               packageName={packageName}
               amount={amount}
+              details={details}
               onSuccess={() => {
                 setActivated(true);
                 onSuccess?.();

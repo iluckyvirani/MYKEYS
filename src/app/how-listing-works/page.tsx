@@ -6,10 +6,6 @@ import OwnerDashboardDemo from "@/components/listing/OwnerDashboardDemo";
 import PropertyRegistrationFlow from "@/components/listing/PropertyRegistrationFlow";
 import CTASection from "@/components/listing/CTASection";
 import FeaturedPropertiesBenefits from "@/components/listing/FeaturedPropertiesBenefits";
-import PackagesComparison from "@/components/listing/PackagesComparison";
-// import PackagesComparison from '@/components/listing/PackagesComparison';
-// import FeaturedPropertiesBenefits from '@/components/listing/FeaturedPropertiesBenefits';
-// import CTASection from '@/components/listing/CTASection';
 
 
 export default function HowListingWorksPage() {
@@ -28,9 +24,6 @@ export default function HowListingWorksPage() {
         
         {/* Property Registration Flow */}
         <PropertyRegistrationFlow />
-        
-        {/* Packages Comparison */}
-        {/* <PackagesComparison /> */}
         
         {/* Featured Properties Benefits */}
         <FeaturedPropertiesBenefits />

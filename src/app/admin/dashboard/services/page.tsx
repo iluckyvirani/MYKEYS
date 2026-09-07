@@ -15,8 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { ImageUploadField } from "@/components/admin/content/ImageUploadField";
+import {
+  computeServicePaymentSummary,
+  type ServiceCheckoutFees,
+} from "@/lib/services/serviceCheckoutFees";
 import {
   Plus,
   Pencil,
@@ -38,6 +43,9 @@ type CatalogRow = {
   image?: string | null;
   price: number;
   commissionPercent: number;
+  morningSurcharge?: number;
+  afternoonSurcharge?: number;
+  eveningSurcharge?: number;
   isActive: boolean;
   categoryId: string;
   category?: { id: string; name: string };
@@ -50,6 +58,9 @@ const emptyForm = {
   image: "",
   price: "50",
   commissionPercent: "10",
+  morningSurcharge: "0",
+  afternoonSurcharge: "0",
+  eveningSurcharge: "0",
   categoryId: "",
   isActive: true,
 };
@@ -74,13 +85,20 @@ export default function AdminCatalogServicesPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [checkoutFees, setCheckoutFees] = useState<ServiceCheckoutFees>({
+    taxPercent: 0,
+    bookingFee: 0,
+    extraLabel: "",
+    extraAmount: 0,
+  });
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [svcRes, catRes] = await Promise.all([
+      const [svcRes, catRes, settingsRes] = await Promise.all([
         api.get("/admin/catalog-services"),
         api.get("/admin/categories"),
+        api.get("/admin/settings").catch(() => null),
       ]);
       const catalogData = svcRes.data?.data;
       const categoryData = catRes.data?.data;
@@ -88,6 +106,15 @@ export default function AdminCatalogServicesPage() {
       setCategories(
         Array.isArray(categoryData) ? categoryData : categoryData?.items ?? []
       );
+      const settings = settingsRes?.data?.data ?? settingsRes?.data;
+      if (settings) {
+        setCheckoutFees({
+          taxPercent: Number(settings.serviceTaxPercent) || 0,
+          bookingFee: Number(settings.serviceBookingFee) || 0,
+          extraLabel: String(settings.serviceExtraFeeLabel || ""),
+          extraAmount: Number(settings.serviceExtraFeeAmount) || 0,
+        });
+      }
     } catch {
       setItems([]);
       setCategories([]);
@@ -118,6 +145,9 @@ export default function AdminCatalogServicesPage() {
       image: row.image ?? "",
       price: String(row.price),
       commissionPercent: String(row.commissionPercent),
+      morningSurcharge: String(row.morningSurcharge ?? 0),
+      afternoonSurcharge: String(row.afternoonSurcharge ?? 0),
+      eveningSurcharge: String(row.eveningSurcharge ?? 0),
       categoryId: row.categoryId,
       isActive: row.isActive,
     });
@@ -132,13 +162,16 @@ export default function AdminCatalogServicesPage() {
     const pct =
       Number.isFinite(commissionNum) && commissionNum >= 0 ? commissionNum : 0;
     const mykeys = (price * pct) / 100;
+    const checkout = computeServicePaymentSummary(price, checkoutFees);
     return {
-      tenantPays: price,
+      tenantPays: checkout.amountToPay,
+      itemTotal: price,
+      taxesAndFee: checkout.taxesAndFee,
       mykeys,
       provider: Math.max(0, price - mykeys),
       valid: price > 0 && pct >= 0 && pct <= 100,
     };
-  }, [priceNum, commissionNum]);
+  }, [priceNum, commissionNum, checkoutFees]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -166,6 +199,9 @@ export default function AdminCatalogServicesPage() {
         image: form.image.trim() || null,
         price: Number(form.price),
         commissionPercent: Number(form.commissionPercent),
+        morningSurcharge: Number(form.morningSurcharge) || 0,
+        afternoonSurcharge: Number(form.afternoonSurcharge) || 0,
+        eveningSurcharge: Number(form.eveningSurcharge) || 0,
         categoryId: form.categoryId,
         isActive: form.isActive,
       };
@@ -215,8 +251,15 @@ export default function AdminCatalogServicesPage() {
               Catalog Services
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Set the tenant price and MYKEYS cut. Providers only choose which
-              services they offer — they cannot change the price.
+              Set the catalog item price and MYKEYS cut. Taxes, booking fee, and
+              extra checkout lines are set in{" "}
+              <Link
+                href="/admin/dashboard/settings"
+                className="text-green-700 font-medium hover:underline"
+              >
+                Platform Settings
+              </Link>
+              .
             </p>
           </div>
           <Button
@@ -487,7 +530,7 @@ export default function AdminCatalogServicesPage() {
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="catalog-price">Tenant pays</Label>
+                    <Label htmlFor="catalog-price">Item total</Label>
                     <div className="relative">
                       <PoundSterling className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <Input
@@ -505,7 +548,7 @@ export default function AdminCatalogServicesPage() {
                       />
                     </div>
                     <p className="text-xs text-gray-500">
-                      Charged in full to the tenant via Stripe.
+                      Catalog price before tax and checkout fees.
                     </p>
                   </div>
                   <div className="space-y-1.5">
@@ -554,6 +597,43 @@ export default function AdminCatalogServicesPage() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-800">
+                    Slot extras (added to item total)
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Each service can charge a different extra for morning,
+                    afternoon, and evening. Leave 0 for no extra.
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(
+                      [
+                        ["morningSurcharge", "Morning"],
+                        ["afternoonSurcharge", "Afternoon"],
+                        ["eveningSurcharge", "Evening"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <div key={key} className="space-y-1.5">
+                        <Label htmlFor={key}>{label} extra</Label>
+                        <div className="relative">
+                          <PoundSterling className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Input
+                            id={key}
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={form[key]}
+                            onChange={(e) =>
+                              setForm((f) => ({ ...f, [key]: e.target.value }))
+                            }
+                            className="h-11 pl-9 bg-white"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="rounded-lg bg-white border p-3">
                   <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
                     <Info className="w-3.5 h-3.5" />
@@ -561,10 +641,15 @@ export default function AdminCatalogServicesPage() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="rounded-md bg-blue-50 px-2 py-2">
-                      <p className="text-[11px] text-blue-700">Tenant pays</p>
+                      <p className="text-[11px] text-blue-700">Amount to pay</p>
                       <p className="text-sm font-semibold text-blue-900">
                         {gbp(split.tenantPays)}
                       </p>
+                      {split.taxesAndFee > 0 && (
+                        <p className="text-[10px] text-blue-600 mt-0.5">
+                          incl. {gbp(split.taxesAndFee)} fees
+                        </p>
+                      )}
                     </div>
                     <div className="rounded-md bg-emerald-50 px-2 py-2">
                       <p className="text-[11px] text-emerald-700">MYKEYS keeps</p>

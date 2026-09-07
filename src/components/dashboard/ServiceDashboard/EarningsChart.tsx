@@ -64,7 +64,8 @@ export default function EarningsChart() {
         <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis dataKey="week" stroke="#6b7280" />
-          <YAxis stroke="#6b7280" />
+          <YAxis yAxisId="left" stroke="#6b7280" />
+          <YAxis yAxisId="right" orientation="right" stroke="#6b7280" allowDecimals={false} />
           <Tooltip
             contentStyle={{
               backgroundColor: "#fff",
@@ -74,7 +75,7 @@ export default function EarningsChart() {
             formatter={(value) => value !== undefined ? `£${(value as number).toLocaleString()}` : '-'}
           />
           <Legend />
-          <Bar dataKey="earnings" fill="#10b981" name="Earnings (£)" radius={[8, 8, 0, 0]} />
+          <Bar dataKey="earnings" fill="#10b981" name="Earnings (£)" radius={[8, 8, 0, 0]} yAxisId="left" />
           <Bar dataKey="bookings" fill="#3b82f6" name="Bookings" radius={[8, 8, 0, 0]} yAxisId="right" />
         </BarChart>
       </ResponsiveContainer>

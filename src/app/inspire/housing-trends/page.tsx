@@ -703,7 +703,7 @@ export default function HousingTrendsPage() {
               </div>
 
               <Link
-                href="/inspire/mortgage-guides"
+                href="/inspire/mortgage-guides#mortgage-calculator"
                 className="block rounded-2xl border border-gray-200 bg-white p-5 hover:border-green-400 cursor-pointer"
               >
                 <div className="flex items-center gap-3 text-green-700 mb-3">

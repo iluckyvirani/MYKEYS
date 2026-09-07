@@ -4,7 +4,7 @@ import { successResponse, errorResponse } from "@/lib/response";
 import { loginSchema, validateSchema } from "@/lib/auth/validation";
 import { verifyPassword } from "@/lib/auth/password";
 import { generateTokenPair } from "@/lib/auth/jwt";
-import { toUserDTO, primaryRoleFromAssignments } from "@/lib/auth/helpers";
+import { toUserDTO, primaryRoleFromAssignments, authUserSelect } from "@/lib/auth/helpers";
 import { createApiError, ErrorCode } from "@/lib/auth/errors";
 import { LoginRequest, LoginResponse } from "@/types/auth";
 // import { UserStatus } from "@prisma/client";
@@ -40,9 +40,7 @@ export async function POST(request: NextRequest) {
     // Find user by email with roles
     const user = await prisma.user.findUnique({
       where: { email },
-      include: {
-        roles: true,
-      },
+      select: authUserSelect,
     });
 
     if (!user) {
@@ -81,6 +79,7 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
+      select: { id: true },
     });
 
     const primaryRole = primaryRoleFromAssignments(user.roles);
