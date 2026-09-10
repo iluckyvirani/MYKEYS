@@ -38,6 +38,9 @@ export const GET = withAuth<{ id: string }>(
               image: true,
             },
           },
+          catalogService: {
+            select: { id: true, name: true, image: true },
+          },
           review: {
             select: {
               id: true,
@@ -66,15 +69,22 @@ export const GET = withAuth<{ id: string }>(
         category: booking.category,
         providerName,
         providerId: booking.providerId,
-        providerImage: booking.provider.user.avatar || '/api/placeholder/100/100',
+        providerImage:
+          booking.provider.user.avatar ||
+          booking.catalogService?.image ||
+          booking.serviceListing?.image ||
+          null,
         providerPhone: booking.provider.user.phone,
-        status: booking.status.toLowerCase().replace('_', '-'),
+        status: String(booking.status).toLowerCase().replace(/_/g, '-'),
         bookingType: booking.bookingType.toLowerCase(),
         scheduledDate: booking.scheduledDate
           ? booking.scheduledDate.toISOString().split('T')[0]
           : undefined,
         scheduledTime: booking.scheduledTime || undefined,
         location: booking.location,
+        trackingActive: Boolean(booking.trackingActive),
+        destinationLat: booking.destinationLat ?? null,
+        destinationLng: booking.destinationLng ?? null,
         description: booking.description,
         totalAmount: booking.totalAmount,
         paymentStatus: booking.paymentStatus.toLowerCase().replace('_', '-'),
@@ -205,7 +215,10 @@ export const PATCH = withAuth<{ id: string }>(
         category: updatedBooking.category,
         providerName,
         providerId: updatedBooking.providerId,
-        providerImage: updatedBooking.provider.user.avatar || '/api/placeholder/100/100',
+        providerImage:
+          updatedBooking.provider.user.avatar ||
+          updatedBooking.serviceListing?.image ||
+          null,
         providerPhone: updatedBooking.provider.user.phone,
         status: updatedBooking.status.toLowerCase().replace('_', '-'),
         bookingType: updatedBooking.bookingType.toLowerCase(),

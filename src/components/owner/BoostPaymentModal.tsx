@@ -21,17 +21,31 @@ import {
 function PaymentForm({
   bidId,
   amount,
+  clientSecret,
   onSuccess,
   onError,
 }: {
   bidId: string;
   amount: number;
+  clientSecret: string;
   onSuccess: () => void;
   onError: (msg: string) => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
+
+  async function confirmBoostOnServer(intentId: string) {
+    try {
+      await api.post(`/owner/bids/${bidId}/payment/verify`, {
+        stripePaymentIntentId: intentId,
+      });
+    } catch {
+      await api.post(`/owner/bids/${bidId}`, {
+        stripePaymentIntentId: intentId,
+      });
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,15 +57,33 @@ function PaymentForm({
         redirect: "if_required",
         confirmParams: buildCompactStripeConfirmParams(),
       });
-      if (error) {
-        onError(error.message || "Payment failed");
+
+      let intentId = paymentIntent?.id;
+      let intentStatus = paymentIntent?.status;
+      if (!intentId || error) {
+        const retrieved = await stripe.retrievePaymentIntent(clientSecret);
+        intentId = retrieved.paymentIntent?.id || intentId;
+        intentStatus = retrieved.paymentIntent?.status || intentStatus;
+      }
+
+      if (intentStatus === "succeeded" && intentId) {
+        await confirmBoostOnServer(intentId);
+        onSuccess();
         return;
       }
-      await api.post(`/owner/bids/${bidId}/payment/verify`, {
-        stripePaymentIntentId: paymentIntent?.id,
-      });
-      onSuccess();
+
+      onError(error?.message || "Payment failed");
     } catch (err: unknown) {
+      try {
+        const retrieved = stripe ? await stripe.retrievePaymentIntent(clientSecret) : null;
+        if (retrieved?.paymentIntent?.status === "succeeded" && retrieved.paymentIntent.id) {
+          await confirmBoostOnServer(retrieved.paymentIntent.id);
+          onSuccess();
+          return;
+        }
+      } catch {
+        // fall through
+      }
       onError(
         (err as { response?: { data?: { message?: string } } })?.response?.data
           ?.message || "Payment failed"
@@ -142,6 +174,7 @@ export default function BoostPaymentModal({
               <PaymentForm
                 bidId={bidId}
                 amount={amount}
+                clientSecret={clientSecret}
                 onSuccess={onSuccess}
                 onError={setError}
               />

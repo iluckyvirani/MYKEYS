@@ -115,13 +115,20 @@ export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
         category: booking.category,
         providerName,
         providerId: booking.providerId,
-        providerImage: booking.provider.user.avatar || '/api/placeholder/100/100',
+        providerImage:
+          booking.provider.user.avatar ||
+          booking.catalogService?.image ||
+          booking.serviceListing?.image ||
+          null,
         providerPhone: booking.provider.user.phone,
-        status: booking.status.toLowerCase().replace('_', '-'),
+        status: String(booking.status).toLowerCase().replace(/_/g, '-'),
         bookingType: booking.bookingType.toLowerCase(),
         scheduledDate: booking.scheduledDate ? booking.scheduledDate.toISOString().split('T')[0] : undefined,
         scheduledTime: booking.scheduledTime || undefined,
         location: booking.location,
+        trackingActive: Boolean(booking.trackingActive),
+        destinationLat: booking.destinationLat ?? null,
+        destinationLng: booking.destinationLng ?? null,
         description: booking.description,
         totalAmount: booking.totalAmount,
         paymentStatus: booking.paymentStatus.toLowerCase().replace('_', '-'),

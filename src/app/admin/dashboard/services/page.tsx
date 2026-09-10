@@ -358,7 +358,18 @@ export default function AdminCatalogServicesPage() {
                         <td className="px-4 py-3 text-gray-600">
                           {row.category?.name ?? "—"}
                         </td>
-                        <td className="px-4 py-3 font-semibold">{gbp(row.price)}</td>
+                        <td className="px-4 py-3 font-semibold">
+                          {gbp(row.price)}
+                          {(Number(row.morningSurcharge) > 0 ||
+                            Number(row.afternoonSurcharge) > 0 ||
+                            Number(row.eveningSurcharge) > 0) && (
+                            <span className="block text-[11px] font-normal text-gray-400">
+                              Slot +{gbp(Number(row.morningSurcharge) || 0)} / +
+                              {gbp(Number(row.afternoonSurcharge) || 0)} / +
+                              {gbp(Number(row.eveningSurcharge) || 0)}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-gray-600">
                           <span className="text-xs text-gray-500">
                             {row.commissionPercent}% MYKEYS

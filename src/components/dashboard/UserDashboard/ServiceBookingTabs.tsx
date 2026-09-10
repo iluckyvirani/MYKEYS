@@ -12,8 +12,9 @@ interface ServiceBooking {
   providerId: string;
   serviceName: string;
   providerName: string;
-  providerImage: string;
-  status: "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+  providerImage?: string | null;
+  status: "pending" | "confirmed" | "on-the-way" | "in-progress" | "completed" | "cancelled";
+  trackingActive?: boolean;
   bookingType: "instant" | "schedule";
   scheduledDate?: string;
   scheduledTime?: string;
@@ -47,9 +48,9 @@ export default function ServiceBookingTabs({
   const [error, setError] = useState<string | null>(null);
   const [completionNotice, setCompletionNotice] = useState<string | null>(null);
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       
       // Build query params — all filters sent to backend
       const params = new URLSearchParams({ limit: '20' });
@@ -102,7 +103,9 @@ export default function ServiceBookingTabs({
   };
 
   useEffect(() => {
-    fetchBookings();
+    fetchBookings(false);
+    const poll = setInterval(() => fetchBookings(true), 12000);
+    return () => clearInterval(poll);
   }, [searchQuery, filters]);
 
   const handleBookingUpdated = (notice?: string) => {
@@ -113,7 +116,11 @@ export default function ServiceBookingTabs({
 
   // Categorize bookings by status
   const upcomingBookings = allBookings.filter(
-    (b) => b.status === "pending" || b.status === "confirmed" || b.status === "in-progress"
+    (b) =>
+      b.status === "pending" ||
+      b.status === "confirmed" ||
+      b.status === "on-the-way" ||
+      b.status === "in-progress"
   );
 
   const completedBookings = allBookings.filter((b) => b.status === "completed");

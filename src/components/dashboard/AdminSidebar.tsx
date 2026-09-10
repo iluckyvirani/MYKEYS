@@ -30,6 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useAdminLogout } from "@/lib/hooks/useAdmin";
+import BrandLogo from "@/components/common/BrandLogo";
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -89,13 +90,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             className="mx-auto flex w-full min-w-0 justify-center hover:opacity-90 transition-opacity"
             aria-label="MYKEYS home"
           >
-            <img
-              src="/mykeys-logo-nav.png"
-              alt="MYKEYS"
-              width={492}
-              height={94}
-              className="mx-auto block h-[52px] w-auto max-w-[210px] object-contain object-center"
-            />
+            <BrandLogo variant="sidebar" className="mx-auto block max-w-[210px]" />
           </Link>
         </div>
 
@@ -152,13 +147,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             className="flex min-w-0 justify-center hover:opacity-90 transition-opacity"
             aria-label="MYKEYS home"
           >
-            <img
-              src="/mykeys-logo-nav.png"
-              alt="MYKEYS"
-              width={492}
-              height={94}
-              className="mx-auto block h-[52px] w-auto max-w-full object-contain object-center"
-            />
+            <BrandLogo variant="sidebar" className="mx-auto block max-w-full" />
           </Link>
           <button
             onClick={onClose}

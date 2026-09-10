@@ -14,11 +14,11 @@ import {
 const SUPPORT_EMAIL = getSupportEmail();
 
 function logoAttachment() {
-  const logoPath = path.join(process.cwd(), "public", "mykeys-logo-nav.png");
+  const logoPath = path.join(process.cwd(), "public", "mykeys-logo.png");
   if (!fs.existsSync(logoPath)) return [];
   return [
     {
-      filename: "mykeys-logo-nav.png",
+      filename: "mykeys-logo.png",
       path: logoPath,
       cid: LOGO_CID,
       contentDisposition: "inline" as const,
@@ -1114,6 +1114,72 @@ export const emailService = {
     } catch (error) {
       console.error(`Failed to send service action OTP to ${opts.to}:`, error);
       throw error;
+    }
+  },
+
+  async sendServiceOnTheWayEmail(opts: {
+    to: string;
+    firstName: string;
+    serviceName: string;
+    providerName: string;
+    location?: string | null;
+    scheduledDate?: string | null;
+    scheduledTime?: string | null;
+    trackUrl: string;
+  }) {
+    try {
+      const details = `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;border-collapse:collapse;border:1px solid #d8eceb;border-radius:8px;overflow:hidden;">
+          <tr style="background:#f3fafa;">
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;"><strong>Service</strong></td>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;">${escapeEmailHtml(opts.serviceName)}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;"><strong>Professional</strong></td>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;">${escapeEmailHtml(opts.providerName)}</td>
+          </tr>
+          ${
+            opts.location
+              ? `<tr style="background:#f3fafa;">
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;"><strong>Location</strong></td>
+            <td style="padding:10px 12px;border-bottom:1px solid #d8eceb;">${escapeEmailHtml(opts.location)}</td>
+          </tr>`
+              : ""
+          }
+          ${
+            opts.scheduledDate || opts.scheduledTime
+              ? `<tr>
+            <td style="padding:10px 12px;"><strong>Slot</strong></td>
+            <td style="padding:10px 12px;">${escapeEmailHtml(
+              [opts.scheduledDate, opts.scheduledTime].filter(Boolean).join(" · ")
+            )}</td>
+          </tr>`
+              : ""
+          }
+        </table>
+      `;
+      const mailOptions = {
+        ...baseMailOptions(opts.to),
+        subject: `${opts.providerName} is on the way — ${opts.serviceName}`,
+        html: renderStandardEmail({
+          title: "Your professional is on the way",
+          greetingName: opts.firstName,
+          preheader: `${opts.providerName} has left and is sharing live location.`,
+          paragraphs: [
+            `<strong>${escapeEmailHtml(opts.providerName)}</strong> has left to provide <strong>${escapeEmailHtml(opts.serviceName)}</strong> and is sharing live location.`,
+            "Open your dashboard to watch them on the map, just like a live delivery track.",
+          ],
+          extraHtml: details,
+          cta: {
+            href: opts.trackUrl,
+            label: "Track live location",
+          },
+        }),
+      };
+      await transporter.sendMail(mailOptions);
+      console.log(`Service on-the-way email sent to ${opts.to}`);
+    } catch (error) {
+      console.error(`Failed to send service on-the-way email to ${opts.to}:`, error);
     }
   },
 };

@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import UserAvatar from "@/components/common/UserAvatar";
 import {
   Star,
   MapPin,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ServiceRatingModal from "./ServiceRatingModal";
+import ServiceLiveTrackPanel from "@/components/services/ServiceLiveTrackPanel";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -26,8 +27,9 @@ interface ServiceBooking {
   providerId: string;
   serviceName: string;
   providerName: string;
-  providerImage: string;
-  status: "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+  providerImage?: string | null;
+  status: "pending" | "confirmed" | "on-the-way" | "in-progress" | "completed" | "cancelled";
+  trackingActive?: boolean;
   bookingType: "instant" | "schedule";
   scheduledDate?: string;
   scheduledTime?: string;
@@ -72,6 +74,8 @@ export default function ServiceBookingCard({
         return "bg-yellow-100 text-yellow-800";
       case "confirmed":
         return "bg-blue-100 text-blue-800";
+      case "on-the-way":
+        return "bg-emerald-100 text-emerald-800";
       case "in-progress":
         return "bg-purple-100 text-purple-800";
       case "completed":
@@ -188,12 +192,11 @@ export default function ServiceBookingCard({
         <div className="flex gap-6">
           {/* Provider Image */}
           <div className="shrink-0">
-            <Image
+            <UserAvatar
+              name={booking.providerName}
               src={booking.providerImage}
-              alt={booking.providerName}
-              width={100}
-              height={100}
-              className="w-24 h-24 rounded-lg object-cover"
+              size="xl"
+              className="rounded-lg"
             />
           </div>
 
@@ -209,8 +212,12 @@ export default function ServiceBookingCard({
                 </p>
               </div>
               <Badge className={`${getStatusColor(booking.status)} font-medium`}>
-                {(booking.status || "pending").charAt(0).toUpperCase() +
-                  (booking.status || "pending").slice(1)}
+                {booking.status === "on-the-way"
+                  ? "On the way"
+                  : booking.status === "in-progress"
+                    ? "In progress"
+                    : (booking.status || "pending").charAt(0).toUpperCase() +
+                      (booking.status || "pending").slice(1)}
               </Badge>
             </div>
 
@@ -234,6 +241,19 @@ export default function ServiceBookingCard({
             <div className="text-lg font-semibold text-gray-900 mb-4">
               {formatCurrency(booking.totalAmount)}
             </div>
+
+            {(booking.status === "confirmed" ||
+              booking.status === "on-the-way" ||
+              booking.status === "in-progress" ||
+              booking.trackingActive) && (
+              <div className="mb-4">
+                <ServiceLiveTrackPanel
+                  bookingId={booking.id}
+                  role="client"
+                  compact
+                />
+              </div>
+            )}
 
             {otpSuccess ? (
               <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -309,6 +329,7 @@ export default function ServiceBookingCard({
           <div className="shrink-0 flex flex-col gap-2">
             {booking.status === "confirmed" ||
             booking.status === "pending" ||
+            booking.status === "on-the-way" ||
             booking.status === "in-progress" ? (
               <>
                 <Button
@@ -403,12 +424,11 @@ export default function ServiceBookingCard({
             </h3>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <Image
+                <UserAvatar
+                  name={booking.providerName}
                   src={booking.providerImage}
-                  alt={booking.providerName}
-                  width={60}
-                  height={60}
-                  className="rounded-lg object-cover"
+                  size="lg"
+                  className="rounded-lg"
                 />
                 <div>
                   <h4 className="font-semibold text-gray-900">{booking.providerName}</h4>

@@ -47,6 +47,13 @@ export async function POST(request: NextRequest) {
           where: { stripePaymentIntentId: intent.id },
         });
 
+        try {
+          const { confirmBidByPaymentIntent } = await import("@/lib/bids/bidService");
+          await confirmBidByPaymentIntent(intent.id);
+        } catch (bidErr) {
+          console.error("Boost bid webhook confirm failed (non-fatal):", bidErr);
+        }
+
         if (payment) {
           if (payment.status !== PaymentStatus.PAID) {
             await prisma.payment.update({

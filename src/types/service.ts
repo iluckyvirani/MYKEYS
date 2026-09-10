@@ -15,7 +15,7 @@ export interface ServiceSubcategory {
 }
 
 export type BookingType = "instant" | "scheduled";
-export type BookingStatus = "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+export type BookingStatus = "pending" | "confirmed" | "on-the-way" | "in-progress" | "completed" | "cancelled";
 
 export interface ServiceProvider {
   id: string;

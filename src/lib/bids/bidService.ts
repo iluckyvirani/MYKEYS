@@ -199,6 +199,52 @@ export async function createBid(input: PlaceBidInput): Promise<BidDTO> {
   return mapBid(bid);
 }
 
+export async function confirmBidStripePayment(
+  bidId: string,
+  ownerId: string,
+  stripePaymentIntentId: string
+): Promise<BidDTO> {
+  const bid = await prisma.propertyBid.findUnique({ where: { id: bidId } });
+  if (!bid) throw new Error("Boost not found");
+  if (bid.ownerId !== ownerId) throw new Error("Unauthorized");
+
+  const { stripe } = await import("@/lib/stripe");
+  const intent = await stripe.paymentIntents.retrieve(stripePaymentIntentId);
+  if (intent.status !== "succeeded") {
+    throw new Error(`Payment has not succeeded (status: ${intent.status})`);
+  }
+
+  const chargeId =
+    typeof intent.latest_charge === "string"
+      ? intent.latest_charge
+      : (intent.latest_charge as { id?: string } | null)?.id ?? null;
+
+  return updateBidPayment(bidId, {
+    stripePaymentIntentId,
+    stripeChargeId: chargeId ?? undefined,
+  });
+}
+
+export async function confirmBidByPaymentIntent(intentId: string): Promise<BidDTO | null> {
+  const bid = await prisma.propertyBid.findFirst({
+    where: { stripePaymentIntentId: intentId },
+  });
+  if (!bid) return null;
+  if (bid.stripeChargeId) return getBidById(bid.id);
+
+  const { stripe } = await import("@/lib/stripe");
+  const intent = await stripe.paymentIntents.retrieve(intentId);
+  if (intent.status !== "succeeded") return null;
+  const chargeId =
+    typeof intent.latest_charge === "string"
+      ? intent.latest_charge
+      : (intent.latest_charge as { id?: string } | null)?.id ?? null;
+  return updateBidPayment(bid.id, {
+    stripePaymentIntentId: intentId,
+    stripeChargeId: chargeId ?? undefined,
+  });
+}
+
 export async function updateBidPayment(
   bidId: string,
   data: { paymentId?: string; stripePaymentIntentId?: string; stripeChargeId?: string }

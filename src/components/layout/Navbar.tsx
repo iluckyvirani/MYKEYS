@@ -25,6 +25,7 @@ import {
   setStoredUser,
   userHasRole,
 } from "@/lib/auth/storedUser";
+import BrandLogo from "@/components/common/BrandLogo";
 
 type MegaMenu = "rent" | "inspire" | "dashboard" | null;
 
@@ -331,13 +332,7 @@ export default function Navbar() {
               onClick={() => setOpenMenu(null)}
               aria-label="MYKEYS home"
             >
-              <img
-                src="/mykeys-logo-nav.png"
-                alt="MYKEYS"
-                width={492}
-                height={94}
-                className="h-[52px] w-auto object-contain"
-              />
+              <BrandLogo variant="nav" />
             </Link>
 
             {/* Desktop nav */}

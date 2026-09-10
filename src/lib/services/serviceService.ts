@@ -38,6 +38,8 @@ export interface ServiceBookingInput {
   scheduledDate?: Date;
   scheduledTime?: string;
   location?: string;
+  destinationLat?: number;
+  destinationLng?: number;
   totalAmount: number;
   price?: number;
   commissionPercent?: number;
@@ -128,11 +130,13 @@ function mapBookingStatus(status: string) {
   const mapping: Record<string, string> = {
     'pending': 'PENDING',
     'confirmed': 'CONFIRMED',
+    'on-the-way': 'ON_THE_WAY',
     'in-progress': 'IN_PROGRESS',
     'completed': 'COMPLETED',
     'cancelled': 'CANCELLED',
     'PENDING': 'PENDING',
     'CONFIRMED': 'CONFIRMED',
+    'ON_THE_WAY': 'ON_THE_WAY',
     'IN_PROGRESS': 'IN_PROGRESS',
     'COMPLETED': 'COMPLETED',
     'CANCELLED': 'CANCELLED',
@@ -144,11 +148,12 @@ function mapBookingStatusToFrontend(status: string): string {
   const mapping: Record<string, string> = {
     'PENDING': 'pending',
     'CONFIRMED': 'confirmed',
+    'ON_THE_WAY': 'on-the-way',
     'IN_PROGRESS': 'in-progress',
     'COMPLETED': 'completed',
     'CANCELLED': 'cancelled',
   };
-  return mapping[status] || status.toLowerCase();
+  return mapping[status] || String(status).toLowerCase().replace(/_/g, '-');
 }
 
 function mapRequestStatusToFrontend(status: string): string {
@@ -398,7 +403,7 @@ export const serviceService = {
    * Create a service booking
    */
   async createBooking(data: ServiceBookingInput) {
-    return prisma.serviceBooking.create({
+    const created = await prisma.serviceBooking.create({
       data: {
         service: data.service,
         category: data.category,
@@ -409,6 +414,9 @@ export const serviceService = {
         scheduledDate: data.scheduledDate,
         scheduledTime: data.scheduledTime,
         location: data.location,
+        ...(Number.isFinite(data.destinationLat) && Number.isFinite(data.destinationLng)
+          ? { destinationLat: data.destinationLat, destinationLng: data.destinationLng }
+          : {}),
         totalAmount: data.totalAmount,
         price: data.price ?? data.totalAmount,
         commissionPercent: data.commissionPercent,
@@ -420,7 +428,7 @@ export const serviceService = {
         providerId: data.providerId,
         serviceListingId: data.serviceListingId,
         settleStatus: 'NOT_APPLICABLE',
-      },
+      } as any,
       include: {
         client: {
           select: { id: true, firstName: true, lastName: true, phone: true, email: true },
@@ -433,6 +441,11 @@ export const serviceService = {
         catalogService: true,
       },
     });
+    if (data.destinationLat != null && data.destinationLng != null) {
+      const { persistBookingDestination } = await import("@/lib/services/serviceTracking");
+      await persistBookingDestination(created.id, data.destinationLat, data.destinationLng);
+    }
+    return created;
   },
 
   /**
@@ -505,6 +518,9 @@ export const serviceService = {
       paymentStatus: mapPaymentStatusToFrontend(b.paymentStatus),
       pendingAction: b.pendingAction,
       settleStatus: b.settleStatus,
+      trackingActive: Boolean(b.trackingActive),
+      destinationLat: b.destinationLat ?? null,
+      destinationLng: b.destinationLng ?? null,
       reviewRating: b.review?.rating ?? null,
       reviewComment: b.review?.comment ?? null,
       reviewResponse: b.review?.response ?? null,
@@ -555,6 +571,9 @@ export const serviceService = {
       amount: b.totalAmount,
       description: b.description || '',
       paymentStatus: mapPaymentStatusToFrontend(b.paymentStatus),
+      trackingActive: Boolean((b as { trackingActive?: boolean }).trackingActive),
+      destinationLat: (b as { destinationLat?: number | null }).destinationLat ?? null,
+      destinationLng: (b as { destinationLng?: number | null }).destinationLng ?? null,
       review: b.review,
       createdAt: b.createdAt,
     };
@@ -728,6 +747,7 @@ export const serviceService = {
           pendingAction: null,
           actionOtpHash: null,
           actionOtpExpiresAt: null,
+          trackingActive: false,
           settleStatus: 'PENDING',
           paymentStatus:
             booking.paymentStatus === 'COMPLETED' ? 'COMPLETED' : booking.paymentStatus,
@@ -735,8 +755,11 @@ export const serviceService = {
             booking.paymentStatus === 'COMPLETED'
               ? booking.paidAmount || booking.totalAmount
               : booking.paidAmount,
-        },
+        } as any,
       });
+
+      const { stopTracking } = await import("@/lib/services/serviceTracking");
+      await stopTracking(id);
 
       try {
         await prisma.serviceProvider.update({
@@ -816,9 +839,13 @@ export const serviceService = {
         pendingAction: null,
         actionOtpHash: null,
         actionOtpExpiresAt: null,
+        trackingActive: false,
         settleStatus: 'NOT_APPLICABLE',
-      },
+      } as any,
     });
+
+    const { stopTracking } = await import("@/lib/services/serviceTracking");
+    await stopTracking(id);
 
     return updated;
   },

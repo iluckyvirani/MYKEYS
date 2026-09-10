@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
       scheduledDate,
       scheduledTime,
       location,
+      destinationLat: destinationLatRaw,
+      destinationLng: destinationLngRaw,
       bookingType,
       slotPeriod: slotPeriodRaw,
       tipAmount: tipAmountRaw,
@@ -148,6 +150,12 @@ export async function POST(request: NextRequest) {
       scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
       scheduledTime,
       location,
+      destinationLat: Number.isFinite(Number(destinationLatRaw))
+        ? Number(destinationLatRaw)
+        : undefined,
+      destinationLng: Number.isFinite(Number(destinationLngRaw))
+        ? Number(destinationLngRaw)
+        : undefined,
       totalAmount: amountToPay,
       price: commissionBase,
       commissionPercent: catalog.commissionPercent,

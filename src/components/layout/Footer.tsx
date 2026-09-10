@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { DEFAULT_CONTACT_CONTENT } from "@/lib/content/siteDefaults";
+import BrandLogo from "@/components/common/BrandLogo";
 
 const FOOTER_PROPERTY_TYPES = [
   { value: "APARTMENT", label: "Apartments", icon: Home, href: "/buy?propertyType=APARTMENT" },
@@ -162,11 +163,7 @@ export default function Footer() {
               {/* Brand */}
               <div className="space-y-4">
                 <Link href="/" className="inline-flex items-center gap-3 group">
-                  <img
-                    src="/mykeys-logo-nav.png"
-                    alt="MYKEYS"
-                    className="h-16 w-auto object-contain group-hover:scale-105 transition-transform"
-                  />
+                  <BrandLogo variant="footer" className="group-hover:scale-105 transition-transform" />
                 </Link>
                 <p className="text-gray-600 max-w-md">
                   Your trusted partner in finding dream properties. With cutting-edge technology
@@ -367,8 +364,9 @@ export default function Footer() {
           {/* Bottom Bar */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             {/* Copyright */}
-            <div className="text-gray-500 text-sm">
-              © {new Date().getFullYear()} MYKEYS. All rights reserved.
+            <div className="flex items-center gap-3 text-gray-500 text-sm">
+              <BrandLogo variant="authCompact" />
+              <span>© {new Date().getFullYear()} MYKEYS. All rights reserved.</span>
             </div>
 
             {/* Ratings */}

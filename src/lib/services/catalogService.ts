@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { createHash, randomInt } from "crypto";
 
 function moneyOrZero(value: unknown) {
@@ -48,6 +49,81 @@ const SLOT_DEFAULTS = {
   eveningSurcharge: 0,
 };
 
+type SlotSurchargeRow = {
+  id: string;
+  morningSurcharge: number;
+  afternoonSurcharge: number;
+  eveningSurcharge: number;
+};
+
+function slotFields(row?: Partial<SlotSurchargeRow> | null) {
+  return {
+    morningSurcharge: moneyOrZero(row?.morningSurcharge),
+    afternoonSurcharge: moneyOrZero(row?.afternoonSurcharge),
+    eveningSurcharge: moneyOrZero(row?.eveningSurcharge),
+  };
+}
+
+/** Raw SQL bypasses Prisma `omit`, so admin/tenant always see stored extras. */
+async function loadSlotSurchargesByIds(ids: string[]) {
+  const map = new Map<string, ReturnType<typeof slotFields>>();
+  if (ids.length === 0) return map;
+  try {
+    const rows = await prisma.$queryRaw<SlotSurchargeRow[]>`
+      SELECT id, "morningSurcharge", "afternoonSurcharge", "eveningSurcharge"
+      FROM "CatalogService"
+      WHERE id IN (${Prisma.join(ids)})
+    `;
+    for (const row of rows) {
+      map.set(row.id, slotFields(row));
+    }
+  } catch (err) {
+    console.warn("Could not load slot extras:", err);
+  }
+  return map;
+}
+
+async function attachSlotSurcharges<T extends { id: string }>(rows: T[]) {
+  const extras = await loadSlotSurchargesByIds(rows.map((row) => row.id));
+  return rows.map((row) => ({
+    ...row,
+    ...SLOT_DEFAULTS,
+    ...slotFields(row as Partial<SlotSurchargeRow>),
+    ...extras.get(row.id),
+  }));
+}
+
+async function persistSlotSurcharges(
+  id: string,
+  data: {
+    morningSurcharge?: number;
+    afternoonSurcharge?: number;
+    eveningSurcharge?: number;
+  }
+) {
+  if (data.morningSurcharge !== undefined) {
+    await prisma.$executeRaw`
+      UPDATE "CatalogService"
+      SET "morningSurcharge" = ${moneyOrZero(data.morningSurcharge)}
+      WHERE id = ${id}
+    `;
+  }
+  if (data.afternoonSurcharge !== undefined) {
+    await prisma.$executeRaw`
+      UPDATE "CatalogService"
+      SET "afternoonSurcharge" = ${moneyOrZero(data.afternoonSurcharge)}
+      WHERE id = ${id}
+    `;
+  }
+  if (data.eveningSurcharge !== undefined) {
+    await prisma.$executeRaw`
+      UPDATE "CatalogService"
+      SET "eveningSurcharge" = ${moneyOrZero(data.eveningSurcharge)}
+      WHERE id = ${id}
+    `;
+  }
+}
+
 export const catalogService = {
   async list(opts?: { activeOnly?: boolean; categoryId?: string }) {
     const where = {
@@ -55,7 +131,7 @@ export const catalogService = {
       ...(opts?.categoryId ? { categoryId: opts.categoryId } : {}),
     };
     try {
-      return await prisma.catalogService.findMany({
+      const rows = await prisma.catalogService.findMany({
         where,
         include: {
           category: { select: { id: true, name: true, icon: true } },
@@ -63,6 +139,7 @@ export const catalogService = {
         },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       });
+      return attachSlotSurcharges(rows);
     } catch (err) {
       console.warn("Catalog list with slot extras failed, retrying without them:", err);
       const rows = await prisma.catalogService.findMany({
@@ -84,18 +161,21 @@ export const catalogService = {
         },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       });
-      return rows.map((row) => ({ ...row, ...SLOT_DEFAULTS }));
+      return attachSlotSurcharges(rows);
     }
   },
 
   async getById(id: string) {
     try {
-      return await prisma.catalogService.findUnique({
+      const row = await prisma.catalogService.findUnique({
         where: { id },
         include: {
           category: { select: { id: true, name: true, icon: true } },
         },
       });
+      if (!row) return null;
+      const [withSlots] = await attachSlotSurcharges([row]);
+      return withSlots;
     } catch (err) {
       console.warn("Catalog getById with slot extras failed, retrying without them:", err);
       const row = await prisma.catalogService.findUnique({
@@ -115,7 +195,9 @@ export const catalogService = {
           category: { select: { id: true, name: true, icon: true } },
         },
       });
-      return row ? { ...row, ...SLOT_DEFAULTS } : null;
+      if (!row) return null;
+      const [withSlots] = await attachSlotSurcharges([row]);
+      return withSlots;
     }
   },
 
@@ -136,7 +218,7 @@ export const catalogService = {
     });
     if (!category) throw new Error("Category not found");
 
-    return prisma.catalogService.create({
+    const created = await prisma.catalogService.create({
       data: {
         name: data.name.trim(),
         description: data.description?.trim() || null,
@@ -152,6 +234,13 @@ export const catalogService = {
       },
       include: { category: { select: { id: true, name: true } } },
     });
+    await persistSlotSurcharges(created.id, {
+      morningSurcharge: moneyOrZero(data.morningSurcharge),
+      afternoonSurcharge: moneyOrZero(data.afternoonSurcharge),
+      eveningSurcharge: moneyOrZero(data.eveningSurcharge),
+    });
+    const [withSlots] = await attachSlotSurcharges([created]);
+    return withSlots;
   },
 
   async update(id: string, data: Partial<CatalogServiceInput>) {
@@ -174,7 +263,7 @@ export const catalogService = {
       throw new Error("Commission must be between 0 and 100");
     }
 
-    return prisma.catalogService.update({
+    const updated = await prisma.catalogService.update({
       where: { id },
       data: {
         ...(data.name !== undefined ? { name: data.name.trim() } : {}),
@@ -199,6 +288,19 @@ export const catalogService = {
       },
       include: { category: { select: { id: true, name: true } } },
     });
+    await persistSlotSurcharges(id, {
+      ...(data.morningSurcharge !== undefined
+        ? { morningSurcharge: moneyOrZero(data.morningSurcharge) }
+        : {}),
+      ...(data.afternoonSurcharge !== undefined
+        ? { afternoonSurcharge: moneyOrZero(data.afternoonSurcharge) }
+        : {}),
+      ...(data.eveningSurcharge !== undefined
+        ? { eveningSurcharge: moneyOrZero(data.eveningSurcharge) }
+        : {}),
+    });
+    const [withSlots] = await attachSlotSurcharges([updated]);
+    return withSlots;
   },
 
   async remove(id: string) {
@@ -262,7 +364,8 @@ export const catalogService = {
     });
 
     const offeredSet = new Set(offered.map((o) => o.catalogServiceId));
-    return catalog.map((s) => ({
+    const withSlots = await attachSlotSurcharges(catalog);
+    return withSlots.map((s) => ({
       ...s,
       isOffered: offeredSet.has(s.id),
     }));

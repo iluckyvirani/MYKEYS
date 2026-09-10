@@ -178,6 +178,8 @@ export default function ServiceCheckoutPage({
         catalogServiceId: service.id,
         providerId: provider.id,
         location: formatLocation(address),
+        destinationLat: address.lat,
+        destinationLng: address.lng,
         scheduledDate: slot.date,
         scheduledTime: slot.time,
         bookingType: "scheduled",

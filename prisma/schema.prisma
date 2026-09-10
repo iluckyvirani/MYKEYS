@@ -159,6 +159,7 @@ enum ServiceCategory {
 enum ServiceBookingStatus {
   PENDING
   CONFIRMED
+  ON_THE_WAY
   IN_PROGRESS
   COMPLETED
   CANCELLED
@@ -1320,6 +1321,13 @@ model ServiceBooking {
 
   // Location
   location String?
+  destinationLat Float?
+  destinationLng Float?
+  providerLat    Float?
+  providerLng    Float?
+  providerLocationUpdatedAt DateTime?
+  trackingActive Boolean @default(false)
+  enRouteAt      DateTime?
 
   // Status
   status        ServiceBookingStatus @default(PENDING)

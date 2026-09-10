@@ -15,6 +15,8 @@ export type CheckoutAddress = {
   landmark: string;
   label: "Home" | "Other";
   contactName: string;
+  lat?: number;
+  lng?: number;
 };
 
 export default function CheckoutAddressModal({
@@ -53,6 +55,8 @@ export default function CheckoutAddressModal({
       landmark: landmark.trim(),
       label,
       contactName: contactName.trim() || defaultName,
+      lat: picked?.lat ?? initial?.lat,
+      lng: picked?.lng ?? initial?.lng,
     });
   }
 
@@ -81,6 +85,8 @@ export default function CheckoutAddressModal({
           compact
           height="220px"
           placeholder="Search for your location / postcode"
+          initialLat={initial?.lat}
+          initialLng={initial?.lng}
           onLocationSelect={setPicked}
         />
 

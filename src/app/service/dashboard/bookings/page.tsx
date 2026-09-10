@@ -6,12 +6,13 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Calendar, Clock, User, MapPin, Phone,
   CheckCircle, XCircle, PlayCircle, Flag, Star,
-  Download, ChevronDown, ChevronUp, Loader2, Inbox,
+  Download, ChevronDown, ChevronUp, Loader2, Inbox, Navigation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import ServiceReviewsModal, { ServiceReview } from "@/components/services/ServiceReviewsModal";
+import ServiceLiveTrackPanel from "@/components/services/ServiceLiveTrackPanel";
 
 interface ServiceBooking {
   id: string;
@@ -22,23 +23,25 @@ interface ServiceBooking {
   date: string;
   time: string;
   location: string;
-  status: "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+  status: "pending" | "confirmed" | "on-the-way" | "in-progress" | "completed" | "cancelled";
   amount: number;
   description: string;
   paymentStatus: string;
   bookingType?: "instant" | "scheduled";
   pendingAction?: "COMPLETE" | "CANCEL" | null;
+  trackingActive?: boolean;
   createdAt: string;
   reviewRating?: number | null;
   reviewComment?: string | null;
   reviewResponse?: string | null;
 }
 
-type StatusKey = "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+type StatusKey = "pending" | "confirmed" | "on-the-way" | "in-progress" | "completed" | "cancelled";
 
 const STATUS_META: Record<StatusKey, { label: string; color: string; bg: string; dot: string }> = {
   pending:       { label: "Pending",     color: "text-yellow-700", bg: "bg-yellow-50 border-yellow-200",  dot: "bg-yellow-400" },
   confirmed:     { label: "Confirmed",   color: "text-blue-700",   bg: "bg-blue-50 border-blue-200",      dot: "bg-blue-500"   },
+  "on-the-way":  { label: "On the way",  color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200", dot: "bg-emerald-500" },
   "in-progress": { label: "In Progress", color: "text-purple-700", bg: "bg-purple-50 border-purple-200",  dot: "bg-purple-500" },
   completed:     { label: "Completed",   color: "text-green-700",  bg: "bg-green-50 border-green-200",    dot: "bg-green-500"  },
   cancelled:     { label: "Cancelled",   color: "text-red-700",    bg: "bg-red-50 border-red-200",        dot: "bg-red-400"    },
@@ -74,7 +77,9 @@ export default function ServiceBookingsPage() {
     try {
       const booking = allBookings.find((b) => b.id === id);
       const jobStarted =
-        booking?.status === "confirmed" || booking?.status === "in-progress";
+        booking?.status === "confirmed" ||
+        booking?.status === "on-the-way" ||
+        booking?.status === "in-progress";
 
       // Complete always needs OTP. Cancel after accept/start also needs OTP
       // (unpaid pending decline can still cancel directly).
@@ -109,6 +114,48 @@ export default function ServiceBookingsPage() {
     }
   };
 
+  const handleOnTheWay = async (id: string) => {
+    setActionLoading(id + "on-the-way");
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("Location is not available on this device"));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+        });
+      });
+      await api.post(`/service/bookings/${id}/tracking`, {
+        action: "start",
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+      });
+      setAllBookings((prev) =>
+        prev.map((b) =>
+          b.id === id ? { ...b, status: "on-the-way" as StatusKey, trackingActive: true } : b
+        )
+      );
+      setExpanded(id);
+      toast({
+        title: "On the way",
+        description: "Live location is now visible to the client. Keep this page open.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Could not start live location",
+        description:
+          err?.code === 1
+            ? "Allow location access so the client can see you coming"
+            : err.response?.data?.message || err.message || "Enable GPS and try again",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const visibleBookings =
     activeTab === "all" ? allBookings : allBookings.filter((b) => b.status === activeTab);
 
@@ -119,6 +166,7 @@ export default function ServiceBookingsPage() {
     { label: "All",         key: "all",         icon: Inbox,       iconClass: "text-gray-500",   bg: "bg-gray-50",   border: "border-gray-200",   activeBorder: "border-gray-500",   activeText: "text-gray-700"   },
     { label: "Pending",     key: "pending",     icon: Clock,       iconClass: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-100",  activeBorder: "border-yellow-400", activeText: "text-yellow-700" },
     { label: "Confirmed",   key: "confirmed",   icon: Calendar,    iconClass: "text-blue-500",   bg: "bg-blue-50",   border: "border-blue-100",   activeBorder: "border-blue-400",   activeText: "text-blue-700"   },
+    { label: "On the way",  key: "on-the-way",  icon: Navigation,  iconClass: "text-emerald-500", bg: "bg-emerald-50", border: "border-emerald-100", activeBorder: "border-emerald-400", activeText: "text-emerald-700" },
     { label: "In Progress", key: "in-progress", icon: PlayCircle,  iconClass: "text-purple-500", bg: "bg-purple-50", border: "border-purple-100",  activeBorder: "border-purple-400", activeText: "text-purple-700" },
     { label: "Completed",   key: "completed",   icon: CheckCircle, iconClass: "text-green-500",  bg: "bg-green-50",  border: "border-green-100",  activeBorder: "border-green-400",  activeText: "text-green-700"  },
     { label: "Cancelled",   key: "cancelled",   icon: XCircle,     iconClass: "text-red-400",    bg: "bg-red-50",    border: "border-red-100",    activeBorder: "border-red-400",    activeText: "text-red-600"    },
@@ -129,12 +177,12 @@ export default function ServiceBookingsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Accept jobs, start work, then request complete/cancel — the client confirms with an email OTP.
+          Accept the job, share live location when you leave, then start work. The client confirms complete/cancel with an email OTP.
         </p>
       </div>
 
       {/* Status filter cards */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-7 gap-3 mb-6">
         {STAT_CARDS.map(({ label, key, icon: Icon, iconClass, bg, border, activeBorder, activeText }) => (
           <button
             key={key}
@@ -303,6 +351,20 @@ export default function ServiceBookingsPage() {
                         <p className="text-xs text-gray-400 italic">No review from customer yet</p>
                       </div>
                     )}
+
+                  </div>
+                )}
+
+                {(booking.status === "on-the-way" ||
+                  booking.status === "in-progress" ||
+                  booking.trackingActive) && (
+                  <div className="mx-4 mb-3">
+                    <ServiceLiveTrackPanel
+                      bookingId={booking.id}
+                      role="provider"
+                      shareLocation
+                      compact
+                    />
                   </div>
                 )}
 
@@ -325,10 +387,29 @@ export default function ServiceBookingsPage() {
                     )}
                     {booking.status === "confirmed" && (
                       <>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                          disabled={!!actionLoading} onClick={() => handleOnTheWay(booking.id)}>
+                          {isActing("on-the-way") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
+                          I&apos;m on the way
+                        </Button>
                         <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
                           disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "in-progress")}>
                           {isActing("in-progress") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
                           Start Job
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
+                          disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "cancelled")}>
+                          {isActing("cancelled") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                          Request Cancel (OTP)
+                        </Button>
+                      </>
+                    )}
+                    {booking.status === "on-the-way" && (
+                      <>
+                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
+                          disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "in-progress")}>
+                          {isActing("in-progress") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
+                          Arrived / Start Job
                         </Button>
                         <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
                           disabled={!!actionLoading} onClick={() => handleStatus(booking.id, "cancelled")}>

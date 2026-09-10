@@ -133,27 +133,16 @@ const globalForPrisma = global as unknown as {
   prismaVersion: string | undefined;
 };
 
-const PRISMA_CLIENT_VERSION = "20260905-ensure-pending-columns-v2";
+const PRISMA_CLIENT_VERSION = "20260908-service-live-tracking";
 
 /**
  * Columns added in 20260905 migrations that may not exist on Neon yet.
  * Omit them from default SELECTs so login and other User reads keep working.
- * Explicit `select` (e.g. bank-details) still queries them once the migration is applied.
+ * Slot extras and checkout fees are ensured below and must be readable.
  */
 const OMIT_UNMIGRATED_COLUMNS = {
   package: {
     accentColor: true,
-  },
-  adminSettings: {
-    serviceTaxPercent: true,
-    serviceBookingFee: true,
-    serviceExtraFeeLabel: true,
-    serviceExtraFeeAmount: true,
-  },
-  catalogService: {
-    morningSurcharge: true,
-    afternoonSurcharge: true,
-    eveningSurcharge: true,
   },
 } as const;
 
@@ -171,6 +160,14 @@ async function ensurePendingColumns(client: PrismaClient) {
     `ALTER TABLE "CatalogService" ADD COLUMN IF NOT EXISTS "morningSurcharge" DOUBLE PRECISION NOT NULL DEFAULT 0`,
     `ALTER TABLE "CatalogService" ADD COLUMN IF NOT EXISTS "afternoonSurcharge" DOUBLE PRECISION NOT NULL DEFAULT 0`,
     `ALTER TABLE "CatalogService" ADD COLUMN IF NOT EXISTS "eveningSurcharge" DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TYPE "ServiceBookingStatus" ADD VALUE IF NOT EXISTS 'ON_THE_WAY'`,
+    `ALTER TABLE "ServiceBooking" ADD COLUMN IF NOT EXISTS "destinationLat" DOUBLE PRECISION`,
+    `ALTER TABLE "ServiceBooking" ADD COLUMN IF NOT EXISTS "destinationLng" DOUBLE PRECISION`,
+    `ALTER TABLE "ServiceBooking" ADD COLUMN IF NOT EXISTS "providerLat" DOUBLE PRECISION`,
+    `ALTER TABLE "ServiceBooking" ADD COLUMN IF NOT EXISTS "providerLng" DOUBLE PRECISION`,
+    `ALTER TABLE "ServiceBooking" ADD COLUMN IF NOT EXISTS "providerLocationUpdatedAt" TIMESTAMP(3)`,
+    `ALTER TABLE "ServiceBooking" ADD COLUMN IF NOT EXISTS "trackingActive" BOOLEAN NOT NULL DEFAULT false`,
+    `ALTER TABLE "ServiceBooking" ADD COLUMN IF NOT EXISTS "enRouteAt" TIMESTAMP(3)`,
   ];
   for (const sql of statements) {
     try {

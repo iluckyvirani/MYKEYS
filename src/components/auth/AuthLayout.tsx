@@ -1,3 +1,5 @@
+import BrandLogo from "@/components/common/BrandLogo";
+
 export default function AuthLayout({
   children,
   compact = false,
@@ -33,11 +35,7 @@ export default function AuthLayout({
         }}
       >
         <div className={`flex justify-center ${compact ? "mb-4" : "mb-6"}`}>
-          <img
-            src="/mykeys-logo-nav.png"
-            alt="MYKEYS"
-            className={`w-auto object-contain ${compact ? "h-9" : "h-12"}`}
-          />
+          <BrandLogo variant={compact ? "authCompact" : "auth"} />
         </div>
         {children}
       </div>

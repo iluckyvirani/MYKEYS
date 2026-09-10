@@ -73,8 +73,8 @@ export function renderEmailLayout(opts: {
       <td align="center">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid ${CARD_BORDER};border-radius:14px;overflow:hidden;">
           <tr>
-            <td style="background:linear-gradient(135deg, ${BRAND} 0%, ${BRAND_DARK} 100%);padding:18px 24px;text-align:center;">
-              <img src="${logo}" alt="MYKEYS" width="140" style="display:inline-block;max-width:140px;height:auto;border:0;background:#ffffff;border-radius:8px;padding:8px 12px;" />
+            <td style="background:#000000;padding:16px 24px;text-align:center;">
+              <img src="${logo}" alt="MYKEYS" width="200" style="display:inline-block;max-width:220px;height:auto;border:0;" />
             </td>
           </tr>
           <tr>
@@ -91,7 +91,8 @@ export function renderEmailLayout(opts: {
             <td style="padding:8px 28px 28px;font-family:Arial,Helvetica,sans-serif;">
               <p style="margin:0 0 4px;font-size:14px;color:#475569;">Best regards,</p>
               <p style="margin:0 0 16px;font-size:14px;color:#0f172a;font-weight:700;">The MYKEYS Team</p>
-              <div style="border-top:1px solid ${CARD_BORDER};padding-top:14px;">
+              <div style="border-top:1px solid ${CARD_BORDER};padding-top:14px;text-align:center;">
+                <img src="${logo}" alt="MYKEYS" width="120" style="display:inline-block;max-width:140px;height:auto;border:0;margin:0 0 10px;" />
                 <p style="margin:0;font-size:12px;color:#64748b;line-height:1.5;">
                   Need help?
                   <a href="mailto:${SUPPORT_EMAIL}" style="color:${BRAND};text-decoration:none;font-weight:600;">${SUPPORT_EMAIL}</a><br/>
